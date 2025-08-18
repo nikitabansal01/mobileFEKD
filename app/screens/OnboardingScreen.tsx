@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
 import AppIntroSlider from "react-native-app-intro-slider";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
+import { StackNavigationProp } from "@react-navigation/stack";
 import { responsiveWidth, responsiveHeight, responsiveFontSize } from "react-native-responsive-dimensions";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Images from "@/assets/images";
@@ -11,6 +12,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import PrimaryButton from "@/components/PrimaryButton";
 import GradientBackground from "@/components/GradientBackground";
 import FixedBottomContainer from "@/components/FixedBottomContainer";
+
+type RootStackParamList = {
+  OnboardingScreen: undefined;
+  IntroScreen: undefined;
+  QuestionScreen: undefined;
+  ResultScreen: undefined;
+  ResearchingScreen: undefined;
+  LoadingScreen: undefined;
+  ResultLoadingScreen: undefined;
+};
+
+type OnboardingScreenNavigationProp = StackNavigationProp<RootStackParamList, 'OnboardingScreen'>;
 
 
 
@@ -329,7 +342,7 @@ const slides = [
 const OnboardingScreen = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const sliderRef = useRef<AppIntroSlider>(null);
-  const router = useRouter();
+  const navigation = useNavigation<OnboardingScreenNavigationProp>();
   const insets = useSafeAreaInsets();
 
   const titleText = [
@@ -352,7 +365,7 @@ const OnboardingScreen = () => {
   };
 
   const handleDone = () => {
-    router.push('/screens/IntroScreen');
+    navigation.navigate('IntroScreen');
   }
 
   // 1.5초마다 자동 슬라이드 (끝까지 가면 멈춤)

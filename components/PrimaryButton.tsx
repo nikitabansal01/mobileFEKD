@@ -1,6 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
-import { responsiveHeight, responsiveFontSize } from "react-native-responsive-dimensions";
+import { responsiveWidth, responsiveHeight, responsiveFontSize } from "react-native-responsive-dimensions";
 
 type PrimaryButtonProps = {
   title: string;
@@ -34,6 +34,7 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: '#ffffff',
     borderRadius: 100,
+    width: responsiveWidth(88), // 기본 가로 길이 설정
     paddingVertical: responsiveHeight(1.5),
     paddingHorizontal: responsiveHeight(4),
     alignItems: 'center',

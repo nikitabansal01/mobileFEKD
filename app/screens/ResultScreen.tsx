@@ -1,71 +1,158 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
+import { LinearGradient } from 'expo-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
+import GradientText from "@/components/GradientText";
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import AuvraCharacter from '@/components/AuvraCharacter';
-import Images from "@/assets/images";
-import { useRouter } from 'expo-router';
+import BackButton from '@/components/BackButton';
+import PrimaryButton from '@/components/PrimaryButton';
+import FixedBottomContainer from '@/components/FixedBottomContainer';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import GraphicProgesterone1 from '@/assets/images/SVG/GraphicProgesterone1';
 import GraphicTestosterone1 from '@/assets/images/SVG/GraphicTestosterone1';
 
-const ICON_INSIGHT = 'http://localhost:3845/assets/1819b895989e78684cffaac7ff874579eced7513.png';
+type RootStackParamList = {
+  OnboardingScreen: undefined;
+  IntroScreen: undefined;
+  QuestionScreen: undefined;
+  ResultScreen: undefined;
+  ResearchingScreen: undefined;
+  LoadingScreen: undefined;
+  ResultLoadingScreen: undefined;
+};
+
+type ResultScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ResultScreen'>;
 
 const ResultScreen = () => {
-  const router = useRouter();
+  const navigation = useNavigation<ResultScreenNavigationProp>();
 
   const handleContinue = () => {
-    router.push('/screens/ResultLoadingScreen');
+    navigation.navigate('ResultLoadingScreen');
+  };
+
+  const handleBack = () => {
+    navigation.goBack();
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 상단 스크롤 가능한 콘텐츠 */}
-      <View style={styles.scrollContent}>
-        <AuvraCharacter size={responsiveWidth(16)} />
-        <Text style={styles.title}>{'Some of your hormone\nbuddies are feeling off'}</Text>
-        <View style={styles.cardsContainer}>
-          <View style={styles.hormoneCard}>
-            <View style={styles.hormoneIconContainer}>
-              <GraphicProgesterone1 
-                width={responsiveWidth(18)} 
-                height={responsiveWidth(18) * (54/68)} 
+      {/* 뒤로가기 버튼 */}
+      <View style={styles.backButtonContainer}>
+        <BackButton onPress={handleBack} />
+      </View>
+
+      {/* 메인 컨텐츠 */}
+      <KeyboardAwareScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[
+          styles.mainContent,
+          { minHeight: '100%' }
+        ]}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid={true}
+        enableAutomaticScroll={true}
+        extraScrollHeight={0}
+        extraHeight={0}
+        keyboardDismissMode="interactive"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.mainContent}>
+          {/* Auvra 캐릭터와 제목 */}
+          <View style={styles.headerSection}>
+            <View style={styles.characterContainer}>
+              <AuvraCharacter size={responsiveWidth(15)} />
+            </View>
+            
+            <View style={styles.titleContainer}>
+              <GradientText
+                text="Some of your hormone buddies are feeling off"
+                textStyle={styles.title}
+                containerStyle={styles.maskedView}
               />
             </View>
-            <View style={styles.hormoneTextBlock}>
-              <Text style={styles.hormoneTitle}>Progesterone <Text style={styles.hormoneSub}>The calmer</Text></Text>
-              <Text style={styles.hormoneDesc}>🔻 Lower levels may be contributing to painful periods, and mood changes.</Text>
-            </View>
           </View>
-          <View style={styles.hormoneCard}>
-            <View style={styles.hormoneIconContainer}>
-              <GraphicTestosterone1 
-                width={responsiveWidth(18)} 
-                height={responsiveWidth(18) * (54/68)} 
-            />
+
+          {/* 호르몬 카드들 */}
+          <View style={styles.cardsContainer}>
+            {/* Progesterone 카드 */}
+            <View style={styles.cardWrapper}>
+              <View style={styles.hormoneCard}>
+                <View style={styles.cardContent}>
+                  <View style={styles.textSection}>
+                    <Text style={styles.hormoneName}>
+                      Progesterone, <Text style={styles.hormoneSubtitle}>The calmer</Text>
+                    </Text>
+                    <Text style={styles.hormoneDescription}>
+                      🔻 Lower levels may be contributing to{' '}
+                      <Text style={styles.underlineText}>painful periods</Text>
+                      , and{' '}
+                      <Text style={styles.underlineText}>mood changes</Text>.
+                    </Text>
+                  </View>
+                                  <View style={[styles.graphicSection, styles.progesteroneGraphic]}>
+                  <GraphicProgesterone1 
+                    width={responsiveWidth(50)} 
+                    height={responsiveWidth(50)} 
+                  />
+                </View>
+                </View>
+              </View>
+              <View style={styles.priorityBadge}>
+                <Text style={styles.priorityText}>High Priority</Text>
+              </View>
             </View>
-            <View style={styles.hormoneTextBlock}>
-              <Text style={styles.hormoneTitle}>Testosterone <Text style={styles.hormoneSub}>The titan</Text></Text>
-              <Text style={styles.hormoneDesc}>🔺 Higher levels may be contributing to acne, excess hair, and mood swings — common in PCOS.</Text>
+
+            {/* Testosterone 카드 */}
+            <View style={styles.cardWrapper}>
+              <View style={styles.hormoneCard}>
+                <View style={styles.cardContent}>
+                  <View style={styles.textSection}>
+                    <Text style={styles.hormoneName}>
+                      Testosterone, <Text style={styles.hormoneSubtitle}>The titan</Text>
+                    </Text>
+                    <Text style={styles.hormoneDescription}>
+                      🔺 Higher levels may be contributing to{' '}
+                      <Text style={styles.underlineText}>acne</Text>
+                      ,{' '}
+                      <Text style={styles.underlineText}>excess hair</Text>
+                      , and{' '}
+                      <Text style={styles.underlineText}>mood swings</Text>
+                      , common in{' '}
+                      <Text style={styles.underlineText}>PCOS</Text>.
+                    </Text>
+                  </View>
+                                  <View style={[styles.graphicSection, styles.testosteroneGraphic]}>
+                  <GraphicTestosterone1 
+                    width={responsiveWidth(50)} 
+                    height={responsiveWidth(50)} 
+                  />
+                </View>
+                </View>
+              </View>
+              <View style={styles.priorityBadge}>
+                <Text style={styles.priorityText}>Moderate</Text>
+              </View>
             </View>
           </View>
         </View>
-      </View>
-      
+      </KeyboardAwareScrollView>
+
       {/* 하단 고정 영역 */}
-      <View style={styles.bottomFixedArea}>
-        <View style={styles.bottomBox}>
-          {/* 분홍색 원형 배경 */}
-          <View style={styles.pinkCircle} />
-          <View style={styles.bottomRow}>
-            <Image source={Images.IconInsight} style={styles.iconInsight} />
-            <Text style={styles.bottomText}>Upload your blood report later{"\n"}for more precise analysis</Text>
-          </View>
-          <Image source={Images.BloodReport} style={styles.bloodReport} />
+      <FixedBottomContainer>
+        <View style={styles.disclaimerContainer}>
+          <Text style={styles.disclaimerText}>
+            This analysis is for informational purposes only and should not replace professional medical advice. Always consult with a qualified healthcare provider for diagnosis and treatment.
+          </Text>
         </View>
-        <TouchableOpacity style={styles.ctaButton} onPress={handleContinue}>
-          <Text style={styles.ctaButtonText}>Continue</Text>
-        </TouchableOpacity>
-      </View>
+        <PrimaryButton
+          title="Continue"
+          onPress={handleContinue}
+        />
+      </FixedBottomContainer>
     </SafeAreaView>
   );
 };
@@ -73,145 +160,149 @@ const ResultScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
   },
-  scrollContent: {
-    flex: 1,
-    alignItems: 'center',
-    paddingTop: responsiveHeight(7),
-    paddingHorizontal: responsiveWidth(5),
+  backButtonContainer: {
+    position: 'absolute',
+    top: responsiveHeight(6),
+    left: responsiveWidth(4),
+    zIndex: 30,
   },
-  bottomFixedArea: {
-    paddingHorizontal: responsiveWidth(5),
-    paddingBottom: responsiveHeight(2),
+  mainContent: {
     alignItems: 'center',
+    paddingTop: responsiveHeight(8), // Auvra character 위치를 위로 올림
+    paddingHorizontal: responsiveWidth(5),
+    paddingBottom: responsiveHeight(20), // 하단 버튼을 위한 충분한 공간
+    flexGrow: 1, // 콘텐츠가 적을 때도 전체 높이 사용
+  },
+  headerSection: {
+    alignItems: 'center',
+    marginBottom: responsiveHeight(4),
+  },
+  characterContainer: {
+    alignItems: 'center',
+    marginBottom: responsiveHeight(1),
+  },
+  titleContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  maskedView: {
+    width: responsiveWidth(80),
+    height: responsiveHeight(6),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gradientText: {
+    width: '100%',
+    height: '100%',
   },
   title: {
-    fontFamily: 'Poppins600',
-    fontSize: responsiveFontSize(3.3),
-    color: '#bb4471',
+    fontFamily: 'NotoSerif600',
+    fontSize: responsiveFontSize(2.6),
     textAlign: 'center',
-    marginTop: responsiveHeight(2),
-    marginBottom: responsiveHeight(3),
-    width: responsiveWidth(85),
-    lineHeight: responsiveFontSize(4.2), // 3.5 → 4.2로 증가
-    paddingVertical: 2, // 위아래 여유 공간 추가
+    lineHeight: responsiveHeight(2.8),
   },
   cardsContainer: {
-    width: responsiveWidth(100),
-    gap: responsiveHeight(2),
-    marginBottom: responsiveHeight(3),
-    alignItems: 'center',
+    width: responsiveWidth(78),
+    gap: responsiveHeight(2.7),
+  },
+  cardWrapper: {
+    position: 'relative',
+    marginTop: responsiveHeight(1), // High Priority 태그를 위한 여백
   },
   hormoneCard: {
+    backgroundColor: '#FFFBFC',
+    borderRadius: 12,
+    padding: responsiveWidth(6),
+    position: 'relative',
+    borderWidth: 0.5,
+    borderColor: '#cfcfcf',
+    elevation: 3,
+    overflow: 'hidden', // 카드 영역 밖으로 나가는 부분을 잘라냄
+  },
+  cardContent: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: 'rgba(185, 231, 252, 0.47)',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
-    justifyContent: 'center',
-    width: '80%',
-    gap: 15,
-  },
-  hormoneIcon: {
-    width: '20%',
-    aspectRatio: 1,
-    resizeMode: 'contain',
-    marginRight: 10,
-  },
-  hormoneIconContainer: {
-    width: '20%',
-    aspectRatio: 1,
-    marginRight: 10,
-    justifyContent: 'center',
     alignItems: 'center',
+    gap: responsiveWidth(3.5),
+    position: 'relative', // 절대 위치 요소들의 기준점
   },
-  hormoneTextBlock: {
+  textSection: {
     flex: 1,
+    gap: responsiveHeight(0.5),
+    maxWidth: responsiveWidth(40), // 텍스트 영역 최대 너비 제한
+    zIndex: 2, // 이미지(zIndex: 1)보다 위에 표시
   },
-  hormoneTitle: {
-    fontFamily: 'Poppins600',
-    fontSize: responsiveFontSize(1.5),
-    color: '#bb4471',
+  hormoneName: {
+    fontFamily: 'Inter600',
+    fontSize: responsiveFontSize(1.6),
+    color: '#000000',
+    lineHeight: responsiveHeight(2),
+    fontWeight: '600',
   },
-  hormoneSub: {
-    fontFamily: 'Poppins400',
-    fontSize: responsiveFontSize(1.1),
-    color: '#bb4471',
-  },
-  hormoneDesc: {
-    fontFamily: 'Poppins400',
-    fontSize: responsiveFontSize(1.2),
-    color: '#000',
-    marginTop: 2,
-  },
-  bottomBox: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    width: '100%', 
-    height: responsiveHeight(7),
-    justifyContent: 'center',
-    paddingLeft : 14,
-    marginBottom: responsiveHeight(2),
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
-    borderWidth: 0.884,
-    borderColor: '#FFF',
-    overflow: 'hidden', // 원이 box 밖으로 안 나가게
-    position: 'relative', // absolute 자식 배치용
-  },
-  pinkCircle: {
-    position: 'absolute',
-    right: '-10%', // 부모 기준 오른쪽에서 10% 삐져나오게
-    width: '40%', // 부모 기준 가로 60%
-    height: '200%', // 부모 기준 세로 120%
-    borderRadius: 9999, // 완전한 원
-    backgroundColor: '#FCE2E2',
-    justifyContent: 'center',
-    zIndex: 0,
-  },
-  bloodReport: {
-    position: 'absolute',
-    right: '8%',
-    height: '80%',
-    aspectRatio: 46/49,
-    resizeMode: 'contain',
-    zIndex: 1,
-  },
-  bottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    zIndex: 1, // 내용이 원 위에 오도록
-  },
-  iconInsight: {
-    width: 20,
-    height: 20,
-    marginRight: 8,
-  },
-  bottomText: {
+  hormoneSubtitle: {
     fontFamily: 'Inter400',
     fontSize: responsiveFontSize(1.3),
-    color: '#000',
-    flex: 1,
+    color: '#6f6f6f',
   },
-  ctaButton: {
-    backgroundColor: '#bb4471',
-    borderRadius: 21,
-    width: responsiveWidth(80),
-    height: 46,
+  hormoneDescription: {
+    fontFamily: 'Inter400',
+    fontSize: responsiveFontSize(1.3),
+    color: '#6f6f6f',
+    lineHeight: responsiveHeight(1.8),
+    marginTop: responsiveHeight(0.5),
+  },
+  underlineText: {
+    textDecorationLine: 'underline',
+    textDecorationStyle: 'dotted',
+    textDecorationColor: 'rgba(0,0,0,0.5)',
+  },
+  graphicSection: {
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'absolute', // 절대 위치로 설정
+    zIndex: 1, // 텍스트 뒤에 배치
   },
-  ctaButtonText: {
-    color: '#fff',
+  progesteroneGraphic: {
+    right: responsiveWidth(-18), // Progesterone 이미지 위치
+    top: responsiveHeight(-5),
+  },
+  testosteroneGraphic: {
+    right: responsiveWidth(-21), // Testosterone 이미지 위치 (더 오른쪽)
+    top: responsiveHeight(-3), // Testosterone 이미지 위치 (더 위쪽)
+  },
+  priorityBadge: {
+    position: 'absolute',
+    top: responsiveHeight(-1.3), // 카드 위로 약간 올라가도록
+    left: responsiveWidth(4),
+    backgroundColor: '#F2F0F2',
+    paddingHorizontal: responsiveWidth(2),
+    paddingVertical: responsiveHeight(0.3),
+    borderRadius: 13,
+    borderWidth: 0.5,
+    borderColor: '#e0e0e0',
+    elevation: 1,
+    zIndex: 10, // 이미지(zIndex: 1)보다 위에 표시되도록 높은 zIndex 설정
+  },
+  priorityText: {
     fontFamily: 'Inter500',
-    fontSize: responsiveFontSize(2),
+    fontSize: responsiveFontSize(1.3),
+    color: '#6f6f6f',
+    textAlign: 'center',
+    fontWeight: '500',
   },
+  disclaimerContainer: {
+    marginBottom: responsiveHeight(2),
+    paddingHorizontal: responsiveWidth(5),
+  },
+  disclaimerText: {
+    fontFamily: 'Inter400',
+    fontSize: responsiveFontSize(1.0),
+    color: '#6f6f6f',
+    textAlign: 'center',
+    lineHeight: responsiveHeight(1.5),
+  },
+
 });
 
 export default ResultScreen; 

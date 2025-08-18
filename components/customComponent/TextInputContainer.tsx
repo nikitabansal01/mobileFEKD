@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
+import { createInputStyle } from '@/utils/inputStyles';
+import { INPUT_STATES } from '@/constants/InputStates';
 
 interface TextInputContainerProps {
   placeholder: string;
@@ -11,6 +13,9 @@ interface TextInputContainerProps {
   inputStyle?: any;
   textStyle?: any;
   onFocus?: () => void;
+  onBlur?: () => void;
+  autoFocus?: boolean;
+  inputRef?: React.RefObject<TextInput>;
 }
 
 const TextInputContainer: React.FC<TextInputContainerProps> = ({
@@ -22,6 +27,9 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
   inputStyle,
   textStyle,
   onFocus,
+  onBlur,
+  autoFocus,
+  inputRef,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [isFilled, setIsFilled] = useState(!!value);
@@ -33,6 +41,7 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
 
   const handleBlur = () => {
     setIsFocused(false);
+    onBlur?.();
   };
 
   const handleChangeText = (text: string) => {
@@ -47,8 +56,13 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
 
   return (
     <View style={[
-      styles.textInputContainer,
-      (isFocused || isFilled) && styles.textInputContainerFocused,
+      createInputStyle((isFocused || isFilled) ? 'selected' : 'default'),
+      {
+        height: responsiveHeight(7.4),// TextInputContainer만 더 큰 높이
+        paddingVertical: responsiveHeight(2),
+        justifyContent: 'center',
+        alignItems: 'flex-start', // 텍스트를 왼쪽 정렬
+      },
       containerStyle
     ]}>
       {/* Floating Label */}
@@ -82,6 +96,8 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
         onChangeText={handleChangeText}
         onFocus={handleFocus}
         onBlur={handleBlur}
+        autoFocus={autoFocus}
+        ref={inputRef}
       />
       
       {/* Clear Button */}
@@ -99,19 +115,7 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
 
 const styles = StyleSheet.create({
   textInputContainer: {
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 10,
-    width: responsiveWidth(80),
-    height: 60,
-    paddingHorizontal: 20,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
     position: 'relative',
-  },
-  textInputContainerFocused: {
-    borderColor: '#c17ec9',
-    backgroundColor: '#F5F5F5',
   },
   floatingLabel: {
     position: 'absolute',
@@ -123,7 +127,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   inputText: {
-    fontFamily: 'Inter500',
+    fontFamily: 'Inter400',
     fontSize: responsiveFontSize(1.8),
     color: '#000000',
     marginTop: 8,
@@ -140,20 +144,17 @@ const styles = StyleSheet.create({
   clearButton: {
     position: 'absolute',
     right: 15,
-    top: '50%',
-    transform: [{ translateY: -10 }],
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#f0f0f0',
+    top: 0,
+    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 3,
+    padding: 5, // 터치 영역 확대
   },
   clearButtonText: {
-    fontSize: responsiveFontSize(1.4),
-    color: '#666666',
-    fontWeight: 'bold',
+    fontSize: responsiveFontSize(4.0),
+    color: '#b3b3b3', // placeholder와 동일한 색상
+    fontWeight: 'normal',
   },
   defaultPlaceholder: {
     fontFamily: 'Inter400',

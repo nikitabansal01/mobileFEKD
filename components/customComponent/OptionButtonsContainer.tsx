@@ -1,15 +1,20 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
+import { createInputStyle, createInputTextStyle } from '@/utils/inputStyles';
 
 interface OptionButton {
   id: string;
   text: string;
   value: string;
+  description?: string; // 옵션 설명 추가
 }
 
+// 기존 문자열 배열과의 호환성을 위한 타입
+type OptionInput = string | OptionButton;
+
 interface OptionButtonsContainerProps {
-  options: OptionButton[];
+  options: OptionInput[];
   selectedValue?: string | string[];
   onSelect: (value: string) => void;
   layout?: 'default' | 'wrap' | 'row';
@@ -17,6 +22,14 @@ interface OptionButtonsContainerProps {
   containerStyle?: any;
   buttonStyle?: any;
   textStyle?: any;
+  // 커스텀 옵션들
+  buttonHeight?: number;
+  buttonWidth?: number; // 버튼 가로 길이 설정
+  buttonPadding?: { vertical?: number; horizontal?: number };
+  buttonAlignment?: { justifyContent?: string; alignItems?: string };
+  textAlignment?: string;
+  containerGap?: number;
+  containerAlignment?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around';
 }
 
 const OptionButtonsContainer: React.FC<OptionButtonsContainerProps> = ({
@@ -28,24 +41,69 @@ const OptionButtonsContainer: React.FC<OptionButtonsContainerProps> = ({
   containerStyle,
   buttonStyle,
   textStyle,
+  buttonHeight,
+  buttonWidth,
+  buttonPadding,
+  buttonAlignment,
+  textAlignment,
+  containerGap,
+  containerAlignment,
 }) => {
   const getContainerStyle = () => {
-    switch (layout) {
-      case 'wrap':
-        return styles.wrapContainer;
-      case 'row':
-        return styles.rowContainer;
-      default:
-        return styles.defaultContainer;
+    const baseStyle = (() => {
+      switch (layout) {
+        case 'wrap':
+          return styles.wrapContainer;
+        case 'row':
+          return styles.rowContainer;
+        default:
+          return styles.defaultContainer;
+      }
+    })();
+    
+    const customStyles = [];
+    
+    // 커스텀 gap 적용
+    if (containerGap) {
+      customStyles.push({ gap: containerGap });
     }
+    
+    // 커스텀 alignment 적용
+    if (containerAlignment) {
+      if (layout === 'default') {
+        // default layout은 세로 배치이므로 alignItems 사용 (가로 정렬)
+        customStyles.push({ alignItems: containerAlignment });
+      } else {
+        // wrap, row layout은 가로 배치이므로 justifyContent 사용 (가로 정렬)
+        customStyles.push({ justifyContent: containerAlignment });
+      }
+    }
+    
+    return customStyles.length > 0 ? [baseStyle, ...customStyles] : baseStyle;
   };
 
-  const getButtonStyle = (isSelected: boolean) => {
+  const getButtonStyle = (isSelected: boolean, hasDescription: boolean) => {
     const baseStyle = [
-      styles.optionButton,
-      isSelected && styles.optionButtonSelected,
+      createInputStyle(isSelected ? 'selected' : 'default', {
+        height: hasDescription ? undefined : buttonHeight, // 설명이 있으면 높이 자동 조정
+        minHeight: buttonHeight, // 최소 높이 설정
+        paddingVertical: buttonPadding?.vertical,
+        paddingHorizontal: buttonPadding?.horizontal,
+        justifyContent: buttonAlignment?.justifyContent,
+        alignItems: buttonAlignment?.alignItems,
+      }),
       buttonStyle,
     ];
+    
+    // 설명이 있을 때는 height를 완전히 제거하여 자동 확장되도록 함
+    if (hasDescription && isSelected) {
+      baseStyle.push({ height: undefined });
+    }
+    
+    // 버튼 가로 길이 설정
+    if (buttonWidth) {
+      baseStyle.push({ width: buttonWidth });
+    }
     
     switch (layout) {
       case 'wrap':
@@ -53,14 +111,18 @@ const OptionButtonsContainer: React.FC<OptionButtonsContainerProps> = ({
       case 'row':
         return [...baseStyle, styles.rowButton];
       default:
+        // default layout에서 containerAlignment가 center면 alignSelf를 center로 변경
+        if (containerAlignment === 'center') {
+          return [...baseStyle, { alignSelf: 'center' as const }];
+        }
         return baseStyle;
     }
   };
 
   const getTextStyle = (isSelected: boolean) => {
     const baseStyle = [
-      styles.optionText,
-      isSelected && styles.optionTextSelected,
+      createInputTextStyle(isSelected ? 'selected' : 'default'),
+      textAlignment && { textAlign: textAlignment },
       textStyle,
     ];
     
@@ -77,19 +139,31 @@ const OptionButtonsContainer: React.FC<OptionButtonsContainerProps> = ({
   return (
     <View style={[getContainerStyle(), containerStyle]}>
       {options.map((option) => {
+        // 문자열인 경우 객체로 변환
+        const optionObj = typeof option === 'string' 
+          ? { id: option, text: option, value: option }
+          : option;
+          
         const isSelected = multiple 
-          ? Array.isArray(selectedValue) && selectedValue.includes(option.value)
-          : selectedValue === option.value;
+          ? Array.isArray(selectedValue) && selectedValue.includes(optionObj.value)
+          : selectedValue === optionObj.value;
         return (
           <TouchableOpacity
-            key={option.id}
-            style={getButtonStyle(isSelected)}
-            onPress={() => onSelect(option.value)}
+            key={optionObj.id}
+            style={getButtonStyle(isSelected, !!optionObj.description)}
+            onPress={() => onSelect(optionObj.value)}
             activeOpacity={0.7}
           >
-            <Text style={getTextStyle(isSelected)}>
-              {option.text}
-            </Text>
+            <View style={styles.optionContent}>
+              <Text style={getTextStyle(isSelected)}>
+                {optionObj.text}
+              </Text>
+              {isSelected && optionObj.description && (
+                <Text style={styles.descriptionText}>
+                  {optionObj.description}
+                </Text>
+              )}
+            </View>
           </TouchableOpacity>
         );
       })}
@@ -102,6 +176,7 @@ const styles = StyleSheet.create({
   defaultContainer: {
     gap: responsiveHeight(1.5),
     alignSelf: 'stretch',
+    alignItems: 'flex-start', // 가로 정렬 기본값
   },
   optionButton: {
     borderWidth: 1,
@@ -127,7 +202,6 @@ const styles = StyleSheet.create({
   },
   optionTextSelected: {
     color: '#000000',
-    fontFamily: 'Inter500',
   },
 
   // Wrap Layout (여러 줄 배치)
@@ -158,6 +232,17 @@ const styles = StyleSheet.create({
   },
   rowText: {
     fontSize: responsiveFontSize(1.4),
+  },
+  optionContent: {
+    flex: 1,
+    gap: responsiveHeight(0.5),
+  },
+  descriptionText: {
+    fontFamily: 'Inter400',
+    fontSize: responsiveFontSize(1.2),
+    color: '#6f6f6f',
+    lineHeight: responsiveHeight(1.8),
+    marginTop: responsiveHeight(0.5),
   },
 });
 

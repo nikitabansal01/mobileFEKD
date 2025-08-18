@@ -22,8 +22,8 @@ const Images = {
     GraphicAppscreenshot1: require('./GraphicAppscreenshot1.png'),
     GraphicAppscreenshot2: require('./GraphicAppscreenshot2.png'),
     GraphicAppscreenshot3: require('./GraphicAppscreenshot3.png'),
-    GraphicTestosterone1: require('./GraphicTestosterone1.png'),
-    GraphicProgesterone1: require('./GraphicProgesterone1.png'),
+    GraphicTestosterone1: require('./characters/GraphicTestosterone1.png'),
+    GraphicProgesterone1: require('./characters/GraphicProgesterone1.png'),
     IconInsight: require('./IconInsight.png'),
     BloodReport: require('./Blood Report.png'),
     // Characters

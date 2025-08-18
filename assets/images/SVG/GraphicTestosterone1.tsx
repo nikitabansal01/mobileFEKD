@@ -1,5 +1,6 @@
 import React from 'react';
-import { Svg, Path, Ellipse, G, Defs, Filter, FeFlood, FeColorMatrix, FeOffset, FeGaussianBlur, FeComposite, FeBlend, Circle } from 'react-native-svg';
+import { Image } from 'react-native';
+import Images from '../index';
 
 interface GraphicTestosterone1Props {
   width?: number;
@@ -11,84 +12,14 @@ const GraphicTestosterone1: React.FC<GraphicTestosterone1Props> = ({
   height = 54 
 }) => {
   return (
-    <Svg width={width} height={height} viewBox="0 0 68 54" fill="none">
-      {/* 흰색 원 배경 */}
-      <Circle cx="34" cy="27" r="28" fill="white" />
-      
-      <G filter="url(#filter0_d_9768_11706)">
-        <Path 
-          d="M31.8288 10.5051C32.6059 8.53489 35.3941 8.53489 36.1712 10.5051L39.8506 19.8345C40.0879 20.436 40.564 20.9121 41.1655 21.1494L50.4949 24.8288C52.4651 25.6059 52.4651 28.3941 50.4949 29.1712L41.1655 32.8506C40.564 33.0879 40.0879 33.564 39.8506 34.1655L36.1712 43.4949C35.3941 45.4651 32.6059 45.4651 31.8288 43.4949L28.1494 34.1655C27.9121 33.564 27.436 33.0879 26.8345 32.8506L17.5051 29.1712C15.5349 28.3941 15.5349 25.6059 17.5051 24.8288L26.8345 21.1494C27.436 20.9121 27.9121 20.436 28.1494 19.8345L31.8288 10.5051Z" 
-          fill="#FFF79D"
-        />
-        <Path 
-          d="M31 25.9828C31.7082 24.6372 32.6289 24.7081 33.2663 25.9828" 
-          stroke="black" 
-          strokeWidth="0.333418" 
-          strokeLinecap="round"
-        />
-        <Path 
-          d="M36.0996 25.7049C36.335 26.387 37.4037 25.6529 38.6492 25.1309" 
-          stroke="black" 
-          strokeWidth="0.333418" 
-          strokeLinecap="round"
-        />
-        <Path 
-          d="M35.897 25.415C35.7565 25.7313 35.778 25.8902 36.0977 26.1233" 
-          stroke="black" 
-          strokeWidth="0.333418" 
-          strokeLinecap="round"
-        />
-        <Path 
-          d="M34.9806 30.9176C35.3198 31.0187 35.6031 30.8771 35.8864 30.5941" 
-          stroke="black" 
-          strokeWidth="0.333418" 
-          strokeLinecap="round"
-        />
-        <Path 
-          d="M32.707 31.2409C33.4404 30.3642 33.4404 28.6742 36.7309 29.6309M36.7404 29.0409C37.1713 29.0019 36.8833 29.5957 37.2317 30.093" 
-          stroke="black" 
-          strokeWidth="0.333418" 
-          strokeLinecap="round"
-        />
-        <Ellipse cx="31.9512" cy="26.6113" rx="0.371073" ry="0.742146" fill="black"/>
-        <Path 
-          d="M21.5977 27.4398L12.5988 30.4395M19.9179 26L12.2388 28.8797" 
-          stroke="black" 
-          strokeWidth="0.214993" 
-          strokeLinecap="round"
-        />
-        <Path 
-          d="M12.5996 30.4525C12.5996 30.5125 12.4112 31.3672 12.1112 31.7271C11.8113 32.0871 11.6913 32.0271 11.6313 31.9071C11.5713 31.7871 11.6313 30.8872 11.6313 30.8872L10.9714 30.9931L10.3115 31.1131C9.68347 31.2616 9.55925 31.0953 9.2316 30.6932C8.84764 30.1538 9.02396 30.0108 9.17161 29.6733C9.31925 29.3358 9.71154 29.2991 10.0715 29.1934C10.4314 29.0876 12.2397 28.8804 12.2397 28.8804M10.4925 29.9713L9.05164 30.2132M10.6116 30.4525L9.23161 30.6332M10.1915 29.5538L9.11156 29.7934" 
-          stroke="black" 
-          strokeWidth="0.214993" 
-          strokeLinecap="round"
-        />
-        <Path 
-          d="M46.4023 27.4398L55.4012 30.4395M48.0821 26L55.7612 28.8797" 
-          stroke="black" 
-          strokeWidth="0.214993" 
-          strokeLinecap="round"
-        />
-        <Path 
-          d="M55.4004 30.4525C55.4004 30.5125 55.5888 31.3672 55.8888 31.7271C56.1887 32.0871 56.3087 32.0271 56.3687 31.9071C56.4287 31.7871 56.3687 30.8872 56.3687 30.8872L57.0286 30.9931L57.6885 31.1131C58.3165 31.2616 58.4408 31.0953 58.7684 30.6932C59.1524 30.1538 58.976 30.0108 58.8284 29.6733C58.6807 29.3358 58.2885 29.2991 57.9285 29.1934C57.5686 29.0876 55.7603 28.8804 55.7603 28.8804M57.5075 29.9713L58.9484 30.2132M57.3884 30.4525L58.7684 30.6332M57.8085 29.5538L58.8884 29.7934" 
-          stroke="black" 
-          strokeWidth="0.214993" 
-          strokeLinecap="round"
-        />
-      </G>
-      <Defs>
-        <Filter id="filter0_d_9768_11706" x="0.492579" y="0.6" width="67.0148" height="52.8" filterUnits="userSpaceOnUse">
-          <FeFlood floodOpacity="0" result="BackgroundImageFix"/>
-          <FeColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-          <FeOffset/>
-          <FeGaussianBlur stdDeviation="4.2"/>
-          <FeComposite in2="hardAlpha" operator="out"/>
-          <FeColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/>
-          <FeBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_9768_11706"/>
-          <FeBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_9768_11706" result="shape"/>
-        </Filter>
-      </Defs>
-    </Svg>
+    <Image
+      source={Images.GraphicTestosterone1}
+      style={{
+        width: width,
+        height: height,
+        resizeMode: 'contain',
+      }}
+    />
   );
 };
 

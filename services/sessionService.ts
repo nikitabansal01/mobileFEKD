@@ -2,10 +2,28 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
+// 플랫폼별 API URL 설정
+const getApiBaseUrl = () => {
+  const envUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (envUrl) return envUrl;
+  
+  // 플랫폼별 기본값 설정
+  if (Platform.OS === 'android') {
+    // Android 에뮬레이터용
+    return 'http://10.0.2.2:8000';
+  } else {
+    // iOS 시뮬레이터용
+    return 'http://localhost:8000';
+  }
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+// API URL 디버깅 로그
+console.log('API Base URL:', API_BASE_URL);
+console.log('Platform:', Platform.OS);
 
 export interface UserResponseData {
-  name?: string;
   age?: number;
   period_description?: string;
   birth_control?: string[];
@@ -18,6 +36,10 @@ export interface UserResponseData {
   other_concerns?: string[];
   top_concern?: string;
   diagnosed_conditions?: string[];
+  family_history?: string[];
+  workout_intensity?: string;
+  sleep_duration?: string;
+  stress_level?: string;
 }
 
 export interface SessionData {
@@ -61,6 +83,9 @@ class SessionService {
     try {
       const deviceId = this.getDeviceId();
       
+      console.log('세션 생성 시도:', `${API_BASE_URL}/api/v1/questions/sessions`);
+      console.log('요청 데이터:', { device_id: deviceId });
+      
       const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions`, {
         method: 'POST',
         headers: {
@@ -84,7 +109,7 @@ class SessionService {
     }
   }
 
-  // 답변 저장
+  // 답변 저장 (새로운 구조)
   async saveAnswers(answers: Record<string, any>, questions: any[]): Promise<boolean> {
     try {
       // 세션 유효성 확인 및 필요시 재생성
@@ -106,12 +131,18 @@ class SessionService {
         questionsCount: questions.length
       });
 
-      // 답변을 UserResponseData 형식으로 변환
-      const responseData: UserResponseData = {};
+      // 이름을 로컬 스토리지에 저장 (개인 정보 분리)
+      const { name, ...sessionData } = answers;
+      if (name) {
+        await AsyncStorage.setItem('userName', name);
+        console.log('이름을 로컬 스토리지에 저장:', name);
+      }
+
+      // 답변을 새로운 구조로 변환 (개인 정보 제외)
+      const responseData: any = {};
       
-      // key 매핑 정의
-      const keyMapping: Record<string, keyof UserResponseData> = {
-        'name': 'name',
+      // key 매핑 정의 (name 제외)
+      const keyMapping: Record<string, string> = {
         'age': 'age',
         'periodDescription': 'period_description',
         'birthControl': 'birth_control',
@@ -123,58 +154,68 @@ class SessionService {
         'mentalHealthConcerns': 'mental_health_concerns',
         'otherConcerns': 'other_concerns',
         'topConcern': 'top_concern',
-        'diagnosedCondition': 'diagnosed_conditions'
+        'diagnosedCondition': 'diagnosed_conditions',
+        'familyHistory': 'family_history',
+        'workoutIntensity': 'workout_intensity',
+        'sleepDuration': 'sleep_duration',
+        'stressLevel': 'stress_level'
       };
       
       // 각 질문의 답변을 매핑
       questions.forEach(q => {
         const answer = answers[q.key];
         console.log(`질문 ${q.key}:`, answer);
-        if (answer !== undefined && answer !== null && answer !== '') {
-          const mappedKey = keyMapping[q.key];
-          if (mappedKey) {
-            // Others 텍스트 입력 처리
-            if (q.key === 'otherConcerns' && Array.isArray(answer)) {
-              const processedAnswer = answer.map(item => {
-                if (item === 'Others (please specify)' && answers.otherConcernsText) {
-                  return `Others: ${answers.otherConcernsText}`;
-                }
-                return item;
-              });
-              responseData[mappedKey] = processedAnswer as any;
-              console.log(`매핑됨 (Others 처리): ${q.key} -> ${mappedKey} =`, processedAnswer);
-            } else if (q.key === 'diagnosedCondition' && Array.isArray(answer)) {
-              const processedAnswer = answer.map(item => {
-                if (item === 'Others (please specify)' && answers.diagnosedConditionText) {
-                  return `Others: ${answers.diagnosedConditionText}`;
-                }
-                return item;
-              });
-              responseData[mappedKey] = processedAnswer as any;
-              console.log(`매핑됨 (Others 처리): ${q.key} -> ${mappedKey} =`, processedAnswer);
-            } else {
-              responseData[mappedKey] = answer as any;
-              console.log(`매핑됨: ${q.key} -> ${mappedKey} =`, answer);
-            }
+        
+        // name은 제외하고 처리
+        if (q.key === 'name') {
+          console.log('이름은 세션에 저장하지 않음');
+          return;
+        }
+        
+        const mappedKey = keyMapping[q.key];
+        if (mappedKey) {
+          // 나이를 숫자로 변환
+          if (q.key === 'age') {
+            responseData[mappedKey] = parseInt(answer) || 0;
+            console.log(`매핑됨 (나이 숫자 변환): ${q.key} -> ${mappedKey} =`, responseData[mappedKey]);
+          }
+          // Others 텍스트 입력 처리
+          else if (q.key === 'otherConcerns' && Array.isArray(answer)) {
+            const processedAnswer = answer.map(item => {
+              if (item === 'Others (please specify)' && answers.otherConcernsText) {
+                return `Others: ${answers.otherConcernsText}`;
+              }
+              return item;
+            });
+            responseData[mappedKey] = processedAnswer;
+            console.log(`매핑됨 (Others 처리): ${q.key} -> ${mappedKey} =`, processedAnswer);
+          } else if (q.key === 'diagnosedCondition' && Array.isArray(answer)) {
+            const processedAnswer = answer.map(item => {
+              if (item === 'Others (please specify)' && answers.diagnosedConditionText) {
+                return `Others: ${answers.diagnosedConditionText}`;
+              }
+              return item;
+            });
+            responseData[mappedKey] = processedAnswer;
+            console.log(`매핑됨 (Others 처리): ${q.key} -> ${mappedKey} =`, processedAnswer);
           } else {
-            // 매핑되지 않은 key는 그대로 사용
-          responseData[q.key as keyof UserResponseData] = answer;
-            console.log(`매핑되지 않음: ${q.key} =`, answer);
+            responseData[mappedKey] = answer;
+            console.log(`매핑됨: ${q.key} -> ${mappedKey} =`, answer);
           }
         } else {
-          console.log(`답변 없음: ${q.key}`);
+          console.log(`매핑되지 않음: ${q.key} =`, answer);
         }
       });
 
       const requestBody = {
         session_id: sessionId,
-        responses: responseData
+        data: responseData
       };
 
-      console.log('요청 URL:', `${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/responses`);
+      console.log('요청 URL:', `${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/data`);
       console.log('요청 본문:', JSON.stringify(requestBody, null, 2));
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/responses`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/data`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -200,8 +241,8 @@ class SessionService {
     }
   }
 
-  // 로그인 후 세션을 사용자와 연결
-  async linkSessionToUser(firebaseToken: string): Promise<boolean> {
+  // 로그인 후 세션을 사용자와 연결 (새로운 구조)
+  async linkSessionToUser(firebaseUser: any): Promise<boolean> {
     try {
       const sessionId = await this.getSessionId();
       if (!sessionId) {
@@ -209,18 +250,27 @@ class SessionService {
         return false;
       }
 
-      // Firebase 토큰에서 UID 추출
-      const tokenPayload = JSON.parse(atob(firebaseToken.split('.')[1]));
-      const uid = tokenPayload.uid;
+      // 로컬 스토리지에서 이름 가져오기
+      const userName = await AsyncStorage.getItem('userName');
+      
+      const userProfile = {
+        name: userName || '',
+        email: firebaseUser.email || ''
+      };
+
+      console.log('세션 연결 시도:', {
+        sessionId,
+        userProfile
+      });
 
       const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/link`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${firebaseToken}`,
+          'Authorization': `Bearer ${await firebaseUser.getIdToken()}`
         },
         body: JSON.stringify({
-          uid: uid
+          user_profile: userProfile
         }),
       });
 
@@ -230,6 +280,11 @@ class SessionService {
 
       const result = await response.json();
       console.log('세션 연결 성공:', result);
+      
+      // 연결 성공 후 로컬 스토리지 정리
+      await AsyncStorage.removeItem('userName');
+      console.log('로컬 스토리지에서 이름 삭제 완료');
+      
       return true;
     } catch (error) {
       console.error('세션 연결 오류:', error);
@@ -263,8 +318,8 @@ class SessionService {
         return newSession !== null;
       }
 
-      // 기존 세션이 유효한지 확인
-      const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/responses`, {
+      // 기존 세션이 유효한지 확인 (새로운 엔드포인트)
+      const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/data`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

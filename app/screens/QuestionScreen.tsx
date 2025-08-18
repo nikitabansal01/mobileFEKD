@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform, Pressable, Alert, Keyboard } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { responsiveWidth, responsiveHeight, responsiveFontSize } from "react-native-responsive-dimensions";
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import AuvraCharacter from '@/components/AuvraCharacter';
 import DialogueBubble from '@/components/DialogueBubble';
 import PrimaryButton from '@/components/PrimaryButton';
@@ -9,17 +11,21 @@ import SVG from '@/assets/images/SVG';
 import FixedBottomContainer from '@/components/FixedBottomContainer';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import BackButton from '@/components/BackButton';
-import { useRouter } from 'expo-router';
 import LoadingScreen from '@/app/screens/LoadingScreen';
 import sessionService from '@/services/sessionService';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
+import GradientText from "@/components/GradientText";
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import OptionButtonsContainer from '@/components/customComponent/OptionButtonsContainer';
 import TextInputContainer from '@/components/customComponent/TextInputContainer';
 import ChipOptionContainer from '@/components/customComponent/ChipOptionContainer';
 import NotSureButton from '@/components/customComponent/NotSureButton';
+import OthersOption from '@/components/customComponent/OthersOption';
+import { createInputStyle, createInputTextStyle } from '@/utils/inputStyles';
+import { INPUT_STATES } from '@/constants/InputStates';
+import { getOptionsWithDescriptions, convertStringOptionsToObjects } from '@/constants/QuestionOptions';
 
 interface Question {
     id: number;
@@ -178,6 +184,7 @@ const questionSteps: QuestionStep[] = [
   {
     step: 5,
     dialogue: "Out of these, what is your top concern at the moment?",
+    subtitle: "Choose any one to get started",
     questions: [
       {
         id: 12,
@@ -199,6 +206,7 @@ const questionSteps: QuestionStep[] = [
   {
     step: 6,
     dialogue: "Is there any diagnosed health condition that I should know about?",
+    subtitle: "Choose any one to get started",
     questions: [
       {
         id: 13,
@@ -209,12 +217,12 @@ const questionSteps: QuestionStep[] = [
           "PCOS",
           "PCOD",
           "Endometriosis",
-          "Dysmenorrhea (painful periods)",
-          "Amenorrhea (absence of periods)",
-          "Menorrhagia (prolonged/heavy bleeding)",
-          "Metrorrhagia (irregular bleeding)",
-          "Cushing’s Syndrome (PMS)",
-          "Premenstrual Syndrome (PMS)",
+          "Dysmenorrhea",
+          "Amenorrhea",
+          "Menorrhagia",
+          "Metrorrhagia",
+          "Cushing’s Syndrome",
+          "Premenstrual Syndrome",
           "None of the above",
           "Others (please specify)"
         ],
@@ -222,20 +230,99 @@ const questionSteps: QuestionStep[] = [
       }
     ]
   },
+  // 추가 질문 - 가족력
+  {
+    step: 7,
+    dialogue: "Have any immediate family members been diagnosed with any of these conditions?",
+    subtitle: "Choose all the diagnosis that apply",
+    questions: [
+      {
+        id: 14,
+        question: "",
+        inputType: "multiple-choice",
+        optionsLayout: "wrap",
+        options: [
+          "PCOS",
+          "PCOD",
+          "Endometriosis",
+          "Dysmenorrhea",
+          "Amenorrhea",
+          "Menorrhagia",
+          "Metrorrhagia",
+          "Cushing's Syndrome",
+          "Premenstrual Syndrome",
+          "None of the above",
+          "Others (please specify)"
+        ],
+        key: "familyHistory",
+      }
+    ]
+  },
+  // 추가 질문 - 라이프스타일
+  {
+    step: 8,
+    dialogue: "Tell me more about your lifestyle?",
+    subtitle: "Select one from each category",
+    questions: [
+      {
+        id: 15,
+        question: "💪🏼 Workout Intensity",
+        inputType: "single-choice",
+        optionsLayout: "wrap",
+        options: [
+          "Low",
+          "Moderate", 
+          "High"
+        ],
+        key: "workoutIntensity",
+        isSubheading: true,
+      },
+      {
+        id: 16,
+        question: "😴 Sleep",
+        inputType: "single-choice",
+        optionsLayout: "wrap",
+        options: [
+          "<6 hours",
+          "6-7 hours",
+          "7-8 hours",
+          "8+ hours"
+        ],
+        key: "sleepDuration",
+        isSubheading: true,
+      },
+      {
+        id: 17,
+        question: "😓️ Stress levels",
+        inputType: "single-choice",
+        optionsLayout: "wrap",
+        options: [
+          "Low",
+          "Moderate",
+          "High"
+        ],
+        key: "stressLevel",
+        isSubheading: true,
+      }
+    ]
+  },
 ];
 
 const QuestionScreen = () => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [answers, setAnswers] = useState<{ [key: string]: string | string[] }>({});
+  const [answers, setAnswers] = useState<{ [key: string]: string | string[] | number }>({});
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
   const [sessionCreated, setSessionCreated] = useState(false);
+  const [showAdditionalQuestionsPrompt, setShowAdditionalQuestionsPrompt] = useState(false);
 
-  const router = useRouter();
+  const navigation = useNavigation<StackNavigationProp<any>>();
   const insets = useSafeAreaInsets();
   const othersInputRef = useRef<TextInput>(null);
 
   const totalSteps = questionSteps.length;
+  // KeyboardAwareScrollView 참조 저장
+  const scrollRef = useRef<any>(null);
   const progress = (currentStep + 1) / totalSteps;
 
   // 컴포넌트 마운트 시 세션 생성
@@ -262,12 +349,15 @@ const QuestionScreen = () => {
 
   // 백버튼 핸들러 - 이전 질문 페이지로 이동
   const handleBackPress = () => {
-    if (currentStep > 0) {
+    if (showAdditionalQuestionsPrompt) {
+      // 추가 질문 의사 확인 화면에서 백버튼을 누르면 이전 질문으로 돌아감
+      setShowAdditionalQuestionsPrompt(false);
+    } else if (currentStep > 0) {
       // 이전 단계로 이동 (답변은 유지됨)
       setCurrentStep(currentStep - 1);
     } else {
       // 첫 번째 단계에서 백버튼을 누르면 intro screen으로 이동
-      router.push('/screens/IntroScreen');
+      navigation.navigate('IntroScreen');
     }
   };
 
@@ -290,6 +380,10 @@ const QuestionScreen = () => {
           : [...existingAnswers, normalizedValue];
         return { ...prev, [key]: newAnswers };
       });
+    } else if (type === 'number') {
+      // 나이를 숫자로 저장
+      const numericValue = parseInt(normalizedValue) || 0;
+      setAnswers(prev => ({ ...prev, [key]: numericValue }));
     } else {
       setAnswers(prev => ({ ...prev, [key]: normalizedValue }));
     }
@@ -325,6 +419,47 @@ const QuestionScreen = () => {
     return value && typeof value === 'string' && value.trim().length > 0;
   };
 
+  // 현재 단계의 모든 질문에 답변이 있는지 확인하는 함수
+  const isCurrentStepComplete = () => {
+    const currentQuestions = currentStepData.questions;
+    
+    return currentQuestions.every(q => {
+      const answer = answers[q.key];
+      
+      // 서브헤딩인 경우 답변 불필요
+      if (q.isSubheading) {
+        return true;
+      }
+      
+      // 텍스트 입력의 경우
+      if (q.inputType === 'text') {
+        return answer && typeof answer === 'string' && answer.trim().length > 0;
+      }
+      
+      // 숫자 입력의 경우 (나이)
+      if (q.inputType === 'number') {
+        return answer && typeof answer === 'number' && answer > 0;
+      }
+      
+      // 날짜 입력의 경우 ("I'm not sure" 버튼 처리)
+      if (q.inputType === 'date') {
+        return answer !== undefined && answer !== null && answer !== '';
+      }
+      
+      // 단일 선택의 경우 ("I'm not sure" 버튼 처리)
+      if (q.inputType === 'single-choice') {
+        return answer !== undefined && answer !== null && answer !== '';
+      }
+      
+      // 다중 선택의 경우
+      if (q.inputType === 'multiple-choice') {
+        return Array.isArray(answer) && answer.length > 0;
+      }
+      
+      return false;
+    });
+  };
+
 
 
   // Clear 버튼 핸들러
@@ -333,10 +468,17 @@ const QuestionScreen = () => {
   };
 
   const handleContinue = async () => {
-    if (currentStep < totalSteps - 1) {
+    if (currentStep < 5) {
+      // step 1-5까지는 다음 스텝으로 이동
       setCurrentStep(currentStep + 1);
-    } else {
-      // 마지막 질문일 때 답변 저장
+    } else if (currentStep === 5) {
+      // step 6 완료 후 추가 질문 의사 확인 화면 표시
+      setShowAdditionalQuestionsPrompt(true);
+    } else if (currentStep === 6) {
+      // step 7 완료 후 step 8(라이프스타일)로 이동
+      setCurrentStep(currentStep + 1);
+    } else if (currentStep === 7) {
+      // step 8 완료 후 답변 저장 및 결과 화면으로 이동
       setShowLoading(true);
       
       try {
@@ -361,24 +503,77 @@ const QuestionScreen = () => {
           
           setTimeout(() => {
             setShowLoading(false);
-            router.push('/screens/ResultScreen');
+            navigation.navigate('ResultScreen');
           }, loadingTime);
         } else {
           console.error('답변 저장 실패');
           // 실패해도 결과 화면으로 이동 (최소 1초 로딩)
           setTimeout(() => {
             setShowLoading(false);
-            router.push('/screens/ResultScreen');
+            navigation.navigate('ResultScreen');
           }, 1000);
         }
       } catch (error) {
         console.error('답변 저장 중 오류:', error);
         // 오류 발생해도 결과 화면으로 이동 (최소 1초 로딩)
-      setTimeout(() => {
-        setShowLoading(false);
-        router.push('/screens/ResultScreen');
+        setTimeout(() => {
+          setShowLoading(false);
+          navigation.navigate('ResultScreen');
         }, 1000);
       }
+    }
+  };
+
+  const handleAdditionalQuestionsContinue = async () => {
+    // 추가 질문 계속하기 - 추가 질문 화면으로 이동
+    setShowAdditionalQuestionsPrompt(false);
+    // 추가 질문은 step 7 (가족력 질문)이므로 step 7로 설정
+    setCurrentStep(6); // currentStep 6 = step 7 (가족력 질문)
+  };
+
+  const handleAdditionalQuestionsSkip = async () => {
+    // 추가 질문 건너뛰기 - 바로 답변 저장 후 결과 화면으로 이동
+    setShowLoading(true);
+    
+    try {
+      // 모든 질문을 하나의 배열로 수집
+      const allQuestions = questionSteps.flatMap(step => step.questions);
+      
+      // 답변 저장 시작 시간 기록
+      const startTime = Date.now();
+      
+      // 답변 저장
+      const saveSuccess = await sessionService.saveAnswers(answers, allQuestions);
+      
+      // 저장 완료 시간 계산
+      const saveTime = Date.now() - startTime;
+      
+      if (saveSuccess) {
+        console.log('답변 저장 성공');
+        // 최소 1초, 최대 3초 로딩 시간 설정
+        const minLoadingTime = 1000;
+        const maxLoadingTime = 3000;
+        const loadingTime = Math.max(minLoadingTime, Math.min(saveTime + 500, maxLoadingTime));
+        
+        setTimeout(() => {
+          setShowLoading(false);
+          navigation.navigate('ResultScreen');
+        }, loadingTime);
+      } else {
+        console.error('답변 저장 실패');
+        // 실패해도 결과 화면으로 이동 (최소 1초 로딩)
+        setTimeout(() => {
+          setShowLoading(false);
+          navigation.navigate('ResultScreen');
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('답변 저장 중 오류:', error);
+      // 오류 발생해도 결과 화면으로 이동 (최소 1초 로딩)
+      setTimeout(() => {
+        setShowLoading(false);
+        navigation.navigate('ResultScreen');
+      }, 1000);
     }
   };
 
@@ -388,6 +583,53 @@ const QuestionScreen = () => {
 
   if (showLoading) {
     return <LoadingScreen />;
+  }
+
+  // 추가 질문 의사 확인 화면
+  if (showAdditionalQuestionsPrompt) {
+    return (
+      <SafeAreaView edges={['top']} style={styles.container}>
+        {/* 뒤로가기 버튼 */}
+        <View style={styles.backButtonContainer}>
+          <BackButton onPress={() => setShowAdditionalQuestionsPrompt(false)} />
+        </View>
+
+        {/* 메인 컨텐츠 */}
+        <View style={styles.content}>
+          {/* Auvra 캐릭터 */}
+          <View style={styles.characterContainer}>
+            <AuvraCharacter size={responsiveWidth(20)} />
+          </View>
+          
+          {/* 텍스트 컨테이너 */}
+          <View style={styles.textContainer}>
+            <View style={styles.maskedViewContainer}>
+              <GradientText
+                text="Great! I have two more questions about your lifestyle and family medical history."
+                textStyle={styles.descriptionText}
+                containerStyle={styles.additionalQuestionsMaskedView}
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* 하단 버튼들 */}
+        <FixedBottomContainer>
+          <View style={styles.additionalQuestionsButtonsContainer}>
+            <PrimaryButton
+              title="Continue"
+              onPress={handleAdditionalQuestionsContinue}
+            />
+            <TouchableOpacity
+              style={styles.skipButton}
+              onPress={handleAdditionalQuestionsSkip}
+            >
+              <Text style={styles.skipButtonText}>Skip for now</Text>
+            </TouchableOpacity>
+          </View>
+        </FixedBottomContainer>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -402,7 +644,7 @@ const QuestionScreen = () => {
         </View>
 
         {/* 메인 컨텐츠 - ScrollView로 감싸기 */}
-        <KeyboardAwareScrollView
+          <KeyboardAwareScrollView
           style={{ flex: 1 }}
           contentContainerStyle={[
             styles.mainContent,
@@ -411,37 +653,30 @@ const QuestionScreen = () => {
           keyboardShouldPersistTaps="handled"
           enableOnAndroid={true}
           enableAutomaticScroll={true}
-          extraScrollHeight={0}
-          extraHeight={0}
+            extraScrollHeight={responsiveHeight(12)}
+            extraHeight={responsiveHeight(4)}
           keyboardDismissMode="interactive"
           showsVerticalScrollIndicator={false}
           onScroll={(event) => {
             console.log('[KeyboardAwareScrollView] 스크롤 발생:', event.nativeEvent.contentOffset.y);
           }}
+            keyboardOpeningTime={220}
+            innerRef={(ref: any) => {
+              scrollRef.current = ref;
+            }}
         >
           <View style={styles.mainContent}>
           {/* 캐릭터와 질문 텍스트 */}
           <View style={styles.characterAndQuestion}>
             <View style={styles.characterContainer}>
-              <AuvraCharacter size={responsiveWidth(25)} />
+              <AuvraCharacter size={responsiveWidth(20)} />
             </View>
             <View style={styles.questionTextContainer}>
-              <MaskedView
-                maskElement={
-                  <Text style={styles.questionText}>
-                    {currentStepData.dialogue}
-                  </Text>
-                }
-                style={styles.maskedView}
-              >
-                <LinearGradient
-                  colors={['#A29AEA', '#C17EC9', '#D482B9', '#E98BAC', '#FDC6D1']}
-                  locations={[0, 0.32, 0.5, 0.73, 1]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.gradientText}
-                />
-              </MaskedView>
+              <GradientText
+                text={currentStepData.dialogue}
+                textStyle={styles.questionText}
+                containerStyle={styles.maskedView}
+              />
               {currentStepData.subtitle && (
                 <Text style={styles.subtitleText}>
                   {currentStepData.subtitle}
@@ -481,109 +716,189 @@ const QuestionScreen = () => {
                 ) : q.inputType === 'date' ? (
                   <TouchableOpacity
                     style={[
-                      styles.textInput, 
-                      answers[q.key] && styles.optionButtonSelected,
+                      createInputStyle(answers[q.key] ? 'selected' : 'default'),
                       {
                         width: '100%',
                         alignSelf: 'stretch',
+                        height: responsiveHeight(7), // DatePicker 높이 증가
+                        paddingVertical: responsiveHeight(2), // 패딩도 증가
+                        justifyContent: 'center', // 세로 중앙정렬
+                        alignItems: 'flex-start', // 가로는 왼쪽 정렬
                       }
                     ]}
                     onPress={() => setShowDatePicker(true)}
                   >
-                    <Text style={answers[q.key] ? styles.datePickerText : styles.datePickerPlaceholder}>
+                    <Text style={createInputTextStyle(answers[q.key] ? 'selected' : 'default')}>
                       {answers[q.key] as string || q.placeholder}
                     </Text>
                   </TouchableOpacity>
                 ) : q.key === 'cycleLength' || q.optionsLayout === 'wrap' ? (
+                  <>
                   <ChipOptionContainer
-                    options={q.options?.filter(option => 
-                      !(option === 'Others (please specify)' && (q.key === 'diagnosedCondition' || q.key === 'otherConcerns'))
-                    ).map(option => ({
-                      id: option,
-                      text: option,
-                      value: option,
-                    })) || []}
+                    options={(() => {
+                      // 설명이 있는 옵션들
+                      const optionsWithDescriptions = getOptionsWithDescriptions(q.key);
+                      if (optionsWithDescriptions.length > 0) {
+                        return optionsWithDescriptions.filter((option: any) => 
+                          !(option.value === 'Others (please specify)' && (q.key === 'otherConcerns' || q.key === 'diagnosedCondition' || q.key === 'familyHistory'))
+                        );
+                      }
+                      
+                      // 기존 문자열 배열 옵션들
+                      return q.options?.filter(option => 
+                        !(option === 'Others (please specify)' && (q.key === 'otherConcerns' || q.key === 'diagnosedCondition' || q.key === 'familyHistory'))
+                      ) || [];
+                    })()}
                     selectedValue={q.inputType === 'single-choice' ? answers[q.key] as string : answers[q.key] as string[]}
                     onSelect={(value) => handleAnswer(q.key, value, q.inputType)}
                     multiple={q.inputType === 'multiple-choice'}
-                  />
-                ) : (
+                    showOthersOption={
+                      q.key === 'otherConcerns' ||
+                      (q.key === 'diagnosedCondition' && q.options?.includes('Others (please specify)')) ||
+                      (q.key === 'familyHistory' && q.options?.includes('Others (please specify)'))
+                    }
+                    othersOptionProps={
+                      q.key === 'otherConcerns' ? {
+                        questionKey: q.key,
+                        isSelected: isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice'),
+                        onSelect: () => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice'),
+                        placeholder: "Please specify your concern",
+                        value: answers.otherConcernsText as string || '',
+                         onChangeText: (text) => handleAnswer('otherConcernsText', text, 'text'),
+                         onFocus: () => {
+                           // Chip Others 포커스 시 보조 로그
+                           console.log('[otherConcernsText] Others (chip) TextInput 포커스');
+                         },
+                          scrollToInput: (node) => {
+                            try {
+                              // Others는 하단 고정 버튼 때문에 여유를 더 줌 (일반보다 크게)
+                              scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
+                            } catch {}
+                          },
+                      } : q.key === 'diagnosedCondition' ? {
+                        questionKey: q.key,
+                        isSelected: isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice'),
+                        onSelect: () => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice'),
+                        placeholder: "Please specify your condition",
+                        value: answers.diagnosedConditionText as string || '',
+                         onChangeText: (text) => handleAnswer('diagnosedConditionText', text, 'text'),
+                         onFocus: () => {
+                           console.log('[diagnosedConditionText] Others (chip) TextInput 포커스');
+                         },
+                          scrollToInput: (node) => {
+                            try {
+                              scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
+                            } catch {}
+                          },
+                      } : q.key === 'familyHistory' ? {
+                        questionKey: q.key,
+                        isSelected: isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice'),
+                        onSelect: () => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice'),
+                        placeholder: "Please specify the condition",
+                        value: answers.familyHistoryText as string || '',
+                         onChangeText: (text) => handleAnswer('familyHistoryText', text, 'text'),
+                         onFocus: () => {
+                           console.log('[familyHistoryText] Others (chip) TextInput 포커스');
+                         },
+                          scrollToInput: (node) => {
+                            try {
+                              scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
+                            } catch {}
+                          },
+                      } : undefined
+                                         }
+                    />
+                  </>
+                  ) : (
                   <>
                     <OptionButtonsContainer
-                      options={q.options?.map(option => ({
-                        id: option,
-                        text: option,
-                        value: option,
-                      })) || []}
-                      selectedValue={q.inputType === 'single-choice' ? answers[q.key] as string : answers[q.key] as string[]}
-                      onSelect={(value) => {
-                        if (value === 'Others (please specify)') {
-                          handleOthersSelect(q.key, value, q.inputType);
-                        } else {
-                          handleAnswer(q.key, value, q.inputType);
+                      options={(() => {
+                        // 설명이 있는 옵션들
+                        const optionsWithDescriptions = getOptionsWithDescriptions(q.key);
+                        if (optionsWithDescriptions.length > 0) {
+                          return optionsWithDescriptions.filter((option: any) => 
+                            !(option.value === 'Others (please specify)' && (q.key === 'diagnosedCondition' || q.key === 'otherConcerns' || q.key === 'familyHistory'))
+                          );
                         }
-                      }}
+                        
+                        // 기존 문자열 배열 옵션들
+                        return q.options?.filter(option => 
+                          !(option === 'Others (please specify)' && (q.key === 'diagnosedCondition' || q.key === 'otherConcerns' || q.key === 'familyHistory'))
+                        ) || [];
+                      })()}
+                      selectedValue={q.inputType === 'single-choice' ? answers[q.key] as string : answers[q.key] as string[]}
+                      onSelect={(value) => handleAnswer(q.key, value, q.inputType)}
                       layout={q.optionsLayout || 'default'}
                       multiple={q.inputType === 'multiple-choice'}
                     />
-                    {/* Others 입력창을 항상 렌더링하되 조건부로 숨김 처리 */}
-                    {q.key === 'otherConcerns' && (
-                      <View style={{ 
-                        height: isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice') ? 'auto' : 0,
-                        overflow: 'hidden',
-                        opacity: isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice') ? 1 : 0,
-                        alignSelf: 'stretch', // 전체 너비 사용
-                        width: '100%', // 전체 너비 사용
-                        marginBottom: responsiveHeight(25), // 그라디언트 영역을 위한 추가 여백
-                      }}>
-                        <TextInputContainer
-                          placeholder="Please specify your concern"
-                          value={answers.otherConcernsText as string || ''}
-                          onChangeText={(text) => handleAnswer('otherConcernsText', text, 'text')}
-                          containerStyle={{
-                            width: '100%',
-                            alignSelf: 'stretch',
-                          }}
-                          onFocus={() => {
-                            console.log('[otherConcernsText] Others TextInput 포커스 - 키보드 스크롤 시작');
-                            console.log('[otherConcernsText] extraScrollHeight: ' + responsiveHeight(15) + ', extraHeight: ' + responsiveHeight(20));
-                            console.log('[otherConcernsText] 추가 여백: ' + responsiveHeight(25));
-                          }}
-                        />
-                      </View>
+                    {/* Others 옵션들 - 기본 모드로 렌더링 */}
+                     {q.key === 'otherConcerns' && (
+                      <OthersOption
+                        questionKey={q.key}
+                        isSelected={isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice')}
+                        onSelect={() => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice')}
+                        placeholder="Please specify your concern"
+                        value={answers.otherConcernsText as string || ''}
+                        onChangeText={(text) => handleAnswer('otherConcernsText', text, 'text')}
+                        onFocus={() => {
+                          console.log('[otherConcernsText] Others TextInput 포커스 - 키보드 스크롤 시작');
+                          console.log('[otherConcernsText] extraScrollHeight: ' + responsiveHeight(15) + ', extraHeight: ' + responsiveHeight(20));
+                          console.log('[otherConcernsText] 추가 여백: ' + responsiveHeight(25));
+                        }}
+                        containerStyle={{
+                          marginBottom: 0, // 여백 제거
+                        }}
+                         scrollToInput={(node) => {
+                           try {
+                             scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
+                           } catch {}
+                         }}
+                      />
                     )}
-                  </>
-                )}
-                
-                {/* Diagnosed Condition Others 텍스트 입력 */}
-                {q.key === 'diagnosedCondition' && q.options?.includes('Others (please specify)') && (
-                  <View style={{ gap: 10 }}>
-                    <TouchableOpacity
-                      style={[styles.optionButton, isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice') && styles.optionButtonSelected]}
-                      onPress={() => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice')}
-                    >
-                      <Text style={[styles.optionText, isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice') && styles.optionTextSelected]}>
-                        Others (please specify)
-                      </Text>
-                    </TouchableOpacity>
-                    
-                    {isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice') && (
-                      <TextInputContainer
+                     {q.key === 'diagnosedCondition' && q.options?.includes('Others (please specify)') && (
+                      <OthersOption
+                        questionKey={q.key}
+                        isSelected={isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice')}
+                        onSelect={() => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice')}
                         placeholder="Please specify your condition"
                         value={answers.diagnosedConditionText as string || ''}
                         onChangeText={(text) => handleAnswer('diagnosedConditionText', text, 'text')}
-                        containerStyle={{
-                          width: '100%',
-                          alignSelf: 'stretch',
+                        onFocus={() => {
+                          console.log('[diagnosedConditionText] Others TextInput 포커스 - 키보드 스크롤 시작');
                         }}
+                        expandedMode={true}
+                          scrollToInput={(node) => {
+                            try {
+                              scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
+                            } catch {}
+                          }}
                       />
                     )}
-                  </View>
+                     {q.key === 'familyHistory' && q.options?.includes('Others (please specify)') && (
+                      <OthersOption
+                        questionKey={q.key}
+                        isSelected={isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice')}
+                        onSelect={() => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice')}
+                        placeholder="Please specify the condition"
+                        value={answers.familyHistoryText as string || ''}
+                        onChangeText={(text) => handleAnswer('familyHistoryText', text, 'text')}
+                        onFocus={() => {
+                          console.log('[familyHistoryText] Others TextInput 포커스 - 키보드 스크롤 시작');
+                        }}
+                        expandedMode={true}
+                          scrollToInput={(node) => {
+                            try {
+                              scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
+                            } catch {}
+                          }}
+                      />
+                    )}
+                  </>
                 )}
                 {q.notSureText && (
                   <NotSureButton
                     text={q.notSureText}
-                    onPress={() => handleAnswer(q.key, q.notSureText || '', 'single-choice')}
+                    onPress={() => handleAnswer(q.key, q.notSureText || '', q.inputType)}
                   />
                 )}
               </View>
@@ -595,11 +910,11 @@ const QuestionScreen = () => {
                  {/* 하단 그라디언트 배경과 버튼 */}
 
        </View>
-       <FixedBottomContainer> 
+       <FixedBottomContainer avoidKeyboard={false}> 
          <PrimaryButton
            title="Continue"
            onPress={handleContinue}
-           style={styles.continueButton}
+           disabled={!isCurrentStepComplete()}
          />
        </FixedBottomContainer>
       {showDatePicker && (
@@ -628,7 +943,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: responsiveWidth(5),
         paddingVertical: responsiveHeight(2),
         height: responsiveHeight(9),
-        gap: responsiveWidth(3),
     },
     progressBarBackground: {
         flex: 1,
@@ -644,7 +958,7 @@ const styles = StyleSheet.create({
 
     mainContent: {
         paddingHorizontal: responsiveWidth(5),
-        paddingTop: responsiveHeight(3),
+        paddingTop: responsiveHeight(2),
         paddingBottom: responsiveHeight(20), // 그라디언트 영역을 위한 충분한 공간
         alignItems: 'center',
         flexGrow: 1, // 콘텐츠가 적을 때도 전체 높이 사용
@@ -668,6 +982,13 @@ const styles = StyleSheet.create({
     maskedView: {
         width: '100%',
         height: responsiveHeight(6),
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    // 추가 질문 화면용 maskedView 스타일
+    additionalQuestionsMaskedView: {
+        width: responsiveWidth(80),
+        height: responsiveHeight(8),
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -705,80 +1026,19 @@ const styles = StyleSheet.create({
     lineHeight: responsiveHeight(1.7),
     textAlign: 'center',
   },
-    textInput: {
-        borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.3)',
-        borderRadius: 10,
-        width: responsiveWidth(80),
-        height: 60,
-        paddingHorizontal: 20,
-        fontFamily: 'Inter400',
-        fontSize: responsiveFontSize(1.7),
-        justifyContent: 'center',
-        backgroundColor: '#ffffff',
-        textAlign: 'left',
-    },
-  datePickerText: {
-    fontFamily: 'Inter500',
-    fontSize: responsiveFontSize(1.5),
-    color: '#000000',
-    textAlign: 'left',
-  },
-  datePickerPlaceholder: {
-    fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.2),
-    color: '#b3b3b3',
-    textAlign: 'left',
-  },
+
       optionsContainer: {
         gap: responsiveHeight(2.25),
         alignSelf: 'stretch',
     },
-  optionButton: {
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 10,
-    height: responsiveHeight(4.5),
-    paddingHorizontal: responsiveWidth(5),
-    justifyContent: 'center',
-    backgroundColor: '#ffffff',
-  },
-  chipOptionButton: {
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    justifyContent: 'center',
-    backgroundColor: '#ffffff',
-  },
-  optionButtonSelected: {
-    backgroundColor: '#F5F5F5',
-    borderColor: '#c17ec9',
-    borderWidth: 1.5,
-  },
-  optionText: {
-    fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.2),
-    color: '#000000',
-  },
-  chipOptionText: {
-    fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.5),
-    color: '#000000',
-  },
-  optionTextSelected: {
-    color: '#000000',
-  },
+
 
   wrappedOptionsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
     },
-    continueButton: {
-    width: responsiveWidth(88),
-  },
+
 
   gradientContainer: {
     position: 'absolute',
@@ -858,10 +1118,10 @@ const styles = StyleSheet.create({
   },
   subtitleText: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.6),
-    color: '#6f6f6f',
+    fontSize: responsiveFontSize(1.6), // 기존 크기로 복원
+    color: '#6f6f6f', // Figma: #6f6f6f
     textAlign: 'center',
-    marginTop: responsiveHeight(1),
+    lineHeight: responsiveFontSize(1.6) * 1.25, // line-height 1.25
   },
   categoryContainer: {
     flexDirection: 'row',
@@ -887,6 +1147,47 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'flex-start',
     marginVertical: responsiveHeight(1),
+  },
+  additionalQuestionsButtonsContainer: {
+    gap: responsiveHeight(2),
+    alignItems: 'center',
+    width: '100%',
+  },
+  skipButton: {
+    paddingVertical: responsiveHeight(1),
+    paddingHorizontal: responsiveWidth(10),
+  },
+  skipButtonText: {
+    fontFamily: 'Inter500',
+    fontSize: responsiveFontSize(1.8),
+    color: '#6f6f6f',
+    textAlign: 'center',
+  },
+  // IntroScreen 스타일과 동일한 스타일들
+  backButtonContainer: {
+    position: 'absolute',
+    top: responsiveHeight(6),
+    left: responsiveWidth(4),
+    zIndex: 30,
+  },
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: responsiveWidth(10),
+  },
+  textContainer: {
+    alignItems: 'center',
+  },
+  maskedViewContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  descriptionText: {
+    fontFamily: 'NotoSerif600',
+    fontSize: responsiveFontSize(2.0),
+    textAlign: 'center',
+    lineHeight: responsiveHeight(2.4),
   },
 });
 

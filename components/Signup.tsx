@@ -8,7 +8,8 @@ import {
 import React, { useRef, useState } from "react";
 import GoogleIconSvg from "@/assets/images/SVG/OnboardingSVG/GoogleIconSvg";
 import AppleIconSvg from "@/assets/images/SVG/OnboardingSVG/AppleIconSvg";
-import { useRouter } from "expo-router";
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import {
   responsiveFontSize,
   responsiveHeight,
@@ -36,7 +37,7 @@ const Signup = () => {
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<any>(null);
-  const router = useRouter();
+  const navigation = useNavigation<StackNavigationProp<any>>();
 
   const [googleRequest, googleResponse, googlePromptAsync] = Google.useIdTokenAuthRequest({
     clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '', // 또는 app.json의 extra에서 불러오기

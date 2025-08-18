@@ -2,27 +2,33 @@ import Images from "@/assets/images";
 import LoginBottomSheet from "@/components/LoginBottomSheet";
 import { responsiveFontSize2 } from "@/globalFontSizeNew";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Image, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { responsiveWidth, responsiveHeight } from "react-native-responsive-dimensions";
+import { responsiveWidth, responsiveHeight, responsiveFontSize } from "react-native-responsive-dimensions";
+import { LinearGradient } from 'expo-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
+import OptionButtonsContainer from "@/components/customComponent/OptionButtonsContainer";
+import FixedBottomContainer from "@/components/FixedBottomContainer";
+import PrimaryButton from "@/components/PrimaryButton";
+import GradientText from "@/components/GradientText";
 
 const firstTitle = "🔍 Researching 25000\nresearch papers...";
 const secondTitle = "🎁 Personalizing based\non your needs";
 const subText = "Crafting your unique action plan,\npersonalized to the whole you";
 
 const questionTitle = "Tell us what feels easiest\nto do better this week?";
-const questionSub = "While we craft your action plan...";
+const questionSub = "Choose one or more options";
 const options = [
-  { key: "eat", label: "🥗 Eat" },
-  { key: "move", label: "🚶‍♀️Move" },
-  { key: "pause", label: "🧘 Pause" },
+  { id: "1", text: "🥗 Eat", value: "eat" },
+  { id: "2", text: "🚶‍♀️Move", value: "move" },
+  { id: "3", text: "🧘 Pause", value: "pause" },
 ];
 
-const finalTitle = "Perfect!\nYour personalized\naction plan is ready!";
+const finalTitle = "🎉 Perfect!\nYour personalized\naction plan is ready!";
 
 const ResearchingScreen = () => {
   const [step, setStep] = useState(0); // 0: 첫 텍스트, 1: 두번째 텍스트, 2: 질문
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
@@ -38,9 +44,18 @@ const ResearchingScreen = () => {
     console.log('showLogin:', showLogin);
   }, [showLogin]);
 
-  const handleSelect = (key: string) => {
-    setSelected(prev => (prev === key ? null : key));
-    setStep(3); // 무조건 Perfect!로 전환
+  const handleOptionSelect = (key: string) => {
+    setSelectedOptions(prev => {
+      if (prev.includes(key)) {
+        return prev.filter(option => option !== key);
+      } else {
+        return [...prev, key];
+      }
+    });
+  };
+
+  const handleContinue = () => {
+    setStep(3); // Perfect!로 전환
     setTimeout(() => setShowLogin(true), 1000); // 1초 후 바텀시트
   };
 
@@ -100,18 +115,24 @@ const ResearchingScreen = () => {
       <View style={{ flex: 0.5, justifyContent: "center", alignItems: "center", width: '100%' }}>
         {step === 0 && (
           <>
-            <Text
-              style={{
-                color: "#bb4471",
-                fontSize: responsiveFontSize2(3.0),
-                fontFamily: "Poppins600",
-                fontWeight: "600",
-                textAlign: "center",
-                marginBottom: 8,
-              }}
-            >
-              {firstTitle}
-            </Text>
+            <View style={{ marginBottom: 8 }}>
+              <GradientText
+                text={firstTitle}
+                textStyle={{
+                  fontFamily: 'Poppins600',
+                  fontSize: responsiveFontSize2(3.0),
+                  fontWeight: "600",
+                  textAlign: 'center',
+                  lineHeight: responsiveHeight(4),
+                }}
+                containerStyle={{
+                  width: responsiveWidth(85),
+                  height: responsiveHeight(20),
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              />
+            </View>
             <Text
               style={{
                 color: "#000",
@@ -128,18 +149,24 @@ const ResearchingScreen = () => {
         )}
         {step === 1 && (
           <>
-            <Text
-              style={{
-                color: "#bb4471",
-                fontSize: responsiveFontSize2(3.0),
-                fontFamily: "Poppins600",
-                fontWeight: "600",
-                textAlign: "center",
-                marginBottom: 8,
-              }}
-            >
-              {secondTitle}
-            </Text>
+            <View style={{ marginBottom: 8 }}>
+              <GradientText
+                text={secondTitle}
+                textStyle={{
+                  fontFamily: 'Poppins600',
+                  fontSize: responsiveFontSize2(3.0),
+                  fontWeight: "600",
+                  textAlign: 'center',
+                  lineHeight: responsiveHeight(4),
+                }}
+                containerStyle={{
+                  width: responsiveWidth(85),
+                  height: responsiveHeight(8),
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              />
+            </View>
             <Text
               style={{
                 color: "#000",
@@ -155,78 +182,68 @@ const ResearchingScreen = () => {
           </>
         )}
         {step === 2 && (
-          <>
+          <View style={{ 
+            width: '100%', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            paddingHorizontal: responsiveWidth(5)
+          }}>
+            <View style={{ marginBottom: responsiveHeight(2) }}>
+              <GradientText
+                text={questionTitle}
+                textStyle={{
+                  fontFamily: 'NotoSerif600',
+                  fontSize: responsiveFontSize(2.4),
+                  textAlign: 'center',
+                  lineHeight: responsiveHeight(3),
+                }}
+                containerStyle={{
+                  width: responsiveWidth(85),
+                  height: responsiveHeight(6),
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              />
+            </View>
+            
             <Text
               style={{
-                color: "#000",
-                fontSize: responsiveFontSize2(1.7),
-                fontFamily: "Poppins400",
+                color: "#6f6f6f",
+                fontSize: responsiveFontSize(1.6), // 기존 크기로 복원
+                fontFamily: "Inter400",
                 textAlign: "center",
-                marginBottom: 8,
+                lineHeight: responsiveFontSize(1.6) * 1.25, // line-height 1.25
+                marginBottom: responsiveHeight(2),
               }}
             >
               {questionSub}
             </Text>
-            <Text
-              style={{
-                color: "#bb4471",
-                fontSize: responsiveFontSize2(2.3),
-                fontFamily: "Poppins600",
-                fontWeight: "600",
-                textAlign: "center",
-                marginBottom: 16,
-              }}
-            >
-              {questionTitle}
-            </Text>
-            <View style={{ width: '80%', gap: 10, zIndex: 10, position: 'relative', alignSelf: 'center' }}>
-              {options.map(opt => (
-                <TouchableOpacity
-                  key={opt.key}
-                  onPress={() => handleSelect(opt.key)}
-                  style={{
-                    borderWidth: 1.5,
-                    borderColor: selected === opt.key ? '#bb4471' : 'rgba(0,0,0,0.3)',
-                    borderRadius: 12,
-                    paddingVertical: 8, // 더 작게
-                    paddingHorizontal: 6, // 더 작게
-                    marginBottom: 6,
-                    backgroundColor: selected === opt.key ? '#FDF1F6' : '#fff',
-                    alignItems: "center",
-                    width: '100%',
-                    alignSelf: "center",
-                    zIndex: 10, // 각 버튼에도 zIndex
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: '#000',
-                      fontFamily: 'Poppins400',
-                      fontSize: responsiveFontSize2(1.6),
-                      textAlign: "center",
-                    }}
-                  >
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </>
+            <OptionButtonsContainer
+              options={options}
+              selectedValue={selectedOptions}
+              onSelect={handleOptionSelect}
+              multiple={true}
+              layout="default"
+              buttonWidth={responsiveWidth(80)} // 버튼 가로 길이 설정
+              buttonAlignment={{ justifyContent: 'center', alignItems: 'center' }}
+              containerAlignment="center"
+            />
+          </View>
         )}
         {step === 3 && (
           <View style={{ width: '100%', alignItems: 'center', justifyContent: 'center', marginTop: 24 }}>
-            <Text
-              style={{
-                color: "#bb4471",
-                fontSize: responsiveFontSize2(3.0),
-                fontFamily: "Poppins600",
-                fontWeight: "600",
-                textAlign: "center",
-                marginBottom: 8,
-              }}
-            >
-              {finalTitle}
-            </Text>
+            <View style={{ marginBottom: 8, width: responsiveWidth(85), height: responsiveHeight(15) }}>
+              <GradientText
+                text={finalTitle}
+                textStyle={{
+                  fontFamily: 'Poppins600',
+                  fontSize: responsiveFontSize2(3.0),
+                  fontWeight: "600",
+                  textAlign: 'center',
+                  lineHeight: responsiveHeight(4),
+                }}
+              />
+            </View>
           </View>
         )}
       </View>
@@ -280,6 +297,18 @@ const ResearchingScreen = () => {
           />
         </View>
       </View>
+      
+      {/* 하단 버튼 - step 2에서만 표시 */}
+      {step === 2 && (
+        <FixedBottomContainer>
+          <PrimaryButton
+            title="Continue"
+            onPress={handleContinue}
+            disabled={selectedOptions.length === 0}
+          />
+        </FixedBottomContainer>
+      )}
+      
       <LoginBottomSheet visible={showLogin} onClose={() => setShowLogin(false)} />
     </SafeAreaView>
   );
