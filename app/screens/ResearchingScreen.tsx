@@ -11,6 +11,7 @@ import OptionButtonsContainer from "@/components/customComponent/OptionButtonsCo
 import FixedBottomContainer from "@/components/FixedBottomContainer";
 import PrimaryButton from "@/components/PrimaryButton";
 import GradientText from "@/components/GradientText";
+import sessionService from "@/services/sessionService";
 
 const firstTitle = "🔍 Researching 25000\nresearch papers...";
 const secondTitle = "🎁 Personalizing based\non your needs";
@@ -30,6 +31,85 @@ const ResearchingScreen = () => {
   const [step, setStep] = useState(0); // 0: 첫 텍스트, 1: 두번째 텍스트, 2: 질문
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [showLogin, setShowLogin] = useState(false);
+  const [recommendationStatus, setRecommendationStatus] = useState<string>('pending');
+  const [statusCheckInterval, setStatusCheckInterval] = useState<NodeJS.Timeout | null>(null);
+
+  // 추천 생성 시작
+  useEffect(() => {
+    const startRecommendation = async () => {
+      try {
+        console.log('🚀 추천 생성 시작 시도...');
+        const success = await sessionService.startRecommendationGeneration();
+        if (success) {
+          console.log('✅ 추천 생성 시작 성공');
+          setRecommendationStatus('in_progress');
+        } else {
+          console.error('❌ 추천 생성 시작 실패');
+          setRecommendationStatus('error');
+        }
+      } catch (error) {
+        console.error('❌ 추천 생성 시작 중 오류:', error);
+        setRecommendationStatus('error');
+      }
+    };
+
+    // 컴포넌트 마운트 시 추천 생성 시작
+    startRecommendation();
+  }, []);
+
+  // 추천 생성 상태 추적
+  useEffect(() => {
+    if (recommendationStatus === 'in_progress') {
+      const interval = setInterval(async () => {
+        try {
+          const status = await sessionService.getRecommendationStatus();
+          if (status) {
+            console.log('추천 생성 상태 업데이트:', status.status);
+            setRecommendationStatus(status.status);
+            
+            // 완료되면 상태 확인 중단
+            if (status.status === 'completed') {
+              console.log('🎉 추천 생성 완료!');
+              console.log('추천 생성 결과 데이터:', status.data);
+              if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+              }
+            } else if (status.status === 'error') {
+              console.log('❌ 추천 생성 중 오류 발생');
+              if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+              }
+            } else if (status.status === 'pending') {
+              console.log('⏳ 추천 생성 대기 중...');
+            } else {
+              console.log('🔄 추천 생성 진행 중...');
+            }
+          } else {
+            console.log('⚠️ 추천 생성 상태 확인 실패 - 응답이 null');
+          }
+        } catch (error) {
+          console.error('❌ 추천 생성 상태 확인 중 오류:', error);
+        }
+      }, 2000); // 2초마다 상태 확인
+
+      setStatusCheckInterval(interval);
+
+      return () => {
+        if (interval) {
+          clearInterval(interval);
+        }
+      };
+    }
+  }, [recommendationStatus]);
+
+  // 컴포넌트 언마운트 시 인터벌 정리
+  useEffect(() => {
+    return () => {
+      if (statusCheckInterval) {
+        clearInterval(statusCheckInterval);
+      }
+    };
+  }, [statusCheckInterval]);
 
   useEffect(() => {
     if (step < 2) {
@@ -43,6 +123,11 @@ const ResearchingScreen = () => {
   useEffect(() => {
     console.log('showLogin:', showLogin);
   }, [showLogin]);
+
+  // 추천 생성 상태 로깅
+  useEffect(() => {
+    console.log('현재 추천 생성 상태:', recommendationStatus);
+  }, [recommendationStatus]);
 
   const handleOptionSelect = (key: string) => {
     setSelectedOptions(prev => {
@@ -127,7 +212,7 @@ const ResearchingScreen = () => {
                 }}
                 containerStyle={{
                   width: responsiveWidth(85),
-                  height: responsiveHeight(20),
+                  height: responsiveHeight(8),
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}

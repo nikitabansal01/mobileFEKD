@@ -19,6 +19,8 @@ import ResultScreen from './app/screens/ResultScreen';
 import ResearchingScreen from './app/screens/ResearchingScreen';
 import LoadingScreen from './app/screens/LoadingScreen';
 import ResultLoadingScreen from './app/screens/ResultLoadingScreen';
+import LoginScreen from './app/screens/LoginScreen';
+import HomeScreen from './app/screens/HomeScreen';
 
 // Context - FirstLog를 직접 정의
 interface FirstLogContextType {
@@ -61,13 +63,13 @@ export default function App() {
         <FirstLog.Provider value={{ firstTimeLog: true, setFirstTimeLog: () => {} }}>
           <StatusBar barStyle={"dark-content"} backgroundColor={"#FFF"} />
           <NavigationContainer>
-                         <Stack.Navigator 
-               initialRouteName="OnboardingScreen"
-               screenOptions={{ 
-                 headerShown: false,
-                 gestureEnabled: true,
-               }}
-             >
+            <Stack.Navigator 
+              initialRouteName="OnboardingScreen"
+              screenOptions={{ 
+                headerShown: false,
+                gestureEnabled: true,
+              }}
+            >
               <Stack.Screen name="OnboardingScreen" component={OnboardingScreen} />
               <Stack.Screen name="IntroScreen" component={IntroScreen} />
               <Stack.Screen name="QuestionScreen" component={QuestionScreen} />
@@ -75,6 +77,8 @@ export default function App() {
               <Stack.Screen name="ResearchingScreen" component={ResearchingScreen} />
               <Stack.Screen name="LoadingScreen" component={LoadingScreen} />
               <Stack.Screen name="ResultLoadingScreen" component={ResultLoadingScreen} />
+              <Stack.Screen name="LoginScreen" component={LoginScreen} />
+              <Stack.Screen name="HomeScreen" component={HomeScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </FirstLog.Provider>

@@ -14,6 +14,8 @@ import {
 import { responsiveWidth, responsiveHeight, responsiveFontSize } from "react-native-responsive-dimensions";
 import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import GradientText from "@/components/GradientText";
 import TextInputContainer from "./customComponent/TextInputContainer";
 import FixedBottomContainer from "./FixedBottomContainer";
@@ -32,6 +34,20 @@ import sessionService from '@/services/sessionService';
 
 WebBrowser.maybeCompleteAuthSession();
 
+type RootStackParamList = {
+  OnboardingScreen: undefined;
+  IntroScreen: undefined;
+  QuestionScreen: undefined;
+  ResultScreen: undefined;
+  ResearchingScreen: undefined;
+  LoadingScreen: undefined;
+  ResultLoadingScreen: undefined;
+  LoginScreen: undefined;
+  HomeScreen: undefined;
+};
+
+type LoginBottomSheetNavigationProp = StackNavigationProp<RootStackParamList>;
+
 interface LoginBottomSheetProps {
   visible: boolean;
   onClose: () => void;
@@ -40,6 +56,7 @@ interface LoginBottomSheetProps {
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
+  const navigation = useNavigation<LoginBottomSheetNavigationProp>();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -62,14 +79,19 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
             const linkSuccess = await sessionService.linkSessionToUser(result.user);
             if (linkSuccess) {
               Alert.alert('Success', 'Google signup successful! Your survey data has been linked.');
+              onClose();
+              navigation.navigate('HomeScreen');
             } else {
               Alert.alert('Success', 'Google signup successful! But failed to link survey data.');
+              onClose();
+              navigation.navigate('HomeScreen');
             }
           } catch (linkError) {
             console.error('세션 연결 실패:', linkError);
             Alert.alert('Success', 'Google signup successful! But failed to link survey data.');
+            onClose();
+            navigation.navigate('HomeScreen');
           }
-          onClose();
         })
         .catch((error) => {
           Alert.alert('Error', error.message || 'Google signup failed');
@@ -119,14 +141,19 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
           const linkSuccess = await sessionService.linkSessionToUser(result.user);
           if (linkSuccess) {
             Alert.alert("Success", "Signup successful! Your survey data has been linked.");
+            onClose();
+            navigation.navigate('HomeScreen');
           } else {
             Alert.alert("Success", "Signup successful! But failed to link survey data.");
+            onClose();
+            navigation.navigate('HomeScreen');
           }
         } catch (linkError) {
           console.error('세션 연결 실패:', linkError);
           Alert.alert("Success", "Signup successful! But failed to link survey data.");
+          onClose();
+          navigation.navigate('HomeScreen');
         }
-        onClose();
       } else {
         Alert.alert("Error", result.error || "Signup failed");
       }
@@ -169,14 +196,19 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
         const linkSuccess = await sessionService.linkSessionToUser(result.user);
         if (linkSuccess) {
           Alert.alert("Success", "Apple signup successful! Your survey data has been linked.");
+          onClose();
+          navigation.navigate('HomeScreen');
         } else {
           Alert.alert("Success", "Apple signup successful! But failed to link survey data.");
+          onClose();
+          navigation.navigate('HomeScreen');
         }
       } catch (linkError) {
         console.error('세션 연결 실패:', linkError);
         Alert.alert("Success", "Apple signup successful! But failed to link survey data.");
+        onClose();
+        navigation.navigate('HomeScreen');
       }
-      onClose();
     } catch (error: any) {
       Alert.alert("Error", error.message || "Apple signup failed");
     }

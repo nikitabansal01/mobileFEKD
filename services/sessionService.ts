@@ -360,6 +360,72 @@ class SessionService {
       console.error('로그아웃 중 오류:', error);
     }
   }
+
+  // 추천 생성 시작
+  async startRecommendationGeneration(): Promise<boolean> {
+    try {
+      const sessionId = await this.getSessionId();
+      if (!sessionId) {
+        console.error('❌ 세션 ID가 없습니다.');
+        return false;
+      }
+
+      console.log('🚀 추천 생성 시작 API 호출:', `${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/generate-recommendations`);
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/generate-recommendations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ 추천 생성 시작 실패:', errorText);
+        throw new Error(`추천 생성 시작 실패: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ 추천 생성 시작 성공:', result);
+      return true;
+    } catch (error) {
+      console.error('❌ 추천 생성 시작 오류:', error);
+      return false;
+    }
+  }
+
+  // 추천 생성 상태 확인
+  async getRecommendationStatus(): Promise<{ status: string; data?: any } | null> {
+    try {
+      const sessionId = await this.getSessionId();
+      if (!sessionId) {
+        console.error('❌ 세션 ID가 없습니다.');
+        return null;
+      }
+
+      console.log('🔍 추천 생성 상태 확인 API 호출:', `${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/recommendations/status`);
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/recommendations/status`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ 추천 생성 상태 확인 실패:', errorText);
+        throw new Error(`추천 생성 상태 확인 실패: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('📊 추천 생성 상태 응답:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ 추천 생성 상태 확인 오류:', error);
+      return null;
+    }
+  }
 }
 
 export default new SessionService(); 

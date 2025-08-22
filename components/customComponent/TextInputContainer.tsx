@@ -9,6 +9,7 @@ interface TextInputContainerProps {
   value: string;
   onChangeText: (text: string) => void;
   keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad';
+  secureTextEntry?: boolean;
   containerStyle?: any;
   inputStyle?: any;
   textStyle?: any;
@@ -23,6 +24,7 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
   value,
   onChangeText,
   keyboardType = 'default',
+  secureTextEntry = false,
   containerStyle,
   inputStyle,
   textStyle,
@@ -98,6 +100,7 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
         onBlur={handleBlur}
         autoFocus={autoFocus}
         ref={inputRef}
+        secureTextEntry={secureTextEntry}
       />
       
       {/* Clear Button */}

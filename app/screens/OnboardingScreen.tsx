@@ -21,6 +21,7 @@ type RootStackParamList = {
   ResearchingScreen: undefined;
   LoadingScreen: undefined;
   ResultLoadingScreen: undefined;
+  LoginScreen: undefined;
 };
 
 type OnboardingScreenNavigationProp = StackNavigationProp<RootStackParamList, 'OnboardingScreen'>;
@@ -368,6 +369,10 @@ const OnboardingScreen = () => {
     navigation.navigate('IntroScreen');
   }
 
+  const handleLogin = () => {
+    navigation.navigate('LoginScreen');
+  }
+
   // 1.5초마다 자동 슬라이드 (끝까지 가면 멈춤)
   useEffect(() => {
     const interval = setInterval(() => {
@@ -428,7 +433,7 @@ const OnboardingScreen = () => {
         />
         <Text style={styles.loginText}>
           Already have an account?{' '}
-          <Text style={styles.loginLink}>LogIn</Text>
+          <Text style={styles.loginLink} onPress={handleLogin}>LogIn</Text>
         </Text>
       </FixedBottomContainer>
     </SafeAreaView>
