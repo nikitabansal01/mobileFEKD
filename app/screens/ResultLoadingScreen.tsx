@@ -27,7 +27,7 @@ const ResultLoadingScreen = () => {
       autoContinue={true}
       autoContinueDelay={3000}
       characterSize={responsiveWidth(30)}
-      messageFontSize={responsiveFontSize(3)}
+      messageFontSize={responsiveFontSize(2.27)}//16px
       messageWidth={responsiveWidth(65)}
       messageHeight={responsiveHeight(10)}
     />

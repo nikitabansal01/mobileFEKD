@@ -171,7 +171,7 @@ const ChipOptionContainer: React.FC<ChipOptionContainerProps> = ({
   },
   chipText: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.5),
+    fontSize: responsiveFontSize(1.7),//12px
     color: '#333333',
     textAlign: 'center', // 중앙 정렬로 복원
     // 글자 줄바꿈 허용
@@ -216,7 +216,7 @@ const ChipOptionContainer: React.FC<ChipOptionContainerProps> = ({
   },
   descriptionText: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.2),
+    fontSize: responsiveFontSize(1.42), //10px
     color: '#6f6f6f',
     lineHeight: responsiveHeight(1.8),
     marginTop: responsiveHeight(0.5),

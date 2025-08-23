@@ -82,10 +82,15 @@ const ResultScreen = () => {
             <View style={styles.cardWrapper}>
               <View style={styles.hormoneCard}>
                 <View style={styles.cardContent}>
-                  <View style={styles.textSection}>
+                  {/* Title과 Subtitle - maxWidth 영향 안받음 */}
+                  <View style={styles.titleSubtitleContainer}>
                     <Text style={styles.hormoneName}>
                       Progesterone, <Text style={styles.hormoneSubtitle}>The calmer</Text>
                     </Text>
+                  </View>
+                  
+                  {/* Description만 maxWidth 영향받음 */}
+                  <View style={styles.textSection}>
                     <Text style={styles.hormoneDescription}>
                       🔻 Lower levels may be contributing to{' '}
                       <Text style={styles.underlineText}>painful periods</Text>
@@ -110,10 +115,15 @@ const ResultScreen = () => {
             <View style={styles.cardWrapper}>
               <View style={styles.hormoneCard}>
                 <View style={styles.cardContent}>
-                  <View style={styles.textSection}>
+                  {/* Title과 Subtitle - maxWidth 영향 안받음 */}
+                  <View style={styles.titleSubtitleContainer}>
                     <Text style={styles.hormoneName}>
                       Testosterone, <Text style={styles.hormoneSubtitle}>The titan</Text>
                     </Text>
+                  </View>
+                  
+                  {/* Description만 maxWidth 영향받음 */}
+                  <View style={styles.textSection}>
                     <Text style={styles.hormoneDescription}>
                       🔺 Higher levels may be contributing to{' '}
                       <Text style={styles.underlineText}>acne</Text>
@@ -199,7 +209,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'NotoSerif600',
-    fontSize: responsiveFontSize(2.6),
+    fontSize: responsiveFontSize(2.27),
     textAlign: 'center',
     lineHeight: responsiveHeight(2.8),
   },
@@ -222,34 +232,31 @@ const styles = StyleSheet.create({
     overflow: 'hidden', // 카드 영역 밖으로 나가는 부분을 잘라냄
   },
   cardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: responsiveWidth(3.5),
+    flexDirection: 'column', // 세로 배치로 변경
+    alignItems: 'flex-start', // 왼쪽 정렬
     position: 'relative', // 절대 위치 요소들의 기준점
   },
   textSection: {
-    flex: 1,
-    gap: responsiveHeight(0.5),
-    maxWidth: responsiveWidth(40), // 텍스트 영역 최대 너비 제한
+    maxWidth: responsiveWidth(46), // 텍스트 영역 최대 너비 제한 (description만)
     zIndex: 2, // 이미지(zIndex: 1)보다 위에 표시
   },
   hormoneName: {
     fontFamily: 'Inter600',
-    fontSize: responsiveFontSize(1.6),
+    fontSize: responsiveFontSize(1.98),//14px
     color: '#000000',
     lineHeight: responsiveHeight(2),
     fontWeight: '600',
   },
   hormoneSubtitle: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.3),
+    fontSize: responsiveFontSize(1.7),//12px
     color: '#6f6f6f',
   },
   hormoneDescription: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.3),
+    fontSize: responsiveFontSize(1.7),//12px
     color: '#6f6f6f',
-    lineHeight: responsiveHeight(1.8),
+    lineHeight: responsiveHeight(2),
     marginTop: responsiveHeight(0.5),
   },
   underlineText: {
@@ -265,11 +272,11 @@ const styles = StyleSheet.create({
   },
   progesteroneGraphic: {
     right: responsiveWidth(-18), // Progesterone 이미지 위치
-    top: responsiveHeight(-5),
+    bottom: responsiveHeight(-8.5), // 카드 하단에서 상대적 위치
   },
   testosteroneGraphic: {
     right: responsiveWidth(-21), // Testosterone 이미지 위치 (더 오른쪽)
-    top: responsiveHeight(-3), // Testosterone 이미지 위치 (더 위쪽)
+    bottom: responsiveHeight(-8.5), // 카드 하단에서 상대적 위치
   },
   priorityBadge: {
     position: 'absolute',
@@ -286,7 +293,7 @@ const styles = StyleSheet.create({
   },
   priorityText: {
     fontFamily: 'Inter500',
-    fontSize: responsiveFontSize(1.3),
+    fontSize: responsiveFontSize(1.42),//10px
     color: '#6f6f6f',
     textAlign: 'center',
     fontWeight: '500',
@@ -297,10 +304,15 @@ const styles = StyleSheet.create({
   },
   disclaimerText: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.0),
+    fontSize: responsiveFontSize(1.42),//10px
     color: '#6f6f6f',
     textAlign: 'center',
     lineHeight: responsiveHeight(1.5),
+  },
+  titleSubtitleContainer: {
+    flex: 1,
+    marginBottom: responsiveHeight(0.5),
+    zIndex: 2, // 이미지(zIndex: 1)보다 위에 표시
   },
 
 });

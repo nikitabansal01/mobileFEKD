@@ -456,20 +456,20 @@ const styles = StyleSheet.create({
   },
   titleText: {
     fontFamily: "NotoSerif600",
-    fontSize: responsiveFontSize(3),
+    fontSize: responsiveFontSize(3.4), //24px
     color: "#6E4B6F",
     textAlign: "left",
     marginBottom: responsiveHeight(2),
-    lineHeight: responsiveFontSize(3)*1.2 ,
+    lineHeight: responsiveFontSize(3.4)*1.2 ,
   },
   description: {
     height: responsiveHeight(5),
     fontFamily: "Inter400",
-    fontSize: responsiveFontSize(1.8),
+    fontSize: responsiveFontSize(1.98), //14px
     color: "#6E4B6F",
     textAlign: "left",
     marginBottom: responsiveHeight(1), // description과 버튼 사이 간격 줄임
-    lineHeight: responsiveFontSize(1.8)*1.4 ,
+    lineHeight: responsiveFontSize(1.98)*1.4 ,
   },
   buttonContainer: {
     width: "100%",
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   },
   loginText: {
     fontFamily: "Inter400",
-    fontSize: responsiveFontSize(1.7),
+    fontSize: responsiveFontSize(1.98), //14px
     color: "#6E4B6F",
     textAlign: "center",
   },

@@ -998,7 +998,7 @@ const styles = StyleSheet.create({
     },
     questionText: {
         fontFamily: 'NotoSerif600',
-        fontSize: responsiveFontSize(2.2),
+        fontSize: responsiveFontSize(2.27), //16px
         textAlign: 'center',
         lineHeight: responsiveHeight(2.8),
         width: responsiveWidth(85),
@@ -1014,7 +1014,7 @@ const styles = StyleSheet.create({
     },
   subQuestionText: {
     fontFamily: 'Inter500',
-    fontSize: responsiveFontSize(1.6),
+    fontSize: responsiveFontSize(1.7), //12px
     color: '#c17ec9',
     textAlign: 'left',
     alignSelf: 'flex-start',
@@ -1023,7 +1023,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter500',
     fontSize: responsiveFontSize(1.7),
     color: '#000000',
-    lineHeight: responsiveHeight(1.7),
+    lineHeight: responsiveHeight(1.8),
     textAlign: 'center',
   },
 
@@ -1066,13 +1066,13 @@ const styles = StyleSheet.create({
     top: 8,
     left: 20,
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.3),
+    fontSize: responsiveFontSize(1.42), //10px
     color: '#b3b3b3',
     zIndex: 1,
   },
   inputText: {
     fontFamily: 'Inter500',
-    fontSize: responsiveFontSize(1.8),
+    fontSize: responsiveFontSize(1.7), //12px
     color: '#000000',
     marginTop: 8,
   },
@@ -1105,7 +1105,7 @@ const styles = StyleSheet.create({
   },
   defaultPlaceholder: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.7),
+    fontSize: responsiveFontSize(1.7), //12px
     color: '#b3b3b3',
     position: 'absolute',
     left: 20,
@@ -1118,7 +1118,7 @@ const styles = StyleSheet.create({
   },
   subtitleText: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.6), // 기존 크기로 복원
+    fontSize: responsiveFontSize(1.7), // 12px
     color: '#6f6f6f', // Figma: #6f6f6f
     textAlign: 'center',
     lineHeight: responsiveFontSize(1.6) * 1.25, // line-height 1.25
@@ -1159,7 +1159,7 @@ const styles = StyleSheet.create({
   },
   skipButtonText: {
     fontFamily: 'Inter500',
-    fontSize: responsiveFontSize(1.8),
+    fontSize: responsiveFontSize(1.98), //14px
     color: '#6f6f6f',
     textAlign: 'center',
   },
@@ -1185,7 +1185,7 @@ const styles = StyleSheet.create({
   },
   descriptionText: {
     fontFamily: 'NotoSerif600',
-    fontSize: responsiveFontSize(2.0),
+    fontSize: responsiveFontSize(2.27), //16px
     textAlign: 'center',
     lineHeight: responsiveHeight(2.4),
   },

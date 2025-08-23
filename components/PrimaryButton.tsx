@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontFamily: 'Inter500',
-    fontSize: responsiveFontSize(1.8),
+    fontSize: responsiveFontSize(1.98), //14px
     color: '#000000',
   },
   buttonTextDisabled: {

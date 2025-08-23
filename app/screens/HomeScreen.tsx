@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
     gap: responsiveWidth(1),
   },
   noCycleDataText: {
-    fontSize: responsiveFontSize(1.2),
+    fontSize: responsiveFontSize(1.7), //12px
     fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     color: '#6F6F6F',
   },
   logPeriodText: {
-    fontSize: responsiveFontSize(1.2),
+    fontSize: responsiveFontSize(1.7), //12px
     fontFamily: 'Inter400',
     color: '#C17EC9',
   },
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
     marginBottom: responsiveHeight(3),
   },
   sectionTitle: {
-    fontSize: responsiveFontSize(1.8),
+    fontSize: responsiveFontSize(1.98),//14px
     fontFamily: 'NotoSerif500',
     color: '#000000',
     textAlign: 'center',
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
     borderRadius: responsiveWidth(9),
   },
   questName: {
-    fontSize: responsiveFontSize(1.2),
+    fontSize: responsiveFontSize(1.7), //12px
     fontFamily: 'NotoSerif400',
     color: '#000000',
     marginBottom: responsiveHeight(1),
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
     borderRadius: responsiveWidth(6.5),
   },
   progressText: {
-    fontSize: responsiveFontSize(1.2),
+    fontSize: responsiveFontSize(1.7), //12px
     fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
     marginBottom: responsiveHeight(2),
   },
   dateText: {
-    fontSize: responsiveFontSize(1.2),
+    fontSize: responsiveFontSize(1.7), //12px
     fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
     borderColor: '#C17EC9',
   },
   sortButtonText: {
-    fontSize: responsiveFontSize(1.2),
+    fontSize: responsiveFontSize(1.7),//12px
     fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
     paddingVertical: responsiveHeight(0.2),
   },
   hormoneBadgeText: {
-    fontSize: responsiveFontSize(0.9),
+    fontSize: responsiveFontSize(1.1),//9px
     fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
@@ -638,7 +638,7 @@ const styles = StyleSheet.create({
     marginHorizontal: responsiveWidth(3),
   },
   actionTitle: {
-    fontSize: responsiveFontSize(1.8),
+    fontSize: responsiveFontSize(1.98),//14px
     fontFamily: 'NotoSerif500',
     color: '#000000',
     marginBottom: responsiveHeight(0.5),
@@ -648,17 +648,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionAmount: {
-    fontSize: responsiveFontSize(1.2),
+    fontSize: responsiveFontSize(1.7),//12px
     fontFamily: 'Inter400',
     color: '#949494',
   },
   actionSeparator: {
-    fontSize: responsiveFontSize(1.2),
+    fontSize: responsiveFontSize(1.7),//12px
     color: '#949494',
     marginHorizontal: responsiveWidth(1),
   },
   actionPurpose: {
-    fontSize: responsiveFontSize(1.2),
+    fontSize: responsiveFontSize(1.7),//12px
     fontFamily: 'Inter400',
     color: '#949494',
   },

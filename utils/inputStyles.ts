@@ -24,6 +24,6 @@ export const createInputStyle = (state: InputState, customProps?: {
 
 export const createInputTextStyle = (state: InputState) => ({
   fontFamily: 'Inter400',
-  fontSize: responsiveFontSize(1.5),
+  fontSize: responsiveFontSize(1.7), //12px
   color: INPUT_STATES[state].text,
 });

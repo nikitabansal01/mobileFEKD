@@ -9,7 +9,7 @@ const LoadingScreen = () => {
       showBackButton={false}
       showContinueButton={false}
       characterSize={responsiveWidth(32)}
-      messageFontSize={responsiveFontSize(2.8)}
+      messageFontSize={responsiveFontSize(2.27)}
       messageWidth={responsiveWidth(70)}
       messageHeight={responsiveHeight(8)}
     />

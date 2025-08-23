@@ -284,16 +284,16 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'NotoSerif600',
-    fontSize: responsiveFontSize(2.2),
+    fontSize: responsiveFontSize(3.12),//22px
     textAlign: 'center',
-    lineHeight: responsiveHeight(2.8),
+    lineHeight: responsiveHeight(3.12),
   },
   subtitle: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.2),
+    fontSize: responsiveFontSize(1.7),//12px
     color: '#6f6f6f',
     textAlign: 'center',
-    lineHeight: responsiveFontSize(1.2) * 1.25,
+    lineHeight: responsiveFontSize(1.7) * 1.25,
   },
   scrollContainer: {
     flex: 1,
@@ -336,14 +336,14 @@ const styles = StyleSheet.create({
   rememberText: {
     fontFamily: 'Inter400',
     color: 'rgba(0, 0, 0, 0.6)',
-    fontSize: responsiveFontSize(1.2),
-    lineHeight: responsiveFontSize(1.2) * 1.25,
+    fontSize: responsiveFontSize(1.7),//12px
+    lineHeight: responsiveFontSize(1.7) * 1.25,
   },
   forgotPasswordText: {
     fontFamily: 'Inter400',
     color: '#C17EC9',
-    fontSize: responsiveFontSize(1.2),
-    lineHeight: responsiveFontSize(1.2) * 1.25,
+    fontSize: responsiveFontSize(1.7),//12px
+    lineHeight: responsiveFontSize(1.7) * 1.25,
   },
   dividerContainer: {
     flexDirection: 'row',
@@ -357,10 +357,10 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     color: '#6f6f6f',
-    fontSize: responsiveFontSize(1.2),
+    fontSize: responsiveFontSize(1.7), //12px
     fontFamily: 'Inter400',
     marginHorizontal: responsiveWidth(2.5),
-    lineHeight: responsiveFontSize(1.2) * 1.25,
+    lineHeight: responsiveFontSize(1.7) * 1.25,
   },
   socialContainer: {
     gap: responsiveHeight(1.5),
@@ -380,16 +380,16 @@ const styles = StyleSheet.create({
   },
   socialButtonText: {
     color: '#1e1e1e',
-    fontSize: responsiveFontSize(1.4),
+    fontSize: responsiveFontSize(1.98), //14px
     fontFamily: 'Inter500',
-    lineHeight: responsiveFontSize(1.4) * 1.25,
+    lineHeight: responsiveFontSize(1.98) * 1.25,
   },
   termsContainer: {
     marginBottom: responsiveHeight(1),
   },
   termsText: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.0),
+    fontSize: responsiveFontSize(1.42), //10px
     color: '#6f6f6f',
     textAlign: 'center',
     lineHeight: responsiveFontSize(1.0) * 1.5,

@@ -125,13 +125,13 @@ const styles = StyleSheet.create({
     top: 8,
     left: 20,
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.3),
+    fontSize: responsiveFontSize(1.42), //10px
     color: '#b3b3b3',
     zIndex: 1,
   },
   inputText: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.8),
+    fontSize: responsiveFontSize(1.98), //14px
     color: '#000000',
     marginTop: 8,
   },
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   },
   defaultPlaceholder: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.7),
+    fontSize: responsiveFontSize(1.7), //12px
     color: '#b3b3b3',
     position: 'absolute',
     left: 20,

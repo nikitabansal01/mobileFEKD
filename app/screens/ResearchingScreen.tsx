@@ -25,7 +25,7 @@ const options = [
   { id: "3", text: "🧘 Pause", value: "pause" },
 ];
 
-const finalTitle = "🎉 Perfect!\nYour personalized\naction plan is ready!";
+const finalTitle = "Perfect!\nYour personalized\naction plan is ready!";
 
 const ResearchingScreen = () => {
   const [step, setStep] = useState(0); // 0: 첫 텍스트, 1: 두번째 텍스트, 2: 질문
@@ -205,7 +205,7 @@ const ResearchingScreen = () => {
                 text={firstTitle}
                 textStyle={{
                   fontFamily: 'Poppins600',
-                  fontSize: responsiveFontSize2(3.0),
+                  fontSize: responsiveFontSize2(3.4),//24px
                   fontWeight: "600",
                   textAlign: 'center',
                   lineHeight: responsiveHeight(4),
@@ -221,7 +221,7 @@ const ResearchingScreen = () => {
             <Text
               style={{
                 color: "#000",
-                fontSize: responsiveFontSize2(1.9),
+                fontSize: responsiveFontSize2(1.98),//14px
                 fontFamily: "Poppins400",
                 textAlign: "center",
                 marginBottom: 16,
@@ -239,7 +239,7 @@ const ResearchingScreen = () => {
                 text={secondTitle}
                 textStyle={{
                   fontFamily: 'Poppins600',
-                  fontSize: responsiveFontSize2(3.0),
+                  fontSize: responsiveFontSize2(3.4),//24
                   fontWeight: "600",
                   textAlign: 'center',
                   lineHeight: responsiveHeight(4),
@@ -255,7 +255,7 @@ const ResearchingScreen = () => {
             <Text
               style={{
                 color: "#000",
-                fontSize: responsiveFontSize2(1.9),
+                fontSize: responsiveFontSize2(1.98),//14px
                 fontFamily: "Poppins400",
                 textAlign: "center",
                 marginBottom: 16,
@@ -278,7 +278,7 @@ const ResearchingScreen = () => {
                 text={questionTitle}
                 textStyle={{
                   fontFamily: 'NotoSerif600',
-                  fontSize: responsiveFontSize(2.4),
+                  fontSize: responsiveFontSize(3.4), //24px
                   textAlign: 'center',
                   lineHeight: responsiveHeight(3),
                 }}
@@ -294,10 +294,10 @@ const ResearchingScreen = () => {
             <Text
               style={{
                 color: "#6f6f6f",
-                fontSize: responsiveFontSize(1.6), // 기존 크기로 복원
+                fontSize: responsiveFontSize(1.7), // 12px
                 fontFamily: "Inter400",
                 textAlign: "center",
-                lineHeight: responsiveFontSize(1.6) * 1.25, // line-height 1.25
+                lineHeight: responsiveFontSize(1.7) * 1.25, // line-height 1.25
                 marginBottom: responsiveHeight(2),
               }}
             >
@@ -322,7 +322,7 @@ const ResearchingScreen = () => {
                 text={finalTitle}
                 textStyle={{
                   fontFamily: 'Poppins600',
-                  fontSize: responsiveFontSize2(3.0),
+                  fontSize: responsiveFontSize2(3.4),//24px
                   fontWeight: "600",
                   textAlign: 'center',
                   lineHeight: responsiveHeight(4),

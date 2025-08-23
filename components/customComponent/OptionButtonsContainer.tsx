@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.5),
+    fontSize: responsiveFontSize(1.7), //12px
     color: '#333333',
     textAlign: 'left',
   },
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     maxWidth: responsiveWidth(80),
   },
   wrapText: {
-    fontSize: responsiveFontSize(1.4),
+    fontSize: responsiveFontSize(1.7), //12px
   },
 
   // Row Layout (가로 배치)
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   rowText: {
-    fontSize: responsiveFontSize(1.4),
+    fontSize: responsiveFontSize(1.7), //12px
   },
   optionContent: {
     flex: 1,
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   },
   descriptionText: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.2),
+    fontSize: responsiveFontSize(1.42), //10px
     color: '#6f6f6f',
     lineHeight: responsiveHeight(1.8),
     marginTop: responsiveHeight(0.5),

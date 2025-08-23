@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     color: '#bb4471',
   },
   tabLabel: {
-    fontSize: responsiveFontSize(1), // 8px
+    fontSize: responsiveFontSize(1.13), // 8px
     fontFamily: 'Inter400',
     color: '#000000',
     textAlign: 'center',

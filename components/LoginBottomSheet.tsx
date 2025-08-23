@@ -284,7 +284,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
               onPress={() => setRememberMe(!rememberMe)}
             >
               <View style={[styles.checkbox, rememberMe && styles.checkboxSelected]}>
-                {rememberMe && <RightTickSvg size={responsiveFontSize(1.4)} color="#FFF" />}
+                {rememberMe && <RightTickSvg size={responsiveFontSize(1.7)} color="#FFF" />} //12px
               </View>
               <Text style={styles.rememberText}>Remember me</Text>
             </TouchableOpacity>
@@ -376,11 +376,11 @@ const styles = StyleSheet.create({
     marginBottom: responsiveHeight(4),
   },
   subHeaderText: {
-    fontSize: responsiveFontSize(1.6),
+    fontSize: responsiveFontSize(1.7), //12px
     fontFamily: "Inter400",
     color: "#000000",
     marginBottom: responsiveHeight(2),
-    lineHeight: responsiveFontSize(1.2) * 1.25,
+    lineHeight: responsiveFontSize(1.7) * 1.25,
   },
   gradientTitleContainer: {
   },
@@ -392,9 +392,9 @@ const styles = StyleSheet.create({
   },
   gradientTitleText: {
     fontFamily: 'NotoSerif600',
-    fontSize: responsiveFontSize(3),
+    fontSize: responsiveFontSize(3.4),//24px
     textAlign: 'left',
-    lineHeight: responsiveHeight(3),
+    lineHeight: responsiveHeight(3.4),
   },
   formContainer: {
     marginBottom: responsiveHeight(3),
@@ -426,8 +426,8 @@ const styles = StyleSheet.create({
   rememberText: {
     fontFamily: "Inter400",
     color: "rgba(0, 0, 0, 0.6)",
-    fontSize: responsiveFontSize(1.2),
-    lineHeight: responsiveFontSize(1.2) * 1.25,
+    fontSize: responsiveFontSize(1.7), //12px
+    lineHeight: responsiveFontSize(1.7) * 1.25,
   },
   dividerContainer: {
     flexDirection: "row",
@@ -441,10 +441,10 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     color: "#6f6f6f",
-    fontSize: responsiveFontSize(1.2),
+    fontSize: responsiveFontSize(1.7), //12px
     fontFamily: "Inter400",
     marginHorizontal: responsiveWidth(2.5),
-    lineHeight: responsiveFontSize(1.2) * 1.25,
+    lineHeight: responsiveFontSize(1.7) * 1.25,
   },
   socialContainer: {
     gap: responsiveHeight(1.5),
@@ -464,19 +464,19 @@ const styles = StyleSheet.create({
   },
   socialButtonText: {
     color: "#1e1e1e",
-    fontSize: responsiveFontSize(1.4),
+    fontSize: responsiveFontSize(1.98),//14px
     fontFamily: "Inter500",
-    lineHeight: responsiveFontSize(1.4) * 1.25,
+    lineHeight: responsiveFontSize(1.98) * 1.25,
   },
   termsContainer: {
     marginBottom: responsiveHeight(2),
   },
   termsText: {
     fontFamily: "Inter400",
-    fontSize: responsiveFontSize(1.2),
+    fontSize: responsiveFontSize(1.42), //10px
     color: "#6f6f6f",
     textAlign: "center",
-    lineHeight: responsiveFontSize(1.0) * 1.5,
+    lineHeight: responsiveFontSize(1.42) * 1.5,
   },
   termsLink: {
     color: "#000000",

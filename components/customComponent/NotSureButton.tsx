@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.6),
+    fontSize: responsiveFontSize(1.7), //12px
     color: '#6f6f6f',
     textDecorationLine: 'underline',
     textAlign: 'right',

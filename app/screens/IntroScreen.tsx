@@ -55,8 +55,8 @@ const IntroScreen = () => {
       return {
         prefix: "Hi! I'm",
         mainText: "Auvra",
-        prefixFontSize: responsiveFontSize(1.2),
-        mainTextFontSize: responsiveFontSize(3.2),
+        prefixFontSize: responsiveFontSize(1.7), //12px
+        mainTextFontSize: responsiveFontSize(3.4), //24px
         prefixColor: '#6f6f6f'
       };
     }
@@ -74,7 +74,7 @@ const IntroScreen = () => {
       autoContinue={currentStep === 0}
       autoContinueDelay={1000}
       characterSize={responsiveWidth(25)}
-      messageFontSize={responsiveFontSize(2.0)}
+      messageFontSize={responsiveFontSize(2.27)} //16px
       messageWidth={responsiveWidth(80)}
       messageHeight={responsiveHeight(8)}
     />
