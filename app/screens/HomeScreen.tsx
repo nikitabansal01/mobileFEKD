@@ -11,7 +11,7 @@ import {
 import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomNavigationBar from '@/components/BottomNavigationBar';
-import homeService, { CycleInfo, AssignmentsResponse, ProgressStatsResponse } from '@/services/homeService';
+import homeService, { CycleInfo, AssignmentsResponse, ProgressStatsResponse, HormoneStats } from '@/services/homeService';
 
 // 임시 이미지 데이터
 const TEMP_IMAGES = {
@@ -37,16 +37,30 @@ const HomeScreen: React.FC = () => {
     try {
       setLoading(true);
       
-      // 병렬로 API 호출
-      const [cycleData, assignmentsData, progressData] = await Promise.all([
+      // 병렬로 API 호출 (progress/stats 제거)
+      const [cycleData, assignmentsData] = await Promise.all([
         homeService.getCyclePhase(),
         homeService.getTodayAssignments(),
-        homeService.getProgressStats(),
       ]);
 
       setCycleInfo(cycleData?.cycle_info || null);
       setAssignments(assignmentsData);
-      setProgressStats(progressData);
+      // progressStats는 assignmentsData의 hormone_stats에서 가져옴
+      if (assignmentsData?.hormone_stats) {
+        const hormoneStats: HormoneStats = {
+          progesterone: {
+            completed: assignmentsData.hormone_stats.progesterone?.completed || 0,
+            total: assignmentsData.hormone_stats.progesterone?.total || 0
+          },
+          testosterone: {
+            completed: assignmentsData.hormone_stats.testosterone?.completed || 0,
+            total: assignmentsData.hormone_stats.testosterone?.total || 0
+          }
+        };
+        setProgressStats({ hormone_stats: hormoneStats });
+      } else {
+        setProgressStats(null);
+      }
     } catch (error) {
       console.error('홈 데이터 로드 오류:', error);
     } finally {
@@ -138,9 +152,19 @@ const HomeScreen: React.FC = () => {
             <Text style={styles.greeting}>
               {getGreeting()} {cycleInfo?.user_name || 'User'}!
             </Text>
-            <Text style={styles.cycleInfo}>
-              Cycle Day {cycleInfo?.cycle_day || 0} | {cycleInfo?.phase || 'Unknown phase'}
-            </Text>
+            {cycleInfo?.cycle_day && cycleInfo?.phase ? (
+              <Text style={styles.cycleInfo}>
+                Cycle Day {cycleInfo.cycle_day} | {cycleInfo.phase}
+              </Text>
+            ) : (
+              <View style={styles.noCycleDataContainer}>
+                <Text style={styles.noCycleDataText}>No cycle data yet</Text>
+                <Text style={styles.separator}>|</Text>
+                <TouchableOpacity>
+                  <Text style={styles.logPeriodText}>Log period</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
           <TouchableOpacity style={styles.menuButton}>
             <Text style={styles.menuIcon}>☰</Text>
@@ -403,7 +427,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: responsiveWidth(5),
-    paddingTop: responsiveHeight(8),
+    paddingTop: responsiveHeight(4),
     paddingBottom: responsiveHeight(3),
   },
   headerLeft: {
@@ -421,11 +445,31 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
+  noCycleDataContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: responsiveWidth(1),
+  },
+  noCycleDataText: {
+    fontSize: responsiveFontSize(1.2),
+    fontFamily: 'Inter400',
+    color: '#6F6F6F',
+  },
+  separator: {
+    fontSize: responsiveFontSize(1.2),
+    fontFamily: 'Inter400',
+    color: '#6F6F6F',
+  },
+  logPeriodText: {
+    fontSize: responsiveFontSize(1.2),
+    fontFamily: 'Inter400',
+    color: '#C17EC9',
+  },
   menuButton: {
     padding: responsiveWidth(1.5),
   },
   menuIcon: {
-    fontSize: responsiveFontSize(2),
+    fontSize: responsiveFontSize(3),
     color: '#000000',
   },
   questSection: {

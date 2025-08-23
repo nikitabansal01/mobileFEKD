@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { getAuth } from 'firebase/auth';
 
 // 플랫폼별 API URL 설정
 const getApiBaseUrl = () => {
@@ -14,6 +15,22 @@ const getApiBaseUrl = () => {
 };
 
 const API_BASE_URL = getApiBaseUrl();
+
+// Firebase 토큰 가져오기
+const getAuthToken = async (): Promise<string | null> => {
+  try {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (user) {
+      const token = await user.getIdToken();
+      return token;
+    }
+    return null;
+  } catch (error) {
+    console.error('❌ Firebase 토큰 가져오기 실패:', error);
+    return null;
+  }
+};
 
 // 타입 정의
 export interface CycleInfo {
@@ -77,11 +94,21 @@ class HomeService {
     try {
       console.log('🔄 생리 주기 정보 조회 API 호출:', `${API_BASE_URL}/api/v1/cycle/phase`);
 
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('🔑 Firebase 토큰 포함됨');
+      } else {
+        console.log('⚠️ Firebase 토큰 없음');
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/v1/cycle/phase`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
       });
 
       if (!response.ok) {
@@ -100,15 +127,25 @@ class HomeService {
   }
 
   // 오늘의 액션 플랜 조회
-  async getTodayAssignments(tzid: string = 'Asia/Seoul'): Promise<AssignmentsResponse | null> {
+  async getTodayAssignments(): Promise<AssignmentsResponse | null> {
     try {
-      console.log('🔄 오늘의 액션 플랜 조회 API 호출:', `${API_BASE_URL}/api/v1/new-scheduling/assignments/today?tzid=${tzid}`);
+      console.log('🔄 오늘의 액션 플랜 조회 API 호출:', `${API_BASE_URL}/api/v1/new-scheduling/assignments/today`);
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/assignments/today?tzid=${tzid}`, {
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('🔑 Firebase 토큰 포함됨');
+      } else {
+        console.log('⚠️ Firebase 토큰 없음');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/assignments/today`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
       });
 
       if (!response.ok) {
@@ -131,11 +168,21 @@ class HomeService {
     try {
       console.log('🔄 진행도 통계 조회 API 호출:', `${API_BASE_URL}/api/v1/progress/stats`);
 
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('🔑 Firebase 토큰 포함됨');
+      } else {
+        console.log('⚠️ Firebase 토큰 없음');
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/v1/progress/stats`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
       });
 
       if (!response.ok) {

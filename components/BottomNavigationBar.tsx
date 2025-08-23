@@ -15,11 +15,18 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
   onTabPress
 }) => {
   const navigation = useNavigation();
+  
+  // 캐릭터 크기 설정
+  const characterSize = responsiveWidth(18);
+  // 빈 문자열의 크기 계산 (tabIcon의 fontSize와 동일)
+  const emptyIconSize = responsiveFontSize(2.5);
+  // 캐릭터와 글씨 간의 순수한 간격 (픽셀 단위)
+  const characterTextGap = 5;
 
   const tabs = [
     { key: 'home', label: 'Home', icon: '🏠', screen: 'HomeScreen' },
     { key: 'calendar', label: 'Calendar', icon: '📅', screen: 'CalendarScreen' },
-    { key: 'auvra', label: 'Auvra', icon: '👤', screen: 'AuvraScreen' },
+    { key: 'auvra', label: 'Auvra', icon: '', screen: 'AuvraScreen' }, // 아이콘 제거
     { key: 'progress', label: 'Progress', icon: '📊', screen: 'ProgressScreen' },
     { key: 'community', label: 'Community', icon: '👥', screen: 'CommunityScreen' },
   ];
@@ -75,11 +82,12 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
           ))}
         </View>
         
-        {/* 중앙 Auvra Character */}
-        <View style={styles.characterContainer}>
-          <View style={styles.characterCircle}>
-            <AuvraCharacterNoShadow size={responsiveWidth(12)} />
-          </View>
+        {/* 중앙 Auvra Character - 흰색 원 없이 */}
+        <View style={[
+          styles.characterContainer,
+          { top: -(characterSize / 2 + characterTextGap - emptyIconSize) }
+        ]}>
+          <AuvraCharacterNoShadow size={characterSize} />
         </View>
       </View>
     </View>
@@ -150,31 +158,10 @@ const styles = StyleSheet.create({
   },
   characterContainer: {
     position: 'absolute',
-    top: -responsiveHeight(2.5), // -18px (중앙 캐릭터가 위로 올라가도록)
-    left: '50%',
-    transform: [{ translateX: -responsiveWidth(7) }], // -27.5px (55px의 절반)
-  },
-  characterCircle: {
-    width: responsiveWidth(15), // 55px
-    height: responsiveWidth(15), // 55px
-    borderRadius: responsiveWidth(7.5), // 27.5px
-    backgroundColor: '#ffffff',
+    left: 0,
+    right: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#f7f7f8',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  characterAnimation: {
-    width: responsiveWidth(12), // 45px
-    height: responsiveWidth(12), // 45px
   },
 });
 

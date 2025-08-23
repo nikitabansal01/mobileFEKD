@@ -207,9 +207,15 @@ class SessionService {
         }
       });
 
+      // 사용자 시간대 자동 감지
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      
       const requestBody = {
         session_id: sessionId,
-        data: responseData
+        data: {
+          ...responseData,
+          survey_timezone: userTimezone  // 필수!
+        }
       };
 
       console.log('요청 URL:', `${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/data`);
@@ -253,6 +259,9 @@ class SessionService {
       // 로컬 스토리지에서 이름 가져오기
       const userName = await AsyncStorage.getItem('userName');
       
+      // 사용자 시간대 자동 감지
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      
       const userProfile = {
         name: userName || '',
         email: firebaseUser.email || ''
@@ -260,7 +269,8 @@ class SessionService {
 
       console.log('세션 연결 시도:', {
         sessionId,
-        userProfile
+        userProfile,
+        timezone: userTimezone
       });
 
       const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/link`, {
@@ -270,7 +280,8 @@ class SessionService {
           'Authorization': `Bearer ${await firebaseUser.getIdToken()}`
         },
         body: JSON.stringify({
-          user_profile: userProfile
+          user_profile: userProfile,
+          current_timezone: userTimezone  // 필수!
         }),
       });
 
