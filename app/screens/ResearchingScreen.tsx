@@ -1,17 +1,15 @@
 import Images from "@/assets/images";
-import LoginBottomSheet from "@/components/LoginBottomSheet";
-import { responsiveFontSize2 } from "@/globalFontSizeNew";
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Image, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { responsiveWidth, responsiveHeight, responsiveFontSize } from "react-native-responsive-dimensions";
-import { LinearGradient } from 'expo-linear-gradient';
-import MaskedView from '@react-native-masked-view/masked-view';
 import OptionButtonsContainer from "@/components/customComponent/OptionButtonsContainer";
 import FixedBottomContainer from "@/components/FixedBottomContainer";
-import PrimaryButton from "@/components/PrimaryButton";
 import GradientText from "@/components/GradientText";
+import LoginBottomSheet from "@/components/LoginBottomSheet";
+import PrimaryButton from "@/components/PrimaryButton";
+import { responsiveFontSize2 } from "@/globalFontSizeNew";
 import sessionService from "@/services/sessionService";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Image, Text, View } from "react-native";
+import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const firstTitle = "🔍 Researching 25000\nresearch papers...";
 const secondTitle = "🎁 Personalizing based\non your needs";

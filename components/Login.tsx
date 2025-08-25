@@ -1,36 +1,30 @@
-import {
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  Alert,
-} from "react-native";
-import React, { useRef, useState, useEffect } from "react";
-import GoogleIconSvg from "@/assets/images/SVG/OnboardingSVG/GoogleIconSvg";
 import AppleIconSvg from "@/assets/images/SVG/OnboardingSVG/AppleIconSvg";
+import GoogleIconSvg from "@/assets/images/SVG/OnboardingSVG/GoogleIconSvg";
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import React, { useEffect, useState } from "react";
 import {
-  responsiveFontSize,
-  responsiveHeight,
-  responsiveWidth,
+    Alert,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from "react-native";
+import {
+    responsiveFontSize,
+    responsiveHeight,
+    responsiveWidth,
 } from "react-native-responsive-dimensions";
-import { responsiveFontSize2 } from "@/globalFontSizeNew";
-import ExpandableInput from "./ExpandableInput";
+
 import RightTickSvg from "@/assets/images/SVG/OnboardingSVG/RightTickSvg";
-import { signInWithEmail } from "@/config/firebase";
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import { GoogleAuthProvider, signInWithCredential, OAuthProvider } from 'firebase/auth';
-import { auth } from '@/config/firebase';
-import * as AppleAuthentication from 'expo-apple-authentication';
+import { auth, signInWithEmail } from "@/config/firebase";
 import sessionService from '@/services/sessionService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+import { GoogleAuthProvider, OAuthProvider, signInWithCredential } from 'firebase/auth';
+import ExpandableInput from "./ExpandableInput";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -360,14 +354,14 @@ const styles = StyleSheet.create({
   rememberText: {
     fontFamily: "Poppins400",
     color: "rgba(0, 0, 0, 0.60)",
-    fontSize: responsiveFontSize2(1.65),
+    fontSize: responsiveFontSize(1.65),
   },
   loginContainer: {
     paddingVertical: 10,
   },
   inputLable: {
     color: "#B3B3B3",
-    fontSize: responsiveFontSize2(1.65),
+    fontSize: responsiveFontSize(1.65),
     fontFamily: "Poppins400",
   },
   inputView: {
@@ -401,12 +395,12 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   forgotButtonText: {
-    fontSize: responsiveFontSize2(1.92),
+    fontSize: responsiveFontSize(1.92),
     fontFamily: "Poppins500",
     color: "rgba(0, 0, 0, 0.60)",
   },
   buttonText: {
-    fontSize: responsiveFontSize2(1.92),
+    fontSize: responsiveFontSize(1.92),
     fontFamily: "Poppins500",
     color: "#FFF",
   },
@@ -425,7 +419,7 @@ const styles = StyleSheet.create({
   },
   lineText: {
     color: "rgba(73, 69, 79, 0.34)",
-    fontSize: responsiveFontSize2(1.8),
+    fontSize: responsiveFontSize(1.8),
     fontFamily: "Poppins400",
   },
   socialLoginContainer: {
@@ -447,7 +441,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   googleButtonText: {
-    fontSize: responsiveFontSize2(1.64),
+    fontSize: responsiveFontSize(1.64),
     fontFamily: "Poppins400",
     color: "rgba(30, 30, 30, 1)",
   },

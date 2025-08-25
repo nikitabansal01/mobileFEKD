@@ -1,26 +1,26 @@
 // URL 폴리필을 가장 먼저 import
 import 'react-native-url-polyfill/auto';
 
-import React, { createContext, useState } from 'react';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { StatusBar } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { useFonts } from "expo-font";
 import { registerRootComponent } from 'expo';
+import { useFonts } from "expo-font";
+import React, { createContext } from 'react';
+import { StatusBar, Text, TextInput } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import "react-native-reanimated";
 
 // Screens
-import OnboardingScreen from './app/screens/OnboardingScreen';
-import IntroScreen from './app/screens/IntroScreen';
-import QuestionScreen from './app/screens/QuestionScreen';
-import ResultScreen from './app/screens/ResultScreen';
-import ResearchingScreen from './app/screens/ResearchingScreen';
-import LoadingScreen from './app/screens/LoadingScreen';
-import ResultLoadingScreen from './app/screens/ResultLoadingScreen';
-import LoginScreen from './app/screens/LoginScreen';
 import HomeScreen from './app/screens/HomeScreen';
+import IntroScreen from './app/screens/IntroScreen';
+import LoadingScreen from './app/screens/LoadingScreen';
+import LoginScreen from './app/screens/LoginScreen';
+import OnboardingScreen from './app/screens/OnboardingScreen';
+import QuestionScreen from './app/screens/QuestionScreen';
+import ResearchingScreen from './app/screens/ResearchingScreen';
+import ResultLoadingScreen from './app/screens/ResultLoadingScreen';
+import ResultScreen from './app/screens/ResultScreen';
 
 // Context - FirstLog를 직접 정의
 interface FirstLogContextType {
@@ -33,6 +33,13 @@ export const FirstLog = createContext<FirstLogContextType | undefined>(undefined
 const Stack = createStackNavigator();
 
 export default function App() {
+  // 전역 폰트 스케일링 비활성화
+  Text.defaultProps = Text.defaultProps || {};
+  Text.defaultProps.allowFontScaling = false;
+
+  TextInput.defaultProps = TextInput.defaultProps || {};
+  TextInput.defaultProps.allowFontScaling = false;
+
   const [loaded] = useFonts({
     Rubik400: require("./assets/fonts/Rubik-Regular.ttf"),
     Rubik500: require("./assets/fonts/Rubik-Medium.ttf"),

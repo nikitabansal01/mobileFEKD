@@ -1,5 +1,5 @@
-import { Platform } from 'react-native';
 import { getAuth } from 'firebase/auth';
+import { Platform } from 'react-native';
 
 // 플랫폼별 API URL 설정
 const getApiBaseUrl = () => {
@@ -80,8 +80,16 @@ export interface AssignmentsResponse {
 }
 
 export interface HormoneStats {
-  progesterone: { completed: number; total: number };
-  testosterone: { completed: number; total: number };
+  androgens?: { completed: number; total: number };
+  progesterone?: { completed: number; total: number };
+  estrogen?: { completed: number; total: number };
+  thyroid?: { completed: number; total: number };
+  insulin?: { completed: number; total: number };
+  cortisol?: { completed: number; total: number };
+  FSH?: { completed: number; total: number };
+  LH?: { completed: number; total: number };
+  prolactin?: { completed: number; total: number };
+  ghrelin?: { completed: number; total: number };
 }
 
 export interface ProgressStatsResponse {

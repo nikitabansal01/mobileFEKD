@@ -1,20 +1,18 @@
 import CloseEye from "@/assets/images/SVG/CloseEye";
-import CrossSvg from "@/assets/images/SVG/CrossSvg";
-import { Entypo, Feather } from "@expo/vector-icons";
-import React, { useState, useRef } from "react";
+import { Feather } from "@expo/vector-icons";
+import React, { useRef, useState } from "react";
 import {
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  View,
-  ViewStyle,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+    ViewStyle,
 } from "react-native";
 import {
-  responsiveFontSize,
-  responsiveWidth,
+    responsiveFontSize
 } from "react-native-responsive-dimensions";
-import { responsiveFontSize2 } from "@/globalFontSizeNew";
+
 
 type ExpandableInputProps = {
   label: string;
@@ -103,12 +101,12 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     color: "#B3B3B3",
-    fontSize: responsiveFontSize2(1.92),
+    fontSize: responsiveFontSize(1.92),
     fontFamily: "Poppins400",
   },
   innerInputView: {
     color: "#000",
-    fontSize: responsiveFontSize2(1.65),
+    fontSize: responsiveFontSize(1.65),
     padding: 0,
     fontFamily: "Poppins400",
   },

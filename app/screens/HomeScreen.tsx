@@ -1,43 +1,42 @@
+import BottomNavigationBar from '@/components/BottomNavigationBar';
+import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse } from '@/services/homeService';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
   SafeAreaView,
-  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
-import { LinearGradient } from 'expo-linear-gradient';
-import BottomNavigationBar from '@/components/BottomNavigationBar';
-import homeService, { CycleInfo, AssignmentsResponse, ProgressStatsResponse, HormoneStats } from '@/services/homeService';
+import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
+import ActionPlanTimeline from '../../components/ActionPlanTimeline';
+import TypeActionPlan from '../../components/TypeActionPlan';
 
-// 임시 이미지 데이터
-const TEMP_IMAGES = {
-  pumpkinSeeds: 'https://via.placeholder.com/50x50/DDC2E9/FFFFFF?text=🎃',
-  briskWalk: 'https://via.placeholder.com/50x50/F0F0F0/FFFFFF?text=🚶',
-  ashwagandha: 'https://via.placeholder.com/50x50/F0F0F0/FFFFFF?text=🌿',
-  lightYoga: 'https://via.placeholder.com/50x50/F0F0F0/FFFFFF?text=🧘',
-  progesterone: 'https://via.placeholder.com/75x75/FFE9F1/FFFFFF?text=🌸',
-  testosterone: 'https://via.placeholder.com/75x75/FFFBD4/FFFFFF?text=💪',
-};
 
 const HomeScreen: React.FC = () => {
   const [cycleInfo, setCycleInfo] = useState<CycleInfo | null>(null);
   const [assignments, setAssignments] = useState<AssignmentsResponse | null>(null);
   const [progressStats, setProgressStats] = useState<ProgressStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState<'time' | 'type'>('time'); // 정렬 방식 상태
+
+
+
 
   useEffect(() => {
     loadHomeData();
   }, []);
 
+
+
   const loadHomeData = async () => {
     try {
       setLoading(true);
       
-      // 병렬로 API 호출 (progress/stats 제거)
+      // 병렬로 API 호출
       const [cycleData, assignmentsData] = await Promise.all([
         homeService.getCyclePhase(),
         homeService.getTodayAssignments(),
@@ -45,18 +44,21 @@ const HomeScreen: React.FC = () => {
 
       setCycleInfo(cycleData?.cycle_info || null);
       setAssignments(assignmentsData);
-      // progressStats는 assignmentsData의 hormone_stats에서 가져옴
+      
+      // hormone_stats를 동적으로 변환
       if (assignmentsData?.hormone_stats) {
-        const hormoneStats: HormoneStats = {
-          progesterone: {
-            completed: assignmentsData.hormone_stats.progesterone?.completed || 0,
-            total: assignmentsData.hormone_stats.progesterone?.total || 0
-          },
-          testosterone: {
-            completed: assignmentsData.hormone_stats.testosterone?.completed || 0,
-            total: assignmentsData.hormone_stats.testosterone?.total || 0
+        const hormoneStats: HormoneStats = {};
+        const supportedHormones = ['androgens', 'progesterone', 'estrogen', 'thyroid', 'insulin', 'cortisol', 'FSH', 'LH', 'prolactin', 'ghrelin'];
+        
+        supportedHormones.forEach(hormone => {
+          if (assignmentsData.hormone_stats[hormone]) {
+            hormoneStats[hormone as keyof HormoneStats] = {
+              completed: assignmentsData.hormone_stats[hormone].completed || 0,
+              total: assignmentsData.hormone_stats[hormone].total || 0
+            };
           }
-        };
+        });
+        
         setProgressStats({ hormone_stats: hormoneStats });
       } else {
         setProgressStats(null);
@@ -89,14 +91,57 @@ const HomeScreen: React.FC = () => {
       case 'morning': return '🌤️';
       case 'afternoon': return '☀️';
       case 'night': return '🌙';
+      case 'anytime': return 'Anytime';
       default: return '⏰';
     }
   };
 
+  const getActionAmount = (assignment: any) => {
+    // 카테고리에 따라 다른 수량 정보 반환
+    switch (assignment.category?.toLowerCase()) {
+      case 'food':
+        return assignment.food_amounts?.[0] || '1 serving';
+      case 'exercise':
+        return assignment.exercise_durations?.[0] || '15 min';
+      case 'supplement':
+        return assignment.food_amounts?.[0] || '1 dose';
+      case 'mindfulness':
+        return assignment.mindfulness_durations?.[0] || '10 min';
+      default:
+        return '1 item';
+    }
+  };
+
+  const getActionPurpose = (assignment: any) => {
+    // symptoms와 conditions를 모두 나열
+    const allItems = [];
+    
+    if (assignment.symptoms && assignment.symptoms.length > 0) {
+      allItems.push(...assignment.symptoms);
+    }
+    if (assignment.conditions && assignment.conditions.length > 0) {
+      allItems.push(...assignment.conditions);
+    }
+    
+    if (allItems.length > 0) {
+      return allItems.join(', ');
+    }
+    
+    return assignment.purpose || 'Health';
+  };
+
   const getHormoneIcon = (hormone: string) => {
     switch (hormone.toLowerCase()) {
+      case 'androgens': return '💪';
       case 'progesterone': return '🌸';
-      case 'testosterone': return '💪';
+      case 'estrogen': return '🌺';
+      case 'thyroid': return '🦋';
+      case 'insulin': return '🍯';
+      case 'cortisol': return '⚡';
+      case 'fsh': return '🌱';
+      case 'lh': return '🌿';
+      case 'prolactin': return '🤱';
+      case 'ghrelin': return '🍽️';
       default: return '💊';
     }
   };
@@ -108,16 +153,32 @@ const HomeScreen: React.FC = () => {
 
   const getProgressColor = (hormone: string) => {
     switch (hormone.toLowerCase()) {
+      case 'androgens': return '#F6C34C';
       case 'progesterone': return '#FF6991';
-      case 'testosterone': return '#F6C34C';
+      case 'estrogen': return '#FF8BA7';
+      case 'thyroid': return '#87CEEB';
+      case 'insulin': return '#FFD700';
+      case 'cortisol': return '#FF6B6B';
+      case 'fsh': return '#98FB98';
+      case 'lh': return '#90EE90';
+      case 'prolactin': return '#DDA0DD';
+      case 'ghrelin': return '#FFA07A';
       default: return '#C17EC9';
     }
   };
 
   const getProgressBgColor = (hormone: string) => {
     switch (hormone.toLowerCase()) {
+      case 'androgens': return '#FFFBD4';
       case 'progesterone': return '#FDEEF5';
-      case 'testosterone': return '#FFFBD4';
+      case 'estrogen': return '#FFE6F0';
+      case 'thyroid': return '#E6F3FF';
+      case 'insulin': return '#FFF8DC';
+      case 'cortisol': return '#FFE6E6';
+      case 'fsh': return '#F0FFF0';
+      case 'lh': return '#F0FFF0';
+      case 'prolactin': return '#F8F0FF';
+      case 'ghrelin': return '#FFF5EE';
       default: return '#F0F0F0';
     }
   };
@@ -172,73 +233,49 @@ const HomeScreen: React.FC = () => {
         </View>
 
         {/* 호르몬 퀘스트 섹션 */}
+        {progressStats?.hormone_stats && Object.keys(progressStats.hormone_stats).length > 0 && (
         <View style={styles.questSection}>
           <Text style={styles.sectionTitle}>🏆 Today's Hormone Quests 🏆</Text>
           <View style={styles.questContainer}>
-            {/* Progesterone Quest */}
-            <View style={styles.questItem}>
+              {Object.entries(progressStats.hormone_stats).map(([hormone, stats]) => {
+                const hormoneKey = hormone as keyof HormoneStats;
+                const hormoneStats = progressStats.hormone_stats[hormoneKey];
+                
+                if (!hormoneStats || hormoneStats.total === 0) return null;
+                
+                return (
+                  <View key={hormone} style={styles.questItem}>
               <View style={styles.questImageContainer}>
-                <Image 
-                  source={{ uri: TEMP_IMAGES.progesterone }}
-                  style={styles.questImage}
-                />
+                      <Text style={styles.questIcon}>{getHormoneIcon(hormone)}</Text>
               </View>
-              <Text style={styles.questName}>Progesterone</Text>
+                    <Text style={styles.questName}>{hormone.charAt(0).toUpperCase() + hormone.slice(1)}</Text>
               <View style={styles.progressContainer}>
-                <View style={[styles.progressBar, { backgroundColor: getProgressBgColor('progesterone') }]}>
+                      <View style={[styles.progressBar, { backgroundColor: getProgressBgColor(hormone) }]}>
                   <View 
                     style={[
                       styles.progressFill, 
                       { 
-                        backgroundColor: getProgressColor('progesterone'),
-                        width: `${getProgressPercentage(
-                          progressStats?.hormone_stats.progesterone.completed || 0,
-                          progressStats?.hormone_stats.progesterone.total || 2
-                        )}%`
+                              backgroundColor: getProgressColor(hormone),
+                              width: `${getProgressPercentage(hormoneStats.completed, hormoneStats.total)}%`
                       }
                     ]} 
                   />
                 </View>
                 <Text style={styles.progressText}>
-                  {progressStats?.hormone_stats.progesterone.completed || 0}/{progressStats?.hormone_stats.progesterone.total || 2}
+                        {hormoneStats.completed}/{hormoneStats.total}
                 </Text>
               </View>
             </View>
-
-            {/* Testosterone Quest */}
-            <View style={styles.questItem}>
-              <View style={styles.questImageContainer}>
-                <Image 
-                  source={{ uri: TEMP_IMAGES.testosterone }}
-                  style={styles.questImage}
-                />
-              </View>
-              <Text style={styles.questName}>Testosterone</Text>
-              <View style={styles.progressContainer}>
-                <View style={[styles.progressBar, { backgroundColor: getProgressBgColor('testosterone') }]}>
-                  <View 
-                    style={[
-                      styles.progressFill, 
-                      { 
-                        backgroundColor: getProgressColor('testosterone'),
-                        width: `${getProgressPercentage(
-                          progressStats?.hormone_stats.testosterone.completed || 0,
-                          progressStats?.hormone_stats.testosterone.total || 2
-                        )}%`
-                      }
-                    ]} 
-                  />
-                </View>
-                <Text style={styles.progressText}>
-                  {progressStats?.hormone_stats.testosterone.completed || 0}/{progressStats?.hormone_stats.testosterone.total || 2}
-                </Text>
-              </View>
-            </View>
+                );
+              })}
           </View>
         </View>
+        )}
 
         {/* 구분선 */}
-        <View style={styles.divider} />
+        <View style={styles.dividerContainer}>
+          <View style={styles.centerDivider} />
+        </View>
 
         {/* 오늘의 액션 플랜 */}
         <View style={styles.actionPlanSection}>
@@ -251,121 +288,52 @@ const HomeScreen: React.FC = () => {
 
           {/* 정렬 버튼 */}
           <View style={styles.sortContainer}>
-            <TouchableOpacity style={styles.sortButton}>
-              <Text style={styles.sortButtonText}>Type</Text>
+            <TouchableOpacity 
+              style={[
+                styles.sortButton, 
+                styles.sortButtonLeft,
+                sortBy === 'type' && styles.sortButtonActive
+              ]}
+              onPress={() => setSortBy('type')}
+            >
+              <Text style={[
+                styles.sortButtonText,
+                sortBy === 'type' && styles.sortButtonTextActive
+              ]}>Type</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.sortButton, styles.sortButtonActive]}>
-              <Text style={[styles.sortButtonText, styles.sortButtonTextActive]}>Time</Text>
+            <TouchableOpacity 
+              style={[
+                styles.sortButton, 
+                styles.sortButtonRight,
+                sortBy === 'time' && styles.sortButtonActive
+              ]}
+              onPress={() => setSortBy('time')}
+            >
+              <Text style={[
+                styles.sortButtonText,
+                sortBy === 'time' && styles.sortButtonTextActive
+              ]}>Time</Text>
             </TouchableOpacity>
           </View>
 
-          {/* 액션 아이템들 */}
-          <View style={styles.actionItemsContainer}>
-            {/* Morning Section */}
-            <View style={styles.timeSection}>
-              <View style={styles.timeIconContainer}>
-                <Text style={styles.timeIcon}>🌤️</Text>
-              </View>
-              
-              {/* Pumpkin Seeds */}
-              <View style={styles.actionItem}>
-                <View style={styles.actionImageContainer}>
-                  <Image 
-                    source={{ uri: TEMP_IMAGES.pumpkinSeeds }}
-                    style={styles.actionImage}
-                  />
-                  <View style={styles.hormoneBadge}>
-                    <Text style={styles.hormoneBadgeText}>+1</Text>
-                  </View>
-                </View>
-                <View style={styles.actionDetails}>
-                  <Text style={styles.actionTitle}>Pumpkin Seeds</Text>
-                  <View style={styles.actionMeta}>
-                    <Text style={styles.actionAmount}>1 spoon</Text>
-                    <Text style={styles.actionSeparator}>•</Text>
-                    <Text style={styles.actionPurpose}>Acne, PCOS</Text>
-                  </View>
-                </View>
-              </View>
+          {/* 동적 컴포넌트 렌더링 */}
+          {assignments?.assignments && Object.keys(assignments.assignments).length > 0 ? (
+            sortBy === 'time' ? (
+              <ActionPlanTimeline
+                dateLabel={assignments?.date ? formatDate(assignments.date) : '15th July, 2025'}
+                assignments={assignments.assignments}
+              />
+            ) : (
+              <TypeActionPlan
+                dateLabel={assignments?.date ? formatDate(assignments.date) : '15th July, 2025'}
+                assignments={assignments.assignments}
+              />
+            )
+          ) : (
+            <View style={styles.noAssignmentsContainer}>
+              <Text style={styles.noAssignmentsText}>No assignments for today</Text>
             </View>
-
-            {/* Afternoon Section */}
-            <View style={styles.timeSection}>
-              <View style={styles.timeIconContainer}>
-                <Text style={styles.timeIcon}>☀️</Text>
-              </View>
-              
-              {/* Brisk Walk */}
-              <View style={[styles.actionItem, styles.actionItemRight]}>
-                <View style={styles.actionDetails}>
-                  <Text style={styles.actionTitle}>Brisk Walk</Text>
-                  <View style={styles.actionMeta}>
-                    <Text style={styles.actionAmount}>15 min</Text>
-                    <Text style={styles.actionSeparator}>•</Text>
-                    <Text style={styles.actionPurpose}>Stress</Text>
-                  </View>
-                </View>
-                <View style={styles.actionImageContainer}>
-                  <Image 
-                    source={{ uri: TEMP_IMAGES.briskWalk }}
-                    style={styles.actionImage}
-                  />
-                  <View style={styles.hormoneBadge}>
-                    <Text style={styles.hormoneBadgeText}>+1</Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Ashwagandha */}
-              <View style={styles.actionItem}>
-                <View style={styles.actionImageContainer}>
-                  <Image 
-                    source={{ uri: TEMP_IMAGES.ashwagandha }}
-                    style={styles.actionImage}
-                  />
-                  <View style={styles.hormoneBadge}>
-                    <Text style={styles.hormoneBadgeText}>+1</Text>
-                  </View>
-                </View>
-                <View style={styles.actionDetails}>
-                  <Text style={styles.actionTitle}>Ashwagandha</Text>
-                  <View style={styles.actionMeta}>
-                    <Text style={styles.actionAmount}>1 spoon</Text>
-                    <Text style={styles.actionSeparator}>•</Text>
-                    <Text style={styles.actionPurpose}>Stress</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            {/* Night Section */}
-            <View style={styles.timeSection}>
-              <View style={styles.timeIconContainer}>
-                <Text style={styles.timeIcon}>🌙</Text>
-              </View>
-              
-              {/* Light Yoga */}
-              <View style={[styles.actionItem, styles.actionItemRight]}>
-                <View style={styles.actionDetails}>
-                  <Text style={styles.actionTitle}>Light Yoga</Text>
-                  <View style={styles.actionMeta}>
-                    <Text style={styles.actionAmount}>10 min</Text>
-                    <Text style={styles.actionSeparator}>•</Text>
-                    <Text style={styles.actionPurpose}>Stress</Text>
-                  </View>
-                </View>
-                <View style={styles.actionImageContainer}>
-                  <Image 
-                    source={{ uri: TEMP_IMAGES.lightYoga }}
-                    style={styles.actionImage}
-                  />
-                  <View style={styles.hormoneBadge}>
-                    <Text style={styles.hormoneBadgeText}>+1</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
+          )}
         </View>
 
         {/* 내일 미리보기 */}
@@ -374,13 +342,61 @@ const HomeScreen: React.FC = () => {
             <Text style={styles.sectionTitle}>Tomorrow</Text>
             <Text style={styles.dateText}>16th July, 2025</Text>
           </View>
-          
+
+          {/* Lock 아이콘 - 날짜와 구분선 사이 */}
+          <View style={styles.tomorrowLockContainer}>
+            <Text style={styles.tomorrowLockIcon}>🔒</Text>
+          </View>
+
+          {/* Tomorrow 액션 플랜 (첫 번째만, blur 처리) */}
           <View style={styles.tomorrowPreview}>
-            <View style={styles.lockIconContainer}>
-              <Text style={styles.lockIcon}>🔒</Text>
-            </View>
-            <View style={styles.blurredContent}>
-              <Text style={styles.blurredText}>내일의 액션 플랜이 여기에 표시됩니다</Text>
+            {/* 전체 blur 처리된 컨텐츠 */}
+            <View style={styles.tomorrowBlurredContent}>
+              {/* 카테고리 헤더 */}
+              <View style={styles.tomorrowCategoryHeader}>
+                <View style={styles.dividerLeft} />
+                <Text style={styles.tomorrowCategoryTitle}>
+                  🥗 Eat
+                </Text>
+                <View style={styles.dividerRight} />
+              </View>
+
+              {/* 첫 번째 액션 아이템 미리보기 */}
+              <View style={styles.tomorrowActionPreview}>
+                <View style={styles.tomorrowImageContainer}>
+                  <Text style={styles.tomorrowActionImage}>📋</Text>
+                </View>
+                
+                <View style={styles.tomorrowActionDetails}>
+                  <Text style={styles.actionTitle}>Pumpkin Seeds</Text>
+                  <View style={styles.tomorrowActionMeta}>
+                    <Text style={styles.actionAmount}>1 spoon</Text>
+                    <View style={styles.actionSeparator} />
+                    <Text style={styles.actionPurpose}>Acne, PCOS</Text>
+                    <View style={styles.actionSeparator} />
+                    <View style={styles.hormoneInfo}>
+                      <Text style={styles.hormoneCount}>+1</Text>
+                      <View style={styles.hormoneIcon}>
+                        <Text style={styles.hormoneIconText}>H</Text>
+                      </View>
+                    </View>
+                    <View style={styles.actionSeparator} />
+                    <Text style={styles.timeEmoji}>🌤️</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* 강한 Blur 오버레이 */}
+              <BlurView 
+                intensity={150} 
+                style={styles.blurOverlay}
+                tint="light"
+              />
+              
+              {/* 추가 노이즈/해상도 저하 효과 - 다중 레이어 */}
+              <View style={styles.noiseOverlay} />
+              <View style={styles.pixelOverlay} />
+              <View style={styles.staticOverlay} />
             </View>
           </View>
         </View>
@@ -474,40 +490,47 @@ const styles = StyleSheet.create({
   },
   questSection: {
     paddingHorizontal: responsiveWidth(5),
-    marginBottom: responsiveHeight(3),
+    marginBottom: responsiveHeight(2),
   },
   sectionTitle: {
     fontSize: responsiveFontSize(1.98),//14px
     fontFamily: 'NotoSerif500',
     color: '#000000',
     textAlign: 'center',
-    marginBottom: responsiveHeight(2),
+    marginBottom: responsiveHeight(1),
   },
   questContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-around',
     alignItems: 'center',
+    gap: responsiveWidth(1),
   },
   questItem: {
     alignItems: 'center',
+    minWidth: responsiveWidth(30),
+    marginBottom: responsiveHeight(1),
   },
   questImageContainer: {
-    width: responsiveWidth(20),
-    height: responsiveHeight(12),
+    width: responsiveWidth(18),
+    height: responsiveHeight(8),
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: responsiveHeight(1),
+    marginBottom: responsiveHeight(0.5),
   },
   questImage: {
     width: responsiveWidth(18),
     height: responsiveHeight(10),
     borderRadius: responsiveWidth(9),
   },
+  questIcon: {
+    fontSize: responsiveFontSize(2.5),
+  },
   questName: {
     fontSize: responsiveFontSize(1.7), //12px
     fontFamily: 'NotoSerif400',
     color: '#000000',
-    marginBottom: responsiveHeight(1),
+    marginBottom: responsiveHeight(0.5),
   },
   progressContainer: {
     flexDirection: 'row',
@@ -515,14 +538,14 @@ const styles = StyleSheet.create({
     gap: responsiveWidth(1),
   },
   progressBar: {
-    width: responsiveWidth(13),
-    height: responsiveHeight(0.6),
-    borderRadius: responsiveWidth(6.5),
+    width: responsiveWidth(12),
+    height: responsiveHeight(0.5),
+    borderRadius: responsiveWidth(6),
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: responsiveWidth(6.5),
+    borderRadius: responsiveWidth(6),
   },
   progressText: {
     fontSize: responsiveFontSize(1.7), //12px
@@ -534,6 +557,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#CFCFCF',
     marginHorizontal: responsiveWidth(5),
     marginVertical: responsiveHeight(3),
+  },
+  dividerContainer: {
+    alignItems: 'center',
+    marginVertical: responsiveHeight(3),
+  },
+  centerDivider: {
+    width: responsiveWidth(30), // 화면 너비의 30%만 사용
+    height: 1,
+    backgroundColor: 'transparent',
+    borderTopWidth: 1,
+    borderTopColor: '#CFCFCF',
+    borderStyle: 'dashed',
   },
   actionPlanSection: {
     paddingHorizontal: responsiveWidth(5),
@@ -551,10 +586,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     marginBottom: responsiveHeight(2),
+    borderRadius: responsiveWidth(2),
+    overflow: 'hidden',
   },
   sortButton: {
     paddingHorizontal: responsiveWidth(3),
-    paddingVertical: responsiveHeight(1.5),
+    paddingVertical: responsiveHeight(0.5),
     backgroundColor: '#FFFFFF',
     borderWidth: 0.25,
     borderColor: '#CFCFCF',
@@ -562,6 +599,16 @@ const styles = StyleSheet.create({
   sortButtonActive: {
     backgroundColor: '#C17EC9',
     borderColor: '#C17EC9',
+  },
+  sortButtonLeft: {
+    borderTopLeftRadius: responsiveWidth(2),
+    borderBottomLeftRadius: responsiveWidth(2),
+    borderRightWidth: 0,
+  },
+  sortButtonRight: {
+    borderTopRightRadius: responsiveWidth(2),
+    borderBottomRightRadius: responsiveWidth(2),
+    borderLeftWidth: 0,
   },
   sortButtonText: {
     fontSize: responsiveFontSize(1.7),//12px
@@ -575,24 +622,10 @@ const styles = StyleSheet.create({
   actionItemsContainer: {
     position: 'relative',
   },
+
   timeSection: {
     marginBottom: responsiveHeight(6),
     position: 'relative',
-  },
-  timeIconContainer: {
-    position: 'absolute',
-    left: '50%',
-    transform: [{ translateX: -responsiveWidth(3) }],
-    width: responsiveWidth(6),
-    height: responsiveWidth(6),
-    backgroundColor: '#FFFFFF',
-    borderRadius: responsiveWidth(3),
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  timeIcon: {
-    fontSize: responsiveFontSize(2),
   },
   actionItem: {
     flexDirection: 'row',
@@ -618,6 +651,9 @@ const styles = StyleSheet.create({
     width: responsiveWidth(12),
     height: responsiveWidth(12),
     borderRadius: responsiveWidth(6),
+  },
+  actionIcon: {
+    fontSize: responsiveFontSize(2.5),
   },
   hormoneBadge: {
     position: 'absolute',
@@ -670,35 +706,154 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: responsiveHeight(2),
   },
-  tomorrowPreview: {
-    height: responsiveHeight(15),
-    backgroundColor: '#F8F9FA',
-    borderRadius: responsiveWidth(2),
-    justifyContent: 'center',
+  tomorrowLockContainer: {
     alignItems: 'center',
-    position: 'relative',
+    marginVertical: responsiveHeight(1.5),
   },
-  lockIconContainer: {
-    position: 'absolute',
-    top: responsiveHeight(2),
-    left: '50%',
-    transform: [{ translateX: -responsiveWidth(3) }],
-  },
-  lockIcon: {
-    fontSize: responsiveFontSize(2),
+  tomorrowLockIcon: {
+    fontSize: responsiveFontSize(2.5),
     color: '#949494',
   },
-  blurredContent: {
-    opacity: 0.3,
+  tomorrowPreview: {
+    position: 'relative',
   },
-  blurredText: {
-    fontSize: responsiveFontSize(1.5),
-    fontFamily: 'Inter400',
+  tomorrowBlurredContent: {
+    position: 'relative',
+  },
+  blurOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
+  },
+  noiseOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    zIndex: 2,
+    opacity: 0.7,
+  },
+  pixelOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(240, 240, 240, 0.4)',
+    zIndex: 3,
+    opacity: 0.6,
+    // 픽셀화된 패턴 효과
+  },
+  staticOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(200, 200, 200, 0.1)',
+    zIndex: 4,
+    opacity: 0.5,
+    // 정적 노이즈 느낌
+  },
+  tomorrowCategoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: responsiveHeight(2),
+  },
+  tomorrowCategoryTitle: {
+    fontSize: responsiveFontSize(2),
+    fontWeight: '500',
     color: '#6F6F6F',
-    textAlign: 'center',
+    paddingHorizontal: responsiveWidth(2),
+  },
+  dividerLeft: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E5EA',
+    marginRight: responsiveWidth(2),
+  },
+  dividerRight: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E5EA',
+    marginLeft: responsiveWidth(2),
+  },
+  tomorrowActionPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: responsiveWidth(5),
+    paddingVertical: responsiveHeight(2),
+    gap: responsiveWidth(3),
+  },
+
+  sortButtonDisabled: {
+    backgroundColor: '#F5F5F5',
+    borderColor: '#E0E0E0',
+  },
+  sortButtonTextDisabled: {
+    color: '#C0C0C0',
+  },
+  tomorrowImageContainer: {
+    width: responsiveWidth(12.5),
+    height: responsiveWidth(12.5),
+    borderRadius: responsiveWidth(6.25),
+    backgroundColor: '#F2F2F7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tomorrowActionImage: {
+    fontSize: responsiveFontSize(3),
+  },
+  tomorrowActionDetails: {
+    flex: 1,
+    gap: responsiveHeight(0.5),
+  },
+  tomorrowActionMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: responsiveWidth(1.5),
+  },
+  hormoneInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: responsiveWidth(1),
+  },
+  hormoneCount: {
+    fontSize: responsiveFontSize(1.6),
+    color: '#949494',
+  },
+  hormoneIcon: {
+    width: responsiveWidth(4),
+    height: responsiveWidth(4),
+    borderRadius: responsiveWidth(2),
+    backgroundColor: '#A36CFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  hormoneIconText: {
+    fontSize: responsiveFontSize(1.2),
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  timeEmoji: {
+    fontSize: responsiveFontSize(2.2),
   },
   bottomSpacing: {
     height: responsiveHeight(5),
+  },
+  noAssignmentsContainer: {
+    alignItems: 'center',
+    paddingVertical: responsiveHeight(4),
+  },
+  noAssignmentsText: {
+    fontSize: responsiveFontSize(1.7),
+    fontFamily: 'Inter400',
+    color: '#6F6F6F',
   },
 });
 

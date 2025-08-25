@@ -1,31 +1,30 @@
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  Alert,
-} from "react-native";
-import React, { useRef, useState } from "react";
-import GoogleIconSvg from "@/assets/images/SVG/OnboardingSVG/GoogleIconSvg";
 import AppleIconSvg from "@/assets/images/SVG/OnboardingSVG/AppleIconSvg";
+import GoogleIconSvg from "@/assets/images/SVG/OnboardingSVG/GoogleIconSvg";
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import React, { useRef, useState } from "react";
 import {
-  responsiveFontSize,
-  responsiveHeight,
-  responsiveWidth,
+    Alert,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import {
+    responsiveFontSize,
+    responsiveHeight,
+    responsiveWidth,
 } from "react-native-responsive-dimensions";
-import { responsiveFontSize2 } from "@/globalFontSizeNew";
-import ExpandableInput from "./ExpandableInput";
+
 import RightTickSvg from "@/assets/images/SVG/OnboardingSVG/RightTickSvg";
+import { auth, signUpWithEmail } from "@/config/firebase";
 import { Feather } from "@expo/vector-icons";
-import AddButtonBottomSheet from "./AddButtonBottomSheet";
-import { signUpWithEmail } from "@/config/firebase";
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import { GoogleAuthProvider, signInWithCredential, OAuthProvider } from 'firebase/auth';
-import { auth } from '@/config/firebase';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+import { GoogleAuthProvider, OAuthProvider, signInWithCredential } from 'firebase/auth';
+import AddButtonBottomSheet from "./AddButtonBottomSheet";
+import ExpandableInput from "./ExpandableInput";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -279,12 +278,12 @@ const styles = StyleSheet.create({
   },
   bottomSheetHeaderText: {
     color: "#1E1E1E",
-    fontSize: responsiveFontSize2(1.92),
+    fontSize: responsiveFontSize(1.92),
     fontFamily: "Poppins400",
   },
   bottomSheetHeaderStrongText: {
     color: "#44AD5E",
-    fontSize: responsiveFontSize2(1.92),
+    fontSize: responsiveFontSize(1.92),
     fontFamily: "Poppins400",
     textAlign: "right",
   },
@@ -304,7 +303,7 @@ const styles = StyleSheet.create({
   },
   bottomSheetItemText: {
     color: "#44AD5E",
-    fontSize: responsiveFontSize2(1.65),
+    fontSize: responsiveFontSize(1.65),
     fontFamily: "Poppins400",
   },
   strongView: {
@@ -316,7 +315,7 @@ const styles = StyleSheet.create({
   },
   strongText: {
     color: "#44AD5E",
-    fontSize: responsiveFontSize2(1.4),
+    fontSize: responsiveFontSize(1.4),
     fontFamily: "Poppins400",
     textAlign: "right",
   },
@@ -341,14 +340,14 @@ const styles = StyleSheet.create({
   rememberText: {
     fontFamily: "Poppins400",
     color: "rgba(0, 0, 0, 0.60)",
-    fontSize: responsiveFontSize2(1.65),
+    fontSize: responsiveFontSize(1.65),
   },
   loginContainer: {
     paddingVertical: 10,
   },
   inputLable: {
     color: "#B3B3B3",
-    fontSize: responsiveFontSize2(1.65),
+    fontSize: responsiveFontSize(1.65),
     fontFamily: "Poppins400",
   },
   inputView: {
@@ -360,7 +359,7 @@ const styles = StyleSheet.create({
   },
   innerInputView: {
     color: "#000",
-    fontSize: responsiveFontSize2(1.65),
+    fontSize: responsiveFontSize(1.65),
     padding: 0,
     fontFamily: "Poppins400",
   },

@@ -1,36 +1,33 @@
-import { responsiveFontSize2 } from "@/globalFontSizeNew";
-import React, { useEffect, useState } from "react";
-import {
-    Animated,
-    Dimensions,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
-} from "react-native";
-import { responsiveWidth, responsiveHeight, responsiveFontSize } from "react-native-responsive-dimensions";
-import { LinearGradient } from 'expo-linear-gradient';
-import MaskedView from '@react-native-masked-view/masked-view';
+
+import AppleIconSvg from "@/assets/images/SVG/OnboardingSVG/AppleIconSvg";
+import GoogleIconSvg from "@/assets/images/SVG/OnboardingSVG/GoogleIconSvg";
+import RightTickSvg from "@/assets/images/SVG/OnboardingSVG/RightTickSvg";
+import GradientText from "@/components/GradientText";
+import { auth, signUpWithEmail } from "@/config/firebase";
+import sessionService from '@/services/sessionService';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import GradientText from "@/components/GradientText";
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+import { GoogleAuthProvider, OAuthProvider, signInWithCredential } from 'firebase/auth';
+import React, { useEffect, useState } from "react";
+import {
+  Alert,
+  Animated,
+  Dimensions,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
+import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
 import TextInputContainer from "./customComponent/TextInputContainer";
 import FixedBottomContainer from "./FixedBottomContainer";
 import PrimaryButton from "./PrimaryButton";
-import GoogleIconSvg from "@/assets/images/SVG/OnboardingSVG/GoogleIconSvg";
-import AppleIconSvg from "@/assets/images/SVG/OnboardingSVG/AppleIconSvg";
-import RightTickSvg from "@/assets/images/SVG/OnboardingSVG/RightTickSvg";
-import { signUpWithEmail } from "@/config/firebase";
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import { GoogleAuthProvider, signInWithCredential, OAuthProvider } from 'firebase/auth';
-import { auth } from '@/config/firebase';
-import * as AppleAuthentication from 'expo-apple-authentication';
-import { Alert } from "react-native";
-import sessionService from '@/services/sessionService';
 
 WebBrowser.maybeCompleteAuthSession();
 

@@ -1,14 +1,14 @@
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  TextStyle,
-  ViewStyle,
-} from "react-native";
 import React from "react";
+import {
+    StyleSheet,
+    Text,
+    TextStyle,
+    TouchableOpacity,
+    View,
+    ViewStyle,
+} from "react-native";
 import { responsiveFontSize } from "react-native-responsive-dimensions";
-import { responsiveFontSize2 } from "@/globalFontSizeNew";
+
 
 export type Props = {
   title: String;
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
     borderRadius: 21,
   },
   title: {
-    fontSize: responsiveFontSize2(1.92),
+    fontSize: responsiveFontSize(1.92),
     fontFamily: "Inter500",
     color: "#FFF",
   },
