@@ -281,7 +281,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
               onPress={() => setRememberMe(!rememberMe)}
             >
               <View style={[styles.checkbox, rememberMe && styles.checkboxSelected]}>
-                {rememberMe && <RightTickSvg size={responsiveFontSize(1.7)} color="#FFF" />} //12px
+                {rememberMe && <RightTickSvg size={responsiveFontSize(1.7)} color="#FFF" />} {/* 12px */}
               </View>
               <Text style={styles.rememberText}>Remember me</Text>
             </TouchableOpacity>

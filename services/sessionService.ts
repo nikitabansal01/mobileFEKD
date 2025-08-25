@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
 import * as Device from 'expo-device';
+import { Platform } from 'react-native';
 
 // 플랫폼별 API URL 설정
 const getApiBaseUrl = () => {
@@ -431,7 +431,17 @@ class SessionService {
 
       const result = await response.json();
       console.log('📊 추천 생성 상태 응답:', result);
-      return result;
+      
+      // 응답 구조 정규화
+      let normalizedResult = {
+        status: result.status || result.currentRecommendationStatus || 'pending',
+        data: result.data || result,
+        recommendations_count: result.recommendations_count || 0,
+        session_id: result.session_id
+      };
+      
+      console.log('✅ 정규화된 응답:', normalizedResult);
+      return normalizedResult;
     } catch (error) {
       console.error('❌ 추천 생성 상태 확인 오류:', error);
       return null;
