@@ -336,70 +336,72 @@ const HomeScreen: React.FC = () => {
           )}
         </View>
 
-        {/* 내일 미리보기 */}
-        <View style={styles.tomorrowSection}>
-          <View style={styles.tomorrowHeader}>
-            <Text style={styles.sectionTitle}>Tomorrow</Text>
-            <Text style={styles.dateText}>16th July, 2025</Text>
-          </View>
+        {/* 내일 미리보기 - type 모드에서만 표시 */}
+        {sortBy === 'type' && (
+          <View style={styles.tomorrowSection}>
+            <View style={styles.tomorrowHeader}>
+              <Text style={styles.sectionTitle}>Tomorrow</Text>
+              <Text style={styles.dateText}>16th July, 2025</Text>
+            </View>
 
-          {/* Lock 아이콘 - 날짜와 구분선 사이 */}
-          <View style={styles.tomorrowLockContainer}>
-            <Text style={styles.tomorrowLockIcon}>🔒</Text>
-          </View>
+            {/* Lock 아이콘 - 날짜와 구분선 사이 */}
+            <View style={styles.tomorrowLockContainer}>
+              <Text style={styles.tomorrowLockIcon}>🔒</Text>
+            </View>
 
-          {/* Tomorrow 액션 플랜 (첫 번째만, blur 처리) */}
-          <View style={styles.tomorrowPreview}>
-            {/* 전체 blur 처리된 컨텐츠 */}
-            <View style={styles.tomorrowBlurredContent}>
-              {/* 카테고리 헤더 */}
-              <View style={styles.tomorrowCategoryHeader}>
-                <View style={styles.dividerLeft} />
-                <Text style={styles.tomorrowCategoryTitle}>
-                  🥗 Eat
-                </Text>
-                <View style={styles.dividerRight} />
-              </View>
-
-              {/* 첫 번째 액션 아이템 미리보기 */}
-              <View style={styles.tomorrowActionPreview}>
-                <View style={styles.tomorrowImageContainer}>
-                  <Text style={styles.tomorrowActionImage}>📋</Text>
+            {/* Tomorrow 액션 플랜 (첫 번째만, blur 처리) */}
+            <View style={styles.tomorrowPreview}>
+              {/* 전체 blur 처리된 컨텐츠 */}
+              <View style={styles.tomorrowBlurredContent}>
+                {/* 카테고리 헤더 */}
+                <View style={styles.tomorrowCategoryHeader}>
+                  <View style={styles.dividerLeft} />
+                  <Text style={styles.tomorrowCategoryTitle}>
+                    🥗 Eat
+                  </Text>
+                  <View style={styles.dividerRight} />
                 </View>
-                
-                <View style={styles.tomorrowActionDetails}>
-                  <Text style={styles.actionTitle}>Pumpkin Seeds</Text>
-                  <View style={styles.tomorrowActionMeta}>
-                    <Text style={styles.actionAmount}>1 spoon</Text>
-                    <View style={styles.actionSeparator} />
-                    <Text style={styles.actionPurpose}>Acne, PCOS</Text>
-                    <View style={styles.actionSeparator} />
-                    <View style={styles.hormoneInfo}>
-                      <Text style={styles.hormoneCount}>+1</Text>
-                      <View style={styles.hormoneIcon}>
-                        <Text style={styles.hormoneIconText}>H</Text>
+
+                {/* 첫 번째 액션 아이템 미리보기 */}
+                <View style={styles.tomorrowActionPreview}>
+                  <View style={styles.tomorrowImageContainer}>
+                    <Text style={styles.tomorrowActionImage}>📋</Text>
+                  </View>
+                  
+                  <View style={styles.tomorrowActionDetails}>
+                    <Text style={styles.actionTitle}>Pumpkin Seeds</Text>
+                    <View style={styles.tomorrowActionMeta}>
+                      <Text style={styles.actionAmount}>1 spoon</Text>
+                      <View style={styles.actionSeparator} />
+                      <Text style={styles.actionPurpose}>Acne, PCOS</Text>
+                      <View style={styles.actionSeparator} />
+                      <View style={styles.hormoneInfo}>
+                        <Text style={styles.hormoneCount}>+1</Text>
+                        <View style={styles.hormoneIcon}>
+                          <Text style={styles.hormoneIconText}>H</Text>
+                        </View>
                       </View>
+                      <View style={styles.actionSeparator} />
+                      <Text style={styles.timeEmoji}>🌤️</Text>
                     </View>
-                    <View style={styles.actionSeparator} />
-                    <Text style={styles.timeEmoji}>🌤️</Text>
                   </View>
                 </View>
-              </View>
 
-              {/* 강한 Blur 오버레이 */}
-              <BlurView 
-                intensity={150} 
-                style={styles.blurOverlay}
-                tint="light"
-              />
-              
-              {/* 추가 노이즈/해상도 저하 효과 - 다중 레이어 */}
-              <View style={styles.noiseOverlay} />
-              <View style={styles.pixelOverlay} />
-              <View style={styles.staticOverlay} />
+                {/* 강한 Blur 오버레이 */}
+                <BlurView 
+                  intensity={150} 
+                  style={styles.blurOverlay}
+                  tint="light"
+                />
+                
+                {/* 추가 노이즈/해상도 저하 효과 - 다중 레이어 */}
+                <View style={styles.noiseOverlay} />
+                <View style={styles.pixelOverlay} />
+                <View style={styles.staticOverlay} />
+              </View>
             </View>
           </View>
-        </View>
+        )}
 
         {/* 하단 여백 */}
         <View style={styles.bottomSpacing} />
