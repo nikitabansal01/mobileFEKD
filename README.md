@@ -10,10 +10,17 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Set up environment variables
 
    ```bash
-   npx expo start
+   # Create .env file in project root
+   echo "EXPO_PUBLIC_API_URL=http://192.168.45.76:8000" > .env
+   ```
+
+3. Start the app
+
+   ```bash
+   npx expo start --clear
    ```
 
 In the output, you'll find options to open the app in a

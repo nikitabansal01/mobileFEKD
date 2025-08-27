@@ -238,6 +238,7 @@ export default function ActionPlanTimeline({
   // 6) Today와 Tomorrow Path 생성
   const [todayPathD, setTodayPathD] = useState('');
   const [tomorrowPathD, setTomorrowPathD] = useState('');
+  const [completedPathD, setCompletedPathD] = useState('');
   
   useEffect(() => {
     if (!geom) return;
@@ -257,6 +258,25 @@ export default function ActionPlanTimeline({
       );
       setTodayPathD(todayPath);
       setPathD(todayPath); // 기존 로직 호환
+
+      // 완료된 앵커까지의 Path 생성
+      const completedCount = todayAssignments.filter(a => a.is_completed).length;
+      if (completedCount > 0) {
+        const completedAnchors = todayAnchors.slice(0, completedCount);
+        const completedPath = generatePathRectilinear(
+          completedAnchors,
+          CIRCLE_RADIUS,
+          CENTER_X,
+          CAP_TOP,
+          CAP_BOTTOM,
+          BRIDGE_DROP,
+          ITEM_BLOCK_H,
+          BASE_TOP
+        );
+        setCompletedPathD(completedPath);
+      } else {
+        setCompletedPathD('');
+      }
     }
 
     // Tomorrow Path 생성: 첫 번째 앵커까지만
@@ -272,7 +292,8 @@ export default function ActionPlanTimeline({
         CENTER_X,
         CAP_TOP,
         ITEM_BLOCK_H,
-        tomorrowBaseY
+        tomorrowBaseY,
+        CIRCLE_RADIUS
       );
       setTomorrowPathD(tomorrowPath);
     }
@@ -349,6 +370,12 @@ export default function ActionPlanTimeline({
                 <Stop offset="0" stopColor="#C17EC9" />
                 <Stop offset="1" stopColor="#A36CFF" />
               </SvgLinearGradient>
+              
+              {/* 완료된 섹션용 그라디언트 */}
+              <SvgLinearGradient id="completedSectionGrad" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0" stopColor="#C17EC9" />
+                <Stop offset="1" stopColor="#A36CFF" />
+              </SvgLinearGradient>
             </Defs>
 
             {/* Today 회색 베이스 라인 (점선) */}
@@ -360,7 +387,20 @@ export default function ActionPlanTimeline({
               />
             )}
 
-            {/* Today 진행 라인 (그라디언트) */}
+            {/* 완료된 앵커까지 그라디언트 라인 (점선) */}
+            {!!completedPathD && (
+              <Path
+                d={completedPathD}
+                stroke="url(#completedSectionGrad)"
+                strokeWidth={15}
+                fill="none"
+                strokeLinejoin="round"
+                strokeDasharray={`${responsiveWidth(14)} ${responsiveWidth(3.5)}`}
+                opacity={1.0}
+              />
+            )}
+
+            {/* Today 진행 라인 (그라디언트) - 기존 애니메이션 유지 */}
             {!!todayPathD && pathLen > 0 && (
               <AnimatedPath
                 ref={svgPathRef}
@@ -602,94 +642,109 @@ export function generatePathRectilinear(
   const pts = [...anchors].sort((a, b) => a.y - b.y);
 
   const s = (n: number) => Math.round(n);
-  const cornerR = 15; // 코너 반지름을 좀 더 크게 (더 확실한 둥근 효과)
+  const cornerR = 15;
   
   const first = pts[0];
   const last = pts[pts.length - 1];
 
-  // 둥근 코너를 위한 헬퍼 함수 (개선된 버전)
+  // 둥근 코너를 위한 헬퍼 함수
   const addRoundedCorner = (x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): string => {
-    // 방향 벡터 계산
     const dx1 = x2 - x1, dy1 = y2 - y1;
     const dx2 = x3 - x2, dy2 = y3 - y2;
     
-    // 벡터 길이
     const len1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
     const len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
     
-    // 길이가 0이거나 너무 짧으면 직선으로
     if (len1 < 1 || len2 < 1) return ` L ${s(x2)},${s(y2)}`;
     
-    // 단위 벡터
     const ux1 = dx1 / len1, uy1 = dy1 / len1;
     const ux2 = dx2 / len2, uy2 = dy2 / len2;
     
-    // 실제 반지름 (더 보수적으로 제한)
-    const maxR = Math.min(len1 * 0.4, len2 * 0.4); // 40%로 제한
+    const maxR = Math.min(len1 * 0.4, len2 * 0.4);
     const actualR = Math.min(cornerR, maxR);
     
-    // 반지름이 너무 작으면 직선으로
     if (actualR < 2) return ` L ${s(x2)},${s(y2)}`;
     
-    // 입측, 출측 점
     const inX = x2 - ux1 * actualR;
     const inY = y2 - uy1 * actualR;
     const outX = x2 + ux2 * actualR;
     const outY = y2 + uy2 * actualR;
     
-    // 회전 방향 계산 (외적) - 더 명확한 계산
     const cross = dx1 * dy2 - dy1 * dx2;
     const sweep = cross > 0 ? 1 : 0;
-    
-    // 디버그용 로그 (첫 번째 코너만)
-    if (Math.abs(x2 - 360) < 5 && Math.abs(y2 - 160) < 5) {
-      console.log(`Corner at (${x2},${y2}): r=${actualR}, sweep=${sweep}, cross=${cross}`);
-    }
     
     return ` L ${s(inX)},${s(inY)} A ${actualR} ${actualR} 0 0 ${sweep} ${s(outX)},${s(outY)}`;
   };
 
-  // Path 점들을 순서대로 배열
-  const pathPoints: [number, number][] = [
+  // 여러 개의 분리된 path 세그먼트를 생성
+  const segments: string[] = [];
+
+  // 첫 번째 세그먼트: 시작점에서 첫 번째 앵커 상단까지
+  const firstSegmentPoints: [number, number][] = [
     [centerX, BASE_TOP],
     [centerX, BASE_TOP + TOP_CAP],
     [first.x, BASE_TOP + TOP_CAP],
-    [first.x, first.y]
+    [first.x, first.y - circleR] // 첫 번째 앵커 상단 가장자리까지
   ];
 
-  // 중간 구간들 추가
+  let segmentPath = `M ${s(firstSegmentPoints[0][0])},${s(firstSegmentPoints[0][1])}`;
+  for (let i = 1; i < firstSegmentPoints.length - 1; i++) {
+    const [x1, y1] = firstSegmentPoints[i - 1];
+    const [x2, y2] = firstSegmentPoints[i];
+    const [x3, y3] = firstSegmentPoints[i + 1];
+    segmentPath += addRoundedCorner(x1, y1, x2, y2, x3, y3);
+  }
+  const [lastX, lastY] = firstSegmentPoints[firstSegmentPoints.length - 1];
+  segmentPath += ` L ${s(lastX)},${s(lastY)}`;
+  segments.push(segmentPath);
+
+  // 중간 세그먼트들: 각 앵커 하단에서 다음 앵커 상단까지
   for (let i = 0; i < pts.length - 1; i++) {
     const a = pts[i], b = pts[i + 1];
-    const yMid = a.y + (b.y - a.y) / 2;
+    const yMid = a.y + circleR + (b.y - circleR - (a.y + circleR)) / 2;
     
-    pathPoints.push([a.x, yMid]);
-    pathPoints.push([b.x, yMid]);
-    pathPoints.push([b.x, b.y]);
+    const segmentPoints: [number, number][] = [
+      [a.x, a.y + circleR], // 현재 앵커 하단 가장자리
+      [a.x, yMid],
+      [b.x, yMid],
+      [b.x, b.y - circleR] // 다음 앵커 상단 가장자리
+    ];
+
+    let midSegmentPath = `M ${s(segmentPoints[0][0])},${s(segmentPoints[0][1])}`;
+    for (let j = 1; j < segmentPoints.length - 1; j++) {
+      const [x1, y1] = segmentPoints[j - 1];
+      const [x2, y2] = segmentPoints[j];
+      const [x3, y3] = segmentPoints[j + 1];
+      midSegmentPath += addRoundedCorner(x1, y1, x2, y2, x3, y3);
+    }
+    const [segLastX, segLastY] = segmentPoints[segmentPoints.length - 1];
+    midSegmentPath += ` L ${s(segLastX)},${s(segLastY)}`;
+    segments.push(midSegmentPath);
   }
 
-  // 마지막 구간 추가
-  const lastMidY = last.y + itemBlockH / 2;
-  pathPoints.push([last.x, lastMidY]);
-  pathPoints.push([centerX, lastMidY]);
-  pathPoints.push([centerX, last.y + itemBlockH / 2 + BOTTOM_CAP]);
+  // 마지막 세그먼트: 마지막 앵커 하단에서 끝점까지
+  const lastBottomY = last.y + circleR;
+  const lastMidY = lastBottomY + itemBlockH / 2;
+  const lastSegmentPoints: [number, number][] = [
+    [last.x, lastBottomY], // 마지막 앵커 하단 가장자리
+    [last.x, lastMidY],
+    [centerX, lastMidY],
+    [centerX, lastMidY + BOTTOM_CAP]
+  ];
 
-  // Path 생성 (첫 점에서 시작)
-  let d = `M ${s(pathPoints[0][0])},${s(pathPoints[0][1])}`;
-
-  // 둥근 코너로 연결
-  for (let i = 1; i < pathPoints.length - 1; i++) {
-    const [x1, y1] = pathPoints[i - 1];
-    const [x2, y2] = pathPoints[i];
-    const [x3, y3] = pathPoints[i + 1];
-    
-    d += addRoundedCorner(x1, y1, x2, y2, x3, y3);
+  let lastSegmentPath = `M ${s(lastSegmentPoints[0][0])},${s(lastSegmentPoints[0][1])}`;
+  for (let i = 1; i < lastSegmentPoints.length - 1; i++) {
+    const [x1, y1] = lastSegmentPoints[i - 1];
+    const [x2, y2] = lastSegmentPoints[i];
+    const [x3, y3] = lastSegmentPoints[i + 1];
+    lastSegmentPath += addRoundedCorner(x1, y1, x2, y2, x3, y3);
   }
+  const [finalX, finalY] = lastSegmentPoints[lastSegmentPoints.length - 1];
+  lastSegmentPath += ` L ${s(finalX)},${s(finalY)}`;
+  segments.push(lastSegmentPath);
 
-  // 마지막 점까지 직선
-  const [lastX, lastY] = pathPoints[pathPoints.length - 1];
-  d += ` L ${s(lastX)},${s(lastY)}`;
-
-  return d;
+  // 모든 세그먼트를 하나의 path로 결합
+  return segments.join(' ');
 }
 
 /**
@@ -701,14 +756,15 @@ function generateTomorrowPathToFirstAnchor(
   TOP_CAP: number,
   ITEM_BLOCK_H: number,
   BASE_TOP: number,
+  circleR: number,
 ) {
   if (!anchors.length) return '';
   
   const s = (n: number) => Math.round(n);
-  const cornerR = 15; // 메인 함수와 동일한 코너 반지름
+  const cornerR = 15;
   const first = anchors[0];
 
-  // 둥근 코너를 위한 헬퍼 함수 (메인 함수와 동일)
+  // 둥근 코너를 위한 헬퍼 함수
   const addRoundedCorner = (x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): string => {
     const dx1 = x2 - x1, dy1 = y2 - y1;
     const dx2 = x3 - x2, dy2 = y3 - y2;
@@ -716,12 +772,15 @@ function generateTomorrowPathToFirstAnchor(
     const len1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
     const len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
     
-    if (len1 === 0 || len2 === 0) return ` L ${s(x2)},${s(y2)}`;
+    if (len1 < 1 || len2 < 1) return ` L ${s(x2)},${s(y2)}`;
     
     const ux1 = dx1 / len1, uy1 = dy1 / len1;
     const ux2 = dx2 / len2, uy2 = dy2 / len2;
     
-    const actualR = Math.min(cornerR, len1 / 2, len2 / 2);
+    const maxR = Math.min(len1 * 0.4, len2 * 0.4);
+    const actualR = Math.min(cornerR, maxR);
+    
+    if (actualR < 2) return ` L ${s(x2)},${s(y2)}`;
     
     const inX = x2 - ux1 * actualR, inY = y2 - uy1 * actualR;
     const outX = x2 + ux2 * actualR, outY = y2 + uy2 * actualR;
@@ -732,12 +791,12 @@ function generateTomorrowPathToFirstAnchor(
     return ` L ${s(inX)},${s(inY)} A ${actualR} ${actualR} 0 0 ${sweep} ${s(outX)},${s(outY)}`;
   };
 
-  // Path 점들 배열
+  // Path 점들 배열 - 첫 번째 앵커 상단 가장자리까지만
   const pathPoints: [number, number][] = [
     [centerX, BASE_TOP],
     [centerX, BASE_TOP + TOP_CAP],
     [first.x, BASE_TOP + TOP_CAP],
-    [first.x, first.y]
+    [first.x, first.y - circleR] // 첫 번째 앵커 상단 가장자리까지
   ];
 
   // Path 생성

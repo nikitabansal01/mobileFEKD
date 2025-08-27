@@ -1,6 +1,7 @@
+import ActionPlanTimeline from '@/components/ActionPlanTimeline';
 import BottomNavigationBar from '@/components/BottomNavigationBar';
 import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse } from '@/services/homeService';
-import { BlurView } from 'expo-blur';
+// import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import {
@@ -12,7 +13,6 @@ import {
   View
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
-import ActionPlanTimeline from '../../components/ActionPlanTimeline';
 import TypeActionPlan from '../../components/TypeActionPlan';
 
 
@@ -387,12 +387,12 @@ const HomeScreen: React.FC = () => {
                   </View>
                 </View>
 
-                {/* 강한 Blur 오버레이 */}
-                <BlurView 
+                {/* 강한 Blur 오버레이 - 임시 비활성화 */}
+                {/* <BlurView 
                   intensity={150} 
                   style={styles.blurOverlay}
                   tint="light"
-                />
+                /> */}
                 
                 {/* 추가 노이즈/해상도 저하 효과 - 다중 레이어 */}
                 <View style={styles.noiseOverlay} />
