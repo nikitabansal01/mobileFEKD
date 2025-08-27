@@ -722,15 +722,15 @@ export function generatePathRectilinear(
     segments.push(midSegmentPath);
   }
 
-  // 마지막 세그먼트: 마지막 앵커 하단에서 끝점까지
-  const lastBottomY = last.y + circleR;
-  const lastMidY = lastBottomY + itemBlockH / 2;
-  const lastSegmentPoints: [number, number][] = [
-    [last.x, lastBottomY], // 마지막 앵커 하단 가장자리
-    [last.x, lastMidY],
-    [centerX, lastMidY],
-    [centerX, lastMidY + BOTTOM_CAP]
-  ];
+ // 마지막 세그먼트: 마지막 앵커 하단에서 끝점까지 (첫 번째와 대칭)
+ const lastBottomY = last.y + circleR;
+ const lastMidY = lastBottomY + itemBlockH / 2 - circleR; // 첫 번째와 대칭으로 circleR 빼기
+ const lastSegmentPoints: [number, number][] = [
+   [last.x, lastBottomY], // 마지막 앵커 하단 가장자리
+   [last.x, lastMidY],
+   [centerX, lastMidY],
+   [centerX, lastMidY + BOTTOM_CAP]
+ ];
 
   let lastSegmentPath = `M ${s(lastSegmentPoints[0][0])},${s(lastSegmentPoints[0][1])}`;
   for (let i = 1; i < lastSegmentPoints.length - 1; i++) {
