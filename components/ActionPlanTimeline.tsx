@@ -42,7 +42,7 @@ const DUMMY_TOMORROW_DATA: Assignment[] = [
     category: "food",
     conditions: ["acne", "pcos"],
     symptoms: ["skin_issues"],
-    hormones: ["androgens"],
+    hormones: ["androgens", "progesterone"], // 호르몬 정보 추가
     is_completed: false,
     completed_at: "",
     advices: ["Take 1 spoon with breakfast"],
@@ -96,13 +96,13 @@ export default function ActionPlanTimeline({
 
     const CENTER_X      = Math.round(canvasW / 2);
     const CIRCLE_RADIUS = Math.round(responsiveWidth(9.72));     // pw() → responsiveWidth로 통일
-    const OFFSET_X      = Math.round(responsiveWidth(31));    // pw() → responsiveWidth로 통일
+    const OFFSET_X      = Math.round(responsiveWidth(26));    // pw() → responsiveWidth로 통일
     const LEFT_X        = CENTER_X - OFFSET_X;                   // 아이템 "중심 X"
     const RIGHT_X       = CENTER_X + OFFSET_X;
 
     // 세로 값들은 기존처럼 responsiveHeight 쓰되, 마지막에 반올림만
     const BASE_TOP      = Math.round(responsiveHeight(0));      // 컨테이너 제일 위 기준점
-    const ITEM_BLOCK_H  = Math.round(responsiveHeight(20));      // 아이템 간 세로 간격
+    const ITEM_BLOCK_H  = Math.round(responsiveHeight(18));      // 아이템 간 세로 간격
     const CAP_TOP       = Math.round(responsiveHeight(7));
     const CAP_BOTTOM    = Math.round(responsiveHeight(7));
     const BRIDGE_DROP   = Math.round(Math.min(responsiveHeight(2.25), 0.5 * CAP_TOP));
@@ -112,7 +112,7 @@ export default function ActionPlanTimeline({
 
   const [anchors, setAnchors] = useState<{ id: string; x: number; y: number }[]>([]);
   const [pathD, setPathD] = useState('');
-  const [contentHeight, setContentHeight] = useState(responsiveHeight(130));
+  const [contentHeight, setContentHeight] = useState(responsiveHeight(200)); // 초기값 증가로 즉시 스크롤 가능하게
   const [pathLen, setPathLen] = useState(0);
   const svgPathRef = useRef<Path>(null);
 
@@ -164,10 +164,12 @@ export default function ActionPlanTimeline({
     });
     setTomorrowAnchors(tomorrowNext);
 
-    // 전체 높이 계산: Tomorrow 첫 번째 앵커 절반 정도에서 끊기
-    const firstTomorrowY = tomorrowNext[0]?.y ?? tomorrowStartY;
-    const cutoffHeight = firstTomorrowY + ITEM_BLOCK_H / 4; // 첫 앵커 절반보다 조금 아래
-    setContentHeight(Math.max(cutoffHeight, responsiveHeight(150)));
+    // 간단한 높이 계산: Tomorrow 마지막 앵커까지
+    const lastTomorrowY = tomorrowNext[tomorrowNext.length - 1]?.y ?? tomorrowStartY;
+    const circleRadius = Math.round(responsiveWidth(9.72)); 
+    const naturalHeight = lastTomorrowY + circleRadius; // 마지막 앵커 아래까지
+    
+    setContentHeight(naturalHeight);
     
     // 기존 anchors는 Today로 설정 (기존 로직 호환)
     setAnchors(todayNext);
@@ -259,16 +261,16 @@ export default function ActionPlanTimeline({
       setTodayPathD(todayPath);
       setPathD(todayPath); // 기존 로직 호환
 
-      // 완료된 앵커까지의 Path 생성
+      // 완료된 앵커까지의 Path 생성 (앵커에서 정확히 끝남)
       const completedCount = todayAssignments.filter(a => a.is_completed).length;
       if (completedCount > 0) {
         const completedAnchors = todayAnchors.slice(0, completedCount);
-        const completedPath = generatePathRectilinear(
+        const completedPath = generateCompletedPath(
           completedAnchors,
+          todayAnchors, // 전체 앵커도 전달 (첫 번째 세그먼트 계산용)
           CIRCLE_RADIUS,
           CENTER_X,
           CAP_TOP,
-          CAP_BOTTOM,
           BRIDGE_DROP,
           ITEM_BLOCK_H,
           BASE_TOP
@@ -337,7 +339,7 @@ export default function ActionPlanTimeline({
     strokeWidth: 15,
     fill: "none",
     strokeLinejoin: "round" as const,
-    strokeDasharray: `${responsiveWidth(14)} ${responsiveWidth(3.5)}`,   // 점선 패턴
+    strokeDasharray: `${responsiveWidth(11)} ${responsiveWidth(2.75)}`,   // 점선 패턴
   };
 
   const lineOpacity = {
@@ -350,7 +352,7 @@ export default function ActionPlanTimeline({
     <View style={styles.container}>
       <View style={{ flex: 1 }}>
         <View 
-          style={{ minHeight: contentHeight }}
+          style={{ height: contentHeight, overflow: 'hidden' }}
           onLayout={(e) => {
             const newWidth = Math.max(0, e.nativeEvent.layout.width);
             if (newWidth > 0 && newWidth !== canvasW) {
@@ -371,10 +373,13 @@ export default function ActionPlanTimeline({
                 <Stop offset="1" stopColor="#A36CFF" />
               </SvgLinearGradient>
               
-              {/* 완료된 섹션용 그라디언트 */}
+              {/* 완료된 섹션용 그라디언트 - GradientText와 동일한 색상 */}
               <SvgLinearGradient id="completedSectionGrad" x1="0" y1="0" x2="1" y2="0">
-                <Stop offset="0" stopColor="#C17EC9" />
-                <Stop offset="1" stopColor="#A36CFF" />
+                <Stop offset="0" stopColor="#A29AEA" />
+                <Stop offset="0.32" stopColor="#C17EC9" />
+                <Stop offset="0.5" stopColor="#D482B9" />
+                <Stop offset="0.73" stopColor="#E98BAC" />
+                <Stop offset="1" stopColor="#FDC6D1" />
               </SvgLinearGradient>
             </Defs>
 
@@ -387,7 +392,7 @@ export default function ActionPlanTimeline({
               />
             )}
 
-            {/* 완료된 앵커까지 그라디언트 라인 (점선) */}
+            {/* 완료된 앵커까지 그라디언트 라인 (직선) */}
             {!!completedPathD && (
               <Path
                 d={completedPathD}
@@ -395,7 +400,6 @@ export default function ActionPlanTimeline({
                 strokeWidth={15}
                 fill="none"
                 strokeLinejoin="round"
-                strokeDasharray={`${responsiveWidth(14)} ${responsiveWidth(3.5)}`}
                 opacity={1.0}
               />
             )}
@@ -472,7 +476,33 @@ export default function ActionPlanTimeline({
                   <Text style={styles.imageFallback} allowFontScaling={false}>
                     📋
                   </Text>
-                  <View style={styles.hormoneBadge}>
+                  {/* 호르몬 이미지 */}
+                  <View style={[
+                    styles.hormoneImage,
+                    {
+                      // 왼쪽 앵커일 때: 왼쪽 상단
+                      // 오른쪽 앵커일 때: 오른쪽 상단
+                      top: isLeft ? -responsiveHeight(3) : -responsiveHeight(3),
+                      left: isLeft ? -responsiveWidth(3) : undefined,
+                      right: isLeft ? undefined : -responsiveWidth(3),
+                    }
+                  ]}>
+                    <Text style={styles.hormoneImageText} allowFontScaling={false}>
+                      🧬
+                    </Text>
+                  </View>
+                  
+                  {/* 호르몬 숫자 (이미지 대비 위치) */}
+                  <View style={[
+                    styles.hormoneBadge,
+                    {
+                      // 왼쪽 앵커일 때: 이미지 왼쪽
+                      // 오른쪽 앵커일 때: 이미지 오른쪽
+                      top: isLeft ? -responsiveHeight(3) : -responsiveHeight(3),
+                      left: isLeft ? -responsiveWidth(8) : undefined,
+                      right: isLeft ? undefined : -responsiveWidth(8),
+                    }
+                  ]}>
                     <Text style={styles.hormoneBadgeText} allowFontScaling={false}>
                       +{a.hormones?.length || 0}
                     </Text>
@@ -500,7 +530,7 @@ export default function ActionPlanTimeline({
           {/* 시간대별 아이콘 표시 */}
           {geom && timeSlotPositions.map((position, index) => {
             const { CENTER_X } = geom;
-            const iconSize = responsiveWidth(7); // 26px 상당
+            const iconSize = responsiveWidth(8); // 26px 상당
             const iconLeft = CENTER_X - iconSize / 2;
             const iconTop = position.iconY - iconSize / 2;
             
@@ -555,6 +585,11 @@ export default function ActionPlanTimeline({
                 }]}>
                   <Text style={styles.tomorrowSectionTitle}>Tomorrow</Text>
                   <Text style={styles.tomorrowDateText}>{tomorrowDate}th {tomorrowMonth}, {tomorrow.getFullYear()}</Text>
+                  
+                  {/* 자물쇠 아이콘 - 아래 선 위에 렌더링 */}
+                  <View style={styles.tomorrowLockContainer}>
+                    <Text style={styles.tomorrowLockIcon}>🔒</Text>
+                  </View>
                 </View>
               );
           })()}
@@ -578,23 +613,53 @@ export default function ActionPlanTimeline({
 
             return (
               <View key={a.id.toString()} style={StyleSheet.absoluteFill} pointerEvents="box-none">
-                {/* Tomorrow 이미지 원 (약간 흐리게) */}
+                {/* Tomorrow 이미지 원 */}
                 <View
                   style={[
                     styles.imageCircle,
                     { left: xImage, top: yImage },
-                    styles.tomorrowItem, // 흐림 효과
                   ]}
                 >
                   <Text style={styles.imageFallback}>🥜</Text>
+                  
+                  {/* Tomorrow 호르몬 이미지 */}
+                  <View style={[
+                    styles.hormoneImage,
+                    {
+                      // 왼쪽 앵커일 때: 왼쪽 상단
+                      // 오른쪽 앵커일 때: 오른쪽 상단
+                      top: isLeft ? -responsiveHeight(3) : -responsiveHeight(3),
+                      left: isLeft ? -responsiveWidth(3) : undefined,
+                      right: isLeft ? undefined : -responsiveWidth(3),
+                    }
+                  ]}>
+                    <Text style={styles.hormoneImageText} allowFontScaling={false}>
+                      🧬
+                    </Text>
+                  </View>
+                  
+                  {/* Tomorrow 호르몬 숫자 (이미지 대비 위치) */}
+                  <View style={[
+                    styles.hormoneBadge,
+                    {
+                      // 왼쪽 앵커일 때: 이미지 왼쪽
+                      // 오른쪽 앵커일 때: 이미지 오른쪽
+                      top: isLeft ? -responsiveHeight(3) : -responsiveHeight(3),
+                      left: isLeft ? -responsiveWidth(8) : undefined,
+                      right: isLeft ? undefined : -responsiveWidth(8),
+                    }
+                  ]}>
+                    <Text style={styles.hormoneBadgeText} allowFontScaling={false}>
+                      +{a.hormones?.length || 0}
+                    </Text>
+                  </View>
                 </View>
 
-                {/* Tomorrow 텍스트 박스 (약간 흐리게) */}
+                {/* Tomorrow 텍스트 박스 */}
                 <View
                   style={[
                     styles.textBox,
                     { left: textLeft, top: yCenter - 28, alignItems: isLeft ? 'flex-start' : 'flex-end' },
-                    styles.tomorrowItem, // 흐림 효과
                   ]}
                 >
                   <Text style={styles.itemTitle} numberOfLines={1} allowFontScaling={false}>
@@ -818,6 +883,106 @@ function generateTomorrowPathToFirstAnchor(
   return d;
 }
 
+/**
+ * 완료된 앵커까지만 그리는 Path 생성 함수 (앵커 중심에서 정확히 끝남)
+ */
+function generateCompletedPath(
+  completedAnchors: { id: string; x: number; y: number }[],
+  allAnchors: { id: string; x: number; y: number }[],
+  circleR: number,
+  centerX: number,
+  TOP_CAP: number,
+  topBridgeDrop: number,
+  itemBlockH: number,
+  BASE_TOP: number,
+) {
+  if (!completedAnchors.length) return '';
+  
+  const s = (n: number) => Math.round(n);
+  const cornerR = 15;
+  const pts = [...completedAnchors].sort((a, b) => a.y - b.y);
+  const first = pts[0];
+  const last = pts[pts.length - 1];
+
+  // 둥근 코너를 위한 헬퍼 함수
+  const addRoundedCorner = (x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): string => {
+    const dx1 = x2 - x1, dy1 = y2 - y1;
+    const dx2 = x3 - x2, dy2 = y3 - y2;
+    
+    const len1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+    const len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+    
+    if (len1 < 1 || len2 < 1) return ` L ${s(x2)},${s(y2)}`;
+    
+    const ux1 = dx1 / len1, uy1 = dy1 / len1;
+    const ux2 = dx2 / len2, uy2 = dy2 / len2;
+    
+    const maxR = Math.min(len1 * 0.4, len2 * 0.4);
+    const actualR = Math.min(cornerR, maxR);
+    
+    if (actualR < 2) return ` L ${s(x2)},${s(y2)}`;
+    
+    const inX = x2 - ux1 * actualR;
+    const inY = y2 - uy1 * actualR;
+    const outX = x2 + ux2 * actualR;
+    const outY = y2 + uy2 * actualR;
+    
+    const cross = dx1 * dy2 - dy1 * dx2;
+    const sweep = cross > 0 ? 1 : 0;
+    
+    return ` L ${s(inX)},${s(inY)} A ${actualR} ${actualR} 0 0 ${sweep} ${s(outX)},${s(outY)}`;
+  };
+
+  const segments: string[] = [];
+
+  // 첫 번째 세그먼트: 시작점에서 첫 번째 앵커 상단까지
+  const firstSegmentPoints: [number, number][] = [
+    [centerX, BASE_TOP],
+    [centerX, BASE_TOP + TOP_CAP],
+    [first.x, BASE_TOP + TOP_CAP],
+    [first.x, first.y - circleR]
+  ];
+
+  let segmentPath = `M ${s(firstSegmentPoints[0][0])},${s(firstSegmentPoints[0][1])}`;
+  for (let i = 1; i < firstSegmentPoints.length - 1; i++) {
+    const [x1, y1] = firstSegmentPoints[i - 1];
+    const [x2, y2] = firstSegmentPoints[i];
+    const [x3, y3] = firstSegmentPoints[i + 1];
+    segmentPath += addRoundedCorner(x1, y1, x2, y2, x3, y3);
+  }
+  const [lastX, lastY] = firstSegmentPoints[firstSegmentPoints.length - 1];
+  segmentPath += ` L ${s(lastX)},${s(lastY)}`;
+  segments.push(segmentPath);
+
+  // 중간 세그먼트들: 각 앵커 하단에서 다음 앵커 상단까지 (완료된 앵커만)
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1];
+    const yMid = a.y + circleR + (b.y - circleR - (a.y + circleR)) / 2;
+    
+    const segmentPoints: [number, number][] = [
+      [a.x, a.y + circleR],
+      [a.x, yMid],
+      [b.x, yMid],
+      [b.x, b.y - circleR]
+    ];
+
+    let midSegmentPath = `M ${s(segmentPoints[0][0])},${s(segmentPoints[0][1])}`;
+    for (let j = 1; j < segmentPoints.length - 1; j++) {
+      const [x1, y1] = segmentPoints[j - 1];
+      const [x2, y2] = segmentPoints[j];
+      const [x3, y3] = segmentPoints[j + 1];
+      midSegmentPath += addRoundedCorner(x1, y1, x2, y2, x3, y3);
+    }
+    const [segLastX, segLastY] = segmentPoints[segmentPoints.length - 1];
+    midSegmentPath += ` L ${s(segLastX)},${s(segLastY)}`;
+    segments.push(midSegmentPath);
+  }
+
+  // 마지막 완료된 앵커에서 끝 (추가 세그먼트 없음)
+
+  return segments.join(' ');
+}
+
 // ====== 스타일 ======
 const styles = StyleSheet.create({
   container: {
@@ -843,16 +1008,29 @@ const styles = StyleSheet.create({
   },
   hormoneBadge: {
     position: 'absolute',
-    top: -8,
-    right: -8,
     backgroundColor: '#A36CFF',
-    borderRadius: 12,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    minWidth: 24,
-    height: 24,
+    borderRadius: responsiveWidth(3),
+    paddingHorizontal: responsiveWidth(1),
+    paddingVertical: responsiveHeight(0.2),
+    minWidth: responsiveWidth(6),
+    height: responsiveHeight(2.4),
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  hormoneImage: {
+    position: 'absolute',
+    width: responsiveWidth(8),
+    height: responsiveWidth(8),
+    borderRadius: responsiveWidth(4),
+    backgroundColor: '#F0F0F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: responsiveWidth(0.5),
+    borderColor: '#E0E0E0',
+  },
+  hormoneImageText: {
+    fontSize: responsiveFontSize(1.8),
+    color: '#666666',
   },
   hormoneBadgeText: {
     color: '#FFFFFF',
@@ -898,6 +1076,14 @@ const styles = StyleSheet.create({
     color: '#6F6F6F',
     textAlign: 'center',
   },
+  tomorrowLockContainer: {
+    alignItems: 'center',
+    marginTop: responsiveHeight(2),
+  },
+  tomorrowLockIcon: {
+    fontSize: responsiveFontSize(2.5),
+    color: '#949494',
+  },
   
   // Tomorrow 아이템 흐림 효과
   tomorrowItem: {
@@ -908,13 +1094,13 @@ const styles = StyleSheet.create({
   timeIcon: {
     position: 'absolute',
     backgroundColor: '#FFFFFF',
-    borderRadius: responsiveWidth(7) / 2, // 50% 원형
+    borderRadius: responsiveWidth(8) / 2,
     justifyContent: 'center',
     alignItems: 'center',
     // 테두리 제거
   },
   timeIconText: {
-    fontSize: responsiveFontSize(2.2), // 18-20px 상당
+    fontSize: responsiveFontSize(2.2), // 아이콘 텍스트 크기 증가 (2.2 → 2.8)
     textAlign: 'center',
     includeFontPadding: false,
     textAlignVertical: 'center',

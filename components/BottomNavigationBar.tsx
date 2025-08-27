@@ -21,7 +21,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
   // 빈 문자열의 크기 계산 (tabIcon의 fontSize와 동일)
   const emptyIconSize = responsiveFontSize(2.5);
   // 캐릭터와 글씨 간의 순수한 간격 (픽셀 단위)
-  const characterTextGap = 5;
+  const characterTextGap = 8;
 
   const tabs = [
     { key: 'home', label: 'Home', icon: '🏠', screen: 'HomeScreen' },
@@ -48,11 +48,6 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* 그라데이션 오버레이 */}
-      <LinearGradient
-        colors={['transparent', 'rgba(0, 0, 0, 0.1)']}
-        style={styles.gradientOverlay}
-      />
       
       {/* 네비게이션 바 */}
       <View style={styles.navigationBar}>
@@ -100,7 +95,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: responsiveHeight(12), // 90px
+    height: responsiveHeight(14), // 바 전체 높이 증가 (90px → 105px)
   },
   gradientOverlay: {
     position: 'absolute',
@@ -114,10 +109,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: responsiveHeight(9), // 72px
+    height: responsiveHeight(8), // 네비게이션 영역 높이 증가 (72px → 82.5px)
     backgroundColor: '#ffffff',
     paddingHorizontal: responsiveWidth(5), // 18.257px
-    paddingVertical: responsiveHeight(1), // 8.299px
+    paddingVertical: responsiveHeight(1.5), // 패딩 증가
   },
   tabContainer: {
     flexDirection: 'row',
@@ -128,10 +123,10 @@ const styles = StyleSheet.create({
   tab: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: responsiveWidth(1.5), // 5.809px
-    paddingVertical: responsiveHeight(1), // 7.469px
+    paddingHorizontal: responsiveWidth(1), // 버튼 내부 가로 패딩 증가
+    paddingVertical: responsiveHeight(0.5), // 버튼 내부 세로 패딩 증가
     borderRadius: 28,
-    width: responsiveWidth(15), // 55px
+    width: responsiveWidth(15), // 버튼 너비 증가 (55px → 66px)
     opacity: 0.5,
   },
   activeTab: {

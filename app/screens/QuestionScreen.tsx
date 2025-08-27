@@ -310,7 +310,7 @@ const questionSteps: QuestionStep[] = [
 
 const QuestionScreen = () => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [answers, setAnswers] = useState<{ [key: string]: string | string[] | number }>({});
+  const [answers, setAnswers] = useState<{ [key: string]: string | string[] | number | null }>({});
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
   const [sessionCreated, setSessionCreated] = useState(false);
@@ -371,6 +371,12 @@ const QuestionScreen = () => {
   const handleAnswer = (key: string, value: string, type: Question['inputType']) => {
     // 값 정규화
     const normalizedValue = normalizeQuotes(value);
+    
+    // "I'm not sure"를 null로 처리
+    if (normalizedValue === "I'm not sure") {
+      setAnswers(prev => ({ ...prev, [key]: null }));
+      return;
+    }
     
     if (type === 'multiple-choice') {
       setAnswers(prev => {
@@ -443,12 +449,12 @@ const QuestionScreen = () => {
       
       // 날짜 입력의 경우 ("I'm not sure" 버튼 처리)
       if (q.inputType === 'date') {
-        return answer !== undefined && answer !== null && answer !== '';
+        return answer !== undefined && answer !== '';
       }
       
       // 단일 선택의 경우 ("I'm not sure" 버튼 처리)
       if (q.inputType === 'single-choice') {
-        return answer !== undefined && answer !== null && answer !== '';
+        return answer !== undefined && answer !== '';
       }
       
       // 다중 선택의 경우

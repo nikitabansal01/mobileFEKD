@@ -10,7 +10,8 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
+  Dimensions
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import TypeActionPlan from '../../components/TypeActionPlan';
@@ -200,12 +201,16 @@ const HomeScreen: React.FC = () => {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        scrollEnabled={true}
       >
-        {/* 배경 그라데이션 */}
+        {/* 배경 그라데이션 - 노란 그라디언트 */}
         <LinearGradient
-          colors={['#F8F9FA', '#FFFFFF']}
+          colors={['#FFFBD4', '#FFFFFF']}
           style={styles.backgroundGradient}
         />
+        
+        {/* 흰색 원으로 가려진 효과 */}
+        <View style={styles.whiteCircleOverlay} />
 
         {/* 상단 헤더 */}
         <View style={styles.header}>
@@ -286,125 +291,62 @@ const HomeScreen: React.FC = () => {
             </Text>
           </View>
 
-          {/* 정렬 버튼 */}
-          <View style={styles.sortContainer}>
-            <TouchableOpacity 
-              style={[
-                styles.sortButton, 
-                styles.sortButtonLeft,
-                sortBy === 'type' && styles.sortButtonActive
-              ]}
-              onPress={() => setSortBy('type')}
-            >
-              <Text style={[
-                styles.sortButtonText,
-                sortBy === 'type' && styles.sortButtonTextActive
-              ]}>Type</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[
-                styles.sortButton, 
-                styles.sortButtonRight,
-                sortBy === 'time' && styles.sortButtonActive
-              ]}
-              onPress={() => setSortBy('time')}
-            >
-              <Text style={[
-                styles.sortButtonText,
-                sortBy === 'time' && styles.sortButtonTextActive
-              ]}>Time</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* 동적 컴포넌트 렌더링 */}
-          {assignments?.assignments && Object.keys(assignments.assignments).length > 0 ? (
-            sortBy === 'time' ? (
-              <ActionPlanTimeline
-                dateLabel={assignments?.date ? formatDate(assignments.date) : '15th July, 2025'}
-                assignments={assignments.assignments}
-              />
+          {/* 타임라인과 정렬 버튼을 같은 공간에 배치 */}
+          <View style={styles.timelineContainer}>
+            {/* 동적 컴포넌트 렌더링 */}
+            {assignments?.assignments && Object.keys(assignments.assignments).length > 0 ? (
+              sortBy === 'time' ? (
+                <ActionPlanTimeline
+                  dateLabel={assignments?.date ? formatDate(assignments.date) : '15th July, 2025'}
+                  assignments={assignments.assignments}
+                />
+              ) : (
+                <TypeActionPlan
+                  dateLabel={assignments?.date ? formatDate(assignments.date) : '15th July, 2025'}
+                  assignments={assignments.assignments}
+                />
+              )
             ) : (
-              <TypeActionPlan
-                dateLabel={assignments?.date ? formatDate(assignments.date) : '15th July, 2025'}
-                assignments={assignments.assignments}
-              />
-            )
-          ) : (
-            <View style={styles.noAssignmentsContainer}>
-              <Text style={styles.noAssignmentsText}>No assignments for today</Text>
+              <View style={styles.noAssignmentsContainer}>
+                <Text style={styles.noAssignmentsText}>No assignments for today</Text>
+              </View>
+            )}
+
+            {/* 정렬 버튼 - absolute로 위에 떠있게 */}
+            <View style={styles.sortContainer}>
+              <TouchableOpacity 
+                style={[
+                  styles.sortButton, 
+                  styles.sortButtonLeft,
+                  sortBy === 'type' && styles.sortButtonActive
+                ]}
+                onPress={() => setSortBy('type')}
+              >
+                <Text style={[
+                  styles.sortButtonText,
+                  sortBy === 'type' && styles.sortButtonTextActive
+                ]}>Type</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[
+                  styles.sortButton, 
+                  styles.sortButtonRight,
+                  sortBy === 'time' && styles.sortButtonActive
+                ]}
+                onPress={() => setSortBy('time')}
+              >
+                <Text style={[
+                  styles.sortButtonText,
+                  sortBy === 'time' && styles.sortButtonTextActive
+                ]}>Time</Text>
+              </TouchableOpacity>
             </View>
-          )}
+          </View>
         </View>
 
-        {/* 내일 미리보기 - type 모드에서만 표시 */}
-        {sortBy === 'type' && (
-          <View style={styles.tomorrowSection}>
-            <View style={styles.tomorrowHeader}>
-              <Text style={styles.sectionTitle}>Tomorrow</Text>
-              <Text style={styles.dateText}>16th July, 2025</Text>
-            </View>
 
-            {/* Lock 아이콘 - 날짜와 구분선 사이 */}
-            <View style={styles.tomorrowLockContainer}>
-              <Text style={styles.tomorrowLockIcon}>🔒</Text>
-            </View>
 
-            {/* Tomorrow 액션 플랜 (첫 번째만, blur 처리) */}
-            <View style={styles.tomorrowPreview}>
-              {/* 전체 blur 처리된 컨텐츠 */}
-              <View style={styles.tomorrowBlurredContent}>
-                {/* 카테고리 헤더 */}
-                <View style={styles.tomorrowCategoryHeader}>
-                  <View style={styles.dividerLeft} />
-                  <Text style={styles.tomorrowCategoryTitle}>
-                    🥗 Eat
-                  </Text>
-                  <View style={styles.dividerRight} />
-                </View>
-
-                {/* 첫 번째 액션 아이템 미리보기 */}
-                <View style={styles.tomorrowActionPreview}>
-                  <View style={styles.tomorrowImageContainer}>
-                    <Text style={styles.tomorrowActionImage}>📋</Text>
-                  </View>
-                  
-                  <View style={styles.tomorrowActionDetails}>
-                    <Text style={styles.actionTitle}>Pumpkin Seeds</Text>
-                    <View style={styles.tomorrowActionMeta}>
-                      <Text style={styles.actionAmount}>1 spoon</Text>
-                      <View style={styles.actionSeparator} />
-                      <Text style={styles.actionPurpose}>Acne, PCOS</Text>
-                      <View style={styles.actionSeparator} />
-                      <View style={styles.hormoneInfo}>
-                        <Text style={styles.hormoneCount}>+1</Text>
-                        <View style={styles.hormoneIcon}>
-                          <Text style={styles.hormoneIconText}>H</Text>
-                        </View>
-                      </View>
-                      <View style={styles.actionSeparator} />
-                      <Text style={styles.timeEmoji}>🌤️</Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* 강한 Blur 오버레이 - 임시 비활성화 */}
-                {/* <BlurView 
-                  intensity={150} 
-                  style={styles.blurOverlay}
-                  tint="light"
-                /> */}
-                
-                {/* 추가 노이즈/해상도 저하 효과 - 다중 레이어 */}
-                <View style={styles.noiseOverlay} />
-                <View style={styles.pixelOverlay} />
-                <View style={styles.staticOverlay} />
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* 하단 여백 */}
-        <View style={styles.bottomSpacing} />
+        {/* 하단 여백 - Tomorrow 앵커 절반까지만 스크롤되도록 제거 */}
       </ScrollView>
 
       {/* 하단 네비게이션 바 */}
@@ -422,7 +364,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: responsiveHeight(15), // 네비게이션 바 높이만큼 여백
+    paddingBottom: responsiveHeight(5), // 네비게이션 바가 앵커 절반 정도 가리도록
+    minHeight: responsiveHeight(120), // 최소 높이 보장으로 즉시 스크롤 가능
   },
   backgroundGradient: {
     position: 'absolute',
@@ -430,6 +373,16 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: responsiveHeight(40),
+  },
+  whiteCircleOverlay: {
+    position: 'absolute',
+    top: responsiveHeight(23), // 호르몬 퀘스트 영역 중간쯤
+    left: (Dimensions.get('window').width / 2) - responsiveWidth(85), // 정확한 화면 중앙
+    width: responsiveWidth(170),
+    height: responsiveWidth(170),
+    backgroundColor: '#FFFFFF',
+    borderRadius: responsiveWidth(75), // 반지름으로 수정
+    zIndex: 0, // 그라디언트보다만 위에
   },
   loadingContainer: {
     flex: 1,
@@ -514,8 +467,8 @@ const styles = StyleSheet.create({
     marginBottom: responsiveHeight(1),
   },
   questImageContainer: {
-    width: responsiveWidth(18),
-    height: responsiveHeight(8),
+    width: responsiveWidth(25), // 18 → 25로 증가
+    height: responsiveHeight(12), // 8 → 12로 증가
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: responsiveHeight(0.5),
@@ -540,8 +493,8 @@ const styles = StyleSheet.create({
     gap: responsiveWidth(1),
   },
   progressBar: {
-    width: responsiveWidth(12),
-    height: responsiveHeight(0.5),
+    width: responsiveWidth(15),
+    height: responsiveHeight(1),
     borderRadius: responsiveWidth(6),
     overflow: 'hidden',
   },
@@ -584,12 +537,17 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
+  timelineContainer: {
+    position: 'relative', // absolute 정렬 버튼을 위한 relative 컨테이너
+  },
   sortContainer: {
+    position: 'absolute',
+    top: 0, // 타임라인 시작점과 같은 Y축
+    right: 0, // 오른쪽 끝에 배치
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: responsiveHeight(2),
     borderRadius: responsiveWidth(2),
     overflow: 'hidden',
+    zIndex: 10, // 타임라인 위에 떠있게
   },
   sortButton: {
     paddingHorizontal: responsiveWidth(3),
@@ -710,7 +668,7 @@ const styles = StyleSheet.create({
   },
   tomorrowLockContainer: {
     alignItems: 'center',
-    marginVertical: responsiveHeight(1.5),
+    marginVertical: responsiveHeight(2),
   },
   tomorrowLockIcon: {
     fontSize: responsiveFontSize(2.5),
