@@ -5,10 +5,12 @@ import {
     StyleSheet,
     Text,
     View,
-    Dimensions
+    Dimensions,
+    TouchableOpacity
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import Svg, { Defs, Line, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
+import { useNavigation } from '@react-navigation/native';
 
 // ====== 타입 import ======
 import { Assignment } from '../services/homeService';
@@ -41,6 +43,19 @@ export default function TypeActionPlan({
   assignments = {},
 }: Props) {
   const [completedCategories, setCompletedCategories] = useState<Set<string>>(new Set());
+  const navigation = useNavigation();
+  
+  // React Navigation을 사용한 네비게이션
+  const handleNavigation = (actionData: any) => {
+    try {
+      navigation.navigate('ActionDetailScreen', {
+        action: JSON.stringify(actionData)
+      });
+    } catch (error) {
+      console.error('Navigation error:', error);
+      console.log('Navigation data:', actionData);
+    }
+  };
   
   // 1) 모든 액션을 하나의 배열로 합치고 카테고리별로 분류
   const categorizedAssignments = useMemo(() => {
@@ -116,8 +131,8 @@ export default function TypeActionPlan({
   };
 
   const getActionPurpose = (assignment: Assignment): string => {
-    const allTags = [...(assignment.symptoms || []), ...(assignment.conditions || [])];
-    return allTags.join(', ');
+    // API에서 받아오는 purpose 필드만 사용
+    return assignment.purpose || '';
   };
 
   const getHormoneCount = (assignment: Assignment): number => {
@@ -141,12 +156,22 @@ export default function TypeActionPlan({
           height={lineHeight}
           viewBox={`0 0 ${screenWidth} ${lineHeight}`}
         >
+          <Defs>
+            <SvgLinearGradient id="topGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <Stop offset="0%" stopColor="#FDC6D1" stopOpacity="1" />
+              <Stop offset="25%" stopColor="#E98BAC" stopOpacity="1" />
+              <Stop offset="50%" stopColor="#D482B9" stopOpacity="1" />
+              <Stop offset="75%" stopColor="#C17EC9" stopOpacity="1" />
+              <Stop offset="100%" stopColor="#A29AEA" stopOpacity="1" />
+            </SvgLinearGradient>
+          </Defs>
+          
           <Line
             x1={centerX}
             y1={0}
             x2={centerX}
             y2={lineHeight}
-            stroke="#cfcfcf"
+            stroke="url(#topGrad)"
             strokeWidth="15"
             fill="none"
             strokeLinejoin="round"
@@ -220,13 +245,27 @@ export default function TypeActionPlan({
   };
 
   // 액션 아이템 렌더링
-  const renderActionItem = (assignment: Assignment & { timeSlot: string }) => (
-    <View key={assignment.id.toString()} style={styles.actionItem}>
-      {/* 이미지 원 */}
-      <View style={styles.imageContainer}>
-        {/* 실제 이미지 대신 이모지 사용 */}
-        <Text style={styles.actionImage}>📋</Text>
-      </View>
+  const renderActionItem = (assignment: Assignment & { timeSlot: string }) => {
+    const handleActionPress = () => {
+      handleNavigation({
+        id: assignment.id,
+        title: assignment.title,
+        purpose: getActionPurpose(assignment),
+        hormones: assignment.hormones || [],
+        specific_action: assignment.specific_action,
+        conditions: assignment.conditions,
+        symptoms: assignment.symptoms,
+        advices: assignment.advices,
+      });
+    };
+
+    return (
+      <View key={assignment.id.toString()} style={styles.actionItem}>
+        {/* 이미지 원 */}
+        <TouchableOpacity style={styles.imageContainer} onPress={handleActionPress}>
+          {/* 실제 이미지 대신 이모지 사용 */}
+          <Text style={styles.actionImage}>📋</Text>
+        </TouchableOpacity>
       
       {/* 액션 정보 */}
       <View style={styles.actionDetails}>
@@ -247,7 +286,8 @@ export default function TypeActionPlan({
         </View>
       </View>
     </View>
-  );
+    );
+  };
 
   // 카테고리 섹션 렌더링
   const renderCategorySection = (category: typeof CATEGORIES[0]) => {

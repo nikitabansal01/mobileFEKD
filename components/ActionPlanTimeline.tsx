@@ -5,10 +5,12 @@ import {
   Dimensions,
   StyleSheet,
   Text,
-  View
+  View,
+  TouchableOpacity
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import Svg, { Defs, Path, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
+import { useNavigation } from '@react-navigation/native';
 
 // ====== 타입 import ======
 import { Assignment } from '../services/homeService';
@@ -66,6 +68,19 @@ export default function ActionPlanTimeline({
   dateLabel = formatToday(new Date()),
   assignments = {},
 }: Props) {
+  const navigation = useNavigation();
+  
+  // React Navigation을 사용한 네비게이션
+  const handleNavigation = (actionData: any) => {
+    try {
+      navigation.navigate('ActionDetailScreen', {
+        action: JSON.stringify(actionData)
+      });
+    } catch (error) {
+      console.error('Navigation error:', error);
+      console.log('Navigation data:', actionData);
+    }
+  };
   // 1) Today와 Tomorrow 액션을 분리해서 관리
   const todayAssignments: Assignment[] = useMemo(() => {
     const arr: Assignment[] = [];
@@ -326,8 +341,8 @@ export default function ActionPlanTimeline({
     return '';
   };
   const getActionPurpose = (assignment: Assignment): string => {
-    const allTags = [...(assignment.symptoms || []), ...(assignment.conditions || [])];
-    return allTags.join(', ');
+    // API에서 받아오는 purpose 필드만 사용
+    return assignment.purpose || '';
   };
 
   // anchorMap 생성 (Today 앵커만)
@@ -463,7 +478,7 @@ export default function ActionPlanTimeline({
             return (
               <View key={a.id.toString()} style={StyleSheet.absoluteFill} pointerEvents="box-none">
                 {/* 이미지 원(아이콘 대체) */}
-                <View
+                <TouchableOpacity
                   style={[
                     styles.imageCircle,
                     { 
@@ -472,6 +487,18 @@ export default function ActionPlanTimeline({
                       borderColor: a.is_completed ? '#DDC2E9' : '#EFEFEF', // 완료 시 라벤더 색깔
                     },
                   ]}
+                  onPress={() => {
+                    handleNavigation({
+                      id: a.id,
+                      title: a.title,
+                      purpose: getActionPurpose(a),
+                      hormones: a.hormones || [],
+                      specific_action: a.specific_action,
+                      conditions: a.conditions,
+                      symptoms: a.symptoms,
+                      advices: a.advices,
+                    });
+                  }}
                 >
                   <Text style={styles.imageFallback} allowFontScaling={false}>
                     📋
@@ -507,7 +534,7 @@ export default function ActionPlanTimeline({
                       +{a.hormones?.length || 0}
                     </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
 
                 {/* 텍스트 */}
                 <View

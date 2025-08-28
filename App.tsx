@@ -12,6 +12,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import "react-native-reanimated";
 
 // Screens
+import ActionDetailScreen from './app/screens/ActionDetailScreen';
 import HomeScreen from './app/screens/HomeScreen';
 import IntroScreen from './app/screens/IntroScreen';
 import LoadingScreen from './app/screens/LoadingScreen';
@@ -86,6 +87,7 @@ export default function App() {
               <Stack.Screen name="ResultLoadingScreen" component={ResultLoadingScreen} />
               <Stack.Screen name="LoginScreen" component={LoginScreen} />
               <Stack.Screen name="HomeScreen" component={HomeScreen} />
+              <Stack.Screen name="ActionDetailScreen" component={ActionDetailScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </FirstLog.Provider>

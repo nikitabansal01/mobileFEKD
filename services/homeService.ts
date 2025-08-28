@@ -48,13 +48,18 @@ export interface Assignment {
   recommendation_id: number;
   title: string;
   purpose: string;
+  specific_action?: string;
   category: string;
   conditions: string[];
   symptoms: string[];
   hormones: string[];
   is_completed: boolean;
   completed_at: string;
-  advices: string[];
+  advices: Array<{
+    type: string;
+    title: string;
+    image?: string;
+  }>;
   food_amounts: string[];
   food_items: string[];
   exercise_durations: string[];
