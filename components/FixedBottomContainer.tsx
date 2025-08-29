@@ -4,14 +4,36 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { responsiveWidth, responsiveHeight } from 'react-native-responsive-dimensions';
 import { LinearGradient } from 'expo-linear-gradient';
 
+/**
+ * Props for the FixedBottomContainer component
+ */
 interface FixedBottomContainerProps {
+  /** Child components to render in the bottom container */
   children: React.ReactNode;
+  /** Additional styles for the container */
   style?: any;
+  /** Horizontal padding for the container */
   paddingHorizontal?: number;
+  /** Gap between child elements */
   gap?: number;
-  avoidKeyboard?: boolean; // 기본: true, 특정 화면(KASV 사용)에서는 false로 중복 회피
+  /** Whether to avoid keyboard. Default: true, set to false for specific screens (KASV) to prevent duplicate avoidance */
+  avoidKeyboard?: boolean;
 }
 
+/**
+ * FixedBottomContainer Component
+ * 
+ * A fixed bottom container with gradient background and keyboard avoidance.
+ * Provides a consistent bottom area for buttons and controls across screens.
+ * 
+ * @param props - Component props
+ * @param props.children - Child components to render
+ * @param props.style - Additional container styles
+ * @param props.paddingHorizontal - Horizontal padding
+ * @param props.gap - Gap between child elements
+ * @param props.avoidKeyboard - Keyboard avoidance behavior
+ * @returns JSX.Element
+ */
 const FixedBottomContainer = ({ 
   children, 
   style, 
@@ -23,7 +45,7 @@ const FixedBottomContainer = ({
   
   return (
     <View style={styles.container}>
-      {/* 🎨 배경 그라디언트 */}
+      {/* Background gradient */}
       <LinearGradient
         colors={['#A29AEA', '#C17EC9', '#D482B9', '#E98BAC', '#FDC6D1']}
         locations={[0, 0.32, 0.5, 0.73, 1]}
@@ -32,7 +54,7 @@ const FixedBottomContainer = ({
         style={[StyleSheet.absoluteFill, { opacity: 0.5 }]}
       />
 
-      {/* 🧢 위쪽 페이드: 흰색 → 투명 */}
+      {/* Top fade effect: white to transparent */}
       <LinearGradient
         colors={['white', 'transparent']}
         start={{ x: 0, y: 0 }}

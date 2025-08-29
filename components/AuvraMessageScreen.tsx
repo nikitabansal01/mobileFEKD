@@ -10,20 +10,35 @@ import PrimaryButton from '@/components/PrimaryButton';
 import BackButton from '@/components/BackButton';
 import FixedBottomContainer from '@/components/FixedBottomContainer';
 
+/**
+ * Props for the AuvraMessageScreen component
+ */
 interface AuvraMessageScreenProps {
+  /** Main message text to display */
   message: string;
+  /** Function to call when continue button is pressed */
   onContinue?: () => void;
+  /** Function to call when back button is pressed */
   onBack?: () => void;
+  /** Whether to show the back button */
   showBackButton?: boolean;
+  /** Whether to show the continue button */
   showContinueButton?: boolean;
+  /** Whether to automatically continue after delay */
   autoContinue?: boolean;
+  /** Delay in milliseconds before auto-continue */
   autoContinueDelay?: number;
+  /** Size of the Auvra character */
   characterSize?: number;
+  /** Font size for the message text */
   messageFontSize?: number;
+  /** Width of the message container */
   messageWidth?: number;
+  /** Height of the message container */
   messageHeight?: number;
+  /** Text for the continue button */
   continueButtonText?: string;
-  // 특별한 메시지 형식을 위한 props
+  /** Special message format with prefix and main text */
   specialMessage?: {
     prefix: string;
     mainText: string;
@@ -33,6 +48,28 @@ interface AuvraMessageScreenProps {
   };
 }
 
+/**
+ * AuvraMessageScreen Component
+ * 
+ * A screen component that displays messages with the Auvra character.
+ * Supports both regular and special message formats with gradient text effects.
+ * 
+ * @param props - Component props
+ * @param props.message - Main message text
+ * @param props.onContinue - Continue button handler
+ * @param props.onBack - Back button handler
+ * @param props.showBackButton - Back button visibility
+ * @param props.showContinueButton - Continue button visibility
+ * @param props.autoContinue - Auto-continue functionality
+ * @param props.autoContinueDelay - Auto-continue delay
+ * @param props.characterSize - Character size
+ * @param props.messageFontSize - Message font size
+ * @param props.messageWidth - Message container width
+ * @param props.messageHeight - Message container height
+ * @param props.continueButtonText - Continue button text
+ * @param props.specialMessage - Special message format
+ * @returns JSX.Element
+ */
 const AuvraMessageScreen: React.FC<AuvraMessageScreenProps> = ({
   message,
   onContinue,
@@ -60,24 +97,24 @@ const AuvraMessageScreen: React.FC<AuvraMessageScreenProps> = ({
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
-      {/* 뒤로가기 버튼 */}
+      {/* Back button */}
       {showBackButton && onBack && (
         <View style={styles.backButtonContainer}>
           <BackButton onPress={onBack} />
         </View>
       )}
 
-      {/* 메인 컨텐츠 */}
+      {/* Main content */}
       <View style={styles.content}>
-        {/* Auvra 캐릭터 */}
+        {/* Auvra character */}
         <View style={styles.characterContainer}>
           <AuvraCharacter size={characterSize} />
         </View>
         
-        {/* 텍스트 컨테이너 */}
+        {/* Text container */}
         <View style={styles.textContainer}>
           {specialMessage ? (
-            // 특별한 메시지 형식 (예: "Hi! I'm" + "Auvra")
+            // Special message format (e.g., "Hi! I'm" + "Auvra")
             <>
               <Text style={[
                 styles.prefixText, 
@@ -100,7 +137,7 @@ const AuvraMessageScreen: React.FC<AuvraMessageScreenProps> = ({
               </View>
             </>
           ) : (
-            // 일반 메시지 형식
+            // Regular message format
             <View style={styles.maskedViewContainer}>
               <GradientText
                 text={message.replace(/\\n/g, '\n')}
@@ -118,7 +155,7 @@ const AuvraMessageScreen: React.FC<AuvraMessageScreenProps> = ({
         </View>
       </View>
 
-      {/* 하단 버튼 */}
+      {/* Bottom button */}
       {showContinueButton && onContinue && (
         <FixedBottomContainer>
           <PrimaryButton

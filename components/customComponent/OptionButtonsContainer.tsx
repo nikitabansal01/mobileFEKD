@@ -3,35 +3,86 @@ import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
 import { createInputStyle, createInputTextStyle } from '@/utils/inputStyles';
 
+/**
+ * Individual option button configuration
+ */
 interface OptionButton {
+  /** Unique identifier for the option */
   id: string;
+  /** Display text for the option */
   text: string;
+  /** Value to be used when option is selected */
   value: string;
-  description?: string; // 옵션 설명 추가
+  /** Optional description shown when option is selected */
+  description?: string;
 }
 
-// 기존 문자열 배열과의 호환성을 위한 타입
+/**
+ * Input type for options - supports both string arrays and OptionButton objects for compatibility
+ */
 type OptionInput = string | OptionButton;
 
+/**
+ * Props for the OptionButtonsContainer component
+ */
 interface OptionButtonsContainerProps {
+  /** Array of options to display as buttons */
   options: OptionInput[];
+  /** Currently selected value(s) - string for single, array for multiple selection */
   selectedValue?: string | string[];
+  /** Callback function when an option is selected */
   onSelect: (value: string) => void;
+  /** Layout mode for button arrangement */
   layout?: 'default' | 'wrap' | 'row';
+  /** Enable multiple selection mode */
   multiple?: boolean;
+  /** Additional styles for the container */
   containerStyle?: any;
+  /** Additional styles for individual buttons */
   buttonStyle?: any;
+  /** Additional styles for button text */
   textStyle?: any;
-  // 커스텀 옵션들
+  /** Custom button height */
   buttonHeight?: number;
-  buttonWidth?: number; // 버튼 가로 길이 설정
+  /** Custom button width */
+  buttonWidth?: number;
+  /** Custom button padding configuration */
   buttonPadding?: { vertical?: number; horizontal?: number };
+  /** Custom button alignment configuration */
   buttonAlignment?: { justifyContent?: string; alignItems?: string };
+  /** Text alignment within buttons */
   textAlignment?: string;
+  /** Custom gap between buttons */
   containerGap?: number;
+  /** Container alignment configuration */
   containerAlignment?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around';
 }
 
+/**
+ * OptionButtonsContainer Component
+ * 
+ * A flexible option button container with multiple layout modes and extensive customization.
+ * Supports default (vertical), wrap (multi-line), and row (horizontal) layouts with
+ * custom styling, alignment, and spacing options.
+ * 
+ * @param props - Component props
+ * @param props.options - Array of options to display
+ * @param props.selectedValue - Currently selected value(s)
+ * @param props.onSelect - Selection handler function
+ * @param props.layout - Button layout mode
+ * @param props.multiple - Multiple selection mode
+ * @param props.containerStyle - Container styling
+ * @param props.buttonStyle - Button styling
+ * @param props.textStyle - Text styling
+ * @param props.buttonHeight - Custom button height
+ * @param props.buttonWidth - Custom button width
+ * @param props.buttonPadding - Button padding configuration
+ * @param props.buttonAlignment - Button alignment configuration
+ * @param props.textAlignment - Text alignment
+ * @param props.containerGap - Gap between buttons
+ * @param props.containerAlignment - Container alignment
+ * @returns JSX.Element
+ */
 const OptionButtonsContainer: React.FC<OptionButtonsContainerProps> = ({
   options,
   selectedValue,
@@ -49,6 +100,10 @@ const OptionButtonsContainer: React.FC<OptionButtonsContainerProps> = ({
   containerGap,
   containerAlignment,
 }) => {
+  /**
+   * Generates container styles based on layout and custom configurations
+   * @returns Container style array
+   */
   const getContainerStyle = () => {
     const baseStyle = (() => {
       switch (layout) {
@@ -63,18 +118,18 @@ const OptionButtonsContainer: React.FC<OptionButtonsContainerProps> = ({
     
     const customStyles = [];
     
-    // 커스텀 gap 적용
+    // Apply custom gap
     if (containerGap) {
       customStyles.push({ gap: containerGap });
     }
     
-    // 커스텀 alignment 적용
+    // Apply custom alignment
     if (containerAlignment) {
       if (layout === 'default') {
-        // default layout은 세로 배치이므로 alignItems 사용 (가로 정렬)
+        // Default layout is vertical, so use alignItems for horizontal alignment
         customStyles.push({ alignItems: containerAlignment });
       } else {
-        // wrap, row layout은 가로 배치이므로 justifyContent 사용 (가로 정렬)
+        // Wrap and row layouts are horizontal, so use justifyContent for horizontal alignment
         customStyles.push({ justifyContent: containerAlignment });
       }
     }
@@ -82,10 +137,16 @@ const OptionButtonsContainer: React.FC<OptionButtonsContainerProps> = ({
     return customStyles.length > 0 ? [baseStyle, ...customStyles] : baseStyle;
   };
 
+  /**
+   * Generates button styles based on selection state, description availability, and layout
+   * @param isSelected - Whether the button is selected
+   * @param hasDescription - Whether the button has a description
+   * @returns Button style array
+   */
   const getButtonStyle = (isSelected: boolean, hasDescription: boolean) => {
     const baseStyle = [
       createInputStyle(isSelected ? 'selected' : 'default', {
-        height: buttonHeight, // buttonHeight가 있으면 사용
+        height: buttonHeight, // Use buttonHeight if provided
         paddingVertical: buttonPadding?.vertical,
         paddingHorizontal: buttonPadding?.horizontal,
         justifyContent: buttonAlignment?.justifyContent,
@@ -94,7 +155,7 @@ const OptionButtonsContainer: React.FC<OptionButtonsContainerProps> = ({
       buttonStyle,
     ];
     
-    // 버튼 가로 길이 설정
+    // Set button width
     if (buttonWidth) {
       baseStyle.push({ width: buttonWidth });
     }
@@ -105,7 +166,7 @@ const OptionButtonsContainer: React.FC<OptionButtonsContainerProps> = ({
       case 'row':
         return [...baseStyle, styles.rowButton];
       default:
-        // default layout에서 containerAlignment가 center면 alignSelf를 center로 변경
+        // In default layout, center alignSelf if containerAlignment is center
         if (containerAlignment === 'center') {
           return [...baseStyle, { alignSelf: 'center' as const }];
         }
@@ -113,6 +174,11 @@ const OptionButtonsContainer: React.FC<OptionButtonsContainerProps> = ({
     }
   };
 
+  /**
+   * Generates text styles based on selection state and layout
+   * @param isSelected - Whether the button is selected
+   * @returns Text style array
+   */
   const getTextStyle = (isSelected: boolean) => {
     const baseStyle = [
       createInputTextStyle(isSelected ? 'selected' : 'default'),
@@ -133,7 +199,7 @@ const OptionButtonsContainer: React.FC<OptionButtonsContainerProps> = ({
   return (
     <View style={[getContainerStyle(), containerStyle]}>
       {options.map((option) => {
-        // 문자열인 경우 객체로 변환
+        // Convert string options to objects for consistent handling
         const optionObj = typeof option === 'string' 
           ? { id: option, text: option, value: option }
           : option;
@@ -166,11 +232,11 @@ const OptionButtonsContainer: React.FC<OptionButtonsContainerProps> = ({
 };
 
 const styles = StyleSheet.create({
-  // Default Layout (세로 배치, 전체 너비)
+  // Default Layout (vertical arrangement, full width)
   defaultContainer: {
     gap: responsiveHeight(1.5),
     alignSelf: 'stretch',
-    alignItems: 'flex-start', // 가로 정렬 기본값
+    alignItems: 'flex-start', // Default horizontal alignment
   },
   optionButton: {
     borderWidth: 1,
@@ -190,7 +256,7 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.7), //12px
+    fontSize: responsiveFontSize(1.7), // 12px equivalent
     color: '#333333',
     textAlign: 'left',
   },
@@ -198,7 +264,7 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
 
-  // Wrap Layout (여러 줄 배치)
+  // Wrap Layout (multi-line arrangement)
   wrapContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -211,10 +277,10 @@ const styles = StyleSheet.create({
     maxWidth: responsiveWidth(80),
   },
   wrapText: {
-    fontSize: responsiveFontSize(1.7), //12px
+    fontSize: responsiveFontSize(1.7), // 12px equivalent
   },
 
-  // Row Layout (가로 배치)
+  // Row Layout (horizontal arrangement)
   rowContainer: {
     flexDirection: 'row',
     gap: responsiveWidth(2),
@@ -225,7 +291,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   rowText: {
-    fontSize: responsiveFontSize(1.7), //12px
+    fontSize: responsiveFontSize(1.7), // 12px equivalent
   },
   optionContent: {
     flex: 1,
@@ -233,7 +299,7 @@ const styles = StyleSheet.create({
   },
   descriptionText: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.42), //10px
+    fontSize: responsiveFontSize(1.42), // 10px equivalent
     color: '#6f6f6f',
     lineHeight: responsiveHeight(1.8),
     marginTop: responsiveHeight(0.5),

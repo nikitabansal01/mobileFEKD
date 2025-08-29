@@ -2,13 +2,33 @@ import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { responsiveWidth, responsiveHeight, responsiveFontSize } from "react-native-responsive-dimensions";
 
+/**
+ * Props for the PrimaryButton component
+ */
 type PrimaryButtonProps = {
+  /** Button text to display */
   title: string;
+  /** Function to call when button is pressed */
   onPress: () => void;
+  /** Additional styles for the button */
   style?: StyleProp<ViewStyle>;
+  /** Whether the button is disabled */
   disabled?: boolean;
 };
 
+/**
+ * PrimaryButton Component
+ * 
+ * A reusable primary button component with consistent styling.
+ * Features white background, rounded corners, and shadow effects.
+ * 
+ * @param props - Component props
+ * @param props.title - Button text
+ * @param props.onPress - Press handler function
+ * @param props.style - Additional button styles
+ * @param props.disabled - Disabled state
+ * @returns JSX.Element
+ */
 const PrimaryButton = ({ title, onPress, style, disabled = false }: PrimaryButtonProps) => {
   return (
     <TouchableOpacity 
@@ -34,7 +54,7 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: '#ffffff',
     borderRadius: 100,
-    width: responsiveWidth(88), // 기본 가로 길이 설정
+    width: responsiveWidth(88), // Default width
     paddingVertical: responsiveHeight(1.5),
     paddingHorizontal: responsiveHeight(4),
     alignItems: 'center',
@@ -53,7 +73,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontFamily: 'Inter500',
-    fontSize: responsiveFontSize(1.98), //14px
+    fontSize: responsiveFontSize(1.98), // 14px
     color: '#000000',
   },
   buttonTextDisabled: {

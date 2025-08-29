@@ -3,16 +3,34 @@ import { View, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { responsiveWidth, responsiveHeight } from 'react-native-responsive-dimensions';
 
+/**
+ * Props for the GradientBackground component
+ */
 interface GradientBackgroundProps {
+  /** Child components to render inside the gradient background */
   children?: React.ReactNode;
+  /** Additional styles for the container */
   style?: any;
+  /** Layout event handler */
   onLayout?: (event: any) => void;
 }
 
+/**
+ * GradientBackground Component
+ * 
+ * Creates a beautiful gradient background with multiple color layers and fade effects.
+ * Used primarily in onboarding and welcome screens.
+ * 
+ * @param props - Component props
+ * @param props.children - Child components to render
+ * @param props.style - Additional container styles
+ * @param props.onLayout - Layout event handler
+ * @returns JSX.Element
+ */
 const GradientBackground = ({ children, style, onLayout }: GradientBackgroundProps) => {
   return (
     <View style={[styles.container, style]} onLayout={onLayout}>
-      {/* 🎨 배경 전체 그라디언트 */}
+      {/* Main gradient background with multiple color stops */}
       <LinearGradient
         colors={['#A29AEA', '#C17EC9', '#D482B9', '#E98BAC', '#FDC6D1']}
         locations={[0, 0.32, 0.5, 0.73, 1]}
@@ -21,13 +39,13 @@ const GradientBackground = ({ children, style, onLayout }: GradientBackgroundPro
         style={[StyleSheet.absoluteFill, { opacity: 0.5 }]}
       />
 
-      {/* 🧢 위쪽 페이드: 흰색 → 투명, 수직 방향 */}
+      {/* Top fade effect: white to transparent, vertical direction */}
       <LinearGradient
         colors={['white', 'transparent']}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={styles.fadeTop}
-        pointerEvents="none" // 클릭 차단
+        pointerEvents="none" // Prevent touch events
       />
 
       {children}
@@ -38,9 +56,9 @@ const GradientBackground = ({ children, style, onLayout }: GradientBackgroundPro
 const styles = StyleSheet.create({
   container: {
     position: 'relative',
-    width: responsiveWidth(100), // 좌우 확장 제거
-    height: responsiveHeight(12), // 높이 더 줄임
-    marginLeft: 0, // 왼쪽 확장 제거
+    width: responsiveWidth(100), // Full width
+    height: responsiveHeight(12), // Reduced height
+    marginLeft: 0, // Remove left margin
   },
   gradient: {
     position: 'absolute',
@@ -48,14 +66,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    opacity: 0.5, // SVG에서 opacity="0.5" 설정
+    opacity: 0.5, // Match SVG opacity="0.5"
   },
   fadeTop: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: responsiveHeight(8), // 위쪽 페이드 높이 증가 (전체 높이)
+    height: responsiveHeight(8), // Increased top fade height
   },
 });
 

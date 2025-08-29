@@ -46,6 +46,10 @@ interface QuestionStep {
     questions: Question[];
 }
 
+/**
+ * Question steps configuration for the onboarding questionnaire
+ * Each step contains dialogue text and associated questions
+ */
 const questionSteps: QuestionStep[] = [
   {
     step: 1,
@@ -75,7 +79,7 @@ const questionSteps: QuestionStep[] = [
         id: 3,
         question: '',
         inputType: 'single-choice',
-        options: ['Regular', 'Irregular', 'Occasional Skips', 'I don’t get periods'],
+        options: ['Regular', 'Irregular', 'Occasional Skips', 'I don\'t get periods'],
         key: 'periodDescription',
         notSureText: "I'm not sure",
       },
@@ -180,7 +184,7 @@ const questionSteps: QuestionStep[] = [
       },
     ],
   },
-  // Figma 기반 추가 질문 (step 5)
+  // Additional questions based on Figma design (step 5)
   {
     step: 5,
     dialogue: "Out of these, what is your top concern at the moment?",
@@ -202,7 +206,7 @@ const questionSteps: QuestionStep[] = [
       }
     ]
   },
-  // Figma 기반 추가 질문 (step 6)
+  // Additional questions based on Figma design (step 6)
   {
     step: 6,
     dialogue: "Is there any diagnosed health condition that I should know about?",
@@ -221,7 +225,7 @@ const questionSteps: QuestionStep[] = [
           "Amenorrhea",
           "Menorrhagia",
           "Metrorrhagia",
-          "Cushing’s Syndrome",
+          "Cushing's Syndrome",
           "Premenstrual Syndrome",
           "None of the above",
           "Others (please specify)"
@@ -230,7 +234,7 @@ const questionSteps: QuestionStep[] = [
       }
     ]
   },
-  // 추가 질문 - 가족력
+  // Additional questions - family history
   {
     step: 7,
     dialogue: "Have any immediate family members been diagnosed with any of these conditions?",
@@ -258,7 +262,7 @@ const questionSteps: QuestionStep[] = [
       }
     ]
   },
-  // 추가 질문 - 라이프스타일
+  // Additional questions - lifestyle
   {
     step: 8,
     dialogue: "Tell me more about your lifestyle?",
@@ -308,6 +312,10 @@ const questionSteps: QuestionStep[] = [
   },
 ];
 
+/**
+ * Question screen component for collecting user health information
+ * Features multi-step questionnaire with various input types and auto-sliding
+ */
 const QuestionScreen = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<{ [key: string]: string | string[] | number | null }>({});
@@ -321,24 +329,23 @@ const QuestionScreen = () => {
   const othersInputRef = useRef<TextInput>(null);
 
   const totalSteps = questionSteps.length;
-  // KeyboardAwareScrollView 참조 저장
+  // KeyboardAwareScrollView reference storage
   const scrollRef = useRef<any>(null);
   const progress = (currentStep + 1) / totalSteps;
 
-  // 컴포넌트 마운트 시 세션 생성
+  // Create session on component mount
   useEffect(() => {
     const initializeSession = async () => {
       try {
-        // 세션 유효성 확인 및 필요시 재생성
+        // Validate session and recreate if necessary
         const sessionValid = await sessionService.validateAndRefreshSession();
         if (sessionValid) {
             setSessionCreated(true);
-          console.log('세션 초기화 완료');
         } else {
-          console.error('세션 초기화 실패');
+          console.error('Session initialization failed');
         }
       } catch (error) {
-        console.error('세션 초기화 오류:', error);
+        console.error('Session initialization error:', error);
       }
     };
 
@@ -347,32 +354,39 @@ const QuestionScreen = () => {
 
 
 
-  // 백버튼 핸들러 - 이전 질문 페이지로 이동
+  /**
+   * Handle back button press - navigate to previous question page
+   */
   const handleBackPress = () => {
     if (showAdditionalQuestionsPrompt) {
-      // 추가 질문 의사 확인 화면에서 백버튼을 누르면 이전 질문으로 돌아감
+      // Return to previous question from additional questions prompt screen
       setShowAdditionalQuestionsPrompt(false);
     } else if (currentStep > 0) {
-      // 이전 단계로 이동 (답변은 유지됨)
+      // Move to previous step (answers are preserved)
       setCurrentStep(currentStep - 1);
     } else {
-      // 첫 번째 단계에서 백버튼을 누르면 intro screen으로 이동
+      // Navigate to intro screen when back button is pressed on first step
       navigation.navigate('IntroScreen');
     }
   };
 
-  // 따옴표 정규화 함수
+  /**
+   * Normalize quotes in text input
+   */
   const normalizeQuotes = (text: string): string => {
     return text
-      .replace(/[''']/g, "'")  // 스마트 따옴표를 일반 따옴표로 변환
-      .replace(/["""]/g, '"'); // 스마트 따옴표를 일반 따옴표로 변환
+      .replace(/[''']/g, "'")  // Convert smart quotes to regular quotes
+      .replace(/["""]/g, '"'); // Convert smart quotes to regular quotes
   };
 
+  /**
+   * Handle answer selection for different input types
+   */
   const handleAnswer = (key: string, value: string, type: Question['inputType']) => {
-    // 값 정규화
+    // Normalize value
     const normalizedValue = normalizeQuotes(value);
     
-    // "I'm not sure"를 null로 처리
+    // Handle "I'm not sure" as null
     if (normalizedValue === "I'm not sure") {
       setAnswers(prev => ({ ...prev, [key]: null }));
       return;
@@ -387,7 +401,7 @@ const QuestionScreen = () => {
         return { ...prev, [key]: newAnswers };
       });
     } else if (type === 'number') {
-      // 나이를 숫자로 저장
+      // Store age as number
       const numericValue = parseInt(normalizedValue) || 0;
       setAnswers(prev => ({ ...prev, [key]: numericValue }));
     } else {
@@ -395,6 +409,9 @@ const QuestionScreen = () => {
     }
   };
 
+  /**
+   * Check if an option is selected
+   */
   const isOptionSelected = (key: string, option: string, type: Question['inputType']) => {
     if (type === 'multiple-choice') {
       return ((answers[key] as string[]) || []).includes(option);
@@ -402,6 +419,9 @@ const QuestionScreen = () => {
     return answers[key] === option;
   };
   
+  /**
+   * Handle date picker changes
+   */
   const handleDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === 'ios'); // Keep open on iOS until dismissal
     if (selectedDate) {
@@ -413,51 +433,57 @@ const QuestionScreen = () => {
     }
   };
 
-  // Others 선택 시 자동 스크롤 및 포커스
+  /**
+   * Handle "Others" option selection with auto-scroll and focus
+   */
   const handleOthersSelect = (key: string, value: string, type: Question['inputType']) => {
     handleAnswer(key, value, type);
-    // TextInputContainer가 자동으로 키보드 위로 스크롤 처리
+    // TextInputContainer handles automatic keyboard scrolling
   };
 
-  // TextInput 상태 확인 함수
+  /**
+   * Check if text input is filled
+   */
   const isInputFilled = (key: string) => {
     const value = answers[key];
     return value && typeof value === 'string' && value.trim().length > 0;
   };
 
-  // 현재 단계의 모든 질문에 답변이 있는지 확인하는 함수
+  /**
+   * Check if all questions in current step are answered
+   */
   const isCurrentStepComplete = () => {
     const currentQuestions = currentStepData.questions;
     
     return currentQuestions.every(q => {
       const answer = answers[q.key];
       
-      // 서브헤딩인 경우 답변 불필요
+      // Subheadings don't require answers
       if (q.isSubheading) {
         return true;
       }
       
-      // 텍스트 입력의 경우
+      // Text input validation
       if (q.inputType === 'text') {
         return answer && typeof answer === 'string' && answer.trim().length > 0;
       }
       
-      // 숫자 입력의 경우 (나이)
+      // Number input validation (age)
       if (q.inputType === 'number') {
         return answer && typeof answer === 'number' && answer > 0;
       }
       
-      // 날짜 입력의 경우 ("I'm not sure" 버튼 처리)
+      // Date input validation (handles "I'm not sure" button)
       if (q.inputType === 'date') {
         return answer !== undefined && answer !== '';
       }
       
-      // 단일 선택의 경우 ("I'm not sure" 버튼 처리)
+      // Single choice validation (handles "I'm not sure" button)
       if (q.inputType === 'single-choice') {
         return answer !== undefined && answer !== '';
       }
       
-      // 다중 선택의 경우
+      // Multiple choice validation
       if (q.inputType === 'multiple-choice') {
         return Array.isArray(answer) && answer.length > 0;
       }
@@ -468,41 +494,45 @@ const QuestionScreen = () => {
 
 
 
-  // Clear 버튼 핸들러
+  /**
+   * Clear input handler
+   */
   const handleClearInput = (key: string) => {
     setAnswers(prev => ({ ...prev, [key]: '' }));
   };
 
+  /**
+   * Handle continue button press
+   */
   const handleContinue = async () => {
     if (currentStep < 5) {
-      // step 1-5까지는 다음 스텝으로 이동
+      // Move to next step for steps 1-5
       setCurrentStep(currentStep + 1);
     } else if (currentStep === 5) {
-      // step 6 완료 후 추가 질문 의사 확인 화면 표시
+      // Show additional questions prompt after step 6 completion
       setShowAdditionalQuestionsPrompt(true);
     } else if (currentStep === 6) {
-      // step 7 완료 후 step 8(라이프스타일)로 이동
+      // Move to step 8 (lifestyle) after step 7 completion
       setCurrentStep(currentStep + 1);
     } else if (currentStep === 7) {
-      // step 8 완료 후 답변 저장 및 결과 화면으로 이동
+      // Save answers and navigate to result screen after step 8 completion
       setShowLoading(true);
       
       try {
-        // 모든 질문을 하나의 배열로 수집
+        // Collect all questions into a single array
         const allQuestions = questionSteps.flatMap(step => step.questions);
         
-        // 답변 저장 시작 시간 기록
+        // Record answer saving start time
         const startTime = Date.now();
         
-        // 답변 저장
+        // Save answers
         const saveSuccess = await sessionService.saveAnswers(answers, allQuestions);
         
-        // 저장 완료 시간 계산
+        // Calculate save completion time
         const saveTime = Date.now() - startTime;
         
         if (saveSuccess) {
-          console.log('답변 저장 성공');
-          // 최소 1초, 최대 3초 로딩 시간 설정
+          // Set minimum 1 second, maximum 3 seconds loading time
           const minLoadingTime = 1000;
           const maxLoadingTime = 3000;
           const loadingTime = Math.max(minLoadingTime, Math.min(saveTime + 500, maxLoadingTime));
@@ -512,16 +542,16 @@ const QuestionScreen = () => {
             navigation.navigate('ResultScreen');
           }, loadingTime);
         } else {
-          console.error('답변 저장 실패');
-          // 실패해도 결과 화면으로 이동 (최소 1초 로딩)
+          console.error('Answer saving failed');
+          // Navigate to result screen even if failed (minimum 1 second loading)
           setTimeout(() => {
             setShowLoading(false);
             navigation.navigate('ResultScreen');
           }, 1000);
         }
       } catch (error) {
-        console.error('답변 저장 중 오류:', error);
-        // 오류 발생해도 결과 화면으로 이동 (최소 1초 로딩)
+        console.error('Error during answer saving:', error);
+        // Navigate to result screen even if error occurs (minimum 1 second loading)
         setTimeout(() => {
           setShowLoading(false);
           navigation.navigate('ResultScreen');
@@ -530,33 +560,38 @@ const QuestionScreen = () => {
     }
   };
 
+  /**
+   * Handle continue with additional questions
+   */
   const handleAdditionalQuestionsContinue = async () => {
-    // 추가 질문 계속하기 - 추가 질문 화면으로 이동
+    // Continue with additional questions - move to additional questions screen
     setShowAdditionalQuestionsPrompt(false);
-    // 추가 질문은 step 7 (가족력 질문)이므로 step 7로 설정
-    setCurrentStep(6); // currentStep 6 = step 7 (가족력 질문)
+    // Additional questions are step 7 (family history questions) so set to step 7
+    setCurrentStep(6); // currentStep 6 = step 7 (family history questions)
   };
 
+  /**
+   * Handle skip additional questions
+   */
   const handleAdditionalQuestionsSkip = async () => {
-    // 추가 질문 건너뛰기 - 바로 답변 저장 후 결과 화면으로 이동
+    // Skip additional questions - save answers and navigate to result screen immediately
     setShowLoading(true);
     
     try {
-      // 모든 질문을 하나의 배열로 수집
+      // Collect all questions into a single array
       const allQuestions = questionSteps.flatMap(step => step.questions);
       
-      // 답변 저장 시작 시간 기록
+      // Record answer saving start time
       const startTime = Date.now();
       
-      // 답변 저장
+      // Save answers
       const saveSuccess = await sessionService.saveAnswers(answers, allQuestions);
       
-      // 저장 완료 시간 계산
+      // Calculate save completion time
       const saveTime = Date.now() - startTime;
       
       if (saveSuccess) {
-        console.log('답변 저장 성공');
-        // 최소 1초, 최대 3초 로딩 시간 설정
+        // Set minimum 1 second, maximum 3 seconds loading time
         const minLoadingTime = 1000;
         const maxLoadingTime = 3000;
         const loadingTime = Math.max(minLoadingTime, Math.min(saveTime + 500, maxLoadingTime));
@@ -566,16 +601,16 @@ const QuestionScreen = () => {
           navigation.navigate('ResultScreen');
         }, loadingTime);
       } else {
-        console.error('답변 저장 실패');
-        // 실패해도 결과 화면으로 이동 (최소 1초 로딩)
+        console.error('Answer saving failed');
+        // Navigate to result screen even if failed (minimum 1 second loading)
         setTimeout(() => {
           setShowLoading(false);
           navigation.navigate('ResultScreen');
         }, 1000);
       }
     } catch (error) {
-      console.error('답변 저장 중 오류:', error);
-      // 오류 발생해도 결과 화면으로 이동 (최소 1초 로딩)
+      console.error('Error during answer saving:', error);
+      // Navigate to result screen even if error occurs (minimum 1 second loading)
       setTimeout(() => {
         setShowLoading(false);
         navigation.navigate('ResultScreen');
@@ -591,23 +626,23 @@ const QuestionScreen = () => {
     return <LoadingScreen />;
   }
 
-  // 추가 질문 의사 확인 화면
+  // Additional questions prompt screen
   if (showAdditionalQuestionsPrompt) {
     return (
       <SafeAreaView edges={['top']} style={styles.container}>
-        {/* 뒤로가기 버튼 */}
+        {/* Back button */}
         <View style={styles.backButtonContainer}>
           <BackButton onPress={() => setShowAdditionalQuestionsPrompt(false)} />
         </View>
 
-        {/* 메인 컨텐츠 */}
+        {/* Main content */}
         <View style={styles.content}>
-          {/* Auvra 캐릭터 */}
+          {/* Auvra character */}
           <View style={styles.characterContainer}>
             <AuvraCharacter size={responsiveWidth(20)} />
           </View>
           
-          {/* 텍스트 컨테이너 */}
+          {/* Text container */}
           <View style={styles.textContainer}>
             <View style={styles.maskedViewContainer}>
               <GradientText
@@ -619,7 +654,7 @@ const QuestionScreen = () => {
           </View>
         </View>
 
-        {/* 하단 버튼들 */}
+        {/* Bottom buttons */}
         <FixedBottomContainer>
           <View style={styles.additionalQuestionsButtonsContainer}>
             <PrimaryButton
@@ -639,59 +674,56 @@ const QuestionScreen = () => {
   }
 
   return (
-    <SafeAreaView edges={['top']} style={styles.container}>
-      <View style={styles.flexColumnContainer}>
-        {/* 헤더 - 뒤로가기 버튼과 프로그레스 바 */}
-        <View style={styles.header}>
-          <BackButton onPress={handleBackPress} />
-          <View style={styles.progressBarBackground}>
-            <View style={[styles.progressBarForeground, { width: `${progress * 100}%` }]} />
-          </View>
-        </View>
-
-        {/* 메인 컨텐츠 - ScrollView로 감싸기 */}
-          <KeyboardAwareScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={[
-            styles.mainContent,
-            { minHeight: '100%' } // 최소 높이를 100%로 설정하여 그라디언트 영역 보호
-          ]}
-          keyboardShouldPersistTaps="handled"
-          enableOnAndroid={true}
-          enableAutomaticScroll={true}
-            extraScrollHeight={responsiveHeight(12)}
-            extraHeight={responsiveHeight(4)}
-          keyboardDismissMode="interactive"
-          showsVerticalScrollIndicator={false}
-          onScroll={(event) => {
-            console.log('[KeyboardAwareScrollView] 스크롤 발생:', event.nativeEvent.contentOffset.y);
-          }}
-            keyboardOpeningTime={220}
-            innerRef={(ref: any) => {
-              scrollRef.current = ref;
-            }}
-        >
-          <View style={styles.mainContent}>
-          {/* 캐릭터와 질문 텍스트 */}
-          <View style={styles.characterAndQuestion}>
-            <View style={styles.characterContainer}>
-              <AuvraCharacter size={responsiveWidth(20)} />
-            </View>
-            <View style={styles.questionTextContainer}>
-              <GradientText
-                text={currentStepData.dialogue}
-                textStyle={styles.questionText}
-                containerStyle={styles.maskedView}
-              />
-              {currentStepData.subtitle && (
-                <Text style={styles.subtitleText}>
-                  {currentStepData.subtitle}
-                </Text>
-              )}
+      <SafeAreaView edges={['top']} style={styles.container}>
+        <View style={styles.flexColumnContainer}>
+          {/* Header - back button and progress bar */}
+          <View style={styles.header}>
+            <BackButton onPress={handleBackPress} />
+            <View style={styles.progressBarBackground}>
+              <View style={[styles.progressBarForeground, { width: `${progress * 100}%` }]} />
             </View>
           </View>
 
-          {/* 입력 필드들 */}
+          {/* Main content - wrapped in ScrollView */}
+            <KeyboardAwareScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={[
+              styles.mainContent,
+              { minHeight: '100%' } // Set minimum height to 100% to protect gradient area
+            ]}
+            keyboardShouldPersistTaps="handled"
+            enableOnAndroid={true}
+            enableAutomaticScroll={true}
+              extraScrollHeight={responsiveHeight(12)}
+              extraHeight={responsiveHeight(4)}
+            keyboardDismissMode="interactive"
+            showsVerticalScrollIndicator={false}
+              keyboardOpeningTime={220}
+              innerRef={(ref: any) => {
+                scrollRef.current = ref;
+              }}
+          >
+            <View style={styles.mainContent}>
+            {/* Character and question text */}
+            <View style={styles.characterAndQuestion}>
+              <View style={styles.characterContainer}>
+                <AuvraCharacter size={responsiveWidth(20)} />
+              </View>
+              <View style={styles.questionTextContainer}>
+                <GradientText
+                  text={currentStepData.dialogue}
+                  textStyle={styles.questionText}
+                  containerStyle={styles.maskedView}
+                />
+                {currentStepData.subtitle && (
+                  <Text style={styles.subtitleText}>
+                    {currentStepData.subtitle}
+                  </Text>
+                )}
+              </View>
+            </View>
+
+          {/* Input fields */}
           <View style={styles.inputFieldsContainer}>
             {currentStepData.questions.map((q) => (
               <View key={q.id} style={styles.inputFieldItem}>
@@ -715,7 +747,7 @@ const QuestionScreen = () => {
                       alignSelf: 'stretch',
                     }}
                     onFocus={() => {
-                      console.log(`[${q.key}] TextInput 포커스 - 키보드 스크롤 시작`);
+                      console.log(`[${q.key}] TextInput focus - keyboard scroll started`);
                       console.log(`[${q.key}] extraScrollHeight: ${responsiveHeight(15)}, extraHeight: ${responsiveHeight(20)}`);
                     }}
                   />
@@ -726,10 +758,10 @@ const QuestionScreen = () => {
                       {
                         width: '100%',
                         alignSelf: 'stretch',
-                        height: responsiveHeight(7), // DatePicker 높이 증가
-                        paddingVertical: responsiveHeight(2), // 패딩도 증가
-                        justifyContent: 'center', // 세로 중앙정렬
-                        alignItems: 'flex-start', // 가로는 왼쪽 정렬
+                        height: responsiveHeight(7),
+                        paddingVertical: responsiveHeight(2),
+                        justifyContent: 'center',
+                        alignItems: 'flex-start',
                       }
                     ]}
                     onPress={() => setShowDatePicker(true)}
@@ -742,7 +774,7 @@ const QuestionScreen = () => {
                   <>
                   <ChipOptionContainer
                     options={(() => {
-                      // 설명이 있는 옵션들
+                      // Options with descriptions
                       const optionsWithDescriptions = getOptionsWithDescriptions(q.key);
                       if (optionsWithDescriptions.length > 0) {
                         return optionsWithDescriptions.filter((option: any) => 
@@ -750,7 +782,7 @@ const QuestionScreen = () => {
                         );
                       }
                       
-                      // 기존 문자열 배열 옵션들
+                      // Existing string array options
                       return q.options?.filter(option => 
                         !(option === 'Others (please specify)' && (q.key === 'otherConcerns' || q.key === 'diagnosedCondition' || q.key === 'familyHistory'))
                       ) || [];
@@ -772,12 +804,10 @@ const QuestionScreen = () => {
                         value: answers.otherConcernsText as string || '',
                          onChangeText: (text) => handleAnswer('otherConcernsText', text, 'text'),
                          onFocus: () => {
-                           // Chip Others 포커스 시 보조 로그
-                           console.log('[otherConcernsText] Others (chip) TextInput 포커스');
                          },
                           scrollToInput: (node) => {
                             try {
-                              // Others는 하단 고정 버튼 때문에 여유를 더 줌 (일반보다 크게)
+                              // Others has extra margin due to bottom fixed button (larger than usual)
                               scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
                             } catch {}
                           },
@@ -789,7 +819,6 @@ const QuestionScreen = () => {
                         value: answers.diagnosedConditionText as string || '',
                          onChangeText: (text) => handleAnswer('diagnosedConditionText', text, 'text'),
                          onFocus: () => {
-                           console.log('[diagnosedConditionText] Others (chip) TextInput 포커스');
                          },
                           scrollToInput: (node) => {
                             try {
@@ -804,7 +833,6 @@ const QuestionScreen = () => {
                         value: answers.familyHistoryText as string || '',
                          onChangeText: (text) => handleAnswer('familyHistoryText', text, 'text'),
                          onFocus: () => {
-                           console.log('[familyHistoryText] Others (chip) TextInput 포커스');
                          },
                           scrollToInput: (node) => {
                             try {
@@ -819,7 +847,7 @@ const QuestionScreen = () => {
                   <>
                     <OptionButtonsContainer
                       options={(() => {
-                        // 설명이 있는 옵션들
+                        // Options with descriptions
                         const optionsWithDescriptions = getOptionsWithDescriptions(q.key);
                         if (optionsWithDescriptions.length > 0) {
                           return optionsWithDescriptions.filter((option: any) => 
@@ -827,7 +855,7 @@ const QuestionScreen = () => {
                           );
                         }
                         
-                        // 기존 문자열 배열 옵션들
+                        // Existing string array options
                         return q.options?.filter(option => 
                           !(option === 'Others (please specify)' && (q.key === 'diagnosedCondition' || q.key === 'otherConcerns' || q.key === 'familyHistory'))
                         ) || [];
@@ -837,7 +865,7 @@ const QuestionScreen = () => {
                       layout={q.optionsLayout || 'default'}
                       multiple={q.inputType === 'multiple-choice'}
                     />
-                    {/* Others 옵션들 - 기본 모드로 렌더링 */}
+                    {/* Others options - rendered in default mode */}
                      {q.key === 'otherConcerns' && (
                       <OthersOption
                         questionKey={q.key}
@@ -847,12 +875,9 @@ const QuestionScreen = () => {
                         value={answers.otherConcernsText as string || ''}
                         onChangeText={(text) => handleAnswer('otherConcernsText', text, 'text')}
                         onFocus={() => {
-                          console.log('[otherConcernsText] Others TextInput 포커스 - 키보드 스크롤 시작');
-                          console.log('[otherConcernsText] extraScrollHeight: ' + responsiveHeight(15) + ', extraHeight: ' + responsiveHeight(20));
-                          console.log('[otherConcernsText] 추가 여백: ' + responsiveHeight(25));
                         }}
                         containerStyle={{
-                          marginBottom: 0, // 여백 제거
+                          marginBottom: 0, // Remove margin
                         }}
                          scrollToInput={(node) => {
                            try {
@@ -869,9 +894,6 @@ const QuestionScreen = () => {
                         placeholder="Please specify your condition"
                         value={answers.diagnosedConditionText as string || ''}
                         onChangeText={(text) => handleAnswer('diagnosedConditionText', text, 'text')}
-                        onFocus={() => {
-                          console.log('[diagnosedConditionText] Others TextInput 포커스 - 키보드 스크롤 시작');
-                        }}
                         expandedMode={true}
                           scrollToInput={(node) => {
                             try {
@@ -888,9 +910,6 @@ const QuestionScreen = () => {
                         placeholder="Please specify the condition"
                         value={answers.familyHistoryText as string || ''}
                         onChangeText={(text) => handleAnswer('familyHistoryText', text, 'text')}
-                        onFocus={() => {
-                          console.log('[familyHistoryText] Others TextInput 포커스 - 키보드 스크롤 시작');
-                        }}
                         expandedMode={true}
                           scrollToInput={(node) => {
                             try {
@@ -913,7 +932,7 @@ const QuestionScreen = () => {
         </View>
         </KeyboardAwareScrollView>
 
-                 {/* 하단 그라디언트 배경과 버튼 */}
+                 {/* Bottom gradient background and button */}
 
        </View>
        <FixedBottomContainer avoidKeyboard={false}> 
@@ -965,9 +984,9 @@ const styles = StyleSheet.create({
     mainContent: {
         paddingHorizontal: responsiveWidth(5),
         paddingTop: responsiveHeight(2),
-        paddingBottom: responsiveHeight(20), // 그라디언트 영역을 위한 충분한 공간
+        paddingBottom: responsiveHeight(20), // Sufficient space for gradient area
         alignItems: 'center',
-        flexGrow: 1, // 콘텐츠가 적을 때도 전체 높이 사용
+        flexGrow: 1, // Use full height even when content is small
     },
     characterAndQuestion: {
         flexDirection: 'column',
@@ -991,7 +1010,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    // 추가 질문 화면용 maskedView 스타일
+    // MaskedView style for additional questions screen
     additionalQuestionsMaskedView: {
         width: responsiveWidth(80),
         height: responsiveHeight(8),
@@ -1169,7 +1188,7 @@ const styles = StyleSheet.create({
     color: '#6f6f6f',
     textAlign: 'center',
   },
-  // IntroScreen 스타일과 동일한 스타일들
+  // Styles identical to IntroScreen
   backButtonContainer: {
     position: 'absolute',
     top: responsiveHeight(6),

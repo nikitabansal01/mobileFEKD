@@ -26,23 +26,24 @@ type RootStackParamList = {
 
 type OnboardingScreenNavigationProp = StackNavigationProp<RootStackParamList, 'OnboardingScreen'>;
 
-
-
+/**
+ * Onboarding slides data with hormone graphics and app screenshots
+ */
 const slides = [
   {
     key: 1,
     render: () => (
       <View style={styles.slideContentWrapper}>
         
-        {/* Splash screen 캐릭터들 */}
+        {/* Hormone character graphics */}
         <View>
-          {/* Testosterone - 오른쪽 중간 별 모양*/}
+          {/* Testosterone - right middle star shape */}
           <View style={{
             position: 'absolute',
             top: responsiveHeight(15),
             right: responsiveWidth(2),
             width: responsiveWidth(36),
-            aspectRatio: 1.195 // 이미지 비율
+            aspectRatio: 1.195
           }}>
             <Image
               source={Images.GraphicTestosteroneDefault}
@@ -51,13 +52,13 @@ const slides = [
             />
           </View>
           
-          {/* FSH - 중앙 타원 모양*/}
+          {/* FSH - center oval shape */}
           <View style={{ 
             position: 'absolute',
             top: responsiveHeight(23), 
             left: responsiveWidth(22),
             width: responsiveWidth(43),
-            aspectRatio: 1.1835 // 이미지 비율
+            aspectRatio: 1.1835
           }}>
             <Image
               source={Images.GraphicFSHDefault}
@@ -66,13 +67,13 @@ const slides = [
             />
           </View>
           
-          {/* GnRH - 왼쪽 아래 세모 모양양 */}
+          {/* GnRH - left bottom triangle shape */}
           <View style={{ 
             position: 'absolute',
             top: responsiveHeight(39), 
             left: responsiveWidth(4),
             width: responsiveWidth(33),
-            aspectRatio: 1 // 이미지 비율
+            aspectRatio: 1
           }}>
             <Image
               source={Images.GraphicGnRHDefault}
@@ -81,7 +82,7 @@ const slides = [
             />
           </View>
           
-          {/* Progesterone - 오른쪽 아래 구름 모양 */}
+          {/* Progesterone - right bottom cloud shape */}
           <View style={{ 
             position: 'absolute',
             top: responsiveHeight(39), 
@@ -96,13 +97,13 @@ const slides = [
             />
           </View>
           
-          {/* LH - 중간 위 네모 모양 */}
+          {/* LH - middle top square shape */}
           <View style={{ 
             position: 'absolute',
             top: responsiveHeight(5), 
             left: responsiveWidth(35),
             width: responsiveWidth(31),
-            aspectRatio: 1.45 // 이미지 비율
+            aspectRatio: 1.45
           }}>
             <Image
               source={Images.GraphicLHDefault}
@@ -111,13 +112,13 @@ const slides = [
             />
           </View>
           
-          {/* Estrogen - 왼쪽 위 번개모양양 */}
+          {/* Estrogen - left top lightning shape */}
           <View style={{ 
             position: 'absolute',
             top: responsiveHeight(7), 
             left: responsiveWidth(2),
             width: responsiveWidth(24),
-            aspectRatio: 0.46 // 이미지 비율
+            aspectRatio: 0.46
           }}>
             <Image
               source={Images.GraphicEstrogenDefault}
@@ -141,7 +142,7 @@ const slides = [
           end={{ x: 1, y: 0 }}
           style={ styles.gradient }
         >
-          {/* 그래픽 이미지 */}
+          {/* Graphic image */}
           <View
             style={{
               width: responsiveWidth(100),
@@ -150,27 +151,27 @@ const slides = [
               justifyContent: 'flex-end',
             }}
           >
-            {/* 이미지 + SVG들을 감싸는 컨테이너 */}
+            {/* Container for image and SVGs */}
             <View style={{ 
               position: 'relative',
               alignItems: 'center',
             }}>
-              {/* 메인 이미지 */}
+              {/* Main image */}
               <Image
                 source={Images.GraphicAppscreenshot1}
                 style={{
                   width: undefined,
-                  height: responsiveHeight(40), // 고정 height로 변경
+                  height: responsiveHeight(40),
                   aspectRatio: 228 / 350,
                 }}
               />
               
-              {/* SVG 1 - 이미지 바깥 왼쪽 위 */}
+              {/* SVG 1 - outside top left of image */}
               <View
                 style={{
                   position: 'absolute',
-                  top: '-7%', // 이미지 위쪽 바깥
-                  left: '-7%', // 이미지 왼쪽 바깥
+                  top: '-7%',
+                  left: '-7%',
                   zIndex: 10,
                 }}
                 pointerEvents="none"
@@ -178,12 +179,12 @@ const slides = [
                 <SVG.GraphicSparkle width={40} height={40} />
               </View>
               
-              {/* SVG 2 - 이미지 바깥 오른쪽 위 */}
+              {/* SVG 2 - outside top right of image */}
               <View
                 style={{
                   position: 'absolute',
-                  bottom: '30%', // 이미지 위쪽 바깥
-                  right: '-12%', // 이미지 오른쪽 바깥
+                  bottom: '30%',
+                  right: '-12%',
                   zIndex: 10,
                 }}
                 pointerEvents="none"
@@ -208,7 +209,7 @@ const slides = [
           end={{ x: 1, y: 0 }}
           style={ styles.gradient }
         >
-          {/* 그래픽 이미지 */}
+          {/* Graphic image */}
           <View
             style={{
               width: responsiveWidth(100),
@@ -217,27 +218,27 @@ const slides = [
               justifyContent: 'flex-end',
             }}
           >
-            {/* 이미지 + SVG들을 감싸는 컨테이너 */}
+            {/* Container for image and SVGs */}
             <View style={{ 
               position: 'relative',
               alignItems: 'center',
             }}>
-              {/* 메인 이미지 */}
+              {/* Main image */}
               <Image
                 source={Images.GraphicAppscreenshot2}
                 style={{
                   width: undefined,
-                  height: responsiveHeight(40), // 고정 height로 변경
+                  height: responsiveHeight(40),
                   aspectRatio: 228 / 350,
                 }}
               />
               
-              {/* SVG 1 - 이미지 바깥 왼쪽 위 */}
+              {/* SVG 1 - outside top left of image */}
               <View
                 style={{
                   position: 'absolute',
-                  top: '-7%', // 이미지 위쪽 바깥
-                  left: '-7%', // 이미지 왼쪽 바깥
+                  top: '-7%',
+                  left: '-7%',
                   zIndex: 10,
                 }}
                 pointerEvents="none"
@@ -245,12 +246,12 @@ const slides = [
                 <SVG.GraphicSparkle width={40} height={40} />
               </View>
               
-              {/* SVG 2 - 이미지 바깥 오른쪽 위 */}
+              {/* SVG 2 - outside top right of image */}
               <View
                 style={{
                   position: 'absolute',
-                  bottom: '30%', // 이미지 위쪽 바깥
-                  right: '-12%', // 이미지 오른쪽 바깥
+                  bottom: '30%',
+                  right: '-12%',
                   zIndex: 10,
                 }}
                 pointerEvents="none"
@@ -277,10 +278,10 @@ const slides = [
             ]}
             locations={[0, 0.12177, 0.20509, 0.71649]}
             start={{ x: 0, y: 0 }}
-            end={{ x: 0.8, y: 1 }} // 155.772도 각도를 x,y로 근사치 변환
+            end={{ x: 0.8, y: 1 }}
             style={ styles.gradient }
         >
-          {/* 그래픽 이미지 */}
+          {/* Graphic image */}
           <View
             style={{
               width: responsiveWidth(100),
@@ -289,27 +290,27 @@ const slides = [
               justifyContent: 'flex-end',
             }}
           >
-            {/* 이미지 + SVG들을 감싸는 컨테이너 */}
+            {/* Container for image and SVGs */}
             <View style={{ 
               position: 'relative',
               alignItems: 'center',
             }}>
-              {/* 메인 이미지 */}
+              {/* Main image */}
               <Image
                 source={Images.GraphicAppscreenshot3}
                 style={{
                   width: undefined,
-                  height: responsiveHeight(40), // 고정 height로 변경
+                  height: responsiveHeight(40),
                   aspectRatio: 228 / 355,
                 }}
               />
               
-              {/* SVG 1 - 이미지 바깥 왼쪽 위 */}
+              {/* SVG 1 - outside top left of image */}
               <View
                 style={{
                   position: 'absolute',
-                  top: '-7%', // 이미지 위쪽 바깥
-                  left: '-7%', // 이미지 왼쪽 바깥
+                  top: '-7%',
+                  left: '-7%',
                   zIndex: 10,
                 }}
                 pointerEvents="none"
@@ -317,12 +318,12 @@ const slides = [
                 <SVG.GraphicSparkle width={40} height={40} />
               </View>
               
-              {/* SVG 2 - 이미지 바깥 오른쪽 위 */}
+              {/* SVG 2 - outside top right of image */}
               <View
                 style={{
                   position: 'absolute',
-                  bottom: '30%', // 이미지 위쪽 바깥
-                  right: '-12%', // 이미지 오른쪽 바깥
+                  bottom: '30%',
+                  right: '-12%',
                   zIndex: 10,
                 }}
                 pointerEvents="none"
@@ -338,8 +339,10 @@ const slides = [
   },
 ];
 
-
-
+/**
+ * Onboarding screen component with auto-sliding introduction slides
+ * Features hormone graphics and app screenshots with gradient backgrounds
+ */
 const OnboardingScreen = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const sliderRef = useRef<AppIntroSlider>(null);
@@ -359,21 +362,30 @@ const OnboardingScreen = () => {
     "Rooted in research. Refined by experts. Designed to help you truly heal.",
   ];
 
+  /**
+   * Handle next slide navigation
+   */
   const handleNext = () => {
     if (currentIndex < slides.length - 1) {
       sliderRef.current?.goToSlide(currentIndex + 1);
     }
   };
 
+  /**
+   * Handle completion of onboarding
+   */
   const handleDone = () => {
     navigation.navigate('IntroScreen');
   }
 
+  /**
+   * Handle login navigation
+   */
   const handleLogin = () => {
     navigation.navigate('LoginScreen');
   }
 
-  // 1.5초마다 자동 슬라이드 (끝까지 가면 멈춤)
+  // Auto-slide every 1.5 seconds (stops at the end)
   useEffect(() => {
     const interval = setInterval(() => {
       if (currentIndex < slides.length - 1) {
@@ -381,7 +393,7 @@ const OnboardingScreen = () => {
         setCurrentIndex(nextIndex);
         sliderRef.current?.goToSlide(nextIndex);
       } else {
-        // 마지막 슬라이드에 도달하면 타이머 정리
+        // Clear timer when reaching the last slide
         clearInterval(interval);
       }
     }, 1500);
@@ -424,7 +436,7 @@ const OnboardingScreen = () => {
         </View>
       </View>
       
-      {/* 하단 그라디언트 배경과 버튼 */}
+      {/* Bottom gradient background and buttons */}
       <FixedBottomContainer>
         <PrimaryButton 
           title="Get Started" 
@@ -448,28 +460,27 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "flex-start",
-    //paddingHorizontal: 24,
     backgroundColor: "#fff",
   },
   slider: {
-    paddingBottom: responsiveHeight(26), // Pushes slider content up
+    paddingBottom: responsiveHeight(26),
   },
   titleText: {
     fontFamily: "NotoSerif600",
-    fontSize: responsiveFontSize(3.4), //24px
+    fontSize: responsiveFontSize(3.4),
     color: "#6E4B6F",
     textAlign: "left",
     marginBottom: responsiveHeight(2),
-    lineHeight: responsiveFontSize(3.4)*1.2 ,
+    lineHeight: responsiveFontSize(3.4)*1.2,
   },
   description: {
     height: responsiveHeight(5),
     fontFamily: "Inter400",
-    fontSize: responsiveFontSize(1.98), //14px
+    fontSize: responsiveFontSize(1.98),
     color: "#6E4B6F",
     textAlign: "left",
-    marginBottom: responsiveHeight(1), // description과 버튼 사이 간격 줄임
-    lineHeight: responsiveFontSize(1.98)*1.4 ,
+    marginBottom: responsiveHeight(1),
+    lineHeight: responsiveFontSize(1.98)*1.4,
   },
   buttonContainer: {
     width: "100%",
@@ -483,7 +494,7 @@ const styles = StyleSheet.create({
   },
   loginText: {
     fontFamily: "Inter400",
-    fontSize: responsiveFontSize(1.98), //14px
+    fontSize: responsiveFontSize(1.98),
     color: "#6E4B6F",
     textAlign: "center",
   },
@@ -506,7 +517,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderTopLeftRadius: responsiveWidth(5),
     borderTopRightRadius: responsiveWidth(5),
-    paddingBottom: responsiveHeight(15), // Adjust padding to make space for the fixed button
+    paddingBottom: responsiveHeight(15),
     paddingTop: responsiveHeight(2),
     paddingHorizontal: responsiveWidth(6),
     alignItems: "center",
@@ -517,7 +528,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginTop: responsiveHeight(1.5),
-    marginBottom: responsiveHeight(4), // 간격 줄임
+    marginBottom: responsiveHeight(4),
   },
   dot: {
     width: responsiveWidth(2.2),
@@ -548,7 +559,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     alignItems: 'center',
     gap: responsiveHeight(0.3),
-    zIndex: 11, // Ensure it's on top of the contentContainer
+    zIndex: 11,
   },
   backgroundCircles: {
     position: 'absolute',
@@ -562,7 +573,7 @@ const styles = StyleSheet.create({
     width: responsiveWidth(115),
     height: responsiveWidth(115),
     borderRadius: responsiveWidth(57.5),
-    backgroundColor: 'rgba(242, 129, 172, 0.1)', // Light pink background
+    backgroundColor: 'rgba(242, 129, 172, 0.1)',
     position: 'absolute',
   },
 });

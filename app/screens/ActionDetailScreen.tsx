@@ -32,21 +32,19 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
   const navigation = useNavigation<ActionDetailScreenNavigationProp>();
   const actionParam = route?.params?.action;
 
-  // 상태 관리
+  // State management
   const [isHowMode, setIsHowMode] = useState(false);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [scrollEnabled, setScrollEnabled] = useState(true);
 
-  // 뒤로가기 제스처 비활성화 (AppIntroSlider 사용 시)
+  // Disable back gesture when using AppIntroSlider
   useFocusEffect(
     React.useCallback(() => {
-      // 화면 포커스 시 뒤로가기 제스처 비활성화
       navigation.setOptions({
         gestureEnabled: false,
       });
 
       return () => {
-        // 화면 언포커스 시 뒤로가기 제스처 재활성화
         navigation.setOptions({
           gestureEnabled: true,
         });
@@ -54,7 +52,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
     }, [navigation])
   );
 
-  // action 객체 생성 (이미 객체이거나 JSON 문자열일 수 있음)
+  // Parse action object from route params
   const action = actionParam ? (typeof actionParam === 'string' ? JSON.parse(actionParam) : actionParam) as {
     id: number;
     title: string;
@@ -71,34 +69,30 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
     }>;
   } : null;
 
-  // 디버깅용 로그
-  console.log('ActionDetailScreen - actionParam:', actionParam);
-  console.log('ActionDetailScreen - parsed action:', action);
-  console.log('ActionDetailScreen - action title:', action?.title);
-  console.log('ActionDetailScreen - action purpose:', action?.purpose);
-  console.log('ActionDetailScreen - action hormones:', action?.hormones);
-  console.log('ActionDetailScreen - action specific_action:', action?.specific_action);
-  console.log('ActionDetailScreen - action conditions:', action?.conditions);
-  console.log('ActionDetailScreen - action symptoms:', action?.symptoms);
-  console.log('ActionDetailScreen - action advices:', action?.advices);
-  console.log('ActionDetailScreen - advices count:', action?.advices?.length);
-
-  // 호르몬별 설명 텍스트
+  /**
+   * Get hormone-specific description text
+   * @param hormones - Array of hormone names
+   * @returns Description text for the hormone
+   */
   const getHormoneDescription = (hormones: string[]) => {
     if (hormones.includes('progesterone')) {
       return "I'm Progesterone — in your luteal phase, I tend to dip, causing mood swings or cramps.";
     }
-    // 다른 호르몬들에 대한 설명은 나중에 추가
     return "";
   };
 
+  /**
+   * Handle close button press
+   */
   const handleClose = () => {
     navigation.goBack();
   };
 
+  /**
+   * Handle "Tell me best ways to consume" button press
+   */
   const handleTellMeMore = () => {
-    // "Tell me best ways to consume" 버튼 클릭 시 동작
-    console.log('Tell me best ways to consume clicked');
+    // TODO: Implement "Tell me best ways to consume" functionality
   };
 
   return (
@@ -199,14 +193,14 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                               </Text>
                             </View>
                             
-                            {/* Type Badge - 좌측상단 */}
+                            {/* Type Badge - Top Left */}
                             <View style={styles.adviceTypeBadge}>
                               <Text style={styles.adviceTypeBadgeText}>
                                 {item.type || 'Easy'}
                               </Text>
                             </View>
                             
-                            {/* Title - 좌측하단 */}
+                            {/* Title - Bottom Left */}
                             <View style={styles.adviceTitleContainer}>
                               <Text style={styles.adviceTitle}>
                                 {item.title || 'Roasted pumpkin seeds'}
@@ -298,7 +292,6 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
             <PrimaryButton
               title="Mark as complete ✅"
               onPress={() => {
-                console.log('Mark as complete clicked');
                 navigation.navigate('ActionCompletedScreen', { 
                   action: JSON.stringify(action) 
                 });
@@ -339,7 +332,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: responsiveWidth(5),
     paddingVertical: responsiveHeight(1),
-    height: responsiveHeight(10), // 40px로 조정
+    height: responsiveHeight(10),
   },
   headerTitleContainer: {
     position: 'absolute',
@@ -347,18 +340,18 @@ const styles = StyleSheet.create({
     right: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    height: responsiveHeight(10), // 헤더 높이와 동일
+    height: responsiveHeight(10),
   },
   backButton: {
     position: 'absolute',
     left: responsiveWidth(5),
     justifyContent: 'center',
     alignItems: 'center',
-    height: responsiveHeight(10), // 헤더 높이와 동일
-    width: responsiveWidth(10), // 40px
+    height: responsiveHeight(10),
+    width: responsiveWidth(10),
   },
   backButtonText: {
-    fontSize: responsiveFontSize(3.5), // 적절한 크기
+    fontSize: responsiveFontSize(3.5),
     color: '#000000',
   },
   closeButtonContainer: {
@@ -366,29 +359,29 @@ const styles = StyleSheet.create({
     right: responsiveWidth(5),
     justifyContent: 'center',
     alignItems: 'center',
-    height: responsiveHeight(10), // 헤더 높이와 동일
+    height: responsiveHeight(10),
   },
   headerTitle: {
-    fontSize: responsiveFontSize(1.7), // 12px (Figma 기준)
-    color: '#6F6F6F', // Grey Medium (Figma 기준)
-    fontFamily: 'Inter400', // 올바른 폰트 이름으로 수정
+    fontSize: responsiveFontSize(1.7),
+    color: '#6F6F6F',
+    fontFamily: 'Inter400',
     textAlign: 'center',
-    textAlignVertical: 'center', // 세로 중앙정렬
-    includeFontPadding: false, // 폰트 패딩 제거
-    lineHeight: responsiveFontSize(1.7), // 폰트 사이즈와 동일한 lineHeight
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+    lineHeight: responsiveFontSize(1.7),
   },
   closeButton: {
-    width: responsiveWidth(10), // 40px로 조정
-    height: responsiveHeight(10), // 40px로 조정
+    width: responsiveWidth(10),
+    height: responsiveHeight(10),
     justifyContent: 'center',
     alignItems: 'center',
   },
   closeButtonText: {
-    fontSize: responsiveFontSize(3.5), // 적절한 크기로 조정
+    fontSize: responsiveFontSize(3.5),
     color: '#6F6F6F',
-    includeFontPadding: false, // 폰트 패딩 제거
-    textAlignVertical: 'center', // 세로 중앙정렬
-    lineHeight: responsiveFontSize(3.5), // 폰트 사이즈와 동일한 lineHeight
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: responsiveFontSize(3.5),
   },
   content: {
     flex: 1,
@@ -400,14 +393,14 @@ const styles = StyleSheet.create({
   },
   titleSection: {
     alignItems: 'center',
-    marginTop: responsiveHeight(7), // 8 → 4로 줄임 (헤더와 그라디언트 제목 간격 감소)
+    marginTop: responsiveHeight(7),
     width: '100%',
   },
   title: {
-    fontSize: responsiveFontSize(2.27), // 16px (Figma 기준)
-    fontFamily: 'NotoSerif600', // 올바른 폰트 이름으로 수정
+    fontSize: responsiveFontSize(2.27),
+    fontFamily: 'NotoSerif600',
     textAlign: 'center',
-    lineHeight: responsiveHeight(2.4), // 1.5 line height
+    lineHeight: responsiveHeight(2.4),
   },
   titleContainer: {
     alignItems: 'center',
@@ -424,18 +417,18 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     position: 'relative',
-    width: responsiveWidth(27.78), // 100px → 27.78% (360px 기준)
-    height: responsiveWidth(27.78), // 100px → 27.78% (360px 기준)
-    borderRadius: responsiveWidth(27.78) / 2, // 정확한 반지름 계산
+    width: responsiveWidth(27.78),
+    height: responsiveWidth(27.78),
+    borderRadius: responsiveWidth(27.78) / 2,
     backgroundColor: '#F0F0F0',
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
   },
   actionImage: {
-    width: responsiveWidth(18), // 80px → 22.22% (360px 기준)
-    height: responsiveWidth(18), // 80px → 22.22% (360px 기준)
-    borderRadius: responsiveWidth(18) / 2, // 정확한 반지름 계산
+    width: responsiveWidth(18),
+    height: responsiveWidth(18),
+    borderRadius: responsiveWidth(18) / 2,
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
@@ -445,17 +438,17 @@ const styles = StyleSheet.create({
   },
   imageBorder: {
     position: 'absolute',
-    top: -responsiveWidth(5.56), // -20px → -5.56% (360px 기준)
-    left: -responsiveWidth(5.56), // -20px → -5.56% (360px 기준)
-    right: -responsiveWidth(5.56), // -20px → -5.56% (360px 기준)
-    bottom: -responsiveWidth(5.56), // -20px → -5.56% (360px 기준)
-    borderWidth: responsiveWidth(5.56), // 20px → 5.56% (360px 기준)
+    top: -responsiveWidth(5.56),
+    left: -responsiveWidth(5.56),
+    right: -responsiveWidth(5.56),
+    bottom: -responsiveWidth(5.56),
+    borderWidth: responsiveWidth(5.56),
     borderColor: '#FCDDEC',
-    borderRadius: responsiveWidth(27.78) / 2 + responsiveWidth(5.56), // 정확한 반지름 계산
+    borderRadius: responsiveWidth(27.78) / 2 + responsiveWidth(5.56),
   },
   hormoneGraphic: {
-    width: responsiveWidth(36.67), // 132px → 36.67% (360px 기준)
-    height: responsiveHeight(20), // 121px → 33.61% (360px 기준)
+    width: responsiveWidth(36.67),
+    height: responsiveHeight(20),
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
@@ -465,7 +458,7 @@ const styles = StyleSheet.create({
       height: 0,
     },
     shadowOpacity: 0.25,
-    shadowRadius: responsiveWidth(6.11), // 22px → 6.11% (360px 기준)
+    shadowRadius: responsiveWidth(6.11),
     elevation: 5,
     alignSelf: 'center',
   },
@@ -474,8 +467,8 @@ const styles = StyleSheet.create({
   },
   descriptionCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: responsiveWidth(5.56), // 20px → 5.56% (360px 기준)
-    padding: responsiveWidth(5.56), // 20px → 5.56% (360px 기준)
+    borderRadius: responsiveWidth(5.56),
+    padding: responsiveWidth(5.56),
     width: '100%',
     borderWidth: 0.5,
     borderColor: '#949494',
@@ -483,10 +476,10 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   descriptionText: {
-    fontSize: responsiveFontSize(1.7), // 12px (Figma 기준)
-    fontFamily: 'Inter400', // 올바른 폰트 이름으로 수정
+    fontSize: responsiveFontSize(1.7),
+    fontFamily: 'Inter400',
     color: '#000000',
-    lineHeight: responsiveHeight(1.8), // 1.5 line height
+    lineHeight: responsiveHeight(1.8),
   },
   studyDetails: {
     width: '100%',
@@ -500,28 +493,28 @@ const styles = StyleSheet.create({
     gap: responsiveWidth(1.5),
   },
   studyDetailsText: {
-    fontSize: responsiveFontSize(1.7), // 12px (Figma 기준)
-    fontFamily: 'Inter400', // 올바른 폰트 이름으로 수정
+    fontSize: responsiveFontSize(1.7),
+    fontFamily: 'Inter400',
     color: '#C17EC9',
   },
   studyDetailsArrow: {
-    fontSize: responsiveFontSize(1.7), // 12px (Figma 기준)
+    fontSize: responsiveFontSize(1.7),
     color: '#C17EC9',
     transform: [{ rotate: '270deg' }],
   },
   // How Mode Styles
   conditionsSection: {
     alignItems: 'center',
-    marginTop: responsiveHeight(7), // 5 → 3으로 줄임
+    marginTop: responsiveHeight(7),
     width: '100%',
   },
   conditionsSubtitle: {
-    fontSize: responsiveFontSize(1.42), // 10px
+    fontSize: responsiveFontSize(1.42),
     color: '#949494',
-    fontFamily: 'Inter500', // 올바른 폰트 이름으로 수정
-    marginBottom: responsiveHeight(1), // 2.5 → 4로 증가 (텍스트와 태그 간격 증가)
+    fontFamily: 'Inter500',
+    marginBottom: responsiveHeight(1),
     textAlign: 'center',
-    opacity: 0.7, // 투명도 추가
+    opacity: 0.7,
   },
   conditionsTags: {
     flexDirection: 'row',
@@ -532,26 +525,26 @@ const styles = StyleSheet.create({
   conditionTag: {
     backgroundColor: 'rgba(218, 214, 219, 0.37)',
     paddingHorizontal: responsiveWidth(1.5),
-    paddingVertical: responsiveHeight(0.5), // 1 → 1.5로 증가 (tag 높이 증가)
-    borderRadius: responsiveWidth(2.78), // 10px
+    paddingVertical: responsiveHeight(0.5),
+    borderRadius: responsiveWidth(2.78),
   },
   conditionTagText: {
-    fontSize: responsiveFontSize(1.7), // 12px
+    fontSize: responsiveFontSize(1.7),
     color: '#6F6F6F',
-    fontFamily: 'Inter400', // 올바른 폰트 이름으로 수정
+    fontFamily: 'Inter400',
   },
   adviceSection: {
     alignItems: 'center',
-    marginTop: responsiveHeight(2), // 4 → 2로 줄임
+    marginTop: responsiveHeight(2),
     width: '100%',
   },
   adviceCard: {
     width: '100%',
-    height: responsiveHeight(18), // 150px
+    height: responsiveHeight(18),
     backgroundColor: '#F0F0F0',
-    borderRadius: responsiveWidth(2.78), // 10px
+    borderRadius: responsiveWidth(2.78),
     position: 'relative',
-    overflow: 'hidden', // 이미지가 카드 경계를 넘지 않도록
+    overflow: 'hidden',
   },
   adviceBackgroundImage: {
     position: 'absolute',
@@ -561,20 +554,20 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F0F0F0', // 배경색
+    backgroundColor: '#F0F0F0',
   },
   adviceBackgroundText: {
-    fontSize: responsiveFontSize(8), // 배경 이미지 크기
+    fontSize: responsiveFontSize(8),
     color: '#CCCCCC',
   },
   adviceTypeBadge: {
     position: 'absolute',
-    top: responsiveHeight(0.75), // 3px로 조정하여 더 위로 올림
-    left: responsiveWidth(1.75), // 7px
+    top: responsiveHeight(0.75),
+    left: responsiveWidth(1.75),
     backgroundColor: '#FFFFFF',
     paddingHorizontal: responsiveWidth(1.5),
     paddingVertical: responsiveHeight(0.75),
-    borderRadius: responsiveWidth(2.78), // 10px
+    borderRadius: responsiveWidth(2.78),
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -582,21 +575,21 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   adviceTypeBadgeText: {
-    fontSize: responsiveFontSize(1.4), // 10px
+    fontSize: responsiveFontSize(1.4),
     color: '#000000',
-    fontFamily: 'Inter500', // 올바른 폰트 이름으로 수정
+    fontFamily: 'Inter500',
     fontWeight: '500',
   },
   adviceTitleContainer: {
     position: 'absolute',
-    bottom: responsiveHeight(1.75), // 7px
-    left: responsiveWidth(1.75), // 7px
-    right: responsiveWidth(1.75), // 7px
+    bottom: responsiveHeight(1.75),
+    left: responsiveWidth(1.75),
+    right: responsiveWidth(1.75),
   },
   adviceTitle: {
-    fontSize: responsiveFontSize(1.7), // 12px
+    fontSize: responsiveFontSize(1.7),
     color: '#000000',
-    fontFamily: 'Inter500', // 올바른 폰트 이름으로 수정
+    fontFamily: 'Inter500',
     fontWeight: '500',
     textShadowColor: 'rgba(255, 255, 255, 0.8)',
     textShadowOffset: { width: 0, height: 1 },
@@ -604,7 +597,7 @@ const styles = StyleSheet.create({
   },
   sliderContainer: {
     width: '100%',
-    height: responsiveHeight(25), // 카드 + dot 공간 포함
+    height: responsiveHeight(25),
     position: 'relative',
   },
   adviceSlideWrapper: {
@@ -614,7 +607,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   sliderPagination: {
-    bottom: responsiveHeight(2), // dot 위치 조정
+    bottom: responsiveHeight(2),
   },
   customPagination: {
     flexDirection: 'row',
@@ -627,12 +620,12 @@ const styles = StyleSheet.create({
     gap: responsiveWidth(1),
   },
   sliderDot: {
-    width: responsiveWidth(2), // 8px
-    height: responsiveWidth(2), // 8px
-    borderRadius: responsiveWidth(1), // 4px
+    width: responsiveWidth(2),
+    height: responsiveWidth(2),
+    borderRadius: responsiveWidth(1),
     backgroundColor: '#C17EC9',
     opacity: 0.3,
-    marginHorizontal: responsiveWidth(1), // dot 간격
+    marginHorizontal: responsiveWidth(1),
   },
   sliderDotActive: {
     opacity: 1,
@@ -648,9 +641,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backToHomeButtonText: {
-    fontSize: responsiveFontSize(1.98), // 14px
+    fontSize: responsiveFontSize(1.98),
     color: '#6F6F6F',
-    fontFamily: 'Inter500', // 올바른 폰트 이름으로 수정
+    fontFamily: 'Inter500',
   },
 });
 

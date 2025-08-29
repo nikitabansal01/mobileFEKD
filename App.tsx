@@ -1,4 +1,4 @@
-// URL 폴리필을 가장 먼저 import
+// Import URL polyfill first
 import 'react-native-url-polyfill/auto';
 
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -24,7 +24,7 @@ import ResearchingScreen from './app/screens/ResearchingScreen';
 import ResultLoadingScreen from './app/screens/ResultLoadingScreen';
 import ResultScreen from './app/screens/ResultScreen';
 
-// Context - FirstLog를 직접 정의
+// Context - Define FirstLog directly
 interface FirstLogContextType {
   firstTimeLog: boolean;
   setFirstTimeLog: React.Dispatch<React.SetStateAction<boolean>>;
@@ -35,7 +35,7 @@ export const FirstLog = createContext<FirstLogContextType | undefined>(undefined
 const Stack = createStackNavigator();
 
 export default function App() {
-  // 전역 폰트 스케일링 비활성화
+  // Disable global font scaling
   Text.defaultProps = Text.defaultProps || {};
   Text.defaultProps.allowFontScaling = false;
 
@@ -98,5 +98,5 @@ export default function App() {
   );
 }
 
-// Expo registerRootComponent 등록
+// Register Expo root component
 registerRootComponent(App);

@@ -2,27 +2,34 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 
-// 플랫폼별 API URL 설정
+/**
+ * Gets the API base URL based on platform and environment
+ * 
+ * @returns The appropriate API base URL for the current platform
+ */
 const getApiBaseUrl = () => {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
   if (envUrl) return envUrl;
   
-  // 플랫폼별 기본값 설정
+  // Platform-specific default values
   if (Platform.OS === 'android') {
-    // Android 에뮬레이터용
+    // For Android emulator
     return 'http://10.0.2.2:8000';
   } else {
-    // iOS 시뮬레이터용
+    // For iOS simulator
     return 'http://localhost:8000';
   }
 };
 
 const API_BASE_URL = getApiBaseUrl();
 
-// API URL 디버깅 로그
+// API URL debugging logs
 console.log('API Base URL:', API_BASE_URL);
 console.log('Platform:', Platform.OS);
 
+/**
+ * User response data structure for survey answers
+ */
 export interface UserResponseData {
   age?: number;
   period_description?: string;
@@ -42,6 +49,9 @@ export interface UserResponseData {
   stress_level?: string;
 }
 
+/**
+ * Session data structure
+ */
 export interface SessionData {
   session_id: string;
   device_id: string;
@@ -49,42 +59,65 @@ export interface SessionData {
   status: string;
 }
 
+/**
+ * Session Service
+ * 
+ * Manages user sessions for survey data collection and recommendation generation.
+ * Handles session creation, validation, data storage, and user linking.
+ */
 class SessionService {
+  /** Current session ID */
   private sessionId: string | null = null;
 
-  // 디바이스 ID 생성
+  /**
+   * Generates a unique device identifier
+   * 
+   * @returns Device identifier string
+   */
   private getDeviceId(): string {
     return Device.deviceName || Device.modelName || 'unknown-device';
   }
 
-  // 세션 ID 가져오기 (로컬 저장소에서)
+  /**
+   * Retrieves session ID from local storage
+   * 
+   * @returns Promise resolving to session ID or null
+   */
   async getSessionId(): Promise<string | null> {
     try {
       const sessionId = await AsyncStorage.getItem('session_id');
       return sessionId;
     } catch (error) {
-      console.error('세션 ID 가져오기 실패:', error);
+      console.error('Failed to get session ID:', error);
       return null;
     }
   }
 
-  // 세션 ID 저장하기 (로컬 저장소에)
+  /**
+   * Saves session ID to local storage
+   * 
+   * @param sessionId - Session ID to save
+   */
   async saveSessionId(sessionId: string): Promise<void> {
     try {
       await AsyncStorage.setItem('session_id', sessionId);
       this.sessionId = sessionId;
     } catch (error) {
-      console.error('세션 ID 저장 실패:', error);
+      console.error('Failed to save session ID:', error);
     }
   }
 
-  // 새 세션 생성
+  /**
+   * Creates a new session for the device
+   * 
+   * @returns Promise resolving to session data or null on error
+   */
   async createSession(): Promise<SessionData | null> {
     try {
       const deviceId = this.getDeviceId();
       
-      console.log('세션 생성 시도:', `${API_BASE_URL}/api/v1/questions/sessions`);
-      console.log('요청 데이터:', { device_id: deviceId });
+      console.log('Attempting to create session:', `${API_BASE_URL}/api/v1/questions/sessions`);
+      console.log('Request data:', { device_id: deviceId });
       
       const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions`, {
         method: 'POST',
@@ -97,51 +130,57 @@ class SessionService {
       });
 
       if (!response.ok) {
-        throw new Error(`세션 생성 실패: ${response.status}`);
+        throw new Error(`Session creation failed: ${response.status}`);
       }
 
       const sessionData: SessionData = await response.json();
       await this.saveSessionId(sessionData.session_id);
       return sessionData;
     } catch (error) {
-      console.error('세션 생성 오류:', error);
+      console.error('Session creation error:', error);
       return null;
     }
   }
 
-  // 답변 저장 (새로운 구조)
+  /**
+   * Saves survey answers to the session (new structure)
+   * 
+   * @param answers - User's survey answers
+   * @param questions - Survey questions structure
+   * @returns Promise resolving to success status
+   */
   async saveAnswers(answers: Record<string, any>, questions: any[]): Promise<boolean> {
     try {
-      // 세션 유효성 확인 및 필요시 재생성
+      // Validate session and recreate if necessary
       const sessionValid = await this.validateAndRefreshSession();
       if (!sessionValid) {
-        console.error('세션 생성 실패');
+        console.error('Session creation failed');
         return false;
       }
 
       const sessionId = await this.getSessionId();
       if (!sessionId) {
-        console.error('세션 ID가 없습니다.');
+        console.error('No session ID available.');
         return false;
       }
 
-      console.log('답변 저장 시작:', {
+      console.log('Starting answer save:', {
         sessionId,
         answersCount: Object.keys(answers).length,
         questionsCount: questions.length
       });
 
-      // 이름을 로컬 스토리지에 저장 (개인 정보 분리)
+      // Save name to local storage (separate personal info)
       const { name, ...sessionData } = answers;
       if (name) {
         await AsyncStorage.setItem('userName', name);
-        console.log('이름을 로컬 스토리지에 저장:', name);
+        console.log('Name saved to local storage:', name);
       }
 
-      // 답변을 새로운 구조로 변환 (개인 정보 제외)
+      // Convert answers to new structure (excluding personal info)
       const responseData: any = {};
       
-      // key 매핑 정의 (name 제외)
+      // Key mapping definition (excluding name)
       const keyMapping: Record<string, string> = {
         'age': 'age',
         'periodDescription': 'period_description',
@@ -161,25 +200,25 @@ class SessionService {
         'stressLevel': 'stress_level'
       };
       
-      // 각 질문의 답변을 매핑
+      // Map each question's answer
       questions.forEach(q => {
         const answer = answers[q.key];
-        console.log(`질문 ${q.key}:`, answer);
+        console.log(`Question ${q.key}:`, answer);
         
-        // name은 제외하고 처리
+        // Exclude name from processing
         if (q.key === 'name') {
-          console.log('이름은 세션에 저장하지 않음');
+          console.log('Name not saved to session');
           return;
         }
         
         const mappedKey = keyMapping[q.key];
         if (mappedKey) {
-          // 나이를 숫자로 변환
+          // Convert age to number
           if (q.key === 'age') {
             responseData[mappedKey] = parseInt(answer) || 0;
-            console.log(`매핑됨 (나이 숫자 변환): ${q.key} -> ${mappedKey} =`, responseData[mappedKey]);
+            console.log(`Mapped (age number conversion): ${q.key} -> ${mappedKey} =`, responseData[mappedKey]);
           }
-          // Others 텍스트 입력 처리
+          // Process Others text input
           else if (q.key === 'otherConcerns' && Array.isArray(answer)) {
             const processedAnswer = answer.map(item => {
               if (item === 'Others (please specify)' && answers.otherConcernsText) {
@@ -188,7 +227,7 @@ class SessionService {
               return item;
             });
             responseData[mappedKey] = processedAnswer;
-            console.log(`매핑됨 (Others 처리): ${q.key} -> ${mappedKey} =`, processedAnswer);
+            console.log(`Mapped (Others processing): ${q.key} -> ${mappedKey} =`, processedAnswer);
           } else if (q.key === 'diagnosedCondition' && Array.isArray(answer)) {
             const processedAnswer = answer.map(item => {
               if (item === 'Others (please specify)' && answers.diagnosedConditionText) {
@@ -197,29 +236,29 @@ class SessionService {
               return item;
             });
             responseData[mappedKey] = processedAnswer;
-            console.log(`매핑됨 (Others 처리): ${q.key} -> ${mappedKey} =`, processedAnswer);
+            console.log(`Mapped (Others processing): ${q.key} -> ${mappedKey} =`, processedAnswer);
           } else {
             responseData[mappedKey] = answer;
-            console.log(`매핑됨: ${q.key} -> ${mappedKey} =`, answer);
+            console.log(`Mapped: ${q.key} -> ${mappedKey} =`, answer);
           }
         } else {
-          console.log(`매핑되지 않음: ${q.key} =`, answer);
+          console.log(`Not mapped: ${q.key} =`, answer);
         }
       });
 
-      // 사용자 시간대 자동 감지
+      // Auto-detect user timezone
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       
       const requestBody = {
         session_id: sessionId,
         data: {
           ...responseData,
-          survey_timezone: userTimezone  // 필수!
+          survey_timezone: userTimezone  // Required!
         }
       };
 
-      console.log('요청 URL:', `${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/data`);
-      console.log('요청 본문:', JSON.stringify(requestBody, null, 2));
+      console.log('Request URL:', `${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/data`);
+      console.log('Request body:', JSON.stringify(requestBody, null, 2));
 
       const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/data`, {
         method: 'POST',
@@ -229,37 +268,42 @@ class SessionService {
         body: JSON.stringify(requestBody),
       });
 
-      console.log('응답 상태:', response.status, response.statusText);
-      console.log('응답 헤더:', Object.fromEntries(response.headers.entries()));
+      console.log('Response status:', response.status, response.statusText);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('답변 저장 응답 오류:', errorText);
-        throw new Error(`답변 저장 실패: ${response.status} - ${errorText}`);
+        console.error('Answer save response error:', errorText);
+        throw new Error(`Answer save failed: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('답변 저장 성공:', result);
+      console.log('Answer save successful:', result);
       return true;
     } catch (error) {
-      console.error('답변 저장 오류:', error);
+      console.error('Answer save error:', error);
       return false;
     }
   }
 
-  // 로그인 후 세션을 사용자와 연결 (새로운 구조)
+  /**
+   * Links session to user after login (new structure)
+   * 
+   * @param firebaseUser - Firebase user object
+   * @returns Promise resolving to success status
+   */
   async linkSessionToUser(firebaseUser: any): Promise<boolean> {
     try {
       const sessionId = await this.getSessionId();
       if (!sessionId) {
-        console.error('세션 ID가 없습니다.');
+        console.error('No session ID available.');
         return false;
       }
 
-      // 로컬 스토리지에서 이름 가져오기
+      // Get name from local storage
       const userName = await AsyncStorage.getItem('userName');
       
-      // 사용자 시간대 자동 감지
+      // Auto-detect user timezone
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       
       const userProfile = {
@@ -267,7 +311,7 @@ class SessionService {
         email: firebaseUser.email || ''
       };
 
-      console.log('세션 연결 시도:', {
+      console.log('Attempting session link:', {
         sessionId,
         userProfile,
         timezone: userTimezone
@@ -281,55 +325,65 @@ class SessionService {
         },
         body: JSON.stringify({
           user_profile: userProfile,
-          current_timezone: userTimezone  // 필수!
+          current_timezone: userTimezone  // Required!
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`세션 연결 실패: ${response.status}`);
+        throw new Error(`Session link failed: ${response.status}`);
       }
 
       const result = await response.json();
-      console.log('세션 연결 성공:', result);
+      console.log('Session link successful:', result);
       
-      // 연결 성공 후 로컬 스토리지 정리
+      // Clean up local storage after successful link
       await AsyncStorage.removeItem('userName');
-      console.log('로컬 스토리지에서 이름 삭제 완료');
+      console.log('Name removed from local storage');
       
       return true;
     } catch (error) {
-      console.error('세션 연결 오류:', error);
+      console.error('Session link error:', error);
       return false;
     }
   }
 
-  // 세션 초기화
+  /**
+   * Clears the current session
+   */
   async clearSession(): Promise<void> {
     try {
       await AsyncStorage.removeItem('session_id');
       this.sessionId = null;
     } catch (error) {
-      console.error('세션 초기화 실패:', error);
+      console.error('Session clear failed:', error);
     }
   }
 
-  // 세션 존재 여부 확인
+  /**
+   * Checks if a session exists
+   * 
+   * @returns Promise resolving to session existence status
+   */
   async hasSession(): Promise<boolean> {
     const sessionId = await this.getSessionId();
     return sessionId !== null;
   }
 
-  // 세션 유효성 확인 및 필요시 재생성
+  /**
+   * Validates session and recreates if necessary
+   * 
+   * @returns Promise resolving to validation success status
+   */
   async validateAndRefreshSession(): Promise<boolean> {
     try {
       const sessionId = await this.getSessionId();
       if (!sessionId) {
-        console.log('세션 ID가 없음 - 새 세션 생성');
+        console.log('No session ID - creating new session');
         const newSession = await this.createSession();
         return newSession !== null;
       }
 
-      // 기존 세션이 유효한지 확인 (새로운 엔드포인트)
+      // Check if existing session is valid (new endpoint)
       const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/data`, {
         method: 'GET',
         headers: {
@@ -338,50 +392,56 @@ class SessionService {
       });
 
       if (response.status === 404) {
-        console.log('기존 세션이 유효하지 않음 - 새 세션 생성');
+        console.log('Existing session invalid - creating new session');
         await this.clearSession();
         const newSession = await this.createSession();
         return newSession !== null;
       }
 
-      console.log('기존 세션이 유효함');
+      console.log('Existing session is valid');
       return true;
     } catch (error) {
-      console.error('세션 유효성 확인 중 오류:', error);
-      // 오류 발생 시 새 세션 생성
+      console.error('Error during session validation:', error);
+      // Create new session on error
       await this.clearSession();
       const newSession = await this.createSession();
       return newSession !== null;
     }
   }
 
-  // 로그아웃 시 모든 저장된 정보 삭제
+  /**
+   * Logs out user and clears all stored information
+   */
   async logout(): Promise<void> {
     try {
-      // 세션 정보 삭제
+      // Clear session information
       await this.clearSession();
       
-      // Remember me 정보 삭제
+      // Clear remember me information
       await AsyncStorage.removeItem('rememberMe');
       await AsyncStorage.removeItem('savedEmail');
       await AsyncStorage.removeItem('savedPassword');
       
-      console.log('로그아웃 완료 - 모든 저장된 정보 삭제됨');
+      console.log('Logout complete - all stored information cleared');
     } catch (error) {
-      console.error('로그아웃 중 오류:', error);
+      console.error('Error during logout:', error);
     }
   }
 
-  // 추천 생성 시작
+  /**
+   * Starts recommendation generation process
+   * 
+   * @returns Promise resolving to success status
+   */
   async startRecommendationGeneration(): Promise<boolean> {
     try {
       const sessionId = await this.getSessionId();
       if (!sessionId) {
-        console.error('❌ 세션 ID가 없습니다.');
+        console.error('❌ No session ID available.');
         return false;
       }
 
-      console.log('🚀 추천 생성 시작 API 호출:', `${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/generate-recommendations`);
+      console.log('🚀 Starting recommendation generation API call:', `${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/generate-recommendations`);
 
       const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/generate-recommendations`, {
         method: 'POST',
@@ -392,29 +452,33 @@ class SessionService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ 추천 생성 시작 실패:', errorText);
-        throw new Error(`추천 생성 시작 실패: ${response.status} - ${errorText}`);
+        console.error('❌ Recommendation generation start failed:', errorText);
+        throw new Error(`Recommendation generation start failed: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('✅ 추천 생성 시작 성공:', result);
+      console.log('✅ Recommendation generation start successful:', result);
       return true;
     } catch (error) {
-      console.error('❌ 추천 생성 시작 오류:', error);
+      console.error('❌ Recommendation generation start error:', error);
       return false;
     }
   }
 
-  // 추천 생성 상태 확인
+  /**
+   * Checks recommendation generation status
+   * 
+   * @returns Promise resolving to status information or null on error
+   */
   async getRecommendationStatus(): Promise<{ status: string; data?: any } | null> {
     try {
       const sessionId = await this.getSessionId();
       if (!sessionId) {
-        console.error('❌ 세션 ID가 없습니다.');
+        console.error('❌ No session ID available.');
         return null;
       }
 
-      console.log('🔍 추천 생성 상태 확인 API 호출:', `${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/recommendations/status`);
+      console.log('🔍 Checking recommendation generation status API call:', `${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/recommendations/status`);
 
       const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/recommendations/status`, {
         method: 'GET',
@@ -425,14 +489,14 @@ class SessionService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ 추천 생성 상태 확인 실패:', errorText);
-        throw new Error(`추천 생성 상태 확인 실패: ${response.status} - ${errorText}`);
+        console.error('❌ Recommendation status check failed:', errorText);
+        throw new Error(`Recommendation status check failed: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('📊 추천 생성 상태 응답:', result);
+      console.log('📊 Recommendation status response:', result);
       
-      // 응답 구조 정규화
+      // Normalize response structure
       let normalizedResult = {
         status: result.status || result.currentRecommendationStatus || 'pending',
         data: result.data || result,
@@ -440,10 +504,10 @@ class SessionService {
         session_id: result.session_id
       };
       
-      console.log('✅ 정규화된 응답:', normalizedResult);
+      console.log('✅ Normalized response:', normalizedResult);
       return normalizedResult;
     } catch (error) {
-      console.error('❌ 추천 생성 상태 확인 오류:', error);
+      console.error('❌ Recommendation status check error:', error);
       return null;
     }
   }

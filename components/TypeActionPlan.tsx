@@ -14,26 +14,35 @@ import Svg, { Defs, Line, Stop, LinearGradient as SvgLinearGradient } from 'reac
 import { useNavigation } from '@react-navigation/native';
 
 
-// ====== 타입 import ======
+// ====== Type imports ======
 import { Assignment } from '../services/homeService';
 type AssignmentsMap = Record<string, Assignment[]>;
 
-// ====== 본 컴포넌트 ======
+// ====== Main component ======
+/**
+ * Props for the TypeActionPlan component
+ */
 type Props = {
-  dateLabel?: string;              // 상단 날짜 라벨 (예: "August 25, 2025")
-  assignments?: AssignmentsMap;    // 시간대별 액션들
+  /** Date label for the top section (e.g., "August 25, 2025") */
+  dateLabel?: string;
+  /** Time-based action assignments */
+  assignments?: AssignmentsMap;
 };
 
-// 카테고리 정의
+/**
+ * Category definitions for action types
+ */
 const CATEGORIES = [
   { key: 'food', emoji: '🥗', name: 'Eat' },
   { key: 'exercise', emoji: '🏃‍♀️‍', name: 'Move' },
   { key: 'mindfulness', emoji: '🧘‍♀️', name: 'Pause' },
 ] as const;
 
-// 시간대 이모지 매핑
+/**
+ * Time slot emoji mapping
+ */
 const TIME_EMOJI_MAP: Record<string, string> = {
-  completed: '', // completed는 아이콘 없음
+  completed: '', // No icon for completed
   morning: '☀️',
   afternoon: '🌤️',
   evening: '🌙',
@@ -41,6 +50,17 @@ const TIME_EMOJI_MAP: Record<string, string> = {
   night: '🌙',
 };
 
+/**
+ * TypeActionPlan Component
+ * 
+ * Displays categorized action plans organized by time slots and categories.
+ * Shows food, exercise, and mindfulness actions with completion tracking.
+ * 
+ * @param props - Component props
+ * @param props.dateLabel - Date label for display
+ * @param props.assignments - Time-based action assignments
+ * @returns JSX.Element
+ */
 export default function TypeActionPlan({
   dateLabel = formatToday(new Date()),
   assignments = {},
@@ -48,7 +68,11 @@ export default function TypeActionPlan({
   const [completedCategories, setCompletedCategories] = useState<Set<string>>(new Set());
   const navigation = useNavigation();
   
-  // React Navigation을 사용한 네비게이션
+  /**
+   * Handles navigation to action detail screen using React Navigation
+   * 
+   * @param actionData - Action data to pass to detail screen
+   */
   const handleNavigation = (actionData: any) => {
     try {
       navigation.navigate('ActionDetailScreen', {
@@ -60,11 +84,14 @@ export default function TypeActionPlan({
     }
   };
   
-  // 1) 모든 액션을 하나의 배열로 합치고 카테고리별로 분류
+  /**
+   * Combines all actions into a single array and categorizes them
+   * Uses API category field first, then falls back to data field analysis
+   */
   const categorizedAssignments = useMemo(() => {
     const allAssignments: (Assignment & { timeSlot: string })[] = [];
     
-    // 모든 시간대의 액션들을 수집
+    // Collect actions from all time slots
     Object.entries(assignments).forEach(([timeSlot, timeAssignments]) => {
       if (timeAssignments && timeAssignments.length > 0) {
         timeAssignments.forEach(assignment => {
@@ -73,7 +100,7 @@ export default function TypeActionPlan({
       }
     });
 
-    // 카테고리별로 분류
+    // Categorize by type
     const categorized: Record<string, (Assignment & { timeSlot: string })[]> = {
       food: [],
       exercise: [],
@@ -81,10 +108,10 @@ export default function TypeActionPlan({
     };
 
     allAssignments.forEach(assignment => {
-      // 카테고리 결정 로직 - API의 category 필드를 우선 사용
+      // Category determination logic - prioritize API category field
       const category = assignment.category?.toLowerCase() || '';
       
-      // 1. API category 필드 기반 분류
+      // 1. API category field-based classification
       if (category.includes('food') || category.includes('nutrition') || category.includes('diet')) {
         categorized.food.push(assignment);
       } else if (category.includes('exercise') || category.includes('movement') || category.includes('physical')) {
@@ -92,7 +119,7 @@ export default function TypeActionPlan({
       } else if (category.includes('mindfulness') || category.includes('meditation') || category.includes('mental')) {
         categorized.mindfulness.push(assignment);
       } 
-      // 2. 데이터 필드 기반 분류
+      // 2. Data field-based classification
       else if (assignment.food_items && assignment.food_items.length > 0) {
         categorized.food.push(assignment);
       } else if (assignment.exercise_types && assignment.exercise_types.length > 0) {
@@ -100,7 +127,7 @@ export default function TypeActionPlan({
       } else if (assignment.mindfulness_techniques && assignment.mindfulness_techniques.length > 0) {
         categorized.mindfulness.push(assignment);
       } 
-      // 3. 제목 기반 분류 (fallback)
+      // 3. Title-based classification (fallback)
       else {
         const title = assignment.title.toLowerCase();
         if (title.includes('seed') || title.includes('ashwagandha') || title.includes('food') || title.includes('eat') || title.includes('nutrition')) {
@@ -110,7 +137,7 @@ export default function TypeActionPlan({
         } else if (title.includes('yoga') || title.includes('meditation') || title.includes('mindful') || title.includes('breathe') || title.includes('relax')) {
           categorized.mindfulness.push(assignment);
         } else {
-          // 기본값으로 food 카테고리에 배치
+          // Default to food category
           categorized.food.push(assignment);
         }
       }
@@ -134,12 +161,11 @@ export default function TypeActionPlan({
   };
 
   const getActionPurpose = (assignment: Assignment): string => {
-    // API에서 받아오는 purpose 필드만 사용 (ActionDetail로 전달용)
     return assignment.purpose || '';
   };
 
   const getActionSymptomsConditions = (assignment: Assignment): string => {
-    // symptoms와 conditions를 순서대로 모아서 반환 (타임라인 표시용)
+    // Collect symptoms and conditions in order and return (for timeline display)
     const symptoms = assignment.symptoms || [];
     const conditions = assignment.conditions || [];
     
@@ -151,7 +177,7 @@ export default function TypeActionPlan({
     return assignment.hormones?.length || 0;
   };
 
-  // 호르몬별 색상 반환 함수
+  // Hormone-specific color return function
   const getProgressColor = (hormone: string) => {
     switch (hormone.toLowerCase()) {
       case 'androgens': return '#F6C34C';
@@ -168,7 +194,7 @@ export default function TypeActionPlan({
     }
   };
 
-  // 호르몬별 아이콘 반환 함수
+  // Hormone-specific icon return function
   const getHormoneIcon = (hormone: string) => {
     switch (hormone.toLowerCase()) {
       case 'androgens': return '💪';
@@ -185,29 +211,29 @@ export default function TypeActionPlan({
     }
   };
 
-  // 첫 번째 호르몬의 색상을 반환하는 함수
+  // Function to return first hormone color
   const getFirstHormoneColor = (assignment: Assignment): string => {
     if (assignment.hormones && assignment.hormones.length > 0) {
       return getProgressColor(assignment.hormones[0]);
     }
-    return '#A36CFF'; // 기본 색상
+    return '#A36CFF'; // Default color
   };
 
-  // 첫 번째 호르몬의 아이콘을 반환하는 함수
+  // Function to return first hormone icon
   const getFirstHormoneIcon = (assignment: Assignment): string => {
     if (assignment.hormones && assignment.hormones.length > 0) {
       return getHormoneIcon(assignment.hormones[0]);
     }
-    return '💊'; // 기본 아이콘
+    return '💊'; // Default icon
   };
 
   const getTimeEmoji = (timeSlot: string): string => {
     return TIME_EMOJI_MAP[timeSlot] || '⏰';
   };
 
-  // 첫 번째 선: 맨 위에서 카테고리 시작 전까지 (그라디언트)
+  // First line: from top to category start (gradient)
   const renderTopLine = () => {
-    const lineHeight = responsiveHeight(7); // ActionPlanTimeline의 TOP_CAP과 일치
+    const lineHeight = responsiveHeight(7); // Match with ActionPlanTimeline TOP_CAP
     const screenWidth = Dimensions.get('window').width;
     const centerX = screenWidth / 2;
     
@@ -243,7 +269,7 @@ export default function TypeActionPlan({
     );
   };
 
-  // 두 번째 선: 액션 플랜 끝에서 Tomorrow 라벨 시작까지 (회색 점선)
+  // second line: from action plan end to Tomorrow label start (grey dashed line)
   const renderMiddleLine = () => {
     const lineHeight = responsiveHeight(8);
     const screenWidth = Dimensions.get('window').width;
@@ -272,7 +298,7 @@ export default function TypeActionPlan({
     );
   };
 
-  // 세 번째 선: Tomorrow 라벨 밑에서 다음 리스트까지 (회색 점선 + 자물쇠)
+  // Third line: from Tomorrow label bottom to next list + lock
   const renderBottomLine = () => {
     const lineHeight = responsiveHeight(8);
     const screenWidth = Dimensions.get('window').width;
@@ -297,7 +323,7 @@ export default function TypeActionPlan({
             strokeDasharray={`${responsiveWidth(8)} ${responsiveWidth(2)}`}
           />
           
-          {/* 자물쇠 아이콘 */}
+          {/* Lock icon */}
           <View style={styles.svgLockIcon}>
             <Image 
               source={require('../assets/icons/IconLock.png')}
@@ -310,7 +336,7 @@ export default function TypeActionPlan({
     );
   };
 
-  // 액션 아이템 렌더링
+  // Action item rendering
   const renderActionItem = (assignment: Assignment & { timeSlot: string }) => {
     const handleActionPress = () => {
       handleNavigation({
@@ -327,11 +353,11 @@ export default function TypeActionPlan({
 
     return (
       <View key={assignment.id.toString()} style={styles.actionItem}>
-        {/* 이미지 원 */}
+        {/* Image circle */}
         <TouchableOpacity 
           style={styles.imageContainer} 
           onLongPress={!assignment.is_completed ? () => {
-            // ActionCompletedScreen으로 이동 (완료되지 않은 경우만)
+            // Navigate to ActionCompletedScreen (only if not completed)
             try {
               navigation.navigate('ActionCompletedScreen', {
                 action: JSON.stringify({
@@ -349,13 +375,13 @@ export default function TypeActionPlan({
               console.error('Navigation to ActionCompletedScreen error:', error);
             }
           } : undefined}
-          delayLongPress={2000} // 2초간 꾹 누르기
+          delayLongPress={2000} // 2 second long press
         >
-          {/* 실제 이미지 대신 이모지 사용 */}
+          {/* Use emoji instead of actual image */}
           <Text style={styles.actionImage}>📋</Text>
         </TouchableOpacity>
       
-      {/* 액션 정보 */}
+      {/* Action information */}
       <View style={styles.actionDetails}>
         <TouchableOpacity 
           onPress={handleActionPress}
@@ -383,7 +409,7 @@ export default function TypeActionPlan({
     );
   };
 
-  // 카테고리 섹션 렌더링
+  // Category section rendering
   const renderCategorySection = (category: typeof CATEGORIES[0]) => {
     const categoryAssignments = categorizedAssignments[category.key];
     
@@ -393,7 +419,7 @@ export default function TypeActionPlan({
 
     return (
       <View key={category.key} style={styles.categorySection}>
-        {/* 카테고리 헤더 */}
+        {/* Category header */}
         <View style={styles.categoryHeader}>
           <View style={styles.dividerLeft} />
           <Text style={styles.categoryTitle}>
@@ -402,7 +428,7 @@ export default function TypeActionPlan({
           <View style={styles.dividerRight} />
         </View>
         
-        {/* 카테고리 액션들 */}
+        {/* Category actions */}
         <View style={styles.categoryActions}>
           {categoryAssignments.map(renderActionItem)}
         </View>
@@ -413,16 +439,16 @@ export default function TypeActionPlan({
      return (
      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
        <View style={styles.content}>
-         {/* 첫 번째 선: 맨 위 그라디언트 선 */}
+         {/* First line: top gradient line */}
          {renderTopLine()}
          
-         {/* 카테고리별 액션들 */}
+         {/* Actions by category */}
          {CATEGORIES.map(renderCategorySection)}
          
-         {/* 두 번째 선: 액션 플랜 끝에서 Tomorrow 시작까지 */}
+         {/* Second line: from action plan end to Tomorrow start */}
          {renderMiddleLine()}
          
-         {/* Tomorrow 섹션 */}
+         {/* Tomorrow section */}
          <View style={styles.tomorrowSection}>
            <View style={styles.tomorrowHeader}>
              <Text style={styles.tomorrowSectionTitle}>Tomorrow</Text>
@@ -430,13 +456,13 @@ export default function TypeActionPlan({
            </View>
          </View>
 
-         {/* 세 번째 선: Tomorrow 라벨 밑에서 다음 리스트까지 + 자물쇠 */}
+         {/* Third line: from Tomorrow label bottom to next list + lock */}
          {renderBottomLine()}
 
-         {/* Tomorrow 액션 플랜 미리보기 */}
+         {/* Tomorrow action plan preview */}
          <View style={styles.tomorrowPreview}>
            <View style={styles.tomorrowBlurredContent}>
-             {/* 카테고리 헤더 */}
+             {/* Category header */}
              <View style={styles.tomorrowCategoryHeader}>
                <View style={styles.dividerLeft} />
                <Text style={styles.tomorrowCategoryTitle}>
@@ -445,7 +471,7 @@ export default function TypeActionPlan({
                <View style={styles.dividerRight} />
              </View>
 
-             {/* 첫 번째 액션 아이템 미리보기 */}
+             {/* First action item preview */}
              <View style={styles.tomorrowActionPreview}>
                <View style={styles.tomorrowImageContainer}>
                  <Text style={styles.tomorrowActionImage}>📋</Text>
@@ -478,7 +504,7 @@ export default function TypeActionPlan({
    );
 }
 
-// ====== 유틸: 날짜 포맷 ======
+// ====== Utility: Date formatting ======
 function formatToday(d: Date) {
   const month = d.toLocaleString('en-US', { month: 'long' });
   const day = d.getDate();
@@ -486,7 +512,7 @@ function formatToday(d: Date) {
   return `${month} ${day}, ${year}`;
 }
 
-// ====== 스타일 ======
+// ====== Styles ======
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -494,10 +520,10 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: responsiveWidth(8),
-    // paddingVertical 제거하여 ActionPlanTimeline과 동일하게 딱 붙어서 시작
+    // Remove paddingVertical to start flush with ActionPlanTimeline
   },
   
-  // 세로선 컨테이너들
+  // Vertical line containers
   topLineContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -507,13 +533,13 @@ const styles = StyleSheet.create({
   middleLineContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: responsiveHeight(2), // ActionPlanTimeline과 일치
+    marginBottom: responsiveHeight(2), // Match ActionPlanTimeline
   },
   
   bottomLineContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: responsiveHeight(2), // ActionPlanTimeline과 일치
+    marginTop: responsiveHeight(2), // Match ActionPlanTimeline
   },
   
   categorySection: {
@@ -537,9 +563,9 @@ const styles = StyleSheet.create({
     marginLeft: responsiveWidth(2),
   },
   categoryTitle: {
-    fontSize: responsiveFontSize(1.98), //14px (Figma 기준)
+    fontSize: responsiveFontSize(1.98), // 14px equivalent
     fontFamily: 'NotoSerif500', // Noto Serif Medium
-    color: '#6F6F6F', // Figma 기준 Grey Medium
+    color: '#6F6F6F', // Grey Medium
     paddingHorizontal: responsiveWidth(2),
   },
   categoryActions: {
@@ -566,14 +592,14 @@ const styles = StyleSheet.create({
     gap: responsiveHeight(0.5),
   },
   actionTitle: {
-    fontSize: responsiveFontSize(1.98), //14px (Figma 기준)
+    fontSize: responsiveFontSize(1.98), // 14px equivalent
     fontFamily: 'NotoSerif500', // Noto Serif Medium
-    color: '#000000', // Figma 기준 Black
+    color: '#000000', // Black
   },
   actionArrow: {
-    fontSize: responsiveFontSize(1.98), //14px (title과 동일)
+    fontSize: responsiveFontSize(1.98), //14px (same as title)
     fontWeight: '300',
-    color: '#949494', // Figma 기준 Grey Light
+    color: '#949494', // Grey Light
     marginLeft: 8,
   },
   actionMeta: {
@@ -582,14 +608,14 @@ const styles = StyleSheet.create({
     gap: responsiveWidth(1.5),
   },
   actionAmount: {
-    fontSize: responsiveFontSize(1.7), //12px (Figma 기준)
+    fontSize: responsiveFontSize(1.7), // 12px equivalent
     fontFamily: 'Inter400', // Inter Regular
-    color: '#949494', // Figma 기준 Grey Light
+    color: '#949494', // Grey Light
   },
   actionPurpose: {
-    fontSize: responsiveFontSize(1.7), //12px (Figma 기준)
+    fontSize: responsiveFontSize(1.7), // 12px equivalent
     fontFamily: 'Inter400', // Inter Regular
-    color: '#949494', // Figma 기준 Grey Light
+    color: '#949494', // Grey Light
   },
   separator: {
     width: 1,
@@ -602,9 +628,9 @@ const styles = StyleSheet.create({
     gap: responsiveWidth(1),
   },
   hormoneCount: {
-    fontSize: responsiveFontSize(1.7), //12px (Figma 기준)
+    fontSize: responsiveFontSize(1.7), // 12px equivalent
     fontFamily: 'Inter400', // Inter Regular
-    color: '#949494', // Figma 기준 Grey Light
+    color: '#949494', // Grey Light
   },
   hormoneIcon: {
     width: responsiveWidth(4),
@@ -615,7 +641,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   hormoneIconText: {
-    fontSize: responsiveFontSize(1.1), //9px (Figma 기준)
+    fontSize: responsiveFontSize(1.1), // 9px equivalent
     color: '#FFFFFF',
     fontWeight: '600',
   },
@@ -623,14 +649,14 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(2.2),
   },
   
-  // Tomorrow 섹션 스타일
+  // Tomorrow section styles
   tomorrowSection: {
-    marginTop: responsiveHeight(1), // ActionPlanTimeline과 일치
-    marginBottom: responsiveHeight(1), // ActionPlanTimeline과 일치
+    marginTop: responsiveHeight(1),
+    marginBottom: responsiveHeight(1),
   },
   tomorrowHeader: {
     alignItems: 'center',
-    paddingVertical: responsiveHeight(1), // ActionPlanTimeline과 일치
+    paddingVertical: responsiveHeight(1),
   },
   tomorrowSectionTitle: {
     fontSize: responsiveFontSize(1.98),
@@ -647,7 +673,7 @@ const styles = StyleSheet.create({
   },
   tomorrowLockContainer: {
     alignItems: 'center',
-    marginTop: responsiveHeight(2), // ActionPlanTimeline과 일치
+    marginTop: responsiveHeight(2),
   },
   tomorrowLockIcon: {
     fontSize: responsiveFontSize(2.5),

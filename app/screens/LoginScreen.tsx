@@ -40,6 +40,10 @@ type RootStackParamList = {
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'LoginScreen'>;
 
+/**
+ * Login screen component with email/password and social authentication
+ * Supports Google and Apple sign-in methods
+ */
 const LoginScreen = () => {
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const [email, setEmail] = useState("");
@@ -58,9 +62,8 @@ const LoginScreen = () => {
       const credential = GoogleAuthProvider.credential(id_token);
       signInWithCredential(auth, credential)
         .then(async (result) => {
-          // Firebase 토큰 가져오기
+          // Get Firebase token for authentication
           const token = await result.user.getIdToken();
-          console.log('Google Login - Firebase ID Token:', token);
           
           Alert.alert('Success', 'Google login successful!');
           navigation.navigate('HomeScreen');
@@ -71,6 +74,9 @@ const LoginScreen = () => {
     }
   }, [googleResponse]);
 
+  /**
+   * Handle email/password login
+   */
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Error", "Please fill in all fields");
@@ -82,9 +88,8 @@ const LoginScreen = () => {
       const result = await signInWithEmail(email, password);
       
       if (result.success) {
-        // Firebase 토큰 가져오기
+        // Get Firebase token for authentication
         const token = await auth.currentUser?.getIdToken();
-        console.log('Firebase ID Token:', token);
         
         Alert.alert("Success", "Login successful!");
         navigation.navigate('HomeScreen');
@@ -98,10 +103,16 @@ const LoginScreen = () => {
     }
   };
 
+  /**
+   * Handle Google sign-in
+   */
   const handleGoogleSignin = () => {
     googlePromptAsync();
   };
 
+  /**
+   * Handle Apple sign-in
+   */
   const handleAppleSignin = async () => {
     try {
       const isAvailable = await AppleAuthentication.isAvailableAsync();
@@ -125,9 +136,8 @@ const LoginScreen = () => {
       
       const result = await signInWithCredential(auth, firebaseCredential);
       
-      // Firebase 토큰 가져오기
+      // Get Firebase token for authentication
       const token = await result.user.getIdToken();
-      console.log('Apple Login - Firebase ID Token:', token);
       
       Alert.alert("Success", "Apple login successful!");
       navigation.navigate('HomeScreen');
@@ -136,6 +146,9 @@ const LoginScreen = () => {
     }
   };
 
+  /**
+   * Handle back navigation
+   */
   const handleBack = () => {
     navigation.goBack();
   };
@@ -284,13 +297,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'NotoSerif600',
-    fontSize: responsiveFontSize(3.12),//22px
+    fontSize: responsiveFontSize(3.12),
     textAlign: 'center',
     lineHeight: responsiveHeight(3.12),
   },
   subtitle: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.7),//12px
+    fontSize: responsiveFontSize(1.7),
     color: '#6f6f6f',
     textAlign: 'center',
     lineHeight: responsiveFontSize(1.7) * 1.25,
@@ -308,7 +321,7 @@ const styles = StyleSheet.create({
     marginBottom: responsiveHeight(1),
   },
   textInput: {
-    // TextInputContainer의 기본 스타일 사용
+    // Uses default TextInputContainer styles
   },
   optionsContainer: {
     flexDirection: 'row',
@@ -336,13 +349,13 @@ const styles = StyleSheet.create({
   rememberText: {
     fontFamily: 'Inter400',
     color: 'rgba(0, 0, 0, 0.6)',
-    fontSize: responsiveFontSize(1.7),//12px
+    fontSize: responsiveFontSize(1.7),
     lineHeight: responsiveFontSize(1.7) * 1.25,
   },
   forgotPasswordText: {
     fontFamily: 'Inter400',
     color: '#C17EC9',
-    fontSize: responsiveFontSize(1.7),//12px
+    fontSize: responsiveFontSize(1.7),
     lineHeight: responsiveFontSize(1.7) * 1.25,
   },
   dividerContainer: {
@@ -357,7 +370,7 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     color: '#6f6f6f',
-    fontSize: responsiveFontSize(1.7), //12px
+    fontSize: responsiveFontSize(1.7),
     fontFamily: 'Inter400',
     marginHorizontal: responsiveWidth(2.5),
     lineHeight: responsiveFontSize(1.7) * 1.25,
@@ -380,7 +393,7 @@ const styles = StyleSheet.create({
   },
   socialButtonText: {
     color: '#1e1e1e',
-    fontSize: responsiveFontSize(1.98), //14px
+    fontSize: responsiveFontSize(1.98),
     fontFamily: 'Inter500',
     lineHeight: responsiveFontSize(1.98) * 1.25,
   },
@@ -389,7 +402,7 @@ const styles = StyleSheet.create({
   },
   termsText: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.42), //10px
+    fontSize: responsiveFontSize(1.42),
     color: '#6f6f6f',
     textAlign: 'center',
     lineHeight: responsiveFontSize(1.0) * 1.5,

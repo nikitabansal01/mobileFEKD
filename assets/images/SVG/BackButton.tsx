@@ -2,7 +2,7 @@ import React from 'react';
 import Svg, { Path } from 'react-native-svg';
 import { moderateScale } from 'react-native-size-matters';
 
-// 뒤로가기 아이콘 컴포넌트
+// Back button icon component
 const BackButton = ({ color = 'black', ...props }) => (
   <Svg
     width={moderateScale(10)}

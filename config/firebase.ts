@@ -5,7 +5,9 @@ import {
   createUserWithEmailAndPassword
 } from 'firebase/auth';
 
-// Firebase 설정을 환경변수에서 가져오기
+/**
+ * Firebase configuration object loaded from environment variables
+ */
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -15,7 +17,10 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-// 환경변수 디버깅
+/**
+ * Environment variable debugging for Firebase configuration
+ * Logs which environment variables are set or not set
+ */
 console.log('Firebase Config Debug:', {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY ? 'SET' : 'NOT SET',
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN ? 'SET' : 'NOT SET',
@@ -25,13 +30,23 @@ console.log('Firebase Config Debug:', {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID ? 'SET' : 'NOT SET',
 });
 
-// Firebase 앱 초기화
+/**
+ * Initialize Firebase app with configuration
+ */
 const app = initializeApp(firebaseConfig);
 
-// Auth 인스턴스 생성
+/**
+ * Firebase Auth instance for authentication operations
+ */
 export const auth = getAuth(app);
 
-// 이메일/비밀번호 로그인 함수
+/**
+ * Email/password sign-in function
+ * 
+ * @param email - User's email address
+ * @param password - User's password
+ * @returns Promise with success status and user data or error message
+ */
 export const signInWithEmail = async (email: string, password: string) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -41,7 +56,13 @@ export const signInWithEmail = async (email: string, password: string) => {
   }
 };
 
-// 이메일/비밀번호 회원가입 함수
+/**
+ * Email/password sign-up function
+ * 
+ * @param email - User's email address
+ * @param password - User's password
+ * @returns Promise with success status and user data or error message
+ */
 export const signUpWithEmail = async (email: string, password: string) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);

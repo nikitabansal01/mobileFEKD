@@ -27,25 +27,35 @@ type RootStackParamList = {
 
 type ResultScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ResultScreen'>;
 
+/**
+ * Result screen component for displaying hormone analysis results
+ * Features hormone cards with priority badges and navigation to next step
+ */
 const ResultScreen = () => {
   const navigation = useNavigation<ResultScreenNavigationProp>();
 
+  /**
+   * Handle continue navigation to result loading screen
+   */
   const handleContinue = () => {
     navigation.navigate('ResultLoadingScreen');
   };
 
+  /**
+   * Handle back navigation
+   */
   const handleBack = () => {
     navigation.goBack();
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 뒤로가기 버튼 */}
+      {/* Back button */}
       <View style={styles.backButtonContainer}>
         <BackButton onPress={handleBack} />
       </View>
 
-      {/* 메인 컨텐츠 */}
+      {/* Main content */}
       <KeyboardAwareScrollView
         style={{ flex: 1 }}
         contentContainerStyle={[
@@ -61,7 +71,7 @@ const ResultScreen = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.mainContent}>
-          {/* Auvra 캐릭터와 제목 */}
+          {/* Auvra character and title */}
           <View style={styles.headerSection}>
             <View style={styles.characterContainer}>
               <AuvraCharacter size={responsiveWidth(15)} />
@@ -76,20 +86,20 @@ const ResultScreen = () => {
             </View>
           </View>
 
-          {/* 호르몬 카드들 */}
+          {/* Hormone cards */}
           <View style={styles.cardsContainer}>
-            {/* Progesterone 카드 */}
+            {/* Progesterone card */}
             <View style={styles.cardWrapper}>
               <View style={styles.hormoneCard}>
                 <View style={styles.cardContent}>
-                  {/* Title과 Subtitle - maxWidth 영향 안받음 */}
+                  {/* Title and Subtitle - not affected by maxWidth */}
                   <View style={styles.titleSubtitleContainer}>
                     <Text style={styles.hormoneName}>
                       Progesterone, <Text style={styles.hormoneSubtitle}>The calmer</Text>
                     </Text>
                   </View>
                   
-                  {/* Description만 maxWidth 영향받음 */}
+                  {/* Description only affected by maxWidth */}
                   <View style={styles.textSection}>
                     <Text style={styles.hormoneDescription}>
                       🔻 Lower levels may be contributing to{' '}
@@ -98,12 +108,12 @@ const ResultScreen = () => {
                       <Text style={styles.underlineText}>mood changes</Text>.
                     </Text>
                   </View>
-                                  <View style={[styles.graphicSection, styles.progesteroneGraphic]}>
-                  <GraphicProgesterone1 
-                    width={responsiveWidth(50)} 
-                    height={responsiveWidth(50)} 
-                  />
-                </View>
+                  <View style={[styles.graphicSection, styles.progesteroneGraphic]}>
+                    <GraphicProgesterone1 
+                      width={responsiveWidth(50)} 
+                      height={responsiveWidth(50)} 
+                    />
+                  </View>
                 </View>
               </View>
               <View style={styles.priorityBadge}>
@@ -111,18 +121,18 @@ const ResultScreen = () => {
               </View>
             </View>
 
-            {/* Testosterone 카드 */}
+            {/* Testosterone card */}
             <View style={styles.cardWrapper}>
               <View style={styles.hormoneCard}>
                 <View style={styles.cardContent}>
-                  {/* Title과 Subtitle - maxWidth 영향 안받음 */}
+                  {/* Title and Subtitle - not affected by maxWidth */}
                   <View style={styles.titleSubtitleContainer}>
                     <Text style={styles.hormoneName}>
                       Testosterone, <Text style={styles.hormoneSubtitle}>The titan</Text>
                     </Text>
                   </View>
                   
-                  {/* Description만 maxWidth 영향받음 */}
+                  {/* Description only affected by maxWidth */}
                   <View style={styles.textSection}>
                     <Text style={styles.hormoneDescription}>
                       🔺 Higher levels may be contributing to{' '}
@@ -135,12 +145,12 @@ const ResultScreen = () => {
                       <Text style={styles.underlineText}>PCOS</Text>.
                     </Text>
                   </View>
-                                  <View style={[styles.graphicSection, styles.testosteroneGraphic]}>
-                  <GraphicTestosterone1 
-                    width={responsiveWidth(50)} 
-                    height={responsiveWidth(50)} 
-                  />
-                </View>
+                  <View style={[styles.graphicSection, styles.testosteroneGraphic]}>
+                    <GraphicTestosterone1 
+                      width={responsiveWidth(50)} 
+                      height={responsiveWidth(50)} 
+                    />
+                  </View>
                 </View>
               </View>
               <View style={styles.priorityBadge}>
@@ -151,7 +161,7 @@ const ResultScreen = () => {
         </View>
       </KeyboardAwareScrollView>
 
-      {/* 하단 고정 영역 */}
+      {/* Fixed bottom area */}
       <FixedBottomContainer>
         <View style={styles.disclaimerContainer}>
           <Text style={styles.disclaimerText}>
@@ -180,10 +190,10 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     alignItems: 'center',
-    paddingTop: responsiveHeight(8), // Auvra character 위치를 위로 올림
+    paddingTop: responsiveHeight(8), // Move Auvra character position up
     paddingHorizontal: responsiveWidth(5),
-    paddingBottom: responsiveHeight(20), // 하단 버튼을 위한 충분한 공간
-    flexGrow: 1, // 콘텐츠가 적을 때도 전체 높이 사용
+    paddingBottom: responsiveHeight(20), // Sufficient space for bottom button
+    flexGrow: 1, // Use full height even when content is small
   },
   headerSection: {
     alignItems: 'center',
@@ -219,7 +229,7 @@ const styles = StyleSheet.create({
   },
   cardWrapper: {
     position: 'relative',
-    marginTop: responsiveHeight(1), // High Priority 태그를 위한 여백
+    marginTop: responsiveHeight(1), // Margin for High Priority tag
   },
   hormoneCard: {
     backgroundColor: '#FFFBFC',
@@ -229,32 +239,32 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: '#cfcfcf',
     elevation: 3,
-    overflow: 'hidden', // 카드 영역 밖으로 나가는 부분을 잘라냄
+    overflow: 'hidden', // Clip parts that extend beyond card area
   },
   cardContent: {
-    flexDirection: 'column', // 세로 배치로 변경
-    alignItems: 'flex-start', // 왼쪽 정렬
-    position: 'relative', // 절대 위치 요소들의 기준점
+    flexDirection: 'column', // Vertical layout
+    alignItems: 'flex-start', // Left alignment
+    position: 'relative', // Reference point for absolute positioned elements
   },
   textSection: {
-    maxWidth: responsiveWidth(46), // 텍스트 영역 최대 너비 제한 (description만)
-    zIndex: 2, // 이미지(zIndex: 1)보다 위에 표시
+    maxWidth: responsiveWidth(46), // Limit maximum width for text area (description only)
+    zIndex: 2, // Display above image (zIndex: 1)
   },
   hormoneName: {
     fontFamily: 'Inter600',
-    fontSize: responsiveFontSize(1.98),//14px
+    fontSize: responsiveFontSize(1.98), //14px
     color: '#000000',
     lineHeight: responsiveHeight(2),
     fontWeight: '600',
   },
   hormoneSubtitle: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.7),//12px
+    fontSize: responsiveFontSize(1.7), //12px
     color: '#6f6f6f',
   },
   hormoneDescription: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.7),//12px
+    fontSize: responsiveFontSize(1.7), //12px
     color: '#6f6f6f',
     lineHeight: responsiveHeight(2),
     marginTop: responsiveHeight(0.5),
@@ -267,20 +277,20 @@ const styles = StyleSheet.create({
   graphicSection: {
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'absolute', // 절대 위치로 설정
-    zIndex: 1, // 텍스트 뒤에 배치
+    position: 'absolute', // Absolute positioning
+    zIndex: 1, // Display behind text
   },
   progesteroneGraphic: {
-    right: responsiveWidth(-18), // Progesterone 이미지 위치
-    bottom: responsiveHeight(-8.5), // 카드 하단에서 상대적 위치
+    right: responsiveWidth(-18), // Progesterone image position
+    bottom: responsiveHeight(-8.5), // Relative position from card bottom
   },
   testosteroneGraphic: {
-    right: responsiveWidth(-21), // Testosterone 이미지 위치 (더 오른쪽)
-    bottom: responsiveHeight(-8.5), // 카드 하단에서 상대적 위치
+    right: responsiveWidth(-21), // Testosterone image position (more to the right)
+    bottom: responsiveHeight(-8.5), // Relative position from card bottom
   },
   priorityBadge: {
     position: 'absolute',
-    top: responsiveHeight(-1.3), // 카드 위로 약간 올라가도록
+    top: responsiveHeight(-1.3), // Slightly above card
     left: responsiveWidth(4),
     backgroundColor: '#F2F0F2',
     paddingHorizontal: responsiveWidth(2),
@@ -289,11 +299,11 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: '#e0e0e0',
     elevation: 1,
-    zIndex: 10, // 이미지(zIndex: 1)보다 위에 표시되도록 높은 zIndex 설정
+    zIndex: 10, // Display above image (zIndex: 1) with high zIndex
   },
   priorityText: {
     fontFamily: 'Inter500',
-    fontSize: responsiveFontSize(1.42),//10px
+    fontSize: responsiveFontSize(1.42), //10px
     color: '#6f6f6f',
     textAlign: 'center',
     fontWeight: '500',
@@ -304,7 +314,7 @@ const styles = StyleSheet.create({
   },
   disclaimerText: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.42),//10px
+    fontSize: responsiveFontSize(1.42), //10px
     color: '#6f6f6f',
     textAlign: 'center',
     lineHeight: responsiveHeight(1.5),
@@ -312,9 +322,8 @@ const styles = StyleSheet.create({
   titleSubtitleContainer: {
     flex: 1,
     marginBottom: responsiveHeight(0.5),
-    zIndex: 2, // 이미지(zIndex: 1)보다 위에 표시
+    zIndex: 2, // Display above image (zIndex: 1)
   },
-
 });
 
 export default ResultScreen; 

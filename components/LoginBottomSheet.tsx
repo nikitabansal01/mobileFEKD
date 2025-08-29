@@ -31,6 +31,9 @@ import PrimaryButton from "./PrimaryButton";
 
 WebBrowser.maybeCompleteAuthSession();
 
+/**
+ * Navigation stack parameter list for the app
+ */
 type RootStackParamList = {
   OnboardingScreen: undefined;
   IntroScreen: undefined;
@@ -45,13 +48,32 @@ type RootStackParamList = {
 
 type LoginBottomSheetNavigationProp = StackNavigationProp<RootStackParamList>;
 
+/**
+ * Props for the LoginBottomSheet component
+ */
 interface LoginBottomSheetProps {
+  /** Whether the bottom sheet is visible */
   visible: boolean;
+  /** Function to call when the bottom sheet should be closed */
   onClose: () => void;
 }
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
+/**
+ * LoginBottomSheet Component
+ * 
+ * A bottom sheet modal that provides user authentication options including:
+ * - Email/password signup
+ * - Google OAuth signup
+ * - Apple authentication signup
+ * - Session linking with survey data
+ * 
+ * @param props - Component props
+ * @param props.visible - Bottom sheet visibility
+ * @param props.onClose - Close handler function
+ * @returns JSX.Element
+ */
 const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
   const navigation = useNavigation<LoginBottomSheetNavigationProp>();
   const [email, setEmail] = useState("");
@@ -65,13 +87,16 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
     clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
   });
 
+  /**
+   * Handles Google OAuth response and user authentication
+   */
   React.useEffect(() => {
     if (googleResponse?.type === 'success') {
       const { id_token } = googleResponse.params;
       const credential = GoogleAuthProvider.credential(id_token);
       signInWithCredential(auth, credential)
         .then(async (result) => {
-          // 세션 연결 시도
+          // Attempt to link session
           try {
             const linkSuccess = await sessionService.linkSessionToUser(result.user);
             if (linkSuccess) {
@@ -84,7 +109,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
               navigation.navigate('HomeScreen');
             }
           } catch (linkError) {
-            console.error('세션 연결 실패:', linkError);
+            console.error('Session linking failed:', linkError);
             Alert.alert('Success', 'Google signup successful! But failed to link survey data.');
             onClose();
             navigation.navigate('HomeScreen');
@@ -96,6 +121,9 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
     }
   }, [googleResponse]);
 
+  /**
+   * Handles bottom sheet animation when visibility changes
+   */
   useEffect(() => {
     if (visible) {
       Animated.timing(slideAnim, {
@@ -112,6 +140,9 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
     }
   }, [visible]);
 
+  /**
+   * Handles email/password signup process
+   */
   const handleSignup = async () => {
     if (!email || !password || !confirmPassword) {
       Alert.alert("Error", "Please fill in all fields");
@@ -133,7 +164,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       const result = await signUpWithEmail(email, password);
       
       if (result.success) {
-        // 세션 연결 시도
+        // Attempt to link session
         try {
           const linkSuccess = await sessionService.linkSessionToUser(result.user);
           if (linkSuccess) {
@@ -146,7 +177,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
             navigation.navigate('HomeScreen');
           }
         } catch (linkError) {
-          console.error('세션 연결 실패:', linkError);
+          console.error('Session linking failed:', linkError);
           Alert.alert("Success", "Signup successful! But failed to link survey data.");
           onClose();
           navigation.navigate('HomeScreen');
@@ -161,10 +192,16 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
     }
   };
 
+  /**
+   * Initiates Google OAuth signup process
+   */
   const handleGoogleSignin = () => {
     googlePromptAsync();
   };
 
+  /**
+   * Handles Apple authentication signup process
+   */
   const handleAppleSignin = async () => {
     try {
       const isAvailable = await AppleAuthentication.isAvailableAsync();
@@ -188,7 +225,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       
       const result = await signInWithCredential(auth, firebaseCredential);
       
-      // 세션 연결 시도
+      // Attempt to link session
       try {
         const linkSuccess = await sessionService.linkSessionToUser(result.user);
         if (linkSuccess) {
@@ -201,7 +238,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
           navigation.navigate('HomeScreen');
         }
       } catch (linkError) {
-        console.error('세션 연결 실패:', linkError);
+        console.error('Session linking failed:', linkError);
         Alert.alert("Success", "Apple signup successful! But failed to link survey data.");
         onClose();
         navigation.navigate('HomeScreen');
@@ -375,7 +412,7 @@ const styles = StyleSheet.create({
     marginBottom: responsiveHeight(4),
   },
   subHeaderText: {
-    fontSize: responsiveFontSize(1.7), //12px
+    fontSize: responsiveFontSize(1.7), // 12px
     fontFamily: "Inter400",
     color: "#000000",
     marginBottom: responsiveHeight(2),
@@ -385,13 +422,13 @@ const styles = StyleSheet.create({
   },
   maskedView: {
     width: responsiveWidth(85),
-    height: responsiveHeight(7), // 높이를 6에서 8로 변경
+    height: responsiveHeight(7), // Changed height from 6 to 8
     alignItems: 'center',
     justifyContent: 'center',
   },
   gradientTitleText: {
     fontFamily: 'NotoSerif600',
-    fontSize: responsiveFontSize(3.4),//24px
+    fontSize: responsiveFontSize(3.4), // 24px
     textAlign: 'left',
     lineHeight: responsiveHeight(3.4),
   },
@@ -402,7 +439,7 @@ const styles = StyleSheet.create({
     marginBottom: responsiveHeight(2.5),
   },
   textInput: {
-    // TextInputContainer의 기본 높이와 패딩을 그대로 사용
+    // Use default height and padding from TextInputContainer
   },
   rememberContainer: {
     flexDirection: "row",
@@ -425,7 +462,7 @@ const styles = StyleSheet.create({
   rememberText: {
     fontFamily: "Inter400",
     color: "rgba(0, 0, 0, 0.6)",
-    fontSize: responsiveFontSize(1.7), //12px
+    fontSize: responsiveFontSize(1.7), // 12px
     lineHeight: responsiveFontSize(1.7) * 1.25,
   },
   dividerContainer: {
@@ -440,7 +477,7 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     color: "#6f6f6f",
-    fontSize: responsiveFontSize(1.7), //12px
+    fontSize: responsiveFontSize(1.7), // 12px
     fontFamily: "Inter400",
     marginHorizontal: responsiveWidth(2.5),
     lineHeight: responsiveFontSize(1.7) * 1.25,
@@ -463,7 +500,7 @@ const styles = StyleSheet.create({
   },
   socialButtonText: {
     color: "#1e1e1e",
-    fontSize: responsiveFontSize(1.98),//14px
+    fontSize: responsiveFontSize(1.98), // 14px
     fontFamily: "Inter500",
     lineHeight: responsiveFontSize(1.98) * 1.25,
   },
@@ -472,7 +509,7 @@ const styles = StyleSheet.create({
   },
   termsText: {
     fontFamily: "Inter400",
-    fontSize: responsiveFontSize(1.42), //10px
+    fontSize: responsiveFontSize(1.42), // 10px
     color: "#6f6f6f",
     textAlign: "center",
     lineHeight: responsiveFontSize(1.42) * 1.5,

@@ -2,14 +2,37 @@ import React from 'react';
 import { View, StyleSheet, StyleProp, ViewStyle, DimensionValue } from 'react-native';
 import { responsiveWidth, responsiveHeight } from 'react-native-responsive-dimensions';
 
+/**
+ * Props for the DialogueBubble component
+ */
 type DialogueBubbleProps = {
+  /** Content to display inside the bubble */
   children: React.ReactNode;
+  /** Visual variant of the bubble: 'tail' or 'corner' */
   variant?: 'tail' | 'corner';
+  /** Corner position for 'corner' variant */
   cornerPosition?: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight';
+  /** Width of the bubble */
   width?: DimensionValue;
+  /** Additional styles for the bubble */
   style?: StyleProp<ViewStyle>;
 };
 
+/**
+ * DialogueBubble Component
+ * 
+ * A customizable dialogue bubble component with two variants:
+ * - 'tail': Bubble with a speech tail pointing upward
+ * - 'corner': Corner-cut bubble for different visual effects
+ * 
+ * @param props - Component props
+ * @param props.children - Content to display
+ * @param props.variant - Visual variant type
+ * @param props.cornerPosition - Corner position for corner variant
+ * @param props.width - Bubble width
+ * @param props.style - Additional styles
+ * @returns JSX.Element
+ */
 const DialogueBubble = ({
   children,
   variant = 'tail',
@@ -72,17 +95,14 @@ const styles = StyleSheet.create({
     paddingVertical: responsiveHeight(2),
     paddingHorizontal: responsiveWidth(5),
     justifyContent: 'center',
-    minHeight: responsiveHeight(6.7), // 최소 높이만 지정, height 고정 X
-    // height: undefined, // height 고정 삭제
+    minHeight: responsiveHeight(6.7), // Minimum height only, not fixed height
   },
   // Styles for 'corner' variant
   cornerBubble: {
     backgroundColor: '#E4E3F3',
     borderRadius: 30,
-    minHeight: responsiveHeight(6.7), // 최소 높이만 지정, height 고정 X
-    // paddingVertical: responsiveHeight(2), // 필요시 부모에서 제어
-    // paddingHorizontal: responsiveWidth(5), // 필요시 부모에서 제어
-    // justifyContent: 'center', // 필요시 부모에서 제어
+    minHeight: responsiveHeight(6.7), // Minimum height only, not fixed height
+    // Padding and justification controlled by parent component as needed
   },
 });
 

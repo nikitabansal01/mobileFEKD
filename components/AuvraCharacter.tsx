@@ -5,10 +5,24 @@ import SVG from '@/assets/images/SVG';
 
 const AuvraAnimation = require('@/assets/animation/Auvra_Animation.json');
 
+/**
+ * Props for the AuvraCharacter component
+ */
 type AuvraCharacterProps = {
+  /** Size of the character animation in pixels. Defaults to 118 */
   size?: number;
 };
 
+/**
+ * AuvraCharacter Component
+ * 
+ * Displays the Auvra character animation with shadow effect.
+ * Used in main screens and prominent UI elements.
+ * 
+ * @param props - Component props
+ * @param props.size - Optional size for the character animation
+ * @returns JSX.Element
+ */
 const AuvraCharacter = ({ size = 118 }: AuvraCharacterProps) => {
   return (
     <View style={styles.container}>
@@ -26,7 +40,7 @@ const AuvraCharacter = ({ size = 118 }: AuvraCharacterProps) => {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    gap: 10, // 그림자와 캐릭터 간의 간격 조정
+    gap: 10, // Spacing between shadow and character
   },
 });
 

@@ -1,21 +1,53 @@
 #!/usr/bin/env node
 
 /**
- * This script is used to reset the project to a blank state.
- * It deletes or moves the /app, /components, /hooks, /scripts, and /constants directories to /app-example based on user input and creates a new /app directory with an index.tsx and _layout.tsx file.
- * You can remove the `reset-project` script from package.json and safely delete this file after running it.
+ * Project Reset Script
+ * 
+ * This script resets the project to a blank state by either moving or deleting
+ * existing directories (/app, /components, /hooks, /scripts, /constants) and
+ * creating a new minimal /app directory with basic files.
+ * 
+ * Usage: npm run reset-project
+ * 
+ * The script will prompt the user to choose between:
+ * - Moving existing files to /app-example (preserves code for reference)
+ * - Deleting existing files completely
+ * 
+ * After running, you can safely remove this script from package.json and delete this file.
  */
 
 const fs = require("fs");
 const path = require("path");
 const readline = require("readline");
 
+/**
+ * Project root directory
+ */
 const root = process.cwd();
+
+/**
+ * Directories to be moved or deleted during reset
+ */
 const oldDirs = ["app", "components", "hooks", "constants", "scripts"];
+
+/**
+ * Directory name for preserving existing files
+ */
 const exampleDir = "app-example";
+
+/**
+ * New app directory name
+ */
 const newAppDir = "app";
+
+/**
+ * Full path to the example directory
+ */
 const exampleDirPath = path.join(root, exampleDir);
 
+/**
+ * Default content for the new index.tsx file
+ */
 const indexContent = `import { Text, View } from "react-native";
 
 export default function Index() {
@@ -33,6 +65,9 @@ export default function Index() {
 }
 `;
 
+/**
+ * Default content for the new _layout.tsx file
+ */
 const layoutContent = `import { Stack } from "expo-router";
 
 export default function RootLayout() {
@@ -40,11 +75,19 @@ export default function RootLayout() {
 }
 `;
 
+/**
+ * Readline interface for user input
+ */
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
 });
 
+/**
+ * Main function to move or delete directories and create new app structure
+ * 
+ * @param userInput - User's choice ('y' for move, 'n' for delete)
+ */
 const moveDirectories = async (userInput) => {
   try {
     if (userInput === "y") {
@@ -98,6 +141,9 @@ const moveDirectories = async (userInput) => {
   }
 };
 
+/**
+ * Prompt user for input and execute the reset process
+ */
 rl.question(
   "Do you want to move existing files to /app-example instead of deleting them? (Y/n): ",
   (answer) => {

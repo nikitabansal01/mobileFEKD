@@ -4,20 +4,55 @@ import { responsiveHeight, responsiveFontSize, responsiveWidth } from 'react-nat
 import { createInputStyle, createInputTextStyle } from '@/utils/inputStyles';
 import TextInputContainer from './TextInputContainer';
 
+/**
+ * Props for the OthersOption component
+ */
 interface OthersOptionProps {
+  /** Unique key for the question/form field */
   questionKey: string;
+  /** Whether this option is currently selected */
   isSelected: boolean;
+  /** Callback function when option is selected */
   onSelect: () => void;
+  /** Placeholder text for the input field */
   placeholder: string;
+  /** Current input value */
   value: string;
+  /** Callback function when input text changes */
   onChangeText: (text: string) => void;
+  /** Optional focus handler for the input */
   onFocus?: () => void;
+  /** Additional styles for the container */
   containerStyle?: any;
-  useChipStyle?: boolean; // chip 스타일 사용 여부
-  expandedMode?: boolean; // 확장 모드 (chip에서 확장되는 경우)
+  /** Whether to use chip-style appearance */
+  useChipStyle?: boolean;
+  /** Whether to use expanded mode (for chip-based expansion) */
+  expandedMode?: boolean;
+  /** Optional function to scroll to input when focused */
   scrollToInput?: (node: number | null) => void;
 }
 
+/**
+ * OthersOption Component
+ * 
+ * A specialized option component that provides "Others (please specify)" functionality
+ * with integrated text input. Supports both chip and expanded modes with automatic
+ * focus and scroll management.
+ * 
+ * @param props - Component props
+ * @param props.questionKey - Unique question identifier
+ * @param props.isSelected - Selection state
+ * @param props.onSelect - Selection handler
+ * @param props.placeholder - Input placeholder text
+ * @param props.value - Current input value
+ * @param props.onChangeText - Input change handler
+ * @param props.onFocus - Optional focus handler
+ * @param props.containerStyle - Container styling
+ * @param props.useChipStyle - Use chip appearance
+ * @param props.expandedMode - Use expanded mode
+ * @param props.scrollToInput - Scroll handler for input focus
+ * @returns JSX.Element
+ */
 const OthersOption: React.FC<OthersOptionProps> = ({
   questionKey,
   isSelected,
@@ -33,7 +68,7 @@ const OthersOption: React.FC<OthersOptionProps> = ({
 }) => {
   const inputRef = useRef<TextInput>(null);
 
-  // 선택 직후 한 틱 뒤에 강제로 포커스하여 레이아웃 안정화 후 스크롤 유도
+  // Force focus after selection to stabilize layout before scrolling
   useEffect(() => {
     if (isSelected && inputRef.current) {
       const t1 = setTimeout(() => {
@@ -51,27 +86,27 @@ const OthersOption: React.FC<OthersOptionProps> = ({
       };
     }
   }, [isSelected]);
-  // expandedMode이고 선택되지 않았으면 렌더링하지 않음
+  // Don't render in expanded mode when not selected
   if (expandedMode && !isSelected) {
     return null;
   }
 
   return (
     <>
-      {/* Others 버튼 */}
+      {/* Others button */}
       {expandedMode && isSelected && <View style={styles.rowBreak} />}
       <TouchableOpacity
         style={[
           createInputStyle(isSelected ? 'selected' : 'default'),
           expandedMode ? styles.othersExpandedButton : 
           useChipStyle ? styles.othersChipButton : styles.othersButton,
-          // expandedMode이고 선택되었으면 전체 너비 사용
+          // Use full width when expanded mode is selected
           expandedMode && isSelected && {
             width: '100%',
             flexBasis: '100%',
             minWidth: 0,
           },
-          // chip 스타일이고 선택되었으면 가로만 확장
+          // Expand horizontally only when chip style is selected
           useChipStyle && isSelected && {
             width: '100%',
             flexBasis: '100%',
@@ -92,7 +127,7 @@ const OthersOption: React.FC<OthersOptionProps> = ({
       </TouchableOpacity>
       {expandedMode && isSelected && <View style={styles.rowBreak} />}
       
-      {/* 텍스트 입력창 - 선택되었을 때만 표시 (별도 컨테이너) */}
+      {/* Text input field - shown only when selected (separate container) */}
       {isSelected && (
         <View style={styles.textInputContainer} onLayout={() => {
           if (isSelected && inputRef.current && scrollToInput) {
@@ -126,9 +161,9 @@ const styles = StyleSheet.create({
   },
   othersChipButton: {
     justifyContent: 'center',
-    alignItems: 'center', // chip 스타일은 중앙정렬
-    // height 제거하여 텍스트 내용에 따라 자동 조절
-    alignSelf: 'flex-start', // chip과 동일한 정렬
+    alignItems: 'center', // Center alignment for chip style
+    // Height removed for automatic adjustment based on text content
+    alignSelf: 'flex-start', // Same alignment as chips
   },
   expandedContainer: {
     gap: responsiveHeight(1.5),
@@ -142,14 +177,14 @@ const styles = StyleSheet.create({
   textInputContainer: {
     alignSelf: 'stretch',
     width: '100%',
-    marginTop: 0, // Others 버튼과의 간격 제거
+    marginTop: 0, // Remove spacing from Others button
   },
   textInput: {
     width: '100%',
     alignSelf: 'stretch',
   },
   rowBreak: {
-    // 줄바꿈용 스페이서: 확장된 Others 옵션이 한 줄 전체를 차지하도록 보장
+    // Line break spacer: Ensures expanded Others option takes full row width
     width: '100%',
     flexBasis: '100%',
     height: 0,

@@ -14,7 +14,7 @@ module.exports = function (api) {
           },
         },
       ],
-      'react-native-reanimated/plugin', // 반드시 마지막에!
+      'react-native-reanimated/plugin', // Must be last!
     ],
   };
 }; 

@@ -5,22 +5,38 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import AuvraCharacterNoShadow from './AuvraCharacterNoShadow';
 
+/**
+ * Props for the BottomNavigationBar component
+ */
 interface BottomNavigationBarProps {
+  /** Currently active tab */
   activeTab?: 'home' | 'calendar' | 'auvra' | 'progress' | 'community';
+  /** Custom tab press handler */
   onTabPress?: (tab: string) => void;
 }
 
+/**
+ * BottomNavigationBar Component
+ * 
+ * A custom bottom navigation bar with 5 tabs including a centered Auvra character.
+ * Provides navigation between main app screens with visual feedback.
+ * 
+ * @param props - Component props
+ * @param props.activeTab - Currently active tab
+ * @param props.onTabPress - Custom tab press handler
+ * @returns JSX.Element
+ */
 const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
   activeTab = 'home',
   onTabPress
 }) => {
   const navigation = useNavigation();
   
-  // 캐릭터 크기 설정
+  // Character size configuration
   const characterSize = responsiveWidth(18);
-  // 빈 문자열의 크기 계산 (tabIcon의 fontSize와 동일)
+  // Empty string size calculation (same as tabIcon fontSize)
   const emptyIconSize = responsiveFontSize(2.5);
-  // 캐릭터와 글씨 간의 순수한 간격 (픽셀 단위)
+  // Pure gap between character and text (in pixels)
   const characterTextGap = 8;
 
   const tabs = [
@@ -39,7 +55,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
     { 
       key: 'auvra', 
       label: 'Auvra', 
-      icon: null, // 아이콘 없음
+      icon: null, // No icon
       screen: 'AuvraScreen' 
     },
     { 
@@ -56,17 +72,23 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
     },
   ];
 
+  /**
+   * Handles tab press events
+   * 
+   * @param tabKey - Tab identifier
+   * @param screenName - Screen name to navigate to
+   */
   const handleTabPress = (tabKey: string, screenName: string) => {
-    // 커스텀 onTabPress 콜백이 있으면 호출
+    // Call custom onTabPress callback if provided
     onTabPress?.(tabKey);
     
-    // 네비게이션 처리
+    // Handle navigation
     if (screenName && navigation) {
       try {
-        // @ts-ignore - navigation 타입 체크 무시
+        // @ts-ignore - Ignore navigation type check
         navigation.navigate(screenName);
       } catch (error) {
-        console.log(`화면 ${screenName}으로 이동할 수 없습니다.`);
+        console.log(`Cannot navigate to screen ${screenName}.`);
       }
     }
   };
@@ -74,7 +96,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
   return (
     <View style={styles.container}>
       
-      {/* 네비게이션 바 */}
+      {/* Navigation bar */}
       <View style={styles.navigationBar}>
         <View style={styles.tabContainer}>
           {tabs.map((tab, index) => (
@@ -106,7 +128,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
           ))}
         </View>
         
-        {/* 중앙 Auvra Character - 흰색 원 없이 */}
+        {/* Center Auvra Character - without white circle */}
         <View style={[
           styles.characterContainer,
           { top: -(characterSize / 2 + characterTextGap - emptyIconSize) }
@@ -124,7 +146,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: responsiveHeight(14), // 바 전체 높이 증가 (90px → 105px)
+    height: responsiveHeight(14), // Increased bar height (90px → 105px)
   },
   gradientOverlay: {
     position: 'absolute',
@@ -138,10 +160,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: responsiveHeight(8), // 네비게이션 영역 높이 증가 (72px → 82.5px)
+    height: responsiveHeight(8), // Increased navigation area height (72px → 82.5px)
     backgroundColor: '#ffffff',
     paddingHorizontal: responsiveWidth(5), // 18.257px
-    paddingVertical: responsiveHeight(1.5), // 패딩 증가
+    paddingVertical: responsiveHeight(1.5), // Increased padding
   },
   tabContainer: {
     flexDirection: 'row',
@@ -152,10 +174,10 @@ const styles = StyleSheet.create({
   tab: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: responsiveWidth(1), // 버튼 내부 가로 패딩 증가
-    paddingVertical: responsiveHeight(0.5), // 버튼 내부 세로 패딩 증가
+    paddingHorizontal: responsiveWidth(1), // Increased button horizontal padding
+    paddingVertical: responsiveHeight(0.5), // Increased button vertical padding
     borderRadius: 28,
-    width: responsiveWidth(15), // 버튼 너비 증가 (55px → 66px)
+    width: responsiveWidth(15), // Increased button width (55px → 66px)
     opacity: 0.5,
   },
   activeTab: {
@@ -164,13 +186,13 @@ const styles = StyleSheet.create({
     opacity: 1,
   },
   tabIcon: {
-    width: responsiveWidth(6), // 아이콘 크기
-    height: responsiveWidth(6), // 아이콘 크기
+    width: responsiveWidth(6), // Icon size
+    height: responsiveWidth(6), // Icon size
     marginBottom: responsiveHeight(0.2), // 1px
   },
   emptyIconSpace: {
-    width: responsiveWidth(6), // 아이콘 크기
-    height: responsiveWidth(6), // 아이콘 크기
+    width: responsiveWidth(6), // Icon size
+    height: responsiveWidth(6), // Icon size
     marginBottom: responsiveHeight(0.2), // 1px
   },
   tabLabel: {

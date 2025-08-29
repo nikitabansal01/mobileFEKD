@@ -2,7 +2,6 @@ import ActionPlanTimeline from '@/components/ActionPlanTimeline';
 import BottomNavigationBar from '@/components/BottomNavigationBar';
 import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse } from '@/services/homeService';
 import apiPromiseManager from '@/services/apiPromiseManager';
-// import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import Svg, { Defs, RadialGradient as SvgRadialGradient, Circle, Stop } from 'react-native-svg';
@@ -19,7 +18,6 @@ import {
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import TypeActionPlan from '../../components/TypeActionPlan';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-
 
 interface HomeScreenProps {
   route?: { 
@@ -38,18 +36,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const [assignments, setAssignments] = useState<AssignmentsResponse | null>(null);
   const [progressStats, setProgressStats] = useState<ProgressStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<'time' | 'type'>('time'); // 정렬 방식 상태
+  const [sortBy, setSortBy] = useState<'time' | 'type'>('time');
 
-  // 스와이프 뒤로가기 비활성화
+  // Disable swipe back gesture to prevent interference with scrolling
   useFocusEffect(
     React.useCallback(() => {
-      // 화면 포커스 시 뒤로가기 제스처 비활성화
       navigation.setOptions({
         gestureEnabled: false,
       });
 
       return () => {
-        // 화면 언포커스 시 뒤로가기 제스처 재활성화
         navigation.setOptions({
           gestureEnabled: true,
         });
@@ -57,10 +53,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }, [navigation])
   );
 
-
-
-
-  // hormone_stats 변환 함수
+  /**
+   * Convert hormone_stats data to HormoneStats interface
+   * @param hormoneStatsData - Raw hormone stats data from API
+   * @returns Formatted hormone stats object
+   */
   const convertHormoneStats = (hormoneStatsData: any) => {
     const hormoneStats: HormoneStats = {};
     const supportedHormones = ['androgens', 'progesterone', 'estrogen', 'thyroid', 'insulin', 'cortisol', 'FSH', 'LH', 'prolactin', 'ghrelin', 'testosterone'];
@@ -78,63 +75,50 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   };
 
   useEffect(() => {
-    // ActionCompletedScreen에서 새로고침된 데이터가 있는지 확인
+    // Check for refreshed data from ActionCompletedScreen
     const refreshedData = route?.params?.refreshedData;
     const cyclePhaseData = route?.params?.cyclePhaseData;
     const skipLoading = route?.params?.skipLoading;
     const skipTodayLoading = route?.params?.skipTodayLoading;
 
     if (refreshedData && skipLoading) {
-      // 모든 데이터가 완료된 경우
-      console.log('✅ ActionCompletedScreen에서 모든 데이터 사용');
-      
-      // 새로고침된 assignments 데이터 사용
+      // All data completed - use refreshed data
       setAssignments(refreshedData);
       
-      // hormone_stats를 동적으로 변환
       if (refreshedData?.hormone_stats) {
         setProgressStats({ hormone_stats: convertHormoneStats(refreshedData.hormone_stats) });
       }
       
-      // cycle 데이터 설정
       if (cyclePhaseData?.cycle_info) {
         setCycleInfo(cyclePhaseData.cycle_info);
       }
       
       setLoading(false);
     } else if (refreshedData && skipTodayLoading) {
-      // Today API만 완료된 경우
-      console.log('✅ ActionCompletedScreen에서 Today 데이터만 사용, Cycle은 별도 로드');
-      
-      // 새로고침된 assignments 데이터 사용
+      // Only Today API completed - use partial data
       setAssignments(refreshedData);
       
-      // hormone_stats를 동적으로 변환
       if (refreshedData?.hormone_stats) {
         setProgressStats({ hormone_stats: convertHormoneStats(refreshedData.hormone_stats) });
       }
       
-      // 사이클 정보만 따로 로드 (loading 없이)
+      // Load cycle data separately without loading state
       homeService.getCyclePhase().then(cycleData => {
         setCycleInfo(cycleData?.cycle_info || null);
         setLoading(false);
       });
     } else {
-      // ActionCompletedScreen에서 진행 중인 API Promise가 있는지 확인
+      // Check for active API promise from ActionCompletedScreen
       const activePromise = apiPromiseManager.getActivePromise();
       
       if (activePromise) {
-        console.log('🔄 ActionCompletedScreen API Promise 발견 - 결과 대기 중');
         setLoading(true);
         
-        // API Promise 결과 대기
+        // Wait for API promise result
         activePromise
           .then(result => {
-            console.log('🔄 API Promise 결과:', result);
-            
             if (result.success) {
               if (result.todayAssignments) {
-                console.log('✅ Promise에서 Today 데이터 받음');
                 setAssignments(result.todayAssignments);
                 
                 if (result.todayAssignments.hormone_stats) {
@@ -143,44 +127,40 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
               }
 
               if (result.cyclePhaseData?.cycle_info) {
-                console.log('✅ Promise에서 Cycle 데이터 받음');
                 setCycleInfo(result.cyclePhaseData.cycle_info);
               }
 
-              // 둘 다 실패한 경우에만 일반 로드
+              // Fallback to normal load if both failed
               if (!result.todayAssignments && !result.cyclePhaseData) {
-                console.log('❌ Promise에서 모든 데이터 실패 - 일반 로드로 전환');
                 loadHomeDataWithoutLoading();
               }
             } else {
-              console.log('❌ Promise 실패 - 일반 로드로 전환');
-              // API 호출이 실패했으면 일반적인 데이터 로드
+              // API call failed - use normal data load
               loadHomeDataWithoutLoading();
             }
           })
           .catch(error => {
-            console.error('❌ API Promise 오류:', error);
-            // Promise에서 오류가 발생하면 일반적인 데이터 로드
+            // Promise error - use normal data load
             loadHomeDataWithoutLoading();
           })
           .finally(() => {
             setLoading(false);
           });
       } else {
-        // 일반적인 데이터 로드
-        console.log('🔄 일반적인 데이터 로드');
+        // Normal data load
         loadHomeData();
       }
     }
   }, [route?.params]);
 
-
-
+  /**
+   * Load home data with loading state
+   */
   const loadHomeData = async () => {
     try {
       setLoading(true);
       
-      // 병렬로 API 호출
+      // Call APIs in parallel
       const [cycleData, assignmentsData] = await Promise.all([
         homeService.getCyclePhase(),
         homeService.getTodayAssignments(),
@@ -189,23 +169,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       setCycleInfo(cycleData?.cycle_info || null);
       setAssignments(assignmentsData);
       
-      // hormone_stats를 동적으로 변환
       if (assignmentsData?.hormone_stats) {
         setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
       } else {
         setProgressStats(null);
       }
     } catch (error) {
-      console.error('홈 데이터 로드 오류:', error);
+      // Handle error silently
     } finally {
       setLoading(false);
     }
   };
 
-  // loading 상태 변경 없이 데이터만 로드하는 함수
+  /**
+   * Load home data without changing loading state
+   */
   const loadHomeDataWithoutLoading = async () => {
     try {
-      // 병렬로 API 호출
+      // Call APIs in parallel
       const [cycleData, assignmentsData] = await Promise.all([
         homeService.getCyclePhase(),
         homeService.getTodayAssignments(),
@@ -214,17 +195,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       setCycleInfo(cycleData?.cycle_info || null);
       setAssignments(assignmentsData);
       
-      // hormone_stats를 동적으로 변환
       if (assignmentsData?.hormone_stats) {
         setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
       } else {
         setProgressStats(null);
       }
     } catch (error) {
-      console.error('홈 데이터 로드 오류:', error);
+      // Handle error silently
     }
   };
 
+  /**
+   * Get greeting based on current time
+   * @returns Greeting string (Morning/Afternoon/Evening)
+   */
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Morning';
@@ -232,6 +216,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     return 'Evening';
   };
 
+  /**
+   * Format date string to readable format
+   * @param dateString - Date string to format
+   * @returns Formatted date string
+   */
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -241,6 +230,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     });
   };
 
+  /**
+   * Get time slot icon
+   * @param timeSlot - Time slot string
+   * @returns Emoji icon for time slot
+   */
   const getTimeIcon = (timeSlot: string) => {
     switch (timeSlot) {
       case 'morning': return '🌤️';
@@ -251,8 +245,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }
   };
 
+  /**
+   * Get action amount based on category
+   * @param assignment - Assignment object
+   * @returns Amount string for the action
+   */
   const getActionAmount = (assignment: any) => {
-    // 카테고리에 따라 다른 수량 정보 반환
     switch (assignment.category?.toLowerCase()) {
       case 'food':
         return assignment.food_amounts?.[0] || '1 serving';
@@ -267,8 +265,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }
   };
 
+  /**
+   * Get action purpose from symptoms and conditions
+   * @param assignment - Assignment object
+   * @returns Purpose string
+   */
   const getActionPurpose = (assignment: any) => {
-    // symptoms와 conditions를 모두 나열
     const allItems = [];
     
     if (assignment.symptoms && assignment.symptoms.length > 0) {
@@ -285,6 +287,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     return assignment.purpose || 'Health';
   };
 
+  /**
+   * Get hormone icon emoji
+   * @param hormone - Hormone name
+   * @returns Emoji icon for hormone
+   */
   const getHormoneIcon = (hormone: string) => {
     switch (hormone.toLowerCase()) {
       case 'androgens': return '💪';
@@ -302,11 +309,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }
   };
 
+  /**
+   * Calculate progress percentage
+   * @param completed - Number of completed items
+   * @param total - Total number of items
+   * @returns Percentage value
+   */
   const getProgressPercentage = (completed: number, total: number) => {
     if (total === 0) return 0;
     return (completed / total) * 100;
   };
 
+  /**
+   * Get progress color for hormone
+   * @param hormone - Hormone name
+   * @returns Color hex string
+   */
   const getProgressColor = (hormone: string) => {
     switch (hormone.toLowerCase()) {
       case 'androgens': return '#F6C34C';
@@ -324,33 +342,36 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }
   };
 
-  // 호르몬 퀘스트에서 사용되는 호르몬들의 색상을 가져오는 함수
+  /**
+   * Get hormone quest colors for background gradients
+   * @returns Object with first and second hormone colors
+   */
   const getHormoneQuestColors = () => {
     const allHormones: string[] = [];
     
-    // hormone_stats에서 직접 호르몬들 가져오기
+    // Get hormones directly from hormone_stats
     if (assignments?.hormone_stats) {
       Object.keys(assignments.hormone_stats).forEach(hormone => {
         allHormones.push(hormone);
       });
     }
     
-    // 중복 제거하고 첫 번째와 두 번째 호르몬 색상 반환
+    // Remove duplicates and get first and second hormone colors
     const uniqueHormones = [...new Set(allHormones)];
     const firstHormoneColor = uniqueHormones.length > 0 ? getProgressColor(uniqueHormones[0]) : '#C17EC9';
-    // 두 번째 색상을 더 대비되는 색상으로 설정
-    const secondHormoneColor = uniqueHormones.length > 1 ? getProgressColor(uniqueHormones[1]) : '#87CEEB'; // 하늘색으로 변경
+    const secondHormoneColor = uniqueHormones.length > 1 ? getProgressColor(uniqueHormones[1]) : '#87CEEB';
     
     return { firstHormoneColor, secondHormoneColor };
   };
 
-  // 거대한 배경 방사형 그라디언트 렌더링 함수
+  /**
+   * Render large background radial gradients
+   * @returns SVG component with overlapping gradients
+   */
   const renderBackgroundGradients = () => {
     const { firstHormoneColor, secondHormoneColor } = getHormoneQuestColors();
     const screenWidth = Dimensions.get('window').width;
     const screenHeight = Dimensions.get('window').height;
-    
-    console.log('그라디언트 색상:', { firstHormoneColor, secondHormoneColor });
     
     return (
       <View style={styles.backgroundGradientsContainer}>
@@ -360,14 +381,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           viewBox={`0 0 ${screenWidth} ${screenHeight}`}
         >
           <Defs>
-            {/* 첫 번째 거대한 방사형 그라디언트 */}
+            {/* First large radial gradient */}
             <SvgRadialGradient id="bgGrad1" cx="0.3" cy="0.4" r="0.5">
               <Stop offset="0%" stopColor={firstHormoneColor} stopOpacity="0.6" />
               <Stop offset="50%" stopColor={firstHormoneColor} stopOpacity="0.2" />
               <Stop offset="100%" stopColor={firstHormoneColor} stopOpacity="0" />
             </SvgRadialGradient>
             
-            {/* 두 번째 거대한 방사형 그라디언트 */}
+            {/* Second large radial gradient */}
             <SvgRadialGradient id="bgGrad2" cx="0.7" cy="0.6" r="0.5">
               <Stop offset="0%" stopColor={secondHormoneColor} stopOpacity="0.6" />
               <Stop offset="50%" stopColor={secondHormoneColor} stopOpacity="0.2" />
@@ -375,7 +396,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             </SvgRadialGradient>
           </Defs>
           
-          {/* 첫 번째 거대한 원형 그라디언트 */}
+          {/* First large circular gradient */}
           <Circle
             cx={screenWidth * 0.3}
             cy={screenHeight * 0.4}
@@ -383,7 +404,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             fill="url(#bgGrad1)"
           />
           
-          {/* 두 번째 거대한 원형 그라디언트 */}
+          {/* Second large circular gradient */}
           <Circle
             cx={screenWidth * 0.7}
             cy={screenHeight * 0.6}
@@ -395,8 +416,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     );
   };
 
-
-
+  /**
+   * Get progress background color for hormone
+   * @param hormone - Hormone name
+   * @returns Background color hex string
+   */
   const getProgressBgColor = (hormone: string) => {
     switch (hormone.toLowerCase()) {
       case 'androgens': return '#FFFBD4';
@@ -432,13 +456,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         contentContainerStyle={styles.scrollContent}
         scrollEnabled={true}
       >
-        {/* 거대한 방사형 그라디언트 배경 */}
+        {/* Large radial gradient background */}
         {renderBackgroundGradients()}
         
-        {/* 흰색 원으로 가려진 효과 */}
+        {/* White circle overlay effect */}
         <View style={styles.whiteCircleOverlay} />
 
-        {/* 상단 헤더 */}
+        {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.greeting}>
@@ -463,7 +487,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           </TouchableOpacity>
         </View>
 
-        {/* 호르몬 퀘스트 섹션 */}
+        {/* Hormone Quests Section */}
         {progressStats?.hormone_stats && Object.keys(progressStats.hormone_stats).length > 0 && (
         <View style={styles.questSection}>
           <Text style={styles.sectionTitle}>🏆 Today's Hormone Quests 🏆</Text>
@@ -503,12 +527,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         </View>
         )}
 
-        {/* 구분선 */}
+        {/* Divider */}
         <View style={styles.dividerContainer}>
           <View style={styles.centerDivider} />
         </View>
 
-        {/* 오늘의 액션 플랜 */}
+        {/* Today's Action Plan */}
         <View style={styles.actionPlanSection}>
           <View style={styles.actionPlanHeader}>
             <Text style={styles.sectionTitle}>Today's Action Plan</Text>
@@ -517,9 +541,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             </Text>
           </View>
 
-          {/* 타임라인과 정렬 버튼을 같은 공간에 배치 */}
+          {/* Timeline and sort buttons container */}
           <View style={styles.timelineContainer}>
-            {/* 동적 컴포넌트 렌더링 */}
+            {/* Dynamic component rendering */}
             {assignments?.assignments && Object.keys(assignments.assignments).length > 0 ? (
               sortBy === 'time' ? (
                 <ActionPlanTimeline
@@ -538,7 +562,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
               </View>
             )}
 
-            {/* 정렬 버튼 - absolute로 위에 떠있게 */}
+            {/* Sort buttons - positioned absolutely */}
             <View style={styles.sortContainer}>
               <TouchableOpacity 
                 style={[
@@ -569,13 +593,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             </View>
           </View>
         </View>
-
-
-
-        {/* 하단 여백 - Tomorrow 앵커 절반까지만 스크롤되도록 제거 */}
       </ScrollView>
 
-      {/* 하단 네비게이션 바 */}
+      {/* Bottom Navigation Bar */}
       <BottomNavigationBar activeTab="home" />
     </SafeAreaView>
   );
@@ -590,8 +610,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: responsiveHeight(5), // 네비게이션 바가 앵커 절반 정도 가리도록
-    minHeight: responsiveHeight(120), // 최소 높이 보장으로 즉시 스크롤 가능
+    paddingBottom: responsiveHeight(5),
+    minHeight: responsiveHeight(120),
   },
   backgroundGradient: {
     position: 'absolute',
@@ -606,18 +626,18 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex: -1, // 맨 뒤로 보내기
+    zIndex: -1,
   },
 
   whiteCircleOverlay: {
     position: 'absolute',
-    top: responsiveHeight(23), // 호르몬 퀘스트 영역 중간쯤
-    left: (Dimensions.get('window').width / 2) - responsiveWidth(150), // 정확한 화면 중앙
+    top: responsiveHeight(23),
+    left: (Dimensions.get('window').width / 2) - responsiveWidth(150),
     width: responsiveWidth(300),
     height: responsiveWidth(300),
     backgroundColor: '#FFFFFF',
-    borderRadius: responsiveWidth(150), // 반지름으로 수정
-    zIndex: 0, // 그라디언트보다만 위에
+    borderRadius: responsiveWidth(150),
+    zIndex: 0,
   },
   loadingContainer: {
     flex: 1,
@@ -657,7 +677,7 @@ const styles = StyleSheet.create({
     gap: responsiveWidth(1),
   },
   noCycleDataText: {
-    fontSize: responsiveFontSize(1.7), //12px
+    fontSize: responsiveFontSize(1.7),
     fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
@@ -667,7 +687,7 @@ const styles = StyleSheet.create({
     color: '#6F6F6F',
   },
   logPeriodText: {
-    fontSize: responsiveFontSize(1.7), //12px
+    fontSize: responsiveFontSize(1.7),
     fontFamily: 'Inter400',
     color: '#C17EC9',
   },
@@ -683,7 +703,7 @@ const styles = StyleSheet.create({
     marginBottom: responsiveHeight(2),
   },
   sectionTitle: {
-    fontSize: responsiveFontSize(1.98),//14px
+    fontSize: responsiveFontSize(1.98),
     fontFamily: 'NotoSerif500',
     color: '#000000',
     textAlign: 'center',
@@ -702,8 +722,8 @@ const styles = StyleSheet.create({
     marginBottom: responsiveHeight(1),
   },
   questImageContainer: {
-    width: responsiveWidth(25), // 18 → 25로 증가
-    height: responsiveHeight(12), // 8 → 12로 증가
+    width: responsiveWidth(25),
+    height: responsiveHeight(12),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: responsiveHeight(0.5),
@@ -717,7 +737,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(2.5),
   },
   questName: {
-    fontSize: responsiveFontSize(1.7), //12px
+    fontSize: responsiveFontSize(1.7),
     fontFamily: 'NotoSerif400',
     color: '#000000',
     marginBottom: responsiveHeight(0.5),
@@ -738,7 +758,7 @@ const styles = StyleSheet.create({
     borderRadius: responsiveWidth(6),
   },
   progressText: {
-    fontSize: responsiveFontSize(1.7), //12px
+    fontSize: responsiveFontSize(1.7),
     fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
@@ -753,7 +773,7 @@ const styles = StyleSheet.create({
     marginVertical: responsiveHeight(3),
   },
   centerDivider: {
-    width: responsiveWidth(30), // 화면 너비의 30%만 사용
+    width: responsiveWidth(30),
     height: 1,
     backgroundColor: 'transparent',
     borderTopWidth: 1,
@@ -768,21 +788,21 @@ const styles = StyleSheet.create({
     marginBottom: responsiveHeight(2),
   },
   dateText: {
-    fontSize: responsiveFontSize(1.7), //12px
+    fontSize: responsiveFontSize(1.7),
     fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
   timelineContainer: {
-    position: 'relative', // absolute 정렬 버튼을 위한 relative 컨테이너
+    position: 'relative',
   },
   sortContainer: {
     position: 'absolute',
-    top: 0, // 타임라인 시작점과 같은 Y축
-    right: 0, // 오른쪽 끝에 배치
+    top: 0,
+    right: 0,
     flexDirection: 'row',
     borderRadius: responsiveWidth(2),
     overflow: 'hidden',
-    zIndex: 10, // 타임라인 위에 떠있게
+    zIndex: 10,
   },
   sortButton: {
     paddingHorizontal: responsiveWidth(3),
@@ -806,7 +826,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 0,
   },
   sortButtonText: {
-    fontSize: responsiveFontSize(1.7),//12px
+    fontSize: responsiveFontSize(1.7),
     fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
@@ -860,7 +880,7 @@ const styles = StyleSheet.create({
     paddingVertical: responsiveHeight(0.2),
   },
   hormoneBadgeText: {
-    fontSize: responsiveFontSize(1.1),//9px
+    fontSize: responsiveFontSize(1.1),
     fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
@@ -869,7 +889,7 @@ const styles = StyleSheet.create({
     marginHorizontal: responsiveWidth(3),
   },
   actionTitle: {
-    fontSize: responsiveFontSize(1.98),//14px
+    fontSize: responsiveFontSize(1.98),
     fontFamily: 'NotoSerif500',
     color: '#000000',
     marginBottom: responsiveHeight(0.5),
@@ -879,17 +899,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionAmount: {
-    fontSize: responsiveFontSize(1.7),//12px
+    fontSize: responsiveFontSize(1.7),
     fontFamily: 'Inter400',
     color: '#949494',
   },
   actionSeparator: {
-    fontSize: responsiveFontSize(1.7),//12px
+    fontSize: responsiveFontSize(1.7),
     color: '#949494',
     marginHorizontal: responsiveWidth(1),
   },
   actionPurpose: {
-    fontSize: responsiveFontSize(1.7),//12px
+    fontSize: responsiveFontSize(1.7),
     fontFamily: 'Inter400',
     color: '#949494',
   },
@@ -942,7 +962,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(240, 240, 240, 0.4)',
     zIndex: 3,
     opacity: 0.6,
-    // 픽셀화된 패턴 효과
   },
   staticOverlay: {
     position: 'absolute',
@@ -953,7 +972,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(200, 200, 200, 0.1)',
     zIndex: 4,
     opacity: 0.5,
-    // 정적 노이즈 느낌
   },
   tomorrowCategoryHeader: {
     flexDirection: 'row',

@@ -2,6 +2,10 @@ import React from 'react';
 import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
 import AuvraMessageScreen from '../../components/AuvraMessageScreen';
 
+/**
+ * Loading screen component that displays analysis message
+ * Uses AuvraMessageScreen to show loading state with character animation
+ */
 const LoadingScreen = () => {
   return (
     <AuvraMessageScreen

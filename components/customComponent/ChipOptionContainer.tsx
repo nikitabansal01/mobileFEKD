@@ -4,26 +4,46 @@ import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-nat
 import { createInputStyle, createInputTextStyle } from '@/utils/inputStyles';
 import OthersOption from './OthersOption';
 
+/**
+ * Individual chip option configuration
+ */
 interface ChipOption {
+  /** Unique identifier for the option */
   id: string;
+  /** Display text for the option */
   text: string;
+  /** Value to be used when option is selected */
   value: string;
-  description?: string; // 옵션 설명 추가
+  /** Optional description shown when option is selected */
+  description?: string;
 }
 
-// 기존 문자열 배열과의 호환성을 위한 타입
+/**
+ * Input type for options - supports both string arrays and ChipOption objects for compatibility
+ */
 type ChipOptionInput = string | ChipOption;
 
+/**
+ * Props for the ChipOptionContainer component
+ */
 interface ChipOptionContainerProps {
+  /** Array of options to display as chips */
   options: ChipOptionInput[];
+  /** Currently selected value(s) - string for single, array for multiple selection */
   selectedValue?: string | string[];
+  /** Callback function when an option is selected */
   onSelect: (value: string) => void;
+  /** Enable multiple selection mode */
   multiple?: boolean;
+  /** Additional styles for the container */
   containerStyle?: any;
+  /** Additional styles for individual chips */
   chipStyle?: any;
+  /** Additional styles for chip text */
   textStyle?: any;
-  // Others 옵션 관련 props
+  /** Whether to show the 'Others' option */
   showOthersOption?: boolean;
+  /** Configuration for the 'Others' option */
   othersOptionProps?: {
     questionKey: string;
     isSelected: boolean;
@@ -35,6 +55,24 @@ interface ChipOptionContainerProps {
   };
 }
 
+/**
+ * ChipOptionContainer Component
+ * 
+ * A flexible chip-based option selector with support for descriptions and 'Others' input.
+ * Features expandable descriptions for selected chips and integrates with custom input handling.
+ * 
+ * @param props - Component props
+ * @param props.options - Array of options to display
+ * @param props.selectedValue - Currently selected value(s)
+ * @param props.onSelect - Selection handler function
+ * @param props.multiple - Multiple selection mode
+ * @param props.containerStyle - Container styling
+ * @param props.chipStyle - Individual chip styling
+ * @param props.textStyle - Chip text styling
+ * @param props.showOthersOption - Show 'Others' option
+ * @param props.othersOptionProps - 'Others' option configuration
+ * @returns JSX.Element
+ */
 const ChipOptionContainer: React.FC<ChipOptionContainerProps> = ({
   options,
   selectedValue,
@@ -46,20 +84,27 @@ const ChipOptionContainer: React.FC<ChipOptionContainerProps> = ({
   showOthersOption = false,
   othersOptionProps,
 }) => {
+  /**
+   * Generates chip styles based on selection state and description availability
+   * 
+   * @param isSelected - Whether the chip is selected
+   * @param hasDescription - Whether the chip has a description
+   * @returns Combined style array
+   */
   const getChipStyle = (isSelected: boolean, hasDescription: boolean) => {
     const baseStyle = [
       createInputStyle(isSelected ? 'selected' : 'default'),
       chipStyle,
     ];
     
-    // 설명이 있고 선택되었을 때는 전체 너비와 좌측 정렬 적용
+    // Apply full width and left alignment when chip has description and is selected
     if (hasDescription && isSelected) {
       baseStyle.push({ 
-        // 가로 한 줄 전체 사용 (wrap 레이아웃 핵심)
+        // Use full row width (key for wrap layout)
         width: '100%',
         flexBasis: '100%',
         minWidth: 0,
-        // 정렬
+        // Left alignment for description display
         justifyContent: 'flex-start',
         alignItems: 'flex-start',
       });
@@ -68,6 +113,12 @@ const ChipOptionContainer: React.FC<ChipOptionContainerProps> = ({
     return baseStyle;
   };
 
+  /**
+   * Generates text styles based on selection state
+   * 
+   * @param isSelected - Whether the chip is selected
+   * @returns Combined text style array
+   */
   const getTextStyle = (isSelected: boolean) => {
     const baseStyle = [
       createInputTextStyle(isSelected ? 'selected' : 'default'),
@@ -79,7 +130,7 @@ const ChipOptionContainer: React.FC<ChipOptionContainerProps> = ({
   return (
     <View style={[styles.container, containerStyle]}>
       {options.map((option) => {
-        // 문자열인 경우 객체로 변환
+        // Convert string options to objects for consistent handling
         const optionObj = typeof option === 'string' 
           ? { id: option, text: option, value: option }
           : option;
@@ -120,13 +171,13 @@ const ChipOptionContainer: React.FC<ChipOptionContainerProps> = ({
         );
       })}
       
-      {/* Others 옵션 - chip style로만 표시 */}
+      {/* Others option - displayed in chip style */}
       {showOthersOption && othersOptionProps && (
         <React.Fragment>
           {othersOptionProps.isSelected && <View style={styles.rowBreak} />}
           <OthersOption
             {...othersOptionProps}
-            useChipStyle={true} // 항상 chip 스타일 사용
+            useChipStyle={true} // Always use chip style
             containerStyle={styles.othersContainer}
           />
           {othersOptionProps.isSelected && <View style={styles.rowBreak} />}
@@ -135,14 +186,14 @@ const ChipOptionContainer: React.FC<ChipOptionContainerProps> = ({
     </View>
   );
 };
-     const styles = StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    // gap이 wrap과 함께 일부 기기에서 레이아웃 흔들릴 수 있어 column/rowGap 권장
+    // Use columnGap/rowGap instead of gap to prevent layout issues on some devices with wrap
     columnGap: responsiveWidth(2),
     rowGap: responsiveHeight(1),
-    justifyContent: 'center',   // ✅ 가운데 정렬 유지
+    justifyContent: 'center', // Maintain center alignment
     alignItems: 'flex-start',
     alignSelf: 'stretch',
   },
@@ -153,10 +204,10 @@ const ChipOptionContainer: React.FC<ChipOptionContainerProps> = ({
     paddingVertical: responsiveHeight(1.5),
     paddingHorizontal: responsiveWidth(5),
     backgroundColor: '#ffffff',
-    justifyContent: 'center', // 중앙 정렬로 복원
-    alignItems: 'center', // 중앙 정렬로 복원
-    // height 제거하여 텍스트 내용에 따라 자동 조절
-    alignSelf: 'flex-start', // 기본 상태에서는 내용에 맞춤
+    justifyContent: 'center', // Center alignment restored
+    alignItems: 'center', // Center alignment restored
+    // Height removed for automatic adjustment based on text content
+    alignSelf: 'flex-start', // Fit content in default state
   },
   chipSelected: {
     borderColor: '#c17ec9',
@@ -165,17 +216,17 @@ const ChipOptionContainer: React.FC<ChipOptionContainerProps> = ({
   },
   chipText: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.7),//12px
+    fontSize: responsiveFontSize(1.7), // 12px equivalent
     color: '#333333',
-    textAlign: 'center', // 중앙 정렬로 복원
-    // 글자 줄바꿈 허용
+    textAlign: 'center', // Center alignment restored
+    // Allow text wrapping
     flexWrap: 'wrap',
   },
   chipTextSelected: {
     color: '#000000',
   },
   othersContainer: {
-    // Others 옵션이 chip과 같은 줄에 표시되도록 스타일
+    // Style to display Others option in same line as chips
     alignSelf: 'flex-start',
   },
   othersChipButton: {
@@ -210,16 +261,16 @@ const ChipOptionContainer: React.FC<ChipOptionContainerProps> = ({
   },
   descriptionText: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.42), //10px
+    fontSize: responsiveFontSize(1.42), // 10px equivalent
     color: '#6f6f6f',
     lineHeight: responsiveHeight(1.8),
     marginTop: responsiveHeight(0.5),
-    textAlign: 'left', // 좌측 정렬로 변경
-    alignSelf: 'stretch', // 전체 너비 사용
+    textAlign: 'left', // Left alignment for descriptions
+    alignSelf: 'stretch', // Use full width
   },
   rowBreak: {
-    // 줄바꿈용 스페이서: 이 View가 한 줄 전체를 차지하게 만들어
-    // 확장 칩이 항상 독립된 줄(100% 폭)에 놓이도록 보장
+    // Line break spacer: Forces this View to take full row width
+    // Ensures expanded chips are always placed on independent rows (100% width)
     width: '100%',
     flexBasis: '100%',
     height: 0,

@@ -4,21 +4,57 @@ import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-nat
 import { createInputStyle } from '@/utils/inputStyles';
 import { INPUT_STATES } from '@/constants/InputStates';
 
+/**
+ * Props for the TextInputContainer component
+ */
 interface TextInputContainerProps {
+  /** Placeholder text for the input field */
   placeholder: string;
+  /** Current input value */
   value: string;
+  /** Callback function when input text changes */
   onChangeText: (text: string) => void;
+  /** Type of keyboard to display */
   keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad';
+  /** Whether to hide input text (for passwords) */
   secureTextEntry?: boolean;
+  /** Additional styles for the container */
   containerStyle?: any;
+  /** Additional styles for the input */
   inputStyle?: any;
+  /** Additional styles for the text */
   textStyle?: any;
+  /** Callback function when input gains focus */
   onFocus?: () => void;
+  /** Callback function when input loses focus */
   onBlur?: () => void;
+  /** Whether to automatically focus on mount */
   autoFocus?: boolean;
+  /** Reference to the TextInput component */
   inputRef?: React.RefObject<TextInput>;
 }
 
+/**
+ * TextInputContainer Component
+ * 
+ * A custom text input component with floating label, clear button, and enhanced styling.
+ * Features automatic focus/blur states, secure text entry support, and responsive design.
+ * 
+ * @param props - Component props
+ * @param props.placeholder - Placeholder/label text
+ * @param props.value - Current input value
+ * @param props.onChangeText - Text change handler
+ * @param props.keyboardType - Keyboard type
+ * @param props.secureTextEntry - Password mode
+ * @param props.containerStyle - Container styling
+ * @param props.inputStyle - Input styling
+ * @param props.textStyle - Text styling
+ * @param props.onFocus - Focus handler
+ * @param props.onBlur - Blur handler
+ * @param props.autoFocus - Auto focus behavior
+ * @param props.inputRef - Input reference
+ * @returns JSX.Element
+ */
 const TextInputContainer: React.FC<TextInputContainerProps> = ({
   placeholder,
   value,
@@ -36,21 +72,34 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
   const [isFocused, setIsFocused] = useState(false);
   const [isFilled, setIsFilled] = useState(!!value);
 
+  /**
+   * Handles input focus event
+   */
   const handleFocus = () => {
     setIsFocused(true);
-    onFocus?.(); // onFocus prop이 있으면 호출
+    onFocus?.(); // Call onFocus prop if provided
   };
 
+  /**
+   * Handles input blur event
+   */
   const handleBlur = () => {
     setIsFocused(false);
     onBlur?.();
   };
 
+  /**
+   * Handles text input changes and updates filled state
+   * @param text - New input text
+   */
   const handleChangeText = (text: string) => {
     setIsFilled(!!text);
     onChangeText(text);
   };
 
+  /**
+   * Clears the input field
+   */
   const handleClearInput = () => {
     setIsFilled(false);
     onChangeText('');
@@ -62,9 +111,9 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
         paddingVertical: responsiveHeight(0),
       }),
       {
-        minHeight: responsiveHeight(7.6),// TextInputContainer만 더 큰 높이
+        minHeight: responsiveHeight(7.6), // Larger height for TextInputContainer only
         justifyContent: 'center',
-        alignItems: 'flex-start', // 텍스트를 왼쪽 정렬
+        alignItems: 'flex-start', // Left-align text
       },
       containerStyle
     ]}>
@@ -126,13 +175,13 @@ const styles = StyleSheet.create({
     top: 8,
     left: 20,
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.42), //10px
+    fontSize: responsiveFontSize(1.42), // 10px equivalent
     color: '#b3b3b3',
     zIndex: 1,
   },
   inputText: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.98), //14px
+    fontSize: responsiveFontSize(1.98), // 14px equivalent
     color: '#000000',
     marginTop: 8,
   },
@@ -142,13 +191,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    opacity: 0.01, // 아주 작은 투명도로 설정하여 커서가 보이도록 함
+    opacity: 0.01, // Very low opacity to keep cursor visible
     zIndex: 2,
-    // Text 컴포넌트와 동일한 스타일 적용
+    // Apply same styles as Text component
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.98), //14px
-    paddingLeft: 20, // Text 컴포넌트와 동일한 위치
-    paddingTop: 8, // marginTop과 동일한 효과
+    fontSize: responsiveFontSize(1.98), // 14px equivalent
+    paddingLeft: 20, // Same position as Text component
+    paddingTop: 8, // Same effect as marginTop
     textAlign: 'left',
     textAlignVertical: 'center',
     includeFontPadding: false,
@@ -161,16 +210,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 3,
-    padding: 5, // 터치 영역 확대
+    padding: 5, // Expand touch area
   },
   clearButtonText: {
     fontSize: responsiveFontSize(4.0),
-    color: '#b3b3b3', // placeholder와 동일한 색상
+    color: '#b3b3b3', // Same color as placeholder
     fontWeight: 'normal',
   },
   defaultPlaceholder: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.7), //12px
+    fontSize: responsiveFontSize(1.7), // 12px equivalent
     color: '#b3b3b3',
     position: 'absolute',
     left: 20,

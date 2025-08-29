@@ -1,4 +1,14 @@
+/**
+ * Question options and survey data for the hormone insight application
+ * 
+ * Contains predefined options for various health-related questions including:
+ * - Period and cycle information
+ * - Medical conditions and family history
+ * - Lifestyle factors (exercise, sleep, stress)
+ * - Health concerns and symptoms
+ */
 export const QUESTION_OPTIONS = {
+  /** Period regularity and description options */
   periodDescription: [
     { id: '1', text: 'Regular', value: 'Regular', description: 'Your cycle comes at roughly the same time each month, with a consistent length that\'s easy to track and predict.' },
     { id: '2', text: 'Irregular', value: 'Irregular', description: 'Your cycle length varies from month to month periods come early, late, or are hard to predict.' },
@@ -6,12 +16,14 @@ export const QUESTION_OPTIONS = {
     { id: '4', text: 'I don\'t get periods', value: 'I don\'t get periods', description: 'You don\'t get periods, possibly due to birth control or a health condition.' },
   ],
   
+  /** Birth control method options */
   birthControl: [
     { id: '1', text: 'Hormonal Birth Control Pills', value: 'Hormonal Birth Control Pills', description: 'Pills that prevent pregnancy and may affect your periods.' },
     { id: '2', text: 'IUD (Intrauterine Device)', value: 'IUD (Intrauterine Device)', description: 'A hormonal device that may stop or lighten periods.' },
     { id: '3', text: 'Copper IUD (Intrauterine Device)', value: 'Copper IUD (Intrauterine Device)', description: 'A non-hormonal device that prevents pregnancy and keeps your natural cycle.' },
   ],
   
+  /** Menstrual cycle length options */
   cycleLength: [
     { id: '1', text: 'Less than 21 days', value: 'Less than 21 days', description: 'You get your period again in less than 21 days after the last one.' },
     { id: '2', text: '21-25 days', value: '21-25 days', description: 'You get your period around 21 to 25 days after your last one.' },
@@ -20,6 +32,7 @@ export const QUESTION_OPTIONS = {
     { id: '5', text: '35+ days', value: '35+ days', description: 'You get your period more than 35 days after the last one.' },
   ],
   
+  /** Diagnosed medical conditions */
   diagnosedCondition: [
     { id: '1', text: 'PCOS', value: 'PCOS', description: 'Polycystic Ovarian Syndrome' },
     { id: '2', text: 'PCOD', value: 'PCOD', description: 'Polycystic Ovarian Disease' },
@@ -36,12 +49,14 @@ export const QUESTION_OPTIONS = {
     { id: '13', text: 'Others (please specify)', value: 'Others (please specify)', description: 'Enter a condition not listed here.' },
   ],
   
+  /** Exercise intensity levels */
   workoutIntensity: [
     { id: '1', text: 'Low', value: 'Low', description: 'Light movement like walking or stretching.' },
     { id: '2', text: 'Moderate', value: 'Moderate', description: 'Regular cardio or weight training, still able to talk.' },
     { id: '3', text: 'High', value: 'High', description: 'Intense workouts that leave you breathless.' },
   ],
   
+  /** Sleep duration options */
   sleepDuration: [
     { id: '1', text: '<6 hours', value: '<6 hours', description: 'Often feel tired and irritable.' },
     { id: '2', text: '6-7 hours', value: '6-7 hours', description: 'Generally fine, but low energy at times.' },
@@ -49,12 +64,14 @@ export const QUESTION_OPTIONS = {
     { id: '4', text: '8+ hours', value: '8+ hours', description: 'Feel well-rested and alert.' },
   ],
   
+  /** Stress level options */
   stressLevel: [
     { id: '1', text: 'Low', value: 'Low', description: 'Calm and relaxed.' },
     { id: '2', text: 'Moderate', value: 'Moderate', description: 'Managing, but sometimes tense.' },
     { id: '3', text: 'High', value: 'High', description: 'Often overwhelmed or drained.' },
   ],
   
+  /** Family medical history conditions */
   familyHistory: [
     { id: '1', text: 'PCOS', value: 'PCOS', description: 'Polycystic Ovarian Syndrome' },
     { id: '2', text: 'PCOD', value: 'PCOD', description: 'Polycystic Ovarian Disease' },
@@ -71,7 +88,7 @@ export const QUESTION_OPTIONS = {
     { id: '13', text: 'Others (please specify)', value: 'Others (please specify)', description: 'Enter a condition not listed here.' },
   ],
   
-  // 기존 옵션들 (설명 없음)
+  /** Period-related concerns (legacy options without descriptions) */
   periodConcerns: [
     'Irregular Periods',
     'Painful Periods', 
@@ -79,6 +96,7 @@ export const QUESTION_OPTIONS = {
     'Heavy periods',
   ],
   
+  /** Body-related health concerns */
   bodyConcerns: [
     'Bloating',
     'Hot Flashes',
@@ -88,12 +106,14 @@ export const QUESTION_OPTIONS = {
     'Menstrual headaches',
   ],
   
+  /** Skin and hair-related concerns */
   skinAndHairConcerns: [
     'Hirsutism (hair growth on chin, nipples etc)',
     'Thinning of hair',
     'Adult Acne',
   ],
   
+  /** Mental health concerns */
   mentalHealthConcerns: [
     'Mood swings', 
     'Stress', 
@@ -101,7 +121,12 @@ export const QUESTION_OPTIONS = {
   ],
 };
 
-// 옵션을 문자열 배열에서 객체 배열로 변환하는 헬퍼 함수
+/**
+ * Helper function to get options with descriptions
+ * 
+ * @param key - Key of the options to retrieve
+ * @returns Array of option objects with descriptions
+ */
 export const getOptionsWithDescriptions = (key: string) => {
   const options = QUESTION_OPTIONS[key as keyof typeof QUESTION_OPTIONS];
   if (Array.isArray(options)) {
@@ -110,7 +135,12 @@ export const getOptionsWithDescriptions = (key: string) => {
   return [];
 };
 
-// 기존 문자열 배열 옵션을 객체로 변환하는 헬퍼 함수
+/**
+ * Helper function to convert string arrays to option objects
+ * 
+ * @param options - Array of string options
+ * @returns Array of option objects with id, text, and value properties
+ */
 export const convertStringOptionsToObjects = (options: string[]) => {
   return options.map((option, index) => ({
     id: String(index + 1),
