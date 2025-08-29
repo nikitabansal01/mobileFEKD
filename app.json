@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Hormone Insight",
-    "slug": "hormone-insight",
+    "slug": "horomone-insight",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -36,6 +36,10 @@
     "plugins": [
       "expo-font"
     ],
-    "extra": {}
+    "extra": {
+      "eas": {
+        "projectId": "49bf0188-d2ef-4e97-990e-52a2c33eacca"
+      }
+    }
   }
 }

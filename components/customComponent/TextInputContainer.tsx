@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
 import { createInputStyle } from '@/utils/inputStyles';
@@ -71,6 +71,11 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [isFilled, setIsFilled] = useState(!!value);
+
+  // Update isFilled when value prop changes
+  useEffect(() => {
+    setIsFilled(!!value);
+  }, [value]);
 
   /**
    * Handles input focus event

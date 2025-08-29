@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform, Pressable, Alert, Keyboard } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { responsiveWidth, responsiveHeight, responsiveFontSize } from "react-native-responsive-dimensions";
@@ -333,10 +334,50 @@ const QuestionScreen = () => {
   const scrollRef = useRef<any>(null);
   const progress = (currentStep + 1) / totalSteps;
 
-  // Create session on component mount
+  // Storage key for persisting answers
+  const STORAGE_KEY = 'QuestionScreen_answers';
+
+  // Load saved answers on component mount
+  const loadSavedAnswers = async () => {
+    try {
+      const savedAnswers = await AsyncStorage.getItem(STORAGE_KEY);
+      if (savedAnswers) {
+        const parsedAnswers = JSON.parse(savedAnswers);
+        console.log('💾 Loaded saved answers:', parsedAnswers);
+        setAnswers(parsedAnswers);
+      }
+    } catch (error) {
+      console.error('❌ Failed to load saved answers:', error);
+    }
+  };
+
+  // Save answers to AsyncStorage
+  const saveAnswersToStorage = async (answersToSave: typeof answers) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(answersToSave));
+      console.log('💾 Answers saved to storage');
+    } catch (error) {
+      console.error('❌ Failed to save answers to storage:', error);
+    }
+  };
+
+  // Clear saved answers from AsyncStorage
+  const clearSavedAnswers = async () => {
+    try {
+      await AsyncStorage.removeItem(STORAGE_KEY);
+      console.log('🗑️ Cleared saved answers from storage');
+    } catch (error) {
+      console.error('❌ Failed to clear saved answers from storage:', error);
+    }
+  };
+
+  // Create session and load saved answers on component mount
   useEffect(() => {
     const initializeSession = async () => {
       try {
+        // Load saved answers first
+        await loadSavedAnswers();
+        
         // Validate session and recreate if necessary
         const sessionValid = await sessionService.validateAndRefreshSession();
         if (sessionValid) {
@@ -351,6 +392,13 @@ const QuestionScreen = () => {
 
     initializeSession();
   }, []);
+
+  // Auto-save answers whenever they change
+  useEffect(() => {
+    if (Object.keys(answers).length > 0) {
+      saveAnswersToStorage(answers);
+    }
+  }, [answers]);
 
 
 
@@ -532,6 +580,9 @@ const QuestionScreen = () => {
         const saveTime = Date.now() - startTime;
         
         if (saveSuccess) {
+          // Clear saved answers from AsyncStorage after successful submission
+          await clearSavedAnswers();
+          
           // Set minimum 1 second, maximum 3 seconds loading time
           const minLoadingTime = 1000;
           const maxLoadingTime = 3000;
@@ -591,6 +642,9 @@ const QuestionScreen = () => {
       const saveTime = Date.now() - startTime;
       
       if (saveSuccess) {
+        // Clear saved answers from AsyncStorage after successful submission
+        await clearSavedAnswers();
+        
         // Set minimum 1 second, maximum 3 seconds loading time
         const minLoadingTime = 1000;
         const maxLoadingTime = 3000;
