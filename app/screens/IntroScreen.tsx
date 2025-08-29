@@ -76,7 +76,7 @@ const IntroScreen = () => {
       characterSize={responsiveWidth(25)}
       messageFontSize={responsiveFontSize(2.27)} //16px
       messageWidth={responsiveWidth(80)}
-      messageHeight={responsiveHeight(8)}
+      messageHeight={responsiveHeight(9)}
     />
   );
 };

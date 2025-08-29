@@ -15,8 +15,8 @@ export const createInputStyle = (state: InputState, customProps?: {
   borderRadius: 10,
   paddingVertical: customProps?.paddingVertical ?? responsiveHeight(1.5),
   paddingHorizontal: customProps?.paddingHorizontal ?? responsiveWidth(5),
-  ...(customProps?.height !== undefined ? { height: customProps.height } : { height: responsiveHeight(5) }),
-  minHeight: customProps?.minHeight,
+  // height가 지정되면 사용, 아니면 자동 조절
+  ...(customProps?.height !== undefined ? { height: customProps.height } : {}),
   justifyContent: (customProps?.justifyContent ?? 'center') as 'center' | 'flex-start' | 'flex-end',
   alignItems: (customProps?.alignItems ?? 'flex-start') as 'center' | 'flex-start' | 'flex-end',
   alignSelf: 'stretch' as const, // 버튼 자체는 전체 너비 유지

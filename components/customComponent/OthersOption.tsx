@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   othersChipButton: {
     justifyContent: 'center',
     alignItems: 'center', // chip 스타일은 중앙정렬
-    height: responsiveHeight(5), // chip과 동일한 높이 (고정)
+    // height 제거하여 텍스트 내용에 따라 자동 조절
     alignSelf: 'flex-start', // chip과 동일한 정렬
   },
   expandedContainer: {

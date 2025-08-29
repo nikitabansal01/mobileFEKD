@@ -6,7 +6,8 @@ import {
   StyleSheet,
   Text,
   View,
-  TouchableOpacity
+  TouchableOpacity,
+  Image
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import Svg, { Defs, Path, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
@@ -18,6 +19,7 @@ type AssignmentsMap = Record<string, Assignment[]>;
 
 // ====== 시간대 아이콘 매핑 ======
 const TIME_ICONS: Record<string, string> = {
+  completed: '', // completed는 아이콘 없음
   morning: '🌤️',
   afternoon: '☀️',
   evening: '🌙',
@@ -39,7 +41,7 @@ const DUMMY_TOMORROW_DATA: Assignment[] = [
   {
     id: 999,
     recommendation_id: 1,
-    title: "Pumpkin Seeds (Tomorrow)",
+    title: "Pumpkin Seeds",
     purpose: "Acne, PCOS",
     category: "food",
     conditions: ["acne", "pcos"],
@@ -341,8 +343,42 @@ export default function ActionPlanTimeline({
     return '';
   };
   const getActionPurpose = (assignment: Assignment): string => {
-    // API에서 받아오는 purpose 필드만 사용
+    // API에서 받아오는 purpose 필드만 사용 (ActionDetail로 전달용)
     return assignment.purpose || '';
+  };
+
+  const getActionSymptomsConditions = (assignment: Assignment): string => {
+    // symptoms와 conditions를 순서대로 모아서 반환 (타임라인 표시용)
+    const symptoms = assignment.symptoms || [];
+    const conditions = assignment.conditions || [];
+    
+    const allItems = [...symptoms, ...conditions];
+    return allItems.join(', ');
+  };
+
+  // 호르몬별 아이콘 반환 함수
+  const getHormoneIcon = (hormone: string) => {
+    switch (hormone.toLowerCase()) {
+      case 'androgens': return '💪';
+      case 'progesterone': return '🌸';
+      case 'estrogen': return '🌺';
+      case 'thyroid': return '🦋';
+      case 'insulin': return '🍯';
+      case 'cortisol': return '⚡';
+      case 'fsh': return '🌱';
+      case 'lh': return '🌿';
+      case 'prolactin': return '🤱';
+      case 'ghrelin': return '🍽️';
+      default: return '💊';
+    }
+  };
+
+  // 첫 번째 호르몬의 아이콘을 반환하는 함수
+  const getFirstHormoneIcon = (assignment: Assignment): string => {
+    if (assignment.hormones && assignment.hormones.length > 0) {
+      return getHormoneIcon(assignment.hormones[0]);
+    }
+    return '🧬'; // 기본 아이콘
   };
 
   // anchorMap 생성 (Today 앵커만)
@@ -487,18 +523,26 @@ export default function ActionPlanTimeline({
                       borderColor: a.is_completed ? '#DDC2E9' : '#EFEFEF', // 완료 시 라벤더 색깔
                     },
                   ]}
-                  onPress={() => {
-                    handleNavigation({
-                      id: a.id,
-                      title: a.title,
-                      purpose: getActionPurpose(a),
-                      hormones: a.hormones || [],
-                      specific_action: a.specific_action,
-                      conditions: a.conditions,
-                      symptoms: a.symptoms,
-                      advices: a.advices,
-                    });
-                  }}
+                  onLongPress={!a.is_completed ? () => {
+                    // ActionCompletedScreen으로 이동 (완료되지 않은 경우만)
+                    try {
+                      navigation.navigate('ActionCompletedScreen', {
+                        action: JSON.stringify({
+                          id: a.id,
+                          title: a.title,
+                          purpose: getActionPurpose(a),
+                          hormones: a.hormones || [],
+                          specific_action: a.specific_action,
+                          conditions: a.conditions,
+                          symptoms: a.symptoms,
+                          advices: a.advices,
+                        })
+                      });
+                    } catch (error) {
+                      console.error('Navigation to ActionCompletedScreen error:', error);
+                    }
+                  } : undefined}
+                  delayLongPress={2000} // 2초간 꾹 누르기
                 >
                   <Text style={styles.imageFallback} allowFontScaling={false}>
                     📋
@@ -515,7 +559,7 @@ export default function ActionPlanTimeline({
                     }
                   ]}>
                     <Text style={styles.hormoneImageText} allowFontScaling={false}>
-                      🧬
+                      {getFirstHormoneIcon(a)}
                     </Text>
                   </View>
                   
@@ -543,11 +587,30 @@ export default function ActionPlanTimeline({
                     { left: textLeft, top: yCenter - 28, alignItems: isLeft ? 'flex-start' : 'flex-end' },
                   ]}
                 >
-                  <Text style={styles.itemTitle} numberOfLines={1} allowFontScaling={false}>
-                    {a.title}
-                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      handleNavigation({
+                        id: a.id,
+                        title: a.title,
+                        purpose: getActionPurpose(a),
+                        hormones: a.hormones || [],
+                        specific_action: a.specific_action,
+                        conditions: a.conditions,
+                        symptoms: a.symptoms,
+                        advices: a.advices,
+                      });
+                    }}
+                    style={{ flexDirection: 'row', alignItems: 'center' }}
+                  >
+                    <Text style={styles.itemTitle}>
+                      {a.title}
+                    </Text>
+                    <Text style={styles.itemArrow} allowFontScaling={false}>
+                      >
+                    </Text>
+                  </TouchableOpacity>
                   <Text style={styles.itemSub} numberOfLines={1} allowFontScaling={false}>
-                    {getActionAmount(a)}{getActionPurpose(a) ? ' | ' : ''}{getActionPurpose(a)}
+                    {getActionAmount(a)}{getActionSymptomsConditions(a) ? ' | ' : ''}{getActionSymptomsConditions(a)}
                   </Text>
                 </View>
               </View>
@@ -615,7 +678,11 @@ export default function ActionPlanTimeline({
                   
                   {/* 자물쇠 아이콘 - 아래 선 위에 렌더링 */}
                   <View style={styles.tomorrowLockContainer}>
-                    <Text style={styles.tomorrowLockIcon}>🔒</Text>
+                    <Image 
+                      source={require('../assets/icons/IconLock.png')}
+                      style={styles.tomorrowLockIcon}
+                      resizeMode="contain"
+                    />
                   </View>
                 </View>
               );
@@ -661,7 +728,7 @@ export default function ActionPlanTimeline({
                     }
                   ]}>
                     <Text style={styles.hormoneImageText} allowFontScaling={false}>
-                      🧬
+                      {getFirstHormoneIcon(a)}
                     </Text>
                   </View>
                   
@@ -689,11 +756,11 @@ export default function ActionPlanTimeline({
                     { left: textLeft, top: yCenter - 28, alignItems: isLeft ? 'flex-start' : 'flex-end' },
                   ]}
                 >
-                  <Text style={styles.itemTitle} numberOfLines={1} allowFontScaling={false}>
+                  <Text style={styles.itemTitle}>
                     {a.title}
                   </Text>
                   <Text style={styles.itemSub} numberOfLines={1} allowFontScaling={false}>
-                    {getActionAmount(a)}{getActionPurpose(a) ? ' | ' : ''}{getActionPurpose(a)}
+                    {getActionAmount(a)}{getActionSymptomsConditions(a) ? ' | ' : ''}{getActionSymptomsConditions(a)}
                   </Text>
                 </View>
               </View>
@@ -1056,12 +1123,12 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   hormoneImageText: {
-    fontSize: responsiveFontSize(1.8),
+    fontSize: responsiveFontSize(1.7), //12px (Figma 기준)
     color: '#666666',
   },
   hormoneBadgeText: {
     color: '#FFFFFF',
-    fontSize: responsiveFontSize(1.2),
+    fontSize: responsiveFontSize(1.1), //9px (Figma 기준)
     fontWeight: '600',
   },
   textBox: {
@@ -1069,14 +1136,21 @@ const styles = StyleSheet.create({
     width: responsiveWidth(45), // Figma 기준: 150px 정도
   },
   itemTitle: {
-    fontSize: responsiveFontSize(2),
-    fontWeight: '700',
-    color: '#111111',
+    fontSize: responsiveFontSize(1.98), //14px (Figma 기준)
+    fontFamily: 'NotoSerif500', // Noto Serif Medium
+    color: '#000000', // Figma 기준 Black
+  },
+  itemArrow: {
+    fontSize: responsiveFontSize(1.98), //14px (title과 동일)
+    fontWeight: '300',
+    color: '#949494', // Figma 기준 Grey Light
+    marginLeft: 8,
   },
   itemSub: {
     marginTop: 4,
-    fontSize: responsiveFontSize(1.6),
-    color: '#8E8E93',
+    fontSize: responsiveFontSize(1.7), //12px (Figma 기준)
+    fontFamily: 'Inter400', // Inter Regular
+    color: '#949494', // Figma 기준 Grey Light
   },
   
   // Tomorrow 라벨 스타일 (홈화면과 동일)
@@ -1091,14 +1165,14 @@ const styles = StyleSheet.create({
     paddingVertical: responsiveHeight(1), // 위아래 여백 추가
   },
   tomorrowSectionTitle: {
-    fontSize: responsiveFontSize(1.98), // 14px (홈화면과 동일)
+    fontSize: responsiveFontSize(1.98), //14px (Figma 기준)
     fontFamily: 'NotoSerif500',
     color: '#000000',
     textAlign: 'center',
     marginBottom: responsiveHeight(1),
   },
   tomorrowDateText: {
-    fontSize: responsiveFontSize(1.7), // 12px (홈화면과 동일)
+    fontSize: responsiveFontSize(1.7), //12px (Figma 기준)
     fontFamily: 'Inter400',
     color: '#6F6F6F',
     textAlign: 'center',
@@ -1108,8 +1182,9 @@ const styles = StyleSheet.create({
     marginTop: responsiveHeight(2),
   },
   tomorrowLockIcon: {
-    fontSize: responsiveFontSize(2.5),
-    color: '#949494',
+    width: responsiveWidth(6),
+    height: responsiveWidth(6),
+    tintColor: '#949494',
   },
   
   // Tomorrow 아이템 흐림 효과

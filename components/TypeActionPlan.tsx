@@ -6,11 +6,13 @@ import {
     Text,
     View,
     Dimensions,
-    TouchableOpacity
+    TouchableOpacity,
+    Image
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import Svg, { Defs, Line, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
+
 
 // ====== 타입 import ======
 import { Assignment } from '../services/homeService';
@@ -31,6 +33,7 @@ const CATEGORIES = [
 
 // 시간대 이모지 매핑
 const TIME_EMOJI_MAP: Record<string, string> = {
+  completed: '', // completed는 아이콘 없음
   morning: '☀️',
   afternoon: '🌤️',
   evening: '🌙',
@@ -131,12 +134,71 @@ export default function TypeActionPlan({
   };
 
   const getActionPurpose = (assignment: Assignment): string => {
-    // API에서 받아오는 purpose 필드만 사용
+    // API에서 받아오는 purpose 필드만 사용 (ActionDetail로 전달용)
     return assignment.purpose || '';
+  };
+
+  const getActionSymptomsConditions = (assignment: Assignment): string => {
+    // symptoms와 conditions를 순서대로 모아서 반환 (타임라인 표시용)
+    const symptoms = assignment.symptoms || [];
+    const conditions = assignment.conditions || [];
+    
+    const allItems = [...symptoms, ...conditions];
+    return allItems.join(', ');
   };
 
   const getHormoneCount = (assignment: Assignment): number => {
     return assignment.hormones?.length || 0;
+  };
+
+  // 호르몬별 색상 반환 함수
+  const getProgressColor = (hormone: string) => {
+    switch (hormone.toLowerCase()) {
+      case 'androgens': return '#F6C34C';
+      case 'progesterone': return '#FF6991';
+      case 'estrogen': return '#FF8BA7';
+      case 'thyroid': return '#87CEEB';
+      case 'insulin': return '#FFD700';
+      case 'cortisol': return '#FF6B6B';
+      case 'fsh': return '#98FB98';
+      case 'lh': return '#90EE90';
+      case 'prolactin': return '#DDA0DD';
+      case 'ghrelin': return '#FFA07A';
+      default: return '#C17EC9';
+    }
+  };
+
+  // 호르몬별 아이콘 반환 함수
+  const getHormoneIcon = (hormone: string) => {
+    switch (hormone.toLowerCase()) {
+      case 'androgens': return '💪';
+      case 'progesterone': return '🌸';
+      case 'estrogen': return '🌺';
+      case 'thyroid': return '🦋';
+      case 'insulin': return '🍯';
+      case 'cortisol': return '⚡';
+      case 'fsh': return '🌱';
+      case 'lh': return '🌿';
+      case 'prolactin': return '🤱';
+      case 'ghrelin': return '🍽️';
+      default: return '💊';
+    }
+  };
+
+  // 첫 번째 호르몬의 색상을 반환하는 함수
+  const getFirstHormoneColor = (assignment: Assignment): string => {
+    if (assignment.hormones && assignment.hormones.length > 0) {
+      return getProgressColor(assignment.hormones[0]);
+    }
+    return '#A36CFF'; // 기본 색상
+  };
+
+  // 첫 번째 호르몬의 아이콘을 반환하는 함수
+  const getFirstHormoneIcon = (assignment: Assignment): string => {
+    if (assignment.hormones && assignment.hormones.length > 0) {
+      return getHormoneIcon(assignment.hormones[0]);
+    }
+    return '💊'; // 기본 아이콘
   };
 
   const getTimeEmoji = (timeSlot: string): string => {
@@ -145,7 +207,7 @@ export default function TypeActionPlan({
 
   // 첫 번째 선: 맨 위에서 카테고리 시작 전까지 (그라디언트)
   const renderTopLine = () => {
-    const lineHeight = responsiveHeight(8);
+    const lineHeight = responsiveHeight(7); // ActionPlanTimeline의 TOP_CAP과 일치
     const screenWidth = Dimensions.get('window').width;
     const centerX = screenWidth / 2;
     
@@ -237,7 +299,11 @@ export default function TypeActionPlan({
           
           {/* 자물쇠 아이콘 */}
           <View style={styles.svgLockIcon}>
-            <Text style={styles.svgLockIconText}>🔒</Text>
+            <Image 
+              source={require('../assets/icons/IconLock.png')}
+              style={styles.svgLockIconImage}
+              resizeMode="contain"
+            />
           </View>
         </Svg>
       </View>
@@ -262,23 +328,51 @@ export default function TypeActionPlan({
     return (
       <View key={assignment.id.toString()} style={styles.actionItem}>
         {/* 이미지 원 */}
-        <TouchableOpacity style={styles.imageContainer} onPress={handleActionPress}>
+        <TouchableOpacity 
+          style={styles.imageContainer} 
+          onLongPress={!assignment.is_completed ? () => {
+            // ActionCompletedScreen으로 이동 (완료되지 않은 경우만)
+            try {
+              navigation.navigate('ActionCompletedScreen', {
+                action: JSON.stringify({
+                  id: assignment.id,
+                  title: assignment.title,
+                  purpose: getActionPurpose(assignment),
+                  hormones: assignment.hormones || [],
+                  specific_action: assignment.specific_action,
+                  conditions: assignment.conditions,
+                  symptoms: assignment.symptoms,
+                  advices: assignment.advices,
+                })
+              });
+            } catch (error) {
+              console.error('Navigation to ActionCompletedScreen error:', error);
+            }
+          } : undefined}
+          delayLongPress={2000} // 2초간 꾹 누르기
+        >
           {/* 실제 이미지 대신 이모지 사용 */}
           <Text style={styles.actionImage}>📋</Text>
         </TouchableOpacity>
       
       {/* 액션 정보 */}
       <View style={styles.actionDetails}>
-        <Text style={styles.actionTitle}>{assignment.title}</Text>
+        <TouchableOpacity 
+          onPress={handleActionPress}
+          style={{ flexDirection: 'row', alignItems: 'center' }}
+        >
+                                  <Text style={styles.actionTitle}>{assignment.title}</Text>
+                        <Text style={styles.actionArrow}>></Text>
+        </TouchableOpacity>
         <View style={styles.actionMeta}>
           <Text style={styles.actionAmount}>{getActionAmount(assignment)}</Text>
           <View style={styles.separator} />
-          <Text style={styles.actionPurpose}>{getActionPurpose(assignment)}</Text>
+          <Text style={styles.actionPurpose}>{getActionSymptomsConditions(assignment)}</Text>
           <View style={styles.separator} />
           <View style={styles.hormoneInfo}>
-            <Text style={styles.hormoneCount}>+{getHormoneCount(assignment)}</Text>
-            <View style={styles.hormoneIcon}>
-              <Text style={styles.hormoneIconText}>H</Text>
+            <Text style={[styles.hormoneCount, { color: getFirstHormoneColor(assignment) }]}>+{getHormoneCount(assignment)}</Text>
+            <View style={[styles.hormoneIcon, { backgroundColor: getFirstHormoneColor(assignment) }]}>
+              <Text style={styles.hormoneIconText}>{getFirstHormoneIcon(assignment)}</Text>
             </View>
           </View>
           <View style={styles.separator} />
@@ -365,8 +459,8 @@ export default function TypeActionPlan({
                    <Text style={styles.actionPurpose}>Acne, PCOS</Text>
                    <View style={styles.actionSeparator} />
                    <View style={styles.hormoneInfo}>
-                     <Text style={styles.hormoneCount}>+1</Text>
-                     <View style={styles.hormoneIcon}>
+                     <Text style={[styles.hormoneCount, { color: '#FF6991' }]}>+1</Text>
+                     <View style={[styles.hormoneIcon, { backgroundColor: '#FF6991' }]}>
                        <Text style={styles.hormoneIconText}>H</Text>
                      </View>
                    </View>
@@ -400,7 +494,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: responsiveWidth(8),
-    paddingVertical: responsiveHeight(1),
+    // paddingVertical 제거하여 ActionPlanTimeline과 동일하게 딱 붙어서 시작
   },
   
   // 세로선 컨테이너들
@@ -413,11 +507,13 @@ const styles = StyleSheet.create({
   middleLineContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: responsiveHeight(2), // ActionPlanTimeline과 일치
   },
   
   bottomLineContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: responsiveHeight(2), // ActionPlanTimeline과 일치
   },
   
   categorySection: {
@@ -441,9 +537,9 @@ const styles = StyleSheet.create({
     marginLeft: responsiveWidth(2),
   },
   categoryTitle: {
-    fontSize: responsiveFontSize(2),
-    fontWeight: '500',
-    color: '#6F6F6F',
+    fontSize: responsiveFontSize(1.98), //14px (Figma 기준)
+    fontFamily: 'NotoSerif500', // Noto Serif Medium
+    color: '#6F6F6F', // Figma 기준 Grey Medium
     paddingHorizontal: responsiveWidth(2),
   },
   categoryActions: {
@@ -470,9 +566,15 @@ const styles = StyleSheet.create({
     gap: responsiveHeight(0.5),
   },
   actionTitle: {
-    fontSize: responsiveFontSize(2),
-    fontWeight: '500',
-    color: '#000000',
+    fontSize: responsiveFontSize(1.98), //14px (Figma 기준)
+    fontFamily: 'NotoSerif500', // Noto Serif Medium
+    color: '#000000', // Figma 기준 Black
+  },
+  actionArrow: {
+    fontSize: responsiveFontSize(1.98), //14px (title과 동일)
+    fontWeight: '300',
+    color: '#949494', // Figma 기준 Grey Light
+    marginLeft: 8,
   },
   actionMeta: {
     flexDirection: 'row',
@@ -480,12 +582,14 @@ const styles = StyleSheet.create({
     gap: responsiveWidth(1.5),
   },
   actionAmount: {
-    fontSize: responsiveFontSize(1.6),
-    color: '#949494',
+    fontSize: responsiveFontSize(1.7), //12px (Figma 기준)
+    fontFamily: 'Inter400', // Inter Regular
+    color: '#949494', // Figma 기준 Grey Light
   },
   actionPurpose: {
-    fontSize: responsiveFontSize(1.6),
-    color: '#949494',
+    fontSize: responsiveFontSize(1.7), //12px (Figma 기준)
+    fontFamily: 'Inter400', // Inter Regular
+    color: '#949494', // Figma 기준 Grey Light
   },
   separator: {
     width: 1,
@@ -498,8 +602,9 @@ const styles = StyleSheet.create({
     gap: responsiveWidth(1),
   },
   hormoneCount: {
-    fontSize: responsiveFontSize(1.6),
-    color: '#949494',
+    fontSize: responsiveFontSize(1.7), //12px (Figma 기준)
+    fontFamily: 'Inter400', // Inter Regular
+    color: '#949494', // Figma 기준 Grey Light
   },
   hormoneIcon: {
     width: responsiveWidth(4),
@@ -510,7 +615,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   hormoneIconText: {
-    fontSize: responsiveFontSize(1.2),
+    fontSize: responsiveFontSize(1.1), //9px (Figma 기준)
     color: '#FFFFFF',
     fontWeight: '600',
   },
@@ -520,11 +625,12 @@ const styles = StyleSheet.create({
   
   // Tomorrow 섹션 스타일
   tomorrowSection: {
-    marginTop: responsiveHeight(2),
-    marginBottom: responsiveHeight(2),
+    marginTop: responsiveHeight(1), // ActionPlanTimeline과 일치
+    marginBottom: responsiveHeight(1), // ActionPlanTimeline과 일치
   },
   tomorrowHeader: {
     alignItems: 'center',
+    paddingVertical: responsiveHeight(1), // ActionPlanTimeline과 일치
   },
   tomorrowSectionTitle: {
     fontSize: responsiveFontSize(1.98),
@@ -541,7 +647,7 @@ const styles = StyleSheet.create({
   },
   tomorrowLockContainer: {
     alignItems: 'center',
-
+    marginTop: responsiveHeight(2), // ActionPlanTimeline과 일치
   },
   tomorrowLockIcon: {
     fontSize: responsiveFontSize(2.5),
@@ -642,5 +748,10 @@ const styles = StyleSheet.create({
   svgLockIconText: {
     fontSize: 20,
     color: '#949494',
+  },
+  svgLockIconImage: {
+    width: 20,
+    height: 20,
+    tintColor: '#949494',
   },
 });

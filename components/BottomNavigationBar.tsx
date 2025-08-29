@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -24,11 +24,36 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
   const characterTextGap = 8;
 
   const tabs = [
-    { key: 'home', label: 'Home', icon: '🏠', screen: 'HomeScreen' },
-    { key: 'calendar', label: 'Calendar', icon: '📅', screen: 'CalendarScreen' },
-    { key: 'auvra', label: 'Auvra', icon: '', screen: 'AuvraScreen' }, // 아이콘 제거
-    { key: 'progress', label: 'Progress', icon: '📊', screen: 'ProgressScreen' },
-    { key: 'community', label: 'Community', icon: '👥', screen: 'CommunityScreen' },
+    { 
+      key: 'home', 
+      label: 'Home', 
+      icon: require('../assets/icons/IconHome.png'),
+      screen: 'HomeScreen' 
+    },
+    { 
+      key: 'calendar', 
+      label: 'Calendar', 
+      icon: require('../assets/icons/IconCalendar.png'),
+      screen: 'CalendarScreen' 
+    },
+    { 
+      key: 'auvra', 
+      label: 'Auvra', 
+      icon: null, // 아이콘 없음
+      screen: 'AuvraScreen' 
+    },
+    { 
+      key: 'progress', 
+      label: 'Progress', 
+      icon: require('../assets/icons/IconProgress.png'),
+      screen: 'ProgressScreen' 
+    },
+    { 
+      key: 'community', 
+      label: 'Community', 
+      icon: require('../assets/icons/IconCommunity.png'),
+      screen: 'CommunityScreen' 
+    },
   ];
 
   const handleTabPress = (tabKey: string, screenName: string) => {
@@ -61,12 +86,16 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
               ]}
               onPress={() => handleTabPress(tab.key, tab.screen)}
             >
-              <Text style={[
-                styles.tabIcon,
-                activeTab === tab.key && styles.activeTabIcon
-              ]}>
-                {tab.icon}
-              </Text>
+              {tab.icon ? (
+                <Image 
+                  source={tab.icon}
+                  style={styles.tabIcon}
+                  tintColor={activeTab === tab.key ? '#bb4471' : '#000000'}
+                  resizeMode="contain"
+                />
+              ) : (
+                <View style={styles.emptyIconSpace} />
+              )}
               <Text style={[
                 styles.tabLabel,
                 activeTab === tab.key && styles.activeTabLabel
@@ -135,11 +164,14 @@ const styles = StyleSheet.create({
     opacity: 1,
   },
   tabIcon: {
-    fontSize: responsiveFontSize(2.5), // 20.816px
+    width: responsiveWidth(6), // 아이콘 크기
+    height: responsiveWidth(6), // 아이콘 크기
     marginBottom: responsiveHeight(0.2), // 1px
   },
-  activeTabIcon: {
-    color: '#bb4471',
+  emptyIconSpace: {
+    width: responsiveWidth(6), // 아이콘 크기
+    height: responsiveWidth(6), // 아이콘 크기
+    marginBottom: responsiveHeight(0.2), // 1px
   },
   tabLabel: {
     fontSize: responsiveFontSize(1.13), // 8px

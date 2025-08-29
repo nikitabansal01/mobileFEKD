@@ -400,6 +400,7 @@ const ResearchingScreen = () => {
               multiple={true}
               layout="default"
               buttonWidth={responsiveWidth(80)} // 버튼 가로 길이 설정
+              buttonHeight={responsiveHeight(5.2)} // 최소 높이 설정
               buttonAlignment={{ justifyContent: 'center', alignItems: 'center' }}
               containerAlignment="center"
             />

@@ -85,8 +85,7 @@ const OptionButtonsContainer: React.FC<OptionButtonsContainerProps> = ({
   const getButtonStyle = (isSelected: boolean, hasDescription: boolean) => {
     const baseStyle = [
       createInputStyle(isSelected ? 'selected' : 'default', {
-        height: hasDescription ? undefined : buttonHeight, // 설명이 있으면 높이 자동 조정
-        minHeight: buttonHeight, // 최소 높이 설정
+        height: buttonHeight, // buttonHeight가 있으면 사용
         paddingVertical: buttonPadding?.vertical,
         paddingHorizontal: buttonPadding?.horizontal,
         justifyContent: buttonAlignment?.justifyContent,
@@ -94,11 +93,6 @@ const OptionButtonsContainer: React.FC<OptionButtonsContainerProps> = ({
       }),
       buttonStyle,
     ];
-    
-    // 설명이 있을 때는 height를 완전히 제거하여 자동 확장되도록 함
-    if (hasDescription && isSelected) {
-      baseStyle.push({ height: undefined });
-    }
     
     // 버튼 가로 길이 설정
     if (buttonWidth) {

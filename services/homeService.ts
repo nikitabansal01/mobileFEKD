@@ -95,6 +95,7 @@ export interface HormoneStats {
   LH?: { completed: number; total: number };
   prolactin?: { completed: number; total: number };
   ghrelin?: { completed: number; total: number };
+  testosterone?: { completed: number; total: number };
 }
 
 export interface ProgressStatsResponse {
@@ -210,6 +211,48 @@ class HomeService {
     } catch (error) {
       console.error('❌ 진행도 통계 조회 오류:', error);
       return null;
+    }
+  }
+
+  // 할당 작업 완료 API
+  async completeAssignment(assignmentId: number, notes?: string): Promise<boolean> {
+    try {
+      console.log('🔄 할당 작업 완료 API 호출:', `${API_BASE_URL}/api/v1/new-scheduling/assignments/${assignmentId}/complete`);
+
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('🔑 Firebase 토큰 포함됨');
+      } else {
+        console.log('⚠️ Firebase 토큰 없음');
+      }
+
+      const requestBody: { notes?: string } = {};
+      if (notes) {
+        requestBody.notes = notes;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/assignments/${assignmentId}/complete`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ 할당 작업 완료 실패:', errorText);
+        throw new Error(`할당 작업 완료 실패: ${response.status} - ${errorText}`);
+      }
+
+      console.log('✅ 할당 작업 완료 성공');
+      return true;
+    } catch (error) {
+      console.error('❌ 할당 작업 완료 오류:', error);
+      return false;
     }
   }
 }

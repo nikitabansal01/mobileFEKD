@@ -48,18 +48,13 @@ const ChipOptionContainer: React.FC<ChipOptionContainerProps> = ({
 }) => {
   const getChipStyle = (isSelected: boolean, hasDescription: boolean) => {
     const baseStyle = [
-      createInputStyle(isSelected ? 'selected' : 'default', {
-        height: hasDescription && isSelected ? undefined : responsiveHeight(5), // 설명이 있고 선택되었으면 높이 자동 조정
-        minHeight: responsiveHeight(5), // 최소 높이 설정
-      }),
+      createInputStyle(isSelected ? 'selected' : 'default'),
       chipStyle,
     ];
     
     // 설명이 있고 선택되었을 때는 전체 너비와 좌측 정렬 적용
     if (hasDescription && isSelected) {
       baseStyle.push({ 
-        // 세로 높이는 자동
-        height: undefined,
         // 가로 한 줄 전체 사용 (wrap 레이아웃 핵심)
         width: '100%',
         flexBasis: '100%',
@@ -160,8 +155,7 @@ const ChipOptionContainer: React.FC<ChipOptionContainerProps> = ({
     backgroundColor: '#ffffff',
     justifyContent: 'center', // 중앙 정렬로 복원
     alignItems: 'center', // 중앙 정렬로 복원
-    height: responsiveHeight(5), // minHeight → height로 변경
-    // 글자 크기에 따라 자동으로 크기 조정
+    // height 제거하여 텍스트 내용에 따라 자동 조절
     alignSelf: 'flex-start', // 기본 상태에서는 내용에 맞춤
   },
   chipSelected: {

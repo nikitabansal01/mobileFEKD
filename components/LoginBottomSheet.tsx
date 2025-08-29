@@ -261,6 +261,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
                 placeholder="Set Password"
                 value={password}
                 onChangeText={setPassword}
+                secureTextEntry={true}
                 containerStyle={styles.textInput}
               />
             </View>
@@ -271,6 +272,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
                 placeholder="Confirm Password"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
+                secureTextEntry={true}
                 containerStyle={styles.textInput}
               />
             </View>
@@ -281,7 +283,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
               onPress={() => setRememberMe(!rememberMe)}
             >
               <View style={[styles.checkbox, rememberMe && styles.checkboxSelected]}>
-                {rememberMe && <RightTickSvg size={responsiveFontSize(1.7)} color="#FFF" />} {/* 12px */}
+                {rememberMe && <RightTickSvg size={responsiveFontSize(1.4)} color="#FFF" />}
               </View>
               <Text style={styles.rememberText}>Remember me</Text>
             </TouchableOpacity>
@@ -383,7 +385,7 @@ const styles = StyleSheet.create({
   },
   maskedView: {
     width: responsiveWidth(85),
-    height: responsiveHeight(6),
+    height: responsiveHeight(7), // 높이를 6에서 8로 변경
     alignItems: 'center',
     justifyContent: 'center',
   },

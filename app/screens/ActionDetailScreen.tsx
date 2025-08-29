@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, } from 'react-native';
 import AppIntroSlider from "react-native-app-intro-slider";
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
 import FixedBottomContainer from '@/components/FixedBottomContainer';
@@ -19,6 +19,7 @@ type RootStackParamList = {
   LoginScreen: undefined;
   HomeScreen: undefined;
   ActionDetailScreen: { action?: string; };
+  ActionCompletedScreen: { action?: string; };
 };
 
 type ActionDetailScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ActionDetailScreen'>;
@@ -35,6 +36,23 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
   const [isHowMode, setIsHowMode] = useState(false);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+
+  // 뒤로가기 제스처 비활성화 (AppIntroSlider 사용 시)
+  useFocusEffect(
+    React.useCallback(() => {
+      // 화면 포커스 시 뒤로가기 제스처 비활성화
+      navigation.setOptions({
+        gestureEnabled: false,
+      });
+
+      return () => {
+        // 화면 언포커스 시 뒤로가기 제스처 재활성화
+        navigation.setOptions({
+          gestureEnabled: true,
+        });
+      };
+    }, [navigation])
+  );
 
   // action 객체 생성 (이미 객체이거나 JSON 문자열일 수 있음)
   const action = actionParam ? (typeof actionParam === 'string' ? JSON.parse(actionParam) : actionParam) as {
@@ -281,7 +299,9 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
               title="Mark as complete ✅"
               onPress={() => {
                 console.log('Mark as complete clicked');
-                // TODO: 완료 처리 로직
+                navigation.navigate('ActionCompletedScreen', { 
+                  action: JSON.stringify(action) 
+                });
               }}
             />
             <TouchableOpacity
@@ -549,7 +569,7 @@ const styles = StyleSheet.create({
   },
   adviceTypeBadge: {
     position: 'absolute',
-    top: responsiveHeight(1.75), // 7px
+    top: responsiveHeight(0.75), // 3px로 조정하여 더 위로 올림
     left: responsiveWidth(1.75), // 7px
     backgroundColor: '#FFFFFF',
     paddingHorizontal: responsiveWidth(1.5),

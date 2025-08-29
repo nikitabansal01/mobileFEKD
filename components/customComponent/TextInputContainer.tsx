@@ -58,10 +58,11 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
 
   return (
     <View style={[
-      createInputStyle((isFocused || isFilled) ? 'selected' : 'default'),
+      createInputStyle((isFocused || isFilled) ? 'selected' : 'default', {
+        paddingVertical: responsiveHeight(0),
+      }),
       {
-        height: responsiveHeight(7.4),// TextInputContainer만 더 큰 높이
-        paddingVertical: responsiveHeight(2),
+        minHeight: responsiveHeight(7.6),// TextInputContainer만 더 큰 높이
         justifyContent: 'center',
         alignItems: 'flex-start', // 텍스트를 왼쪽 정렬
       },
@@ -77,7 +78,7 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
       {/* Input Text */}
       {(isFocused || isFilled) && (
         <Text style={[styles.inputText, textStyle]}>
-          {value}
+          {secureTextEntry ? '•'.repeat(value.length) : value}
         </Text>
       )}
       
@@ -91,7 +92,7 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
       {/* Hidden TextInput for actual input */}
       <TextInput
         style={[styles.hiddenTextInput, inputStyle]}
-        placeholder={placeholder}
+        placeholder=""
         placeholderTextColor="transparent"
         keyboardType={keyboardType}
         value={value}
@@ -141,8 +142,16 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    opacity: 0,
+    opacity: 0.01, // 아주 작은 투명도로 설정하여 커서가 보이도록 함
     zIndex: 2,
+    // Text 컴포넌트와 동일한 스타일 적용
+    fontFamily: 'Inter400',
+    fontSize: responsiveFontSize(1.98), //14px
+    paddingLeft: 20, // Text 컴포넌트와 동일한 위치
+    paddingTop: 8, // marginTop과 동일한 효과
+    textAlign: 'left',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   clearButton: {
     position: 'absolute',
