@@ -12,6 +12,7 @@ import {
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import Svg, { Defs, Path, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
+// import { BlurView } from 'expo-blur';
 
 // ====== Type imports ======
 import { Assignment } from '../services/homeService';
@@ -711,6 +712,7 @@ export default function ActionPlanTimeline({
               );
           })()}
 
+
           {/* Display only the first Tomorrow item */}
           {geom && tomorrowAnchors.slice(0, 1).map((anchor, idx) => {
             const { CIRCLE_RADIUS } = geom;
@@ -789,6 +791,30 @@ export default function ActionPlanTimeline({
               </View>
             );
           })}
+
+          {/* Tomorrow blur overlay - positioned after all items to appear on top */}
+          {/* COMMENTED OUT FOR BUILD - BlurView not working in APK
+          {geom && tomorrowAnchors.length > 0 && (() => {
+            const todayLastY = todayAnchors.at(-1)?.y ?? 0;
+            const tomorrowTextHeight = responsiveHeight(6);
+            const tomorrowStartY = todayLastY + geom.ITEM_BLOCK_H / 2 + geom.CAP_BOTTOM + responsiveHeight(8) + tomorrowTextHeight;
+            
+            return (
+              <BlurView
+                intensity={80}
+                tint="light"
+                style={[
+                  styles.tomorrowSectionBlur,
+                  {
+                    top: tomorrowStartY,
+                    height: contentHeight - tomorrowStartY,
+                    zIndex: 100, // Ensure it's on top
+                  }
+                ]}
+              />
+            );
+          })()}
+          */}
         </View>
       </View>
     </View>
@@ -1213,6 +1239,14 @@ const styles = StyleSheet.create({
   // Tomorrow item blur effect
   tomorrowItem: {
     opacity: 0.6,
+  },
+  
+  // Tomorrow section blur overlay
+  tomorrowSectionBlur: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    backgroundColor: 'transparent',
   },
   
   // Time-based icon style

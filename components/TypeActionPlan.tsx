@@ -12,6 +12,7 @@ import {
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import Svg, { Defs, Line, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
+// import { BlurView } from 'expo-blur';
 
 
 // ====== Type imports ======
@@ -461,6 +462,13 @@ export default function TypeActionPlan({
 
          {/* Tomorrow action plan preview */}
          <View style={styles.tomorrowPreview}>
+           {/* Tomorrow blur overlay - COMMENTED OUT FOR BUILD
+           <BlurView
+             intensity={80}
+             tint="light"
+             style={styles.tomorrowSectionBlur}
+           />
+           */}
            <View style={styles.tomorrowBlurredContent}>
              {/* Category header */}
              <View style={styles.tomorrowCategoryHeader}>
@@ -779,5 +787,16 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     tintColor: '#949494',
+  },
+  
+  // Tomorrow section blur overlay
+  tomorrowSectionBlur: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 100,
+    backgroundColor: 'transparent',
   },
 });

@@ -11,7 +11,8 @@
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#ffffff",
+      "hideExponentText": true
     },
     "ios": {
       "supportsTablet": true,
@@ -27,7 +28,8 @@
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE"
-      ]
+      ],
+      "versionCode": 4
     },
     "web": {
       "bundler": "metro",
@@ -35,11 +37,6 @@
     },
     "plugins": [
       "expo-font"
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "49bf0188-d2ef-4e97-990e-52a2c33eacca"
-      }
-    }
+    ]
   }
 }
