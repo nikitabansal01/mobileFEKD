@@ -1,32 +1,27 @@
-import React, { useState, useRef, useEffect } from 'react';
+import LoadingScreen from '@/app/screens/LoadingScreen';
+import AuvraCharacter from '@/components/AuvraCharacter';
+import BackButton from '@/components/BackButton';
+import FixedBottomContainer from '@/components/FixedBottomContainer';
+import PrimaryButton from '@/components/PrimaryButton';
+import sessionService from '@/services/sessionService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform, Pressable, Alert, Keyboard } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { responsiveWidth, responsiveHeight, responsiveFontSize } from "react-native-responsive-dimensions";
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import AuvraCharacter from '@/components/AuvraCharacter';
-import DialogueBubble from '@/components/DialogueBubble';
-import PrimaryButton from '@/components/PrimaryButton';
-import SVG from '@/assets/images/SVG';
-import FixedBottomContainer from '@/components/FixedBottomContainer';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import BackButton from '@/components/BackButton';
-import LoadingScreen from '@/app/screens/LoadingScreen';
-import sessionService from '@/services/sessionService';
+import React, { useEffect, useRef, useState } from 'react';
+import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { LinearGradient } from 'expo-linear-gradient';
-import MaskedView from '@react-native-masked-view/masked-view';
-import GradientText from "@/components/GradientText";
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import OptionButtonsContainer from '@/components/customComponent/OptionButtonsContainer';
-import TextInputContainer from '@/components/customComponent/TextInputContainer';
 import ChipOptionContainer from '@/components/customComponent/ChipOptionContainer';
 import NotSureButton from '@/components/customComponent/NotSureButton';
+import OptionButtonsContainer from '@/components/customComponent/OptionButtonsContainer';
 import OthersOption from '@/components/customComponent/OthersOption';
+import TextInputContainer from '@/components/customComponent/TextInputContainer';
+import GradientText from "@/components/GradientText";
+import { getOptionsWithDescriptions } from '@/constants/QuestionOptions';
 import { createInputStyle, createInputTextStyle } from '@/utils/inputStyles';
-import { INPUT_STATES } from '@/constants/InputStates';
-import { getOptionsWithDescriptions, convertStringOptionsToObjects } from '@/constants/QuestionOptions';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 interface Question {
     id: number;
@@ -321,6 +316,7 @@ const QuestionScreen = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<{ [key: string]: string | string[] | number | null }>({});
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [currentDateField, setCurrentDateField] = useState<string>('');
   const [showLoading, setShowLoading] = useState(false);
   const [sessionCreated, setSessionCreated] = useState(false);
   const [showAdditionalQuestionsPrompt, setShowAdditionalQuestionsPrompt] = useState(false);
@@ -333,6 +329,12 @@ const QuestionScreen = () => {
   // KeyboardAwareScrollView reference storage
   const scrollRef = useRef<any>(null);
   const progress = (currentStep + 1) / totalSteps;
+
+  const scrollToInput = (node: any) => {
+    try {
+      scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
+    } catch {}
+  };
 
   // Storage key for persisting answers
   const STORAGE_KEY = 'QuestionScreen_answers';
@@ -471,12 +473,26 @@ const QuestionScreen = () => {
    * Handle date picker changes
    */
   const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios'); // Keep open on iOS until dismissal
-    if (selectedDate) {
-        const formattedDate = `${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}/${selectedDate.getDate().toString().padStart(2, '0')}/${selectedDate.getFullYear()}`;
-        handleAnswer('lastPeriodDate', formattedDate, 'date');
+    console.log('Date change event:', event.type, 'Selected date:', selectedDate, 'Current field:', currentDateField);
+    
+    if (Platform.OS === 'ios') {
+      // On iOS, close the picker when user dismisses it
+      if (event.type === 'dismissed') {
+        console.log('iOS date picker dismissed');
+        setShowDatePicker(false);
+        return;
+      }
     }
-    if (Platform.OS === 'android') {
+    
+    if (selectedDate && currentDateField) {
+        const formattedDate = `${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}/${selectedDate.getDate().toString().padStart(2, '0')}/${selectedDate.getFullYear()}`;
+        console.log('Saving date:', formattedDate, 'to field:', currentDateField);
+        handleAnswer(currentDateField, formattedDate, 'date');
+    }
+    
+    // Close picker on Android and iOS after selection
+    if (Platform.OS === 'android' || (Platform.OS === 'ios' && selectedDate)) {
+      console.log('Closing date picker');
       setShowDatePicker(false);
     }
   };
@@ -801,8 +817,9 @@ const QuestionScreen = () => {
                       alignSelf: 'stretch',
                     }}
                     onFocus={() => {
-                      console.log(`[${q.key}] TextInput focus - keyboard scroll started`);
-                      console.log(`[${q.key}] extraScrollHeight: ${responsiveHeight(15)}, extraHeight: ${responsiveHeight(20)}`);
+                      if (othersInputRef.current) {
+                        scrollToInput(othersInputRef.current);
+                      }
                     }}
                   />
                 ) : q.inputType === 'date' ? (
@@ -818,7 +835,11 @@ const QuestionScreen = () => {
                         alignItems: 'flex-start',
                       }
                     ]}
-                    onPress={() => setShowDatePicker(true)}
+                    onPress={() => {
+                      console.log('Date picker triggered for field:', q.key);
+                      setShowDatePicker(true);
+                      setCurrentDateField(q.key);
+                    }}
                   >
                     <Text style={createInputTextStyle(answers[q.key] ? 'selected' : 'default')}>
                       {answers[q.key] as string || q.placeholder}
@@ -997,12 +1018,35 @@ const QuestionScreen = () => {
          />
        </FixedBottomContainer>
       {showDatePicker && (
-        <DateTimePicker
-          value={answers.lastPeriodDate && typeof answers.lastPeriodDate === 'string' && !isNaN(new Date(answers.lastPeriodDate).getTime()) ? new Date(answers.lastPeriodDate) : new Date()}
-          mode="date"
-          display="default"
-          onChange={handleDateChange}
-        />
+        <View style={styles.datePickerContainer}>
+          <DateTimePicker
+            value={(() => {
+              if (currentDateField && answers[currentDateField]) {
+                const dateValue = answers[currentDateField] as string;
+                // Try to parse the date - handle MM/DD/YYYY format
+                if (typeof dateValue === 'string' && dateValue.includes('/')) {
+                  const [month, day, year] = dateValue.split('/');
+                  const parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                  if (!isNaN(parsedDate.getTime())) {
+                    return parsedDate;
+                  }
+                }
+                // Fallback to direct parsing
+                const directParse = new Date(dateValue);
+                if (!isNaN(directParse.getTime())) {
+                  return directParse;
+                }
+              }
+              return new Date();
+            })()}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleDateChange}
+            style={styles.datePicker}
+            textColor="#000000"
+            themeVariant="light"
+          />
+        </View>
       )}
     </SafeAreaView>
   );
@@ -1267,6 +1311,26 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(2.27), //16px
     textAlign: 'center',
     lineHeight: responsiveHeight(2.4),
+  },
+  datePickerContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    marginTop: responsiveHeight(1),
+    marginHorizontal: responsiveWidth(5),
+    paddingVertical: responsiveHeight(2),
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  datePicker: {
+    width: '100%',
+    height: Platform.OS === 'ios' ? responsiveHeight(25) : 'auto',
+    backgroundColor: 'transparent',
   },
 });
 

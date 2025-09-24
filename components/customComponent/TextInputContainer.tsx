@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
 import { createInputStyle } from '@/utils/inputStyles';
-import { INPUT_STATES } from '@/constants/InputStates';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { responsiveFontSize, responsiveHeight } from 'react-native-responsive-dimensions';
 
 /**
  * Props for the TextInputContainer component
@@ -122,30 +121,30 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
       },
       containerStyle
     ]}>
-      {/* Floating Label */}
+      {/* Floating Label - shown when focused or filled */}
       {(isFocused || isFilled) && (
         <Text style={styles.floatingLabel}>
           {placeholder}
         </Text>
       )}
       
-      {/* Input Text */}
-      {(isFocused || isFilled) && (
+      {/* Input Text - only show when not focused to avoid double text */}
+      {!isFocused && isFilled && (
         <Text style={[styles.inputText, textStyle]}>
           {secureTextEntry ? '•'.repeat(value.length) : value}
         </Text>
       )}
       
-      {/* Default Placeholder */}
+      {/* Default Placeholder - shown when not focused and not filled */}
       {!isFocused && !isFilled && (
         <Text style={styles.defaultPlaceholder}>
           {placeholder}
         </Text>
       )}
       
-      {/* Hidden TextInput for actual input */}
+      {/* TextInput for actual input - more visible on iOS */}
       <TextInput
-        style={[styles.hiddenTextInput, inputStyle]}
+        style={[styles.visibleTextInput, inputStyle]}
         placeholder=""
         placeholderTextColor="transparent"
         keyboardType={keyboardType}
@@ -156,6 +155,9 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
         autoFocus={autoFocus}
         ref={inputRef}
         secureTextEntry={secureTextEntry}
+        editable={true}
+        selectTextOnFocus={true}
+        caretHidden={false}
       />
       
       {/* Clear Button */}
@@ -190,13 +192,12 @@ const styles = StyleSheet.create({
     color: '#000000',
     marginTop: 8,
   },
-  hiddenTextInput: {
+  visibleTextInput: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    opacity: 0.01, // Very low opacity to keep cursor visible
     zIndex: 2,
     // Apply same styles as Text component
     fontFamily: 'Inter400',
@@ -206,6 +207,10 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     textAlignVertical: 'center',
     includeFontPadding: false,
+    // iOS-specific properties for better keyboard handling
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    color: '#000000',
   },
   clearButton: {
     position: 'absolute',
@@ -224,7 +229,7 @@ const styles = StyleSheet.create({
   },
   defaultPlaceholder: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.7), // 12px equivalent
+    fontSize: responsiveFontSize(1.98), // 14px equivalent - same as input text
     color: '#b3b3b3',
     position: 'absolute',
     left: 20,
@@ -234,7 +239,10 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     textAlignVertical: 'center',
     includeFontPadding: false,
+    lineHeight: responsiveHeight(7.6), // Match the container height for vertical centering
   },
 });
 
 export default TextInputContainer;
+
+

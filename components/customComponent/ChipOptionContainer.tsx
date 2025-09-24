@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
 import { createInputStyle, createInputTextStyle } from '@/utils/inputStyles';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import OthersOption from './OthersOption';
 
 /**
@@ -52,6 +52,7 @@ interface ChipOptionContainerProps {
     value: string;
     onChangeText: (text: string) => void;
     onFocus?: () => void;
+    scrollToInput?: (node: number | null) => void;
   };
 }
 

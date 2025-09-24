@@ -10,7 +10,7 @@ import sessionService from "@/services/sessionService";
 import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Image, Text, View } from "react-native";
+import { ActivityIndicator, Image, Platform, Text, View } from "react-native";
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -471,6 +471,27 @@ const ResearchingScreen = () => {
             title="Continue"
             onPress={handleContinue}
             disabled={selectedOptions.length === 0}
+            style={{
+              ...(Platform.OS === 'web' && {
+                backgroundColor: '#ffffff',
+                borderRadius: 100,
+                width: responsiveWidth(88),
+                paddingVertical: responsiveHeight(1.5),
+                paddingHorizontal: responsiveHeight(4),
+                alignItems: 'center',
+                justifyContent: 'center',
+                shadowColor: '#000000',
+                shadowOffset: {
+                  width: 0,
+                  height: 4,
+                },
+                shadowOpacity: 0.1,
+                shadowRadius: 10,
+                elevation: 5,
+                zIndex: 1000,
+                position: 'relative',
+              })
+            }}
           />
         </FixedBottomContainer>
       )}
