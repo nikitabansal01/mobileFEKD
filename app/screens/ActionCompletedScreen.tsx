@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
-import LottieView from 'lottie-react-native';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
 import FixedBottomContainer from '@/components/FixedBottomContainer';
 import PrimaryButton from '@/components/PrimaryButton';
-import homeService, { AssignmentsResponse, CyclePhaseResponse } from '@/services/homeService';
 import apiPromiseManager from '@/services/apiPromiseManager';
+import homeService, { AssignmentsResponse, CyclePhaseResponse } from '@/services/homeService';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import LottieView from 'lottie-react-native';
+import React, { useEffect, useState } from 'react';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 
 const GiftBoxAnimation = require('@/assets/animation/Gift_Box_Bouncing.json');
 const MovingGlowAnimation = require('@/assets/animation/Moving_glow.json');
@@ -22,7 +22,12 @@ type RootStackParamList = {
   LoadingScreen: undefined;
   ResultLoadingScreen: undefined;
   LoginScreen: undefined;
-  HomeScreen: undefined;
+  HomeScreen: { 
+    refreshedData?: AssignmentsResponse;
+    cyclePhaseData?: CyclePhaseResponse;
+    skipLoading?: boolean;
+    skipTodayLoading?: boolean;
+  };
   ActionDetailScreen: { action?: string; };
   ActionCompletedScreen: { action?: string; };
 };
@@ -162,7 +167,7 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
       });
     } else {
       // APIs still in progress or failed - let HomeScreen handle promise
-      navigation.navigate('HomeScreen');
+      navigation.navigate('HomeScreen', {});
     }
   };
 
