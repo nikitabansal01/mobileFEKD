@@ -46,7 +46,32 @@ const FixedBottomContainer = ({
   return (
     <View style={styles.container}>
       {/* Background gradient - exact match from Figma design */}
+      {/* Background Gradients */}
       <LinearGradient
+        colors={[
+          "#A29AEA",   // lavender
+          "#C17EC9",   // purple-pink
+          "#D482B9",
+          "#E98BAC",
+          "#FDC6D1",
+          // "#ffffff"  // soft pink
+        ]}
+        locations={[0, 0.3, 0.55, 0.75, 1]}
+        start={{ x: 0, y: 1 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.gradientBase}
+      />
+      <LinearGradient
+        colors={[
+          "rgba(255,255,255,1)",  // strong white at top
+          "rgba(255,255,255,0.9)",// softer white
+          "rgba(255,255,255,0.7)",// subtle haze
+          "rgba(255,255,255,0)"   // fully transparent
+        ]}
+        locations={[0, 0.2, 0.4, 1]}
+        style={styles.gradientFade}
+      />
+      {/* <LinearGradient
         colors={['#A29AEA', '#C17EC9', '#D482B9', '#E98BAC', '#FDC6D1']}
         locations={[0, 0.32, 0.5, 0.73, 1]}
         start={{ x: 0, y: 0.5 }}
@@ -54,22 +79,22 @@ const FixedBottomContainer = ({
         style={[
           StyleSheet.absoluteFill, 
           { 
-            opacity: Platform.OS === 'ios' ? 0.3 : 0.5 
+            opacity: Platform.OS === 'ios' ? 0.5 : 0.5 
           }
         ]}
       />
 
-      {/* Top fade effect: white to transparent - matches Figma design */}
+      
       <LinearGradient
         colors={['white', 'transparent']}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={[
           styles.fadeTop,
-          Platform.OS === 'ios' && { height: responsiveHeight(6) }
+          Platform.OS === 'ios' && { height: responsiveHeight(0) }
         ]}
         pointerEvents="none"
-      />
+      /> */}
 
       {avoidKeyboard ? (
         <KeyboardAvoidingView
@@ -80,7 +105,7 @@ const FixedBottomContainer = ({
               bottom: 0,
               left: 0,
               right: 0,
-              paddingBottom: insets.bottom > 0 ? insets.bottom + responsiveHeight(1.5) : responsiveHeight(1.5),
+              paddingBottom: insets.bottom > 0 ? insets.bottom + responsiveHeight(2) : responsiveHeight(2),
               paddingHorizontal,
               alignItems: 'center',
               gap,
@@ -107,7 +132,7 @@ const FixedBottomContainer = ({
               bottom: 0,
               left: 0,
               right: 0,
-              paddingBottom: insets.bottom > 0 ? insets.bottom + responsiveHeight(1.5) : responsiveHeight(1.5),
+              paddingBottom: insets.bottom > 0 ? insets.bottom + responsiveHeight(2) : responsiveHeight(2),
               paddingHorizontal,
               alignItems: 'center',
               gap,
@@ -124,6 +149,7 @@ const FixedBottomContainer = ({
                 flexDirection: 'column',
                 justifyContent: 'center',
                 alignItems: 'center',
+                // marginBottom: responsiveHeight(2),
               }),
             },
             style
@@ -143,7 +169,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     width: responsiveWidth(100),
-    height: responsiveHeight(12),
+    height: responsiveHeight(10),
     zIndex: 10,
     // Web-specific fixes
     ...(Platform.OS === 'web' && {
@@ -158,13 +184,32 @@ const styles = StyleSheet.create({
       alignItems: 'center',
     }),
   },
-  fadeTop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: responsiveHeight(8),
-  },
+  // fadeTop: {
+  //   position: 'absolute',
+  //   top: 0,
+  //   left: 0,
+  //   right: 0,
+  //   height: responsiveHeight(8),
+  // },
+    // Background gradients
+    gradientBase: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: responsiveHeight(15),
+      // height: verticalScale(124),
+      zIndex: -1,
+    },
+    gradientFade: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: responsiveHeight(15),
+      // height: verticalScale(124),
+      zIndex: -1,
+    },
 });
 
 export default FixedBottomContainer;

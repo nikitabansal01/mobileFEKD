@@ -14,10 +14,11 @@ import "react-native-reanimated";
 // Screens
 import ActionCompletedScreen from './app/screens/ActionCompletedScreen';
 import ActionDetailScreen from './app/screens/ActionDetailScreen';
-import HomeScreen from './app/screens/HomeScreen';
+import ChatbotScreen from './app/screens/ChatbotScreen';
 import IntroScreen from './app/screens/IntroScreen';
 import LoadingScreen from './app/screens/LoadingScreen';
 import LoginScreen from './app/screens/LoginScreen';
+import MainScreenTabs from './app/screens/MainScreenTabs';
 import OnboardingScreen from './app/screens/OnboardingScreen';
 import QuestionScreen from './app/screens/QuestionScreen';
 import ResearchingScreen from './app/screens/ResearchingScreen';
@@ -36,11 +37,11 @@ const Stack = createStackNavigator();
 
 export default function App() {
   // Disable global font scaling
-  Text.defaultProps = Text.defaultProps || {};
-  Text.defaultProps.allowFontScaling = false;
+  (Text as any).defaultProps = (Text as any).defaultProps || {};
+  (Text as any).defaultProps.allowFontScaling = false;
 
-  TextInput.defaultProps = TextInput.defaultProps || {};
-  TextInput.defaultProps.allowFontScaling = false;
+  (TextInput as any).defaultProps = (TextInput as any).defaultProps || {};
+  (TextInput as any).defaultProps.allowFontScaling = false;
 
   const [loaded] = useFonts({
     Rubik400: require("./assets/fonts/Rubik-Regular.ttf"),
@@ -87,7 +88,8 @@ export default function App() {
               <Stack.Screen name="LoadingScreen" component={LoadingScreen} />
               <Stack.Screen name="ResultLoadingScreen" component={ResultLoadingScreen} />
               <Stack.Screen name="LoginScreen" component={LoginScreen} />
-              <Stack.Screen name="HomeScreen" component={HomeScreen} />
+              <Stack.Screen name="MainScreenTabs" component={MainScreenTabs} />
+              <Stack.Screen name="ChatbotScreen" component={ChatbotScreen} />
               <Stack.Screen name="ActionDetailScreen" component={ActionDetailScreen} />
               <Stack.Screen name="ActionCompletedScreen" component={ActionCompletedScreen} />
             </Stack.Navigator>

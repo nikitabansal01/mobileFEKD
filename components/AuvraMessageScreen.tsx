@@ -1,14 +1,12 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
-import { LinearGradient } from 'expo-linear-gradient';
-import MaskedView from '@react-native-masked-view/masked-view';
-import GradientText from "@/components/GradientText";
 import AuvraCharacter from '@/components/AuvraCharacter';
-import PrimaryButton from '@/components/PrimaryButton';
 import BackButton from '@/components/BackButton';
 import FixedBottomContainer from '@/components/FixedBottomContainer';
+import GradientText from "@/components/GradientText";
+import PrimaryButton from '@/components/PrimaryButton';
+import React, { useEffect } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 /**
  * Props for the AuvraMessageScreen component
@@ -128,10 +126,10 @@ const AuvraMessageScreen: React.FC<AuvraMessageScreenProps> = ({
               <View style={styles.maskedViewContainer}>
                 <GradientText
                   text={specialMessage.mainText}
-                  textStyle={[
-                    styles.mainText, 
-                    { fontSize: specialMessage.mainTextFontSize || responsiveFontSize(2.4) }
-                  ]}
+                  textStyle={{
+                    ...styles.mainText, 
+                    fontSize: specialMessage.mainTextFontSize || responsiveFontSize(2.4)
+                  }}
                   containerStyle={[styles.maskedView, { width: messageWidth, height: messageHeight }]}
                 />
               </View>
@@ -141,13 +139,11 @@ const AuvraMessageScreen: React.FC<AuvraMessageScreenProps> = ({
             <View style={styles.maskedViewContainer}>
               <GradientText
                 text={message.replace(/\\n/g, '\n')}
-                textStyle={[
-                  styles.messageText, 
-                  { 
-                    fontSize: messageFontSize,
-                    lineHeight: messageFontSize * 1.2
-                  }
-                ]}
+                textStyle={{
+                  ...styles.messageText, 
+                  fontSize: messageFontSize,
+                  lineHeight: messageFontSize * 1.2
+                }}
                 containerStyle={[styles.maskedView, { width: messageWidth, height: messageHeight }]}
               />
             </View>

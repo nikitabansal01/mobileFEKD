@@ -1,28 +1,26 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import { GoogleAuthProvider, signInWithCredential, OAuthProvider } from 'firebase/auth';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+import { GoogleAuthProvider, OAuthProvider, signInWithCredential } from 'firebase/auth';
+import React, { useState } from 'react';
+import { Alert, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Components
+import AppleIconSvg from '@/assets/images/SVG/OnboardingSVG/AppleIconSvg';
+import GoogleIconSvg from '@/assets/images/SVG/OnboardingSVG/GoogleIconSvg';
+import RightTickSvg from '@/assets/images/SVG/OnboardingSVG/RightTickSvg';
 import AuvraCharacter from '@/components/AuvraCharacter';
-import GradientText from '@/components/GradientText';
 import TextInputContainer from '@/components/customComponent/TextInputContainer';
 import FixedBottomContainer from '@/components/FixedBottomContainer';
+import GradientText from '@/components/GradientText';
 import PrimaryButton from '@/components/PrimaryButton';
-import GoogleIconSvg from '@/assets/images/SVG/OnboardingSVG/GoogleIconSvg';
-import AppleIconSvg from '@/assets/images/SVG/OnboardingSVG/AppleIconSvg';
-import RightTickSvg from '@/assets/images/SVG/OnboardingSVG/RightTickSvg';
 
 // Services
-import { signInWithEmail } from '@/config/firebase';
-import { auth } from '@/config/firebase';
-import sessionService from '@/services/sessionService';
+import { auth, signInWithEmail } from '@/config/firebase';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -36,6 +34,7 @@ type RootStackParamList = {
   ResultLoadingScreen: undefined;
   LoginScreen: undefined;
   HomeScreen: undefined;
+  MainScreenTabs: undefined;
 };
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'LoginScreen'>;
@@ -66,7 +65,7 @@ const LoginScreen = () => {
           const token = await result.user.getIdToken();
           
           Alert.alert('Success', 'Google login successful!');
-          navigation.navigate('HomeScreen');
+          navigation.navigate('MainScreenTabs');
         })
         .catch((error) => {
           Alert.alert('Error', error.message || 'Google login failed');
@@ -92,7 +91,7 @@ const LoginScreen = () => {
         const token = await auth.currentUser?.getIdToken();
         
         Alert.alert("Success", "Login successful!");
-        navigation.navigate('HomeScreen');
+        navigation.navigate('MainScreenTabs');
       } else {
         Alert.alert("Error", result.error || "Login failed");
       }
@@ -140,7 +139,7 @@ const LoginScreen = () => {
       const token = await result.user.getIdToken();
       
       Alert.alert("Success", "Apple login successful!");
-      navigation.navigate('HomeScreen');
+      navigation.navigate('MainScreenTabs');
     } catch (error: any) {
       Alert.alert("Error", error.message || "Apple login failed");
     }

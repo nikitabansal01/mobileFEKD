@@ -53,13 +53,13 @@ const ResearchingScreen = () => {
         
         // If already logged in, skip recommendation generation and go directly to home
         if (!hasStartedRecommendation) {
-          navigation.navigate('HomeScreen');
+          navigation.navigate('MainScreenTabs');
           return;
         }
         
         // If in login process, wait briefly then navigate to home screen
         setTimeout(() => {
-          navigation.navigate('HomeScreen');
+          navigation.navigate('MainScreenTabs');
         }, 1000);
       } else {
         setIsUserLoggedIn(false);

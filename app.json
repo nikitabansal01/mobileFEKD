@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Hormone Insight",
-    "slug": "horomone-insight",
+    "slug": "auvra-fe",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -37,6 +37,12 @@
     },
     "plugins": [
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4e16144e-0f6e-40c2-aea9-5b0012cb7916"
+      }
+    },
+    "owner": "hi00"
   }
 }

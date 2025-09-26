@@ -1082,7 +1082,7 @@ const styles = StyleSheet.create({
     mainContent: {
         paddingHorizontal: responsiveWidth(5),
         paddingTop: responsiveHeight(2),
-        paddingBottom: responsiveHeight(20), // Sufficient space for gradient area
+        paddingBottom: responsiveHeight(10), // Sufficient space for gradient area
         alignItems: 'center',
         flexGrow: 1, // Use full height even when content is small
     },

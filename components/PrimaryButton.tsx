@@ -1,6 +1,7 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
-import { responsiveWidth, responsiveHeight, responsiveFontSize } from "react-native-responsive-dimensions";
+import { StyleProp, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
+import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
+
 
 /**
  * Props for the PrimaryButton component
@@ -57,6 +58,7 @@ const styles = StyleSheet.create({
     width: responsiveWidth(88), // Default width
     paddingVertical: responsiveHeight(1.5),
     paddingHorizontal: responsiveHeight(4),
+    // marginBottom: responsiveHeight(0),
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000000',

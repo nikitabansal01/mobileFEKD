@@ -1,8 +1,7 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import React from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import AuvraCharacterNoShadow from './AuvraCharacterNoShadow';
 
 /**
@@ -10,9 +9,11 @@ import AuvraCharacterNoShadow from './AuvraCharacterNoShadow';
  */
 interface BottomNavigationBarProps {
   /** Currently active tab */
-  activeTab?: 'home' | 'calendar' | 'auvra' | 'progress' | 'community';
+  activeTab?: 'home' | 'personalize' | 'auvra' | 'progress' | 'community';
   /** Custom tab press handler */
   onTabPress?: (tab: string) => void;
+  /** Navigation object */
+  navigation?: any;
 }
 
 /**
@@ -28,9 +29,11 @@ interface BottomNavigationBarProps {
  */
 const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
   activeTab = 'home',
-  onTabPress
+  onTabPress,
+  navigation: propNavigation
 }) => {
-  const navigation = useNavigation();
+  const hookNavigation = useNavigation();
+  const navigation = propNavigation || hookNavigation;
   
   // Character size configuration
   const characterSize = responsiveWidth(18);
@@ -47,16 +50,16 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
       screen: 'HomeScreen' 
     },
     { 
-      key: 'calendar', 
-      label: 'Calendar', 
+      key: 'personalize', 
+      label: 'Personalize', 
       icon: require('../assets/icons/IconCalendar.png'),
-      screen: 'CalendarScreen' 
+      screen: 'PersonalizeScreen' 
     },
     { 
       key: 'auvra', 
       label: 'Auvra', 
       icon: null, // No icon
-      screen: 'AuvraScreen' 
+      screen: 'ChatbotScreen' 
     },
     { 
       key: 'progress', 
@@ -79,17 +82,27 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
    * @param screenName - Screen name to navigate to
    */
   const handleTabPress = (tabKey: string, screenName: string) => {
-    // Call custom onTabPress callback if provided
-    onTabPress?.(tabKey);
+    console.log(`Attempting to navigate to ${screenName}`);
     
-    // Handle navigation
+    // If onTabPress callback is provided, use it and skip direct navigation
+    if (onTabPress) {
+      console.log('Using onTabPress callback for navigation');
+      onTabPress(tabKey);
+      return;
+    }
+    
+    // Fallback to direct navigation only if no callback is provided
     if (screenName && navigation) {
       try {
+        console.log('Navigation object:', navigation);
         // @ts-ignore - Ignore navigation type check
         navigation.navigate(screenName);
+        console.log(`Successfully navigated to ${screenName}`);
       } catch (error) {
-        console.log(`Cannot navigate to screen ${screenName}.`);
+        console.log(`Cannot navigate to screen ${screenName}:`, error);
       }
+    } else {
+      console.log('No screen name or navigation object available');
     }
   };
 
@@ -129,12 +142,19 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
         </View>
         
         {/* Center Auvra Character - without white circle */}
-        <View style={[
-          styles.characterContainer,
-          { top: -(characterSize / 2 + characterTextGap - emptyIconSize) }
-        ]}>
+        <TouchableOpacity 
+          style={[
+            styles.characterContainer,
+            { 
+              top: -(characterSize / 2 + characterTextGap - emptyIconSize),
+              marginLeft: -(60 / 2) // Center the 60px wide container
+            }
+          ]}
+          onPress={() => handleTabPress('auvra', 'ChatbotScreen')}
+          activeOpacity={0.7}
+        >
           <AuvraCharacterNoShadow size={characterSize} />
-        </View>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -207,10 +227,12 @@ const styles = StyleSheet.create({
   },
   characterContainer: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    left: '50%',
     alignItems: 'center',
     justifyContent: 'center',
+    width: 60, // Fixed reasonable touch area
+    height: 60,
+    zIndex: 1, // Ensure it's above other elements but doesn't block them
   },
 });
 

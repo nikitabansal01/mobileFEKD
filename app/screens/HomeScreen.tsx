@@ -1,23 +1,20 @@
 import ActionPlanTimeline from '@/components/ActionPlanTimeline';
-import BottomNavigationBar from '@/components/BottomNavigationBar';
-import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse } from '@/services/homeService';
 import apiPromiseManager from '@/services/apiPromiseManager';
-import { LinearGradient } from 'expo-linear-gradient';
+import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse } from '@/services/homeService';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useEffect, useState } from 'react';
-import Svg, { Defs, RadialGradient as SvgRadialGradient, Circle, Stop } from 'react-native-svg';
 import {
+  Dimensions,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
-  Dimensions,
-  Image
+  View
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
+import Svg, { Circle, Defs, Stop, RadialGradient as SvgRadialGradient } from 'react-native-svg';
 import TypeActionPlan from '../../components/TypeActionPlan';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 interface HomeScreenProps {
   route?: { 
@@ -443,7 +440,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
-        <BottomNavigationBar activeTab="home" />
       </SafeAreaView>
     );
   }
@@ -594,9 +590,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           </View>
         </View>
       </ScrollView>
-
-      {/* Bottom Navigation Bar */}
-      <BottomNavigationBar activeTab="home" />
     </SafeAreaView>
   );
 };

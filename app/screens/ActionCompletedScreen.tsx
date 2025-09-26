@@ -154,20 +154,20 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
   const handleContinue = () => {
     if (todayAssignments && cyclePhaseData) {
       // Both APIs completed - pass full data
-      navigation.navigate('HomeScreen', { 
+      navigation.navigate('MainScreenTabs', { 
         refreshedData: todayAssignments,
         cyclePhaseData: cyclePhaseData,
         skipLoading: true 
       });
     } else if (todayAssignments) {
       // Only Today API completed - pass partial data
-      navigation.navigate('HomeScreen', { 
+      navigation.navigate('MainScreenTabs', { 
         refreshedData: todayAssignments,
         skipTodayLoading: true 
       });
     } else {
       // APIs still in progress or failed - let HomeScreen handle promise
-      navigation.navigate('HomeScreen', {});
+      navigation.navigate('MainScreenTabs', {});
     }
   };
 
