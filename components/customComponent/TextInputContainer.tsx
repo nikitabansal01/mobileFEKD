@@ -1,7 +1,8 @@
 import { createInputStyle } from '@/utils/inputStyles';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { responsiveFontSize, responsiveHeight } from 'react-native-responsive-dimensions';
+import { responsiveHeight } from 'react-native-responsive-dimensions';
+import { moderateScale } from 'react-native-size-matters';
 
 /**
  * Props for the TextInputContainer component
@@ -115,7 +116,7 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
         paddingVertical: responsiveHeight(0),
       }),
       {
-        minHeight: responsiveHeight(7.6), // Larger height for TextInputContainer only
+        minHeight: moderateScale(50, 1.5), // Larger height for TextInputContainer only
         justifyContent: 'center',
         alignItems: 'flex-start', // Left-align text
       },
@@ -128,12 +129,6 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
         </Text>
       )}
       
-      {/* Input Text - only show when not focused to avoid double text */}
-      {!isFocused && isFilled && (
-        <Text style={[styles.inputText, textStyle]}>
-          {secureTextEntry ? '•'.repeat(value.length) : value}
-        </Text>
-      )}
       
       {/* Default Placeholder - shown when not focused and not filled */}
       {!isFocused && !isFilled && (
@@ -142,7 +137,7 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
         </Text>
       )}
       
-      {/* TextInput for actual input - more visible on iOS */}
+      {/* TextInput for actual input - always present and visible */}
       <TextInput
         style={[styles.visibleTextInput, inputStyle]}
         placeholder=""
@@ -182,13 +177,13 @@ const styles = StyleSheet.create({
     top: 8,
     left: 20,
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.42), // 10px equivalent
+    fontSize: moderateScale(10, 1.5), // 10px equivalent
     color: '#b3b3b3',
     zIndex: 1,
   },
   inputText: {
-    fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.98), // 14px equivalent
+      fontFamily: 'Inter400',
+      fontSize: moderateScale(14, 1.5), // 14px equivalent
     color: '#000000',
     marginTop: 8,
   },
@@ -201,7 +196,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
     // Apply same styles as Text component
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.98), // 14px equivalent
+    fontSize: moderateScale(14, 1.5), // 14px equivalent
     paddingLeft: 20, // Same position as Text component
     paddingTop: 8, // Same effect as marginTop
     textAlign: 'left',
@@ -223,13 +218,13 @@ const styles = StyleSheet.create({
     padding: 5, // Expand touch area
   },
   clearButtonText: {
-    fontSize: responsiveFontSize(4.0),
+    fontSize: moderateScale(16, 1.5),
     color: '#b3b3b3', // Same color as placeholder
     fontWeight: 'normal',
   },
   defaultPlaceholder: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.98), // 14px equivalent - same as input text
+    fontSize: moderateScale(14, 1.5), // 14px equivalent - same as input text
     color: '#b3b3b3',
     position: 'absolute',
     left: 20,
@@ -239,7 +234,7 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     textAlignVertical: 'center',
     includeFontPadding: false,
-    lineHeight: responsiveHeight(7.6), // Match the container height for vertical centering
+    lineHeight: moderateScale(50, 1.5), // Match the container height for vertical centering
   },
 });
 

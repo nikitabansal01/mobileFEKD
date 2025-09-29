@@ -7,6 +7,7 @@ import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { moderateScale } from 'react-native-size-matters';
 
 /**
  * Props for the AuvraMessageScreen component
@@ -77,7 +78,7 @@ const AuvraMessageScreen: React.FC<AuvraMessageScreenProps> = ({
   autoContinue = false,
   autoContinueDelay = 1000,
   characterSize = responsiveWidth(25),
-  messageFontSize = responsiveFontSize(2.0),
+  messageFontSize = moderateScale(18, 1.5),
   messageWidth = responsiveWidth(80),
   messageHeight = responsiveHeight(8),
   continueButtonText = "Continue",
@@ -140,9 +141,7 @@ const AuvraMessageScreen: React.FC<AuvraMessageScreenProps> = ({
               <GradientText
                 text={message.replace(/\\n/g, '\n')}
                 textStyle={{
-                  ...styles.messageText, 
-                  fontSize: messageFontSize,
-                  lineHeight: messageFontSize * 1.2
+                  ...styles.messageText
                 }}
                 containerStyle={[styles.maskedView, { width: messageWidth, height: messageHeight }]}
               />
@@ -204,6 +203,8 @@ const styles = StyleSheet.create({
   messageText: {
     fontFamily: 'NotoSerif600',
     textAlign: 'center',
+    fontSize: moderateScale(16, 1.5),
+    lineHeight: moderateScale(16, 1.5) * 1.35,
   },
   prefixText: {
     fontFamily: 'Inter400',
@@ -213,7 +214,8 @@ const styles = StyleSheet.create({
   mainText: {
     fontFamily: 'NotoSerif600',
     textAlign: 'center',
-    lineHeight: responsiveHeight(3),
+    fontSize: moderateScale(16, 1.5),
+    lineHeight: moderateScale(16, 1.5) * 1.35,
   },
 
 });

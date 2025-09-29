@@ -1,9 +1,11 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import LottieView from 'lottie-react-native';
 import SVG from '@/assets/images/SVG';
+import LottieView from 'lottie-react-native';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 
-const AuvraAnimation = require('@/assets/animation/Auvra_Animation.json');
+// const AuvraAnimation = require('@/assets/animation/Auvra_Animation.json');
+const AuvraAnimation = require('@/assets/animation/auvra-character.json');
+
 
 /**
  * Props for the AuvraCharacter component
@@ -40,7 +42,7 @@ const AuvraCharacter = ({ size = 118 }: AuvraCharacterProps) => {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    gap: 10, // Spacing between shadow and character
+    gap: 7.711, // Exact spacing from Figma between character and shadow
   },
 });
 

@@ -98,17 +98,22 @@ const ChipOptionContainer: React.FC<ChipOptionContainerProps> = ({
       chipStyle,
     ];
     
-    // Apply full width and left alignment when chip has description and is selected
-    if (hasDescription && isSelected) {
+    // Apply full width for all selected chips
+    if (isSelected) {
       baseStyle.push({ 
-        // Use full row width (key for wrap layout)
+        // Use full row width - more reliable for mobile
         width: '100%',
-        flexBasis: '100%',
-        minWidth: 0,
-        // Left alignment for description display
-        justifyContent: 'flex-start',
-        alignItems: 'flex-start',
+        alignSelf: 'stretch',
+        flex: 1,
       });
+      
+      // Left alignment only when chip has description
+      if (hasDescription) {
+        baseStyle.push({
+          justifyContent: 'flex-start',
+          alignItems: 'flex-start',
+        });
+      }
     }
     
     return baseStyle;
@@ -214,6 +219,8 @@ const styles = StyleSheet.create({
     borderColor: '#c17ec9',
     backgroundColor: '#F5F5F5',
     borderWidth: 1.5,
+    width: '100%',
+    alignSelf: 'stretch',
   },
   chipText: {
     fontFamily: 'Inter400',

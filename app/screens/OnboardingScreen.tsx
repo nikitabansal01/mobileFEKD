@@ -1,17 +1,16 @@
-import React, { useState, useRef, useEffect } from "react";
-import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
-import AppIntroSlider from "react-native-app-intro-slider";
-import { useNavigation } from "@react-navigation/native";
-import { StackNavigationProp } from "@react-navigation/stack";
-import { responsiveWidth, responsiveHeight, responsiveFontSize } from "react-native-responsive-dimensions";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Images from "@/assets/images";
 import SVG from "@/assets/images/SVG";
-import HormonesSvg from "@/assets/images/SVG/OnboardingSVG/HormonesSvg";
-import { LinearGradient } from 'expo-linear-gradient';
-import PrimaryButton from "@/components/PrimaryButton";
-import GradientBackground from "@/components/GradientBackground";
 import FixedBottomContainer from "@/components/FixedBottomContainer";
+import PrimaryButton from "@/components/PrimaryButton";
+import { useNavigation } from "@react-navigation/native";
+import { StackNavigationProp } from "@react-navigation/stack";
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef, useState } from "react";
+import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import AppIntroSlider from "react-native-app-intro-slider";
+import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { moderateScale, verticalScale } from 'react-native-size-matters';
 
 type RootStackParamList = {
   OnboardingScreen: undefined;
@@ -129,16 +128,16 @@ const slides = [
         </View>
       </View>
     ),
-    backgroundColor: "#EFF8E1",
+    backgroundColor: "#FFFFFF",
   },
   {
     key: 2,
     render: () => (
       <View style={styles.slideContentWrapper}>
         <LinearGradient
-          colors={['rgb(255, 238, 198)', 'rgb(251, 186, 119)']}
-          locations={[0, 1.0017]}
-          start={{ x: 0, y: 0.7 }}
+          colors={["#EFF8E1", "#EFF8E1"]}
+          locations={[0, 1]}
+          start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={ styles.gradient }
         >
@@ -146,7 +145,7 @@ const slides = [
           <View
             style={{
               width: responsiveWidth(100),
-              height: responsiveHeight(51),
+              height: '100%',
               alignItems: 'center',
               justifyContent: 'flex-end',
             }}
@@ -155,23 +154,25 @@ const slides = [
             <View style={{ 
               position: 'relative',
               alignItems: 'center',
+              width: '80%',
+              height: '100%',
             }}>
               {/* Main image */}
               <Image
                 source={Images.GraphicAppscreenshot1}
                 style={{
-                  width: undefined,
-                  height: responsiveHeight(40),
-                  aspectRatio: 228 / 350,
+                  width: '100%',
+                  height: '100%',
                 }}
+                resizeMode="contain"
               />
               
               {/* SVG 1 - outside top left of image */}
               <View
                 style={{
                   position: 'absolute',
-                  top: '-7%',
-                  left: '-7%',
+                  top: '-5%',
+                  left: '-5%',
                   zIndex: 10,
                 }}
                 pointerEvents="none"
@@ -184,7 +185,76 @@ const slides = [
                 style={{
                   position: 'absolute',
                   bottom: '30%',
-                  right: '-12%',
+                  right: '-8%',
+                  zIndex: 10,
+                }}
+                pointerEvents="none"
+              >
+                <SVG.GraphicSparkle1 width={30} height={35} />
+              </View>
+            </View>
+          </View>
+        </LinearGradient>
+      </View>
+    ),
+    backgroundColor: "#EFF8E1",
+  },
+  {
+    key: 3,
+    render: () => (
+      <View style={styles.slideContentWrapper}>
+        <LinearGradient
+          colors={["#FEEBD1", "#FEEBD1"]}
+          locations={[0, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={ styles.gradient }
+        >
+          {/* Graphic image */}
+          <View
+            style={{
+              width: responsiveWidth(100),
+              height: '100%',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+            }}
+          >
+            {/* Container for image and SVGs */}
+            <View style={{ 
+              position: 'relative',
+              alignItems: 'center',
+              width: '80%',
+              height: '100%',
+            }}>
+              {/* Main image */}
+              <Image
+                source={Images.GraphicAppscreenshot2}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                }}
+                resizeMode="contain"
+              />
+              
+              {/* SVG 1 - outside top left of image */}
+              <View
+                style={{
+                  position: 'absolute',
+                  top: '-5%',
+                  left: '-5%',
+                  zIndex: 10,
+                }}
+                pointerEvents="none"
+              >
+                <SVG.GraphicSparkle width={40} height={40} />
+              </View>
+              
+              {/* SVG 2 - outside top right of image */}
+              <View
+                style={{
+                  position: 'absolute',
+                  bottom: '30%',
+                  right: '-8%',
                   zIndex: 10,
                 }}
                 pointerEvents="none"
@@ -199,93 +269,21 @@ const slides = [
     backgroundColor: "#FEEBD1",
   },
   {
-    key: 3,
-    render: () => (
-      <View style={styles.slideContentWrapper}>
-        <LinearGradient
-          colors={['rgb(255, 238, 198)', 'rgb(251, 186, 119)']}
-          locations={[0, 1.0017]}
-          start={{ x: 0, y: 0.7 }}
-          end={{ x: 1, y: 0 }}
-          style={ styles.gradient }
-        >
-          {/* Graphic image */}
-          <View
-            style={{
-              width: responsiveWidth(100),
-              height: responsiveHeight(51),
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-            }}
-          >
-            {/* Container for image and SVGs */}
-            <View style={{ 
-              position: 'relative',
-              alignItems: 'center',
-            }}>
-              {/* Main image */}
-              <Image
-                source={Images.GraphicAppscreenshot2}
-                style={{
-                  width: undefined,
-                  height: responsiveHeight(40),
-                  aspectRatio: 228 / 350,
-                }}
-              />
-              
-              {/* SVG 1 - outside top left of image */}
-              <View
-                style={{
-                  position: 'absolute',
-                  top: '-7%',
-                  left: '-7%',
-                  zIndex: 10,
-                }}
-                pointerEvents="none"
-              >
-                <SVG.GraphicSparkle width={40} height={40} />
-              </View>
-              
-              {/* SVG 2 - outside top right of image */}
-              <View
-                style={{
-                  position: 'absolute',
-                  bottom: '30%',
-                  right: '-12%',
-                  zIndex: 10,
-                }}
-                pointerEvents="none"
-              >
-                <SVG.GraphicSparkle1 width={30} height={35} />
-              </View>
-            </View>
-          </View>
-        </LinearGradient>
-      </View>
-    ),
-    backgroundColor: "#FEFAFC",
-  },
-  {
     key: 4,
     render: () => (
       <View style={styles.slideContentWrapper}>
         <LinearGradient
-            colors={[
-              'rgba(120, 224, 226, 0.882)',
-              'rgb(228, 248, 255)', 
-              'rgba(218, 241, 247, 0.984)',
-              'rgba(194, 224, 227, 0.94)'
-            ]}
-            locations={[0, 0.12177, 0.20509, 0.71649]}
+            colors={["#E7F5F7", "#E7F5F7"]}
+            locations={[0, 1]}
             start={{ x: 0, y: 0 }}
-            end={{ x: 0.8, y: 1 }}
+            end={{ x: 1, y: 0 }}
             style={ styles.gradient }
         >
           {/* Graphic image */}
           <View
             style={{
               width: responsiveWidth(100),
-              height: responsiveHeight(51),
+              height: '100%',
               alignItems: 'center',
               justifyContent: 'flex-end',
             }}
@@ -294,23 +292,25 @@ const slides = [
             <View style={{ 
               position: 'relative',
               alignItems: 'center',
+              width: '80%',
+              height: '100%',
             }}>
               {/* Main image */}
               <Image
                 source={Images.GraphicAppscreenshot3}
                 style={{
-                  width: undefined,
-                  height: responsiveHeight(40),
-                  aspectRatio: 228 / 355,
+                  width: '100%',
+                  height: '100%',
                 }}
+                resizeMode="contain"
               />
               
               {/* SVG 1 - outside top left of image */}
               <View
                 style={{
                   position: 'absolute',
-                  top: '-7%',
-                  left: '-7%',
+                  top: '-5%',
+                  left: '-5%',
                   zIndex: 10,
                 }}
                 pointerEvents="none"
@@ -323,7 +323,7 @@ const slides = [
                 style={{
                   position: 'absolute',
                   bottom: '30%',
-                  right: '-12%',
+                  right: '-8%',
                   zIndex: 10,
                 }}
                 pointerEvents="none"
@@ -335,7 +335,7 @@ const slides = [
         </LinearGradient>
       </View>
     ),
-    backgroundColor: "#FEFAFC",
+    backgroundColor: "#E7F5F7",
   },
 ];
 
@@ -402,12 +402,13 @@ const OnboardingScreen = () => {
   }, [currentIndex]);
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: slides[0].backgroundColor }}>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: slides[currentIndex]?.backgroundColor || '#FFFFFF' }}>
+      {/* backgroundColor: slides[0].backgroundColor */}
       <AppIntroSlider
         ref={sliderRef}
         data={slides}
         renderItem={({ item }: { item: any }) => (
-          <View style={styles.slide}>
+          <View style={[styles.slide, { backgroundColor: item.backgroundColor ?? '#fff' }]}>
             {item.render ? item.render() : null}
           </View>
         )}
@@ -430,10 +431,10 @@ const OnboardingScreen = () => {
             />
           ))}
         </View>
-        <View style={{ width: "100%" }}>
+        <ScrollView style={{ width: "100%", flex: 1 }} showsVerticalScrollIndicator={false}>
           <Text style={styles.titleText}>{titleText[currentIndex]}</Text>
           <Text style={styles.description}>{description[currentIndex]}</Text>
-        </View>
+        </ScrollView>
       </View>
       
       {/* Bottom gradient background and buttons */}
@@ -466,21 +467,22 @@ const styles = StyleSheet.create({
     paddingBottom: responsiveHeight(26),
   },
   titleText: {
-    fontFamily: "NotoSerif600",
-    fontSize: responsiveFontSize(3.4),
-    color: "#6E4B6F",
+    fontFamily: "NotoSerif-SemiBold",
+    fontSize: moderateScale(24, 1.5),
+    color: "#404040",
     textAlign: "left",
     marginBottom: responsiveHeight(2),
-    lineHeight: responsiveFontSize(3.4)*1.2,
+    lineHeight: moderateScale(24, 1.5) * 1.15,
+    letterSpacing: 0,
   },
   description: {
-    height: responsiveHeight(5),
-    fontFamily: "Inter400",
-    fontSize: responsiveFontSize(1.98),
-    color: "#6E4B6F",
+    fontFamily: "Inter-Regular",
+    fontSize: moderateScale(14, 1.5),
+    color: "#6F6F6F",
     textAlign: "left",
     marginBottom: responsiveHeight(1),
-    lineHeight: responsiveFontSize(1.98)*1.4,
+    lineHeight: moderateScale(14, 1.5) * 1.25,
+    letterSpacing: 0,
   },
   buttonContainer: {
     width: "100%",
@@ -510,10 +512,10 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     position: "absolute",
-    height: responsiveHeight(46),
     left: 0,
     right: 0,
     bottom: 0,
+    height: responsiveHeight(46),
     backgroundColor: "#fff",
     borderTopLeftRadius: responsiveWidth(5),
     borderTopRightRadius: responsiveWidth(5),
@@ -542,6 +544,8 @@ const styles = StyleSheet.create({
   },
   gradient: {
     width: responsiveWidth(100),
+    height: verticalScale(400),
+    paddingVertical: verticalScale(20),
   },
   gradientContainer: {
     position: 'absolute',

@@ -12,6 +12,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 
 import ChipOptionContainer from '@/components/customComponent/ChipOptionContainer';
 import NotSureButton from '@/components/customComponent/NotSureButton';
@@ -1080,9 +1081,10 @@ const styles = StyleSheet.create({
     },
 
     mainContent: {
-        paddingHorizontal: responsiveWidth(5),
+        paddingHorizontal: scale(5),
         paddingTop: responsiveHeight(2),
         paddingBottom: responsiveHeight(10), // Sufficient space for gradient area
+        marginBottom: verticalScale(10),
         alignItems: 'center',
         flexGrow: 1, // Use full height even when content is small
     },
@@ -1104,7 +1106,7 @@ const styles = StyleSheet.create({
     },
     maskedView: {
         width: '100%',
-        height: responsiveHeight(6),
+        height: responsiveHeight(8),
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -1121,9 +1123,9 @@ const styles = StyleSheet.create({
     },
     questionText: {
         fontFamily: 'NotoSerif600',
-        fontSize: responsiveFontSize(2.27), //16px
+        fontSize: moderateScale(16, 1.5), //16px
         textAlign: 'center',
-        lineHeight: responsiveHeight(2.8),
+        lineHeight: moderateScale(16, 1.5) * 1.25,
         width: responsiveWidth(85),
     },
     inputFieldsContainer: {
@@ -1137,14 +1139,14 @@ const styles = StyleSheet.create({
     },
   subQuestionText: {
     fontFamily: 'Inter500',
-    fontSize: responsiveFontSize(1.7), //12px
+    fontSize: moderateScale(14, 1.5), //12px
     color: '#c17ec9',
     textAlign: 'left',
     alignSelf: 'flex-start',
   },
   inputLabelText: {
     fontFamily: 'Inter500',
-    fontSize: responsiveFontSize(1.7),
+    fontSize: moderateScale(14, 1.5),
     color: '#000000',
     lineHeight: responsiveHeight(1.8),
     textAlign: 'center',
@@ -1189,13 +1191,13 @@ const styles = StyleSheet.create({
     top: 8,
     left: 20,
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.42), //10px
+    fontSize: moderateScale(10, 1.5), //10px  
     color: '#b3b3b3',
     zIndex: 1,
   },
   inputText: {
     fontFamily: 'Inter500',
-    fontSize: responsiveFontSize(1.7), //12px
+    fontSize: moderateScale(14, 1.5), //12px
     color: '#000000',
     marginTop: 8,
   },
@@ -1222,13 +1224,13 @@ const styles = StyleSheet.create({
     zIndex: 3,
   },
   clearButtonText: {
-    fontSize: responsiveFontSize(1.4),
+    fontSize: moderateScale(12, 1.5),
     color: '#666666',
     fontWeight: 'bold',
   },
   defaultPlaceholder: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.7), //12px
+    fontSize: moderateScale(14, 1.5), //12px
     color: '#b3b3b3',
     position: 'absolute',
     left: 20,
@@ -1241,7 +1243,7 @@ const styles = StyleSheet.create({
   },
   subtitleText: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.7), // 12px
+    fontSize: moderateScale(14, 1.5), // 12px
     color: '#6f6f6f', // Figma: #6f6f6f
     textAlign: 'center',
     lineHeight: responsiveFontSize(1.6) * 1.25, // line-height 1.25
@@ -1260,7 +1262,7 @@ const styles = StyleSheet.create({
   },
   subQuestionTextLeft: {
     fontFamily: 'Inter500',
-    fontSize: responsiveFontSize(1.6),
+    fontSize: moderateScale(14, 1.5),
     color: '#c17ec9',
     textAlign: 'left',
     alignSelf: 'flex-start',
@@ -1318,6 +1320,7 @@ const styles = StyleSheet.create({
     marginTop: responsiveHeight(1),
     marginHorizontal: responsiveWidth(5),
     paddingVertical: responsiveHeight(2),
+    paddingBottom: responsiveHeight(5),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,

@@ -96,68 +96,41 @@ const FixedBottomContainer = ({
         pointerEvents="none"
       /> */}
 
-      {avoidKeyboard ? (
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={[
-            {
-              position: 'absolute',
+      <View
+        style={[
+          {
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            paddingBottom: Platform.OS === 'ios' ? 40 : responsiveHeight(2) + 20,
+            paddingHorizontal,
+            alignItems: 'center',
+            gap,
+            zIndex: 20,
+            // Web-specific fixes
+            ...(Platform.OS === 'web' && {
+              position: 'fixed',
               bottom: 0,
               left: 0,
               right: 0,
-              paddingBottom: insets.bottom > 0 ? insets.bottom + responsiveHeight(2) : responsiveHeight(2),
-              paddingHorizontal,
-              alignItems: 'center',
-              gap,
-              zIndex: 20,
-              // Web-specific fixes
-              ...(Platform.OS === 'web' && {
-                position: 'fixed',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                width: '100%',
-              }),
-            },
-            style
-          ]}
-        >
-          {children}
-        </KeyboardAvoidingView>
-      ) : (
-        <View
-          style={[
-            {
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              paddingBottom: insets.bottom > 0 ? insets.bottom + responsiveHeight(2) : responsiveHeight(2),
-              paddingHorizontal,
-              alignItems: 'center',
-              gap,
-              zIndex: 20,
-              // Web-specific fixes
-              ...(Platform.OS === 'web' && {
-                position: 'fixed',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                width: '100%',
-                backgroundColor: 'transparent',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                // marginBottom: responsiveHeight(2),
-              }),
-            },
-            style
-          ]}
-        >
-          {children}
-        </View>
-      )}
+              width: '100%',
+            }),
+          },
+          style
+        ]}
+      >
+        {avoidKeyboard ? (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ width: '100%' }}
+          >
+            {children}
+          </KeyboardAvoidingView>
+        ) : (
+          children
+        )}
+      </View>
     </View>
   );
 };
@@ -173,15 +146,13 @@ const styles = StyleSheet.create({
     zIndex: 10,
     // Web-specific fixes
     ...(Platform.OS === 'web' && {
-      position: 'absolute',
+      position: 'fixed' as any,
       bottom: 0,
       left: 0,
       right: 0,
       width: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'flex-end',
-      alignItems: 'center',
+      height: responsiveHeight(10),
+      zIndex: 10,
     }),
   },
   // fadeTop: {
