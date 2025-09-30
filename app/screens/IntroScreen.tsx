@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { responsiveWidth, responsiveHeight, responsiveFontSize } from "react-native-responsive-dimensions";
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import React, { useEffect, useState } from 'react';
+import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
 import AuvraMessageScreen from '../../components/AuvraMessageScreen';
 
 type RootStackParamList = {
@@ -84,7 +84,7 @@ const IntroScreen = () => {
       onContinue={handleContinue}
       autoContinue={currentStep === 0}
       autoContinueDelay={1000}
-      characterSize={responsiveWidth(25)}
+      characterSize={responsiveWidth(35)}
       messageFontSize={responsiveFontSize(2.27)}
       messageWidth={responsiveWidth(80)}
       messageHeight={responsiveHeight(9)}

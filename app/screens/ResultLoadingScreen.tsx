@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
-import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import React, { useEffect } from 'react';
+import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import AuvraMessageScreen from '../../components/AuvraMessageScreen';
 
 /**
@@ -34,7 +34,7 @@ const ResultLoadingScreen = () => {
       showContinueButton={false}
       autoContinue={true}
       autoContinueDelay={3000}
-      characterSize={responsiveWidth(30)}
+      characterSize={responsiveWidth(35)}
       messageFontSize={responsiveFontSize(2.27)} //16px
       messageWidth={responsiveWidth(65)}
       messageHeight={responsiveHeight(10)}

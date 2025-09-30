@@ -1,5 +1,5 @@
 import React from 'react';
-import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
+import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import AuvraMessageScreen from '../../components/AuvraMessageScreen';
 
 /**
@@ -12,7 +12,7 @@ const LoadingScreen = () => {
       message={`I'm analyzing your\nroot cause...`}
       showBackButton={false}
       showContinueButton={false}
-      characterSize={responsiveWidth(32)}
+      characterSize={responsiveWidth(35)}
       messageFontSize={responsiveFontSize(2.27)}
       messageWidth={responsiveWidth(70)}
       messageHeight={responsiveHeight(8)}

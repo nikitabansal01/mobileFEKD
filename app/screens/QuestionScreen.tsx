@@ -711,7 +711,7 @@ const QuestionScreen = () => {
         <View style={styles.content}>
           {/* Auvra character */}
           <View style={styles.characterContainer}>
-            <AuvraCharacter size={responsiveWidth(20)} />
+            <AuvraCharacter size={responsiveWidth(35)} />
           </View>
           
           {/* Text container */}
@@ -1133,7 +1133,7 @@ const styles = StyleSheet.create({
     },
     maskedView: {
         width: '100%',
-        height: responsiveHeight(8),
+        height: responsiveHeight(10),
         alignItems: 'center',
         justifyContent: 'center',
     },

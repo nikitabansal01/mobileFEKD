@@ -1,19 +1,17 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
-import { LinearGradient } from 'expo-linear-gradient';
-import MaskedView from '@react-native-masked-view/masked-view';
-import GradientText from "@/components/GradientText";
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import AuvraCharacter from '@/components/AuvraCharacter';
-import BackButton from '@/components/BackButton';
-import PrimaryButton from '@/components/PrimaryButton';
-import FixedBottomContainer from '@/components/FixedBottomContainer';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
 import GraphicProgesterone1 from '@/assets/images/SVG/GraphicProgesterone1';
 import GraphicTestosterone1 from '@/assets/images/SVG/GraphicTestosterone1';
+import AuvraCharacter from '@/components/AuvraCharacter';
+import BackButton from '@/components/BackButton';
+import FixedBottomContainer from '@/components/FixedBottomContainer';
+import GradientText from "@/components/GradientText";
+import PrimaryButton from '@/components/PrimaryButton';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type RootStackParamList = {
   OnboardingScreen: undefined;
@@ -74,7 +72,7 @@ const ResultScreen = () => {
           {/* Auvra character and title */}
           <View style={styles.headerSection}>
             <View style={styles.characterContainer}>
-              <AuvraCharacter size={responsiveWidth(15)} />
+              <AuvraCharacter size={responsiveWidth(20)} />
             </View>
             
             <View style={styles.titleContainer}>
@@ -190,7 +188,7 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     alignItems: 'center',
-    paddingTop: responsiveHeight(8), // Move Auvra character position up
+    paddingTop: responsiveHeight(5), // Move Auvra character position up
     paddingHorizontal: responsiveWidth(5),
     paddingBottom: responsiveHeight(20), // Sufficient space for bottom button
     flexGrow: 1, // Use full height even when content is small

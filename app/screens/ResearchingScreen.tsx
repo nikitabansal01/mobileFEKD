@@ -1,9 +1,10 @@
 import Images from "@/assets/images";
 import OptionButtonsContainer from "@/components/customComponent/OptionButtonsContainer";
 import FixedBottomContainer from "@/components/FixedBottomContainer";
-import GradientText from "@/components/GradientText";
 import LoginBottomSheet from "@/components/LoginBottomSheet";
 import PrimaryButton from "@/components/PrimaryButton";
+import MaskedView from '@react-native-masked-view/masked-view';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { auth } from "@/config/firebase";
 import sessionService from "@/services/sessionService";
@@ -265,22 +266,40 @@ const ResearchingScreen = () => {
         {step === 0 && (
           <>
             <View style={{ marginBottom: 8 }}>
-              <GradientText
-                text={firstTitle}
-                textStyle={{
-                  fontFamily: 'Poppins600',
-                  fontSize: responsiveFontSize(3.4), //24px
-                  fontWeight: "600",
-                  textAlign: 'center',
-                  lineHeight: responsiveHeight(4),
-                }}
-                containerStyle={{
-                  width: responsiveWidth(85),
-                  height: responsiveHeight(8),
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              />
+              <View style={{
+                width: responsiveWidth(85),
+                height: responsiveHeight(8),
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <MaskedView
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  maskElement={
+                    <Text style={{
+                      fontFamily: 'Poppins600',
+                      fontSize: responsiveFontSize(3.4), //24px
+                      fontWeight: "600",
+                      textAlign: 'center',
+                      lineHeight: responsiveHeight(4),
+                      backgroundColor: 'transparent'
+                    }}>
+                      {firstTitle}
+                    </Text>
+                  }
+                >
+                  <LinearGradient
+                    colors={['#A29AEA', '#C17EC9', '#E98BAC']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{ flex: 1, width: '100%', height: '100%' }}
+                  />
+                </MaskedView>
+              </View>
             </View>
             <Text
               style={{
@@ -299,22 +318,40 @@ const ResearchingScreen = () => {
         {step === 1 && (
           <>
             <View style={{ marginBottom: 8 }}>
-              <GradientText
-                text={secondTitle}
-                textStyle={{
-                  fontFamily: 'Poppins600',
-                  fontSize: responsiveFontSize(3.4), //24px
-                  fontWeight: "600",
-                  textAlign: 'center',
-                  lineHeight: responsiveHeight(4),
-                }}
-                containerStyle={{
-                  width: responsiveWidth(85),
-                  height: responsiveHeight(8),
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              />
+              <View style={{
+                width: responsiveWidth(85),
+                height: responsiveHeight(8),
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <MaskedView
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  maskElement={
+                    <Text style={{
+                      fontFamily: 'Poppins600',
+                      fontSize: responsiveFontSize(3.4), //24px
+                      fontWeight: "600",
+                      textAlign: 'center',
+                      lineHeight: responsiveHeight(4),
+                      backgroundColor: 'transparent'
+                    }}>
+                      {secondTitle}
+                    </Text>
+                  }
+                >
+                  <LinearGradient
+                    colors={['#A29AEA', '#C17EC9', '#E98BAC']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{ flex: 1, width: '100%', height: '100%' }}
+                  />
+                </MaskedView>
+              </View>
             </View>
             <Text
               style={{
@@ -338,21 +375,39 @@ const ResearchingScreen = () => {
             paddingHorizontal: responsiveWidth(5)
           }}>
             <View style={{ marginBottom: responsiveHeight(2) }}>
-              <GradientText
-                text={questionTitle}
-                textStyle={{
-                  fontFamily: 'NotoSerif600',
-                  fontSize: responsiveFontSize(3.4), //24px
-                  textAlign: 'center',
-                  lineHeight: responsiveHeight(3),
-                }}
-                containerStyle={{
-                  width: responsiveWidth(85),
-                  height: responsiveHeight(6),
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              />
+              <View style={{
+                width: responsiveWidth(85),
+                height: responsiveHeight(10),
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <MaskedView
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  maskElement={
+                    <Text style={{
+                      fontFamily: 'NotoSerif600',
+                      fontSize: responsiveFontSize(3.4), //24px
+                      textAlign: 'center',
+                      lineHeight: responsiveHeight(3),
+                      backgroundColor: 'transparent'
+                    }}>
+                      {questionTitle}
+                    </Text>
+                  }
+                >
+                  <LinearGradient
+                    colors={['#A29AEA', '#C17EC9', '#E98BAC']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{ flex: 1, width: '100%', height: '100%' }}
+                  />
+                </MaskedView>
+              </View>
             </View>
             
             <Text
@@ -374,7 +429,7 @@ const ResearchingScreen = () => {
               multiple={true}
               layout="default"
               buttonWidth={responsiveWidth(80)} // Set button width
-              buttonHeight={responsiveHeight(5.2)} // Set minimum height
+              buttonHeight={responsiveHeight(6)} // Increased height to prevent cropping
               buttonAlignment={{ justifyContent: 'center', alignItems: 'center' }}
               containerAlignment="center"
             />
@@ -383,16 +438,33 @@ const ResearchingScreen = () => {
         {step === 3 && (
           <View style={{ width: '100%', alignItems: 'center', justifyContent: 'center', marginTop: 24 }}>
             <View style={{ marginBottom: 8, width: responsiveWidth(85), height: responsiveHeight(15) }}>
-              <GradientText
-                text={canProceedToFinal ? finalTitle : "🔬 Almost done!\nFinalizing your\npersonalized plan..."}
-                textStyle={{
-                  fontFamily: 'Poppins600',
-                  fontSize: responsiveFontSize(3.4), //24px
-                  fontWeight: "600",
-                  textAlign: 'center',
-                  lineHeight: responsiveHeight(4),
+              <MaskedView
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
-              />
+                maskElement={
+                  <Text style={{
+                    fontFamily: 'Poppins600',
+                    fontSize: responsiveFontSize(3.4), //24px
+                    fontWeight: "600",
+                    textAlign: 'center',
+                    lineHeight: responsiveHeight(4),
+                    backgroundColor: 'transparent'
+                  }}>
+                    {canProceedToFinal ? finalTitle : "🔬 Almost done!\nFinalizing your\npersonalized plan..."}
+                  </Text>
+                }
+              >
+                <LinearGradient
+                  colors={['#A29AEA', '#C17EC9', '#E98BAC']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={{ flex: 1, width: '100%', height: '100%' }}
+                />
+              </MaskedView>
             </View>
             {!canProceedToFinal && (
               <>
