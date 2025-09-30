@@ -1,8 +1,9 @@
 import AuvraCharacter from '@/components/AuvraCharacter';
 import BackButton from '@/components/BackButton';
 import FixedBottomContainer from '@/components/FixedBottomContainer';
-import GradientText from "@/components/GradientText";
 import PrimaryButton from '@/components/PrimaryButton';
+import MaskedView from '@react-native-masked-view/masked-view';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
@@ -125,26 +126,54 @@ const AuvraMessageScreen: React.FC<AuvraMessageScreenProps> = ({
                 {specialMessage.prefix}
               </Text>
               <View style={styles.maskedViewContainer}>
-                <GradientText
-                  text={specialMessage.mainText}
-                  textStyle={{
-                    ...styles.mainText, 
-                    fontSize: specialMessage.mainTextFontSize || responsiveFontSize(2.4)
-                  }}
-                  containerStyle={[styles.maskedView, { width: messageWidth, height: messageHeight }]}
-                />
+                <View style={[styles.maskedView, { width: messageWidth, height: messageHeight }]}>
+                  <MaskedView
+                    style={styles.maskedViewInner}
+                    maskElement={
+                      <Text style={[
+                        styles.mainText, 
+                        { 
+                          fontSize: specialMessage.mainTextFontSize || responsiveFontSize(2.4),
+                          backgroundColor: 'transparent'
+                        }
+                      ]}>
+                        {specialMessage.mainText}
+                      </Text>
+                    }
+                  >
+                    <LinearGradient
+                      colors={['#A29AEA', '#C17EC9', '#E98BAC']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.gradientFill}
+                    />
+                  </MaskedView>
+                </View>
               </View>
             </>
           ) : (
             // Regular message format
             <View style={styles.maskedViewContainer}>
-              <GradientText
-                text={message.replace(/\\n/g, '\n')}
-                textStyle={{
-                  ...styles.messageText
-                }}
-                containerStyle={[styles.maskedView, { width: messageWidth, height: messageHeight }]}
-              />
+              <View style={[styles.maskedView, { width: messageWidth, height: messageHeight }]}>
+                <MaskedView
+                  style={styles.maskedViewInner}
+                  maskElement={
+                    <Text style={[
+                      styles.messageText,
+                      { backgroundColor: 'transparent' }
+                    ]}>
+                      {message.replace(/\\n/g, '\n')}
+                    </Text>
+                  }
+                >
+                  <LinearGradient
+                    colors={['#A29AEA', '#C17EC9', '#E98BAC']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.gradientFill}
+                  />
+                </MaskedView>
+              </View>
             </View>
           )}
         </View>
@@ -216,6 +245,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: moderateScale(16, 1.5),
     lineHeight: moderateScale(16, 1.5) * 1.35,
+  },
+  maskedViewInner: {
+    flex: 1,
+    flexDirection: 'row',
+    height: '100%',
+  },
+  gradientFill: {
+    flex: 1,
+    height: '100%',
   },
 
 });

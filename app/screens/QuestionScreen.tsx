@@ -12,16 +12,17 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import { moderateScale, scale } from 'react-native-size-matters';
 
 import ChipOptionContainer from '@/components/customComponent/ChipOptionContainer';
 import NotSureButton from '@/components/customComponent/NotSureButton';
 import OptionButtonsContainer from '@/components/customComponent/OptionButtonsContainer';
 import OthersOption from '@/components/customComponent/OthersOption';
 import TextInputContainer from '@/components/customComponent/TextInputContainer';
-import GradientText from "@/components/GradientText";
 import { getOptionsWithDescriptions } from '@/constants/QuestionOptions';
 import { createInputStyle, createInputTextStyle } from '@/utils/inputStyles';
+import MaskedView from '@react-native-masked-view/masked-view';
+import { LinearGradient } from 'expo-linear-gradient';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 interface Question {
@@ -714,13 +715,25 @@ const QuestionScreen = () => {
           </View>
           
           {/* Text container */}
-          <View style={styles.textContainer}>
+            <View style={styles.textContainer}>
             <View style={styles.maskedViewContainer}>
-              <GradientText
-                text="Great! I have two more questions about your lifestyle and family medical history."
-                textStyle={styles.descriptionText}
-                containerStyle={styles.additionalQuestionsMaskedView}
-              />
+              <View style={styles.additionalQuestionsMaskedView}>
+                <MaskedView
+                  style={styles.maskedViewInner}
+                  maskElement={
+                    <Text style={[styles.descriptionText, { backgroundColor: 'transparent' }]}>
+                      {"Great! I have two more questions about your lifestyle and family medical history."}
+                    </Text>
+                  }
+                >
+                  <LinearGradient
+                    colors={["#A29AEA", "#C17EC9", "#E98BAC"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.gradientFill}
+                  />
+                </MaskedView>
+              </View>
             </View>
           </View>
         </View>
@@ -781,11 +794,23 @@ const QuestionScreen = () => {
                 <AuvraCharacter size={responsiveWidth(20)} />
               </View>
               <View style={styles.questionTextContainer}>
-                <GradientText
-                  text={currentStepData.dialogue}
-                  textStyle={styles.questionText}
-                  containerStyle={styles.maskedView}
-                />
+                <View style={styles.maskedView}>
+                  <MaskedView
+                    style={styles.maskedViewInner}
+                    maskElement={
+                      <Text style={[styles.questionText, { backgroundColor: 'transparent' }]}>
+                        {currentStepData.dialogue}
+                      </Text>
+                    }
+                  >
+                    <LinearGradient
+                      colors={["#A29AEA", "#C17EC9", "#E98BAC"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.gradientFill}
+                    />
+                  </MaskedView>
+                </View>
                 {currentStepData.subtitle && (
                   <Text style={styles.subtitleText}>
                     {currentStepData.subtitle}
@@ -1083,8 +1108,8 @@ const styles = StyleSheet.create({
     mainContent: {
         paddingHorizontal: scale(5),
         paddingTop: responsiveHeight(2),
-        paddingBottom: responsiveHeight(10), // Sufficient space for gradient area
-        marginBottom: verticalScale(10),
+        paddingBottom: responsiveHeight(15), // Sufficient space for gradient area
+        // marginBottom: responsiveHeight(10),
         alignItems: 'center',
         flexGrow: 1, // Use full height even when content is small
     },
@@ -1307,6 +1332,15 @@ const styles = StyleSheet.create({
   maskedViewContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  maskedViewInner: {
+    flex: 1,
+    flexDirection: 'row',
+    height: '100%',
+  },
+  gradientFill: {
+    flex: 1,
+    height: '100%',
   },
   descriptionText: {
     fontFamily: 'NotoSerif600',
