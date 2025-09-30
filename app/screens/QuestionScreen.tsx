@@ -12,7 +12,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { moderateScale, scale } from 'react-native-size-matters';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 
 import ChipOptionContainer from '@/components/customComponent/ChipOptionContainer';
 import NotSureButton from '@/components/customComponent/NotSureButton';
@@ -741,10 +741,12 @@ const QuestionScreen = () => {
         {/* Bottom buttons */}
         <FixedBottomContainer>
           <View style={styles.additionalQuestionsButtonsContainer}>
+            <View style={[{ marginBottom: verticalScale(10) }]}>
             <PrimaryButton
               title="Continue"
               onPress={handleAdditionalQuestionsContinue}
             />
+            </View>
             <TouchableOpacity
               style={styles.skipButton}
               onPress={handleAdditionalQuestionsSkip}
@@ -1138,7 +1140,7 @@ const styles = StyleSheet.create({
     // MaskedView style for additional questions screen
     additionalQuestionsMaskedView: {
         width: responsiveWidth(80),
-        height: responsiveHeight(8),
+        height: responsiveHeight(12),
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -1173,7 +1175,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter500',
     fontSize: moderateScale(14, 1.5),
     color: '#000000',
-    lineHeight: responsiveHeight(1.8),
+    lineHeight: moderateScale(14, 1.5) * 1.25,
     textAlign: 'center',
   },
 
@@ -1299,12 +1301,12 @@ const styles = StyleSheet.create({
     marginVertical: responsiveHeight(1),
   },
   additionalQuestionsButtonsContainer: {
-    gap: responsiveHeight(2),
+    // gap: responsiveHeight(2),
     alignItems: 'center',
     width: '100%',
   },
   skipButton: {
-    paddingVertical: responsiveHeight(1),
+    // paddingVertical: responsiveHeight(1),
     paddingHorizontal: responsiveWidth(10),
   },
   skipButtonText: {
@@ -1324,7 +1326,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: responsiveWidth(10),
+    paddingHorizontal: responsiveWidth(5),
   },
   textContainer: {
     alignItems: 'center',
@@ -1346,7 +1348,8 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoSerif600',
     fontSize: responsiveFontSize(2.27), //16px
     textAlign: 'center',
-    lineHeight: responsiveHeight(2.4),
+    lineHeight: responsiveHeight(2.5) *1.25,
+    // lineHeight: moderateScale(16, 1.5) * 1.25,
   },
   datePickerContainer: {
     backgroundColor: '#ffffff',

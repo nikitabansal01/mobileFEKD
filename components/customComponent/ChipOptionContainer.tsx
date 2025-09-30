@@ -98,22 +98,14 @@ const ChipOptionContainer: React.FC<ChipOptionContainerProps> = ({
       chipStyle,
     ];
     
-    // Apply full width for all selected chips
-    if (isSelected) {
+    // Apply full width for selected chips with descriptions
+    if (isSelected && hasDescription) {
       baseStyle.push({ 
-        // Use full row width - more reliable for mobile
-        // width: '100%',
+        width: '100%',
         alignSelf: 'stretch',
-        // flex: 1,
+        justifyContent: 'flex-start',
+        alignItems: 'flex-start',
       });
-      
-      // Left alignment only when chip has description
-      if (hasDescription) {
-        baseStyle.push({
-          justifyContent: 'flex-start',
-          alignItems: 'flex-start',
-        });
-      }
     }
     
     return baseStyle;
