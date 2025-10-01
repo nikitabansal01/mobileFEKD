@@ -162,7 +162,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
+    position: 'fixed' as any,
     bottom: 0,
     left: 0,
     right: 0,
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     height: responsiveHeight(4), // 44px
   },
   navigationBar: {
-    position: 'absolute',
+    position: 'fixed' as any,
     bottom: 0,
     left: 0,
     right: 0,

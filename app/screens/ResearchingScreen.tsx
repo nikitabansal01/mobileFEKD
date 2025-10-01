@@ -44,41 +44,36 @@ const ResearchingScreen = () => {
   const [isPolling, setIsPolling] = useState(false); // Polling status
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false); // User login status
   const [hasStartedRecommendation, setHasStartedRecommendation] = useState(false); // Recommendation generation start status
+  const [authChecked, setAuthChecked] = useState(false); // Auth state check status
 
   // Firebase login state detection
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = auth.onAuthStateChanged((user: any) => {
+      setAuthChecked(true);
+      
       if (user) {
         setIsUserLoggedIn(true);
         setShowLogin(false); // Close bottom sheet when logged in
         
-        // If already logged in, skip recommendation generation and go directly to home
-        if (!hasStartedRecommendation) {
-          navigation.navigate('MainScreenTabs');
-          return;
-        }
-        
-        // If in login process, wait briefly then navigate to home screen
-        setTimeout(() => {
-          navigation.navigate('MainScreenTabs');
-        }, 1000);
+        // If user is already logged in, navigate directly to home
+        navigation.navigate('MainScreenTabs');
       } else {
         setIsUserLoggedIn(false);
       }
     });
 
     return () => unsubscribe();
-  }, [navigation, hasStartedRecommendation]);
+  }, [navigation]);
 
   // Start recommendation generation - only execute once when not logged in
   useEffect(() => {
-    // Skip if already logged in or recommendation generation already started
-    if (isUserLoggedIn || hasStartedRecommendation) {
-      if (isUserLoggedIn) {
-        // If logged in, treat as completed
-        setCanProceedToFinal(true);
-        setRecommendationStatus('completed');
-      }
+    // Skip if already logged in
+    if (isUserLoggedIn) {
+      return;
+    }
+    
+    // Skip if recommendation generation already started
+    if (hasStartedRecommendation) {
       return;
     }
 
@@ -208,6 +203,15 @@ const ResearchingScreen = () => {
       return () => clearTimeout(timer);
     }
   }, [step, canProceedToFinal, showLogin, isUserLoggedIn]);
+
+  // Show loading while checking auth state
+  if (!authChecked) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#FFF", justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#bb4471" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#FFF" }}>

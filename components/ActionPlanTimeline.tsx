@@ -1,20 +1,22 @@
 // ActionPlanTimeline.tsx
+import Images from '@/assets/images';
+import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
+  Image,
   StyleSheet,
   Text,
-  View,
   TouchableOpacity,
-  Image
+  View
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import Svg, { Defs, Path, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
-import { useNavigation } from '@react-navigation/native';
 // import { BlurView } from 'expo-blur';
 
 // ====== Type imports ======
+import { scale, verticalScale } from 'react-native-size-matters';
 import { Assignment } from '../services/homeService';
 type AssignmentsMap = Record<string, Assignment[]>;
 
@@ -87,7 +89,7 @@ export default function ActionPlanTimeline({
   dateLabel = formatToday(new Date()),
   assignments = {},
 }: Props) {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   
   /**
    * Handles navigation to action detail screen using React Navigation
@@ -384,21 +386,26 @@ export default function ActionPlanTimeline({
   const getHormoneIcon = (hormone: string) => {
     switch (hormone.toLowerCase()) {
       case 'androgens': return '💪';
-      case 'progesterone': return '🌸';
-      case 'estrogen': return '🌺';
-      case 'thyroid': return '🦋';
-      case 'insulin': return '🍯';
-      case 'cortisol': return '⚡';
+      case 'progesterone': 
+        return Images.ProgesteroneBothHand;
+      case 'estrogen': 
+      return Images.EstrogenBothHand;
+      case 'thyroid': 
+      return Images.ThyroidBothHand;
+      case 'insulin': return Images.InsulinBothHand;
+      case 'cortisol': 
+      return Images.CortisolBothHand;
       case 'fsh': return '🌱';
       case 'lh': return '🌿';
       case 'prolactin': return '🤱';
       case 'ghrelin': return '🍽️';
+      case 'testosterone': return Images.TestosteroneBothHand;
       default: return '💊';
     }
   };
 
   // Function to return first hormone icon
-  const getFirstHormoneIcon = (assignment: Assignment): string => {
+  const getFirstHormoneIcon = (assignment: Assignment): string | any => {
     if (assignment.hormones && assignment.hormones.length > 0) {
       return getHormoneIcon(assignment.hormones[0]);
     }
@@ -577,14 +584,25 @@ export default function ActionPlanTimeline({
                     {
                       // When left anchor: top left
                       // When right anchor: top right
-                      top: isLeft ? -responsiveHeight(3) : -responsiveHeight(3),
-                      left: isLeft ? -responsiveWidth(3) : undefined,
-                      right: isLeft ? undefined : -responsiveWidth(3),
+                      top: isLeft ? -responsiveHeight(5) : -responsiveHeight(5),
+                      left: isLeft ? -responsiveWidth(8) : undefined,
+                      right: isLeft ? undefined : -responsiveWidth(8),
                     }
                   ]}>
-                    <Text style={styles.hormoneImageText} allowFontScaling={false}>
-                      {getFirstHormoneIcon(a)}
-                    </Text>
+                    {typeof getFirstHormoneIcon(a) === 'string' ? (
+                      <Text style={styles.hormoneImageText} allowFontScaling={false}>
+                        {getFirstHormoneIcon(a)}
+                      </Text>
+                    ) : (
+                      <Image 
+                        source={getFirstHormoneIcon(a)} 
+                        style={[
+                          styles.hormoneImageIcon,
+                          { transform: isLeft ? [{ rotate: '333deg' }] : [{ rotate: '30deg' }] }
+                        ]}
+                        resizeMode="contain"
+                      />
+                    )}
                   </View>
                   
                   {/* Hormone number (relative to image) */}
@@ -630,7 +648,7 @@ export default function ActionPlanTimeline({
                       {a.title}
                     </Text>
                     <Text style={styles.itemArrow} allowFontScaling={false}>
-                      >
+                      {'>'}
                     </Text>
                   </TouchableOpacity>
                   <Text style={styles.itemSub} numberOfLines={1} allowFontScaling={false}>
@@ -747,14 +765,25 @@ export default function ActionPlanTimeline({
                     {
                       // When left anchor: top left
                       // When right anchor: top right
-                      top: isLeft ? -responsiveHeight(3) : -responsiveHeight(3),
+                      top: isLeft ? -responsiveHeight(5) : -responsiveHeight(3),
                       left: isLeft ? -responsiveWidth(3) : undefined,
                       right: isLeft ? undefined : -responsiveWidth(3),
                     }
                   ]}>
-                    <Text style={styles.hormoneImageText} allowFontScaling={false}>
-                      {getFirstHormoneIcon(a)}
-                    </Text>
+                    {typeof getFirstHormoneIcon(a) === 'string' ? (
+                      <Text style={styles.hormoneImageText} allowFontScaling={false}>
+                        {getFirstHormoneIcon(a)}
+                      </Text>
+                    ) : (
+                      <Image 
+                        source={getFirstHormoneIcon(a)} 
+                        style={[
+                          styles.hormoneImageIcon,
+                          { transform: isLeft ? [{ rotate: '333deg' }] : [{ rotate: '30deg' }] }
+                        ]}
+                        resizeMode="contain"
+                      />
+                    )}
                   </View>
                   
                   {/* Tomorrow hormone number (relative to image) */}
@@ -1162,18 +1191,24 @@ const styles = StyleSheet.create({
   },
   hormoneImage: {
     position: 'absolute',
-    width: responsiveWidth(8),
-    height: responsiveWidth(8),
-    borderRadius: responsiveWidth(4),
-    backgroundColor: '#F0F0F0',
+    width: scale(50),
+    height: verticalScale(50),
+    borderRadius: responsiveWidth(6),
+    paddingHorizontal: scale(1),
+    paddingVertical: verticalScale(1),
+    // backgroundColor: '#F0F0F0',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: responsiveWidth(0.5),
-    borderColor: '#E0E0E0',
+    // borderWidth: responsiveWidth(0.5),
+    // borderColor: '#E0E0E0',
   },
   hormoneImageText: {
     fontSize: responsiveFontSize(1.7),
     color: '#666666',
+  },
+  hormoneImageIcon: {
+    width: '100%',
+    height: '100%',
   },
   hormoneBadgeText: {
     color: '#FFFFFF',

@@ -1,9 +1,13 @@
 import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword
+import {
+  browserLocalPersistence,
+  createUserWithEmailAndPassword,
+  getAuth,
+  setPersistence,
+  signInWithEmailAndPassword,
 } from 'firebase/auth';
+// React Native persistence
+import { Platform } from 'react-native';
 
 /**
  * Firebase configuration object loaded from environment variables
@@ -36,9 +40,22 @@ console.log('Firebase Config Debug:', {
 const app = initializeApp(firebaseConfig);
 
 /**
- * Firebase Auth instance for authentication operations
+ * Firebase Auth instance with persistence configured per platform
+ * - Native (iOS/Android): AsyncStorage persistence
+ * - Web: browser local persistence
  */
-export const auth = getAuth(app);
+export const auth = (() => {
+  const authInstance = getAuth(app);
+  
+  if (Platform.OS === 'web') {
+    // Ensure web uses local (non-session) persistence
+    setPersistence(authInstance, browserLocalPersistence).catch((error) => {
+      console.log('Persistence setting failed:', error);
+    });
+  }
+  
+  return authInstance;
+})();
 
 /**
  * Email/password sign-in function
@@ -49,6 +66,10 @@ export const auth = getAuth(app);
  */
 export const signInWithEmail = async (email: string, password: string) => {
   try {
+    // Ensure persistence on web before sign-in so session survives refresh
+    if (Platform.OS === 'web') {
+      await setPersistence(auth, browserLocalPersistence);
+    }
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return { success: true, user: userCredential.user };
   } catch (error: any) {

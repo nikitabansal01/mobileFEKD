@@ -1,7 +1,7 @@
-import React, { useRef, useEffect } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, TextInput, findNodeHandle } from 'react-native';
-import { responsiveHeight, responsiveFontSize, responsiveWidth } from 'react-native-responsive-dimensions';
 import { createInputStyle, createInputTextStyle } from '@/utils/inputStyles';
+import React, { useEffect, useRef } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, findNodeHandle } from 'react-native';
+import { responsiveHeight } from 'react-native-responsive-dimensions';
 import TextInputContainer from './TextInputContainer';
 
 /**

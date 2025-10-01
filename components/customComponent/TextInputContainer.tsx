@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   },
   floatingLabel: {
     position: 'absolute',
-    top: 8,
+    top: 4,
     left: 20,
     fontFamily: 'Inter400',
     fontSize: moderateScale(10, 1.5), // 10px equivalent
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter400',
     fontSize: moderateScale(14, 1.5), // 14px equivalent
     paddingLeft: 20, // Same position as Text component
-    paddingTop: 8, // Same effect as marginTop
+    paddingTop: 16, // Move input text further down
     textAlign: 'left',
     textAlignVertical: 'center',
     includeFontPadding: false,

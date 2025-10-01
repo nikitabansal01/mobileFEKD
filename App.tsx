@@ -6,10 +6,11 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { registerRootComponent } from 'expo';
 import { useFonts } from "expo-font";
-import React, { createContext } from 'react';
-import { StatusBar, Text, TextInput } from 'react-native';
+import React, { createContext, useEffect, useState } from 'react';
+import { ActivityIndicator, StatusBar, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import "react-native-reanimated";
+import { auth } from './config/firebase';
 
 // Screens
 import ActionCompletedScreen from './app/screens/ActionCompletedScreen';
@@ -63,8 +64,25 @@ export default function App() {
     NotoSerif600: require("./assets/fonts/NotoSerif-SemiBold.ttf"),
   });
 
-  if (!loaded) {
-    return null;
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // Check auth state on app start
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user: any) => {
+      setIsLoggedIn(!!user);
+      setAuthChecked(true);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  if (!loaded || !authChecked) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF' }}>
+        <ActivityIndicator size="large" color="#bb4471" />
+      </View>
+    );
   }
 
   return (
@@ -74,7 +92,7 @@ export default function App() {
           <StatusBar barStyle={"dark-content"} backgroundColor={"#FFF"} />
           <NavigationContainer>
             <Stack.Navigator 
-              initialRouteName="OnboardingScreen"
+              initialRouteName={isLoggedIn ? "MainScreenTabs" : "OnboardingScreen"}
               screenOptions={{ 
                 headerShown: false,
                 gestureEnabled: true,

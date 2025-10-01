@@ -1,3 +1,4 @@
+import Images from '@/assets/images';
 import ActionPlanTimeline from '@/components/ActionPlanTimeline';
 import apiPromiseManager from '@/services/apiPromiseManager';
 import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse } from '@/services/homeService';
@@ -5,6 +6,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useEffect, useState } from 'react';
 import {
   Dimensions,
+  Image,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -13,6 +15,7 @@ import {
   View
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
+import { scale, verticalScale } from 'react-native-size-matters';
 import Svg, { Circle, Defs, Stop, RadialGradient as SvgRadialGradient } from 'react-native-svg';
 import TypeActionPlan from '../../components/TypeActionPlan';
 
@@ -285,23 +288,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   };
 
   /**
-   * Get hormone icon emoji
+   * Get hormone icon emoji or image
    * @param hormone - Hormone name
-   * @returns Emoji icon for hormone
+   * @returns Emoji icon for hormone or image source
    */
   const getHormoneIcon = (hormone: string) => {
     switch (hormone.toLowerCase()) {
       case 'androgens': return '💪';
-      case 'progesterone': return '🌸';
-      case 'estrogen': return '🌺';
-      case 'thyroid': return '🦋';
-      case 'insulin': return '🍯';
-      case 'cortisol': return '⚡';
+      case 'progesterone': 
+        return Images.ProgesteroneCharacter;
+      case 'estrogen': 
+      return Images.EstrogenCharacter;
+      case 'thyroid': 
+      return Images.ThyroidCharacter;
+      case 'insulin': return Images.InsulinCharacter;
+      case 'cortisol': 
+      return Images.CortisolCharacter;
       case 'fsh': return '🌱';
       case 'lh': return '🌿';
       case 'prolactin': return '🤱';
       case 'ghrelin': return '🍽️';
-      case 'testosterone': return '💪';
+      case 'testosterone': return Images.TestosteroneCharacter;
       default: return '💊';
     }
   };
@@ -486,7 +493,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         {/* Hormone Quests Section */}
         {progressStats?.hormone_stats && Object.keys(progressStats.hormone_stats).length > 0 && (
         <View style={styles.questSection}>
-          <Text style={styles.sectionTitle}>🏆 Today's Hormone Quests 🏆</Text>
+          <Text style={styles.sectionTitle}>🏆 Your Hormone Quests 🏆</Text>
           <View style={styles.questContainer}>
               {Object.entries(progressStats.hormone_stats).map(([hormone, stats]) => {
                 const hormoneKey = hormone as keyof HormoneStats;
@@ -497,7 +504,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                 return (
                   <View key={hormone} style={styles.questItem}>
               <View style={styles.questImageContainer}>
-                      <Text style={styles.questIcon}>{getHormoneIcon(hormone)}</Text>
+                      {typeof getHormoneIcon(hormone) === 'string' ? (
+                        <Text style={styles.questIcon}>{getHormoneIcon(hormone)}</Text>
+                      ) : (
+                        <View style={styles.questIconImageContainer}>
+                          <Image 
+                            source={getHormoneIcon(hormone)} 
+                            style={styles.questIconImage}
+                            resizeMode="contain"
+                          />
+                        </View>
+                      )}
               </View>
                     <Text style={styles.questName}>{hormone.charAt(0).toUpperCase() + hormone.slice(1)}</Text>
               <View style={styles.progressContainer}>
@@ -728,6 +745,18 @@ const styles = StyleSheet.create({
   },
   questIcon: {
     fontSize: responsiveFontSize(2.5),
+  },
+  questIconImageContainer: {
+    width: scale(128),
+    height: verticalScale(100),
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(10),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  questIconImage: {
+    width: '100%',
+    height: '100%',
   },
   questName: {
     fontSize: responsiveFontSize(1.7),
