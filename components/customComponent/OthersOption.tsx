@@ -66,7 +66,7 @@ const OthersOption: React.FC<OthersOptionProps> = ({
   expandedMode = false,
   scrollToInput,
 }) => {
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInput | null>(null);
 
   // Force focus after selection to stabilize layout before scrolling
   useEffect(() => {
@@ -142,7 +142,7 @@ const OthersOption: React.FC<OthersOptionProps> = ({
             containerStyle={styles.textInput}
             onFocus={onFocus}
             autoFocus={true}
-            inputRef={inputRef}
+            inputRef={inputRef as React.RefObject<TextInput>}
           />
         </View>
       )}
