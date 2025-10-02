@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Dimensions, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { scale, verticalScale } from 'react-native-size-matters';
-import { FONT_FAMILIES } from '../../constants/fonts';
 
 // Responsive dimensions
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -77,7 +76,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: FONT_SIZES.header,
-    fontFamily: FONT_FAMILIES['NotoSerif-Regular'],
+    fontFamily: 'NotoSerif400',
     color: COLORS.onSurface,
     textAlign: 'center',
   },

@@ -285,7 +285,7 @@ const ResearchingScreen = () => {
                   }}
                   maskElement={
                     <Text style={{
-                      fontFamily: 'Poppins600',
+                      fontFamily: 'NotoSerif600',
                       fontSize: responsiveFontSize(3.4), //24px
                       fontWeight: "600",
                       textAlign: 'center',
@@ -309,7 +309,7 @@ const ResearchingScreen = () => {
               style={{
                 color: "#000",
                 fontSize: responsiveFontSize(1.98), //14px
-                fontFamily: "Poppins400",
+                fontFamily: "Inter400",
                 textAlign: "center",
                 marginBottom: 16,
               }}
@@ -337,7 +337,7 @@ const ResearchingScreen = () => {
                   }}
                   maskElement={
                     <Text style={{
-                      fontFamily: 'Poppins600',
+                      fontFamily: 'NotoSerif600',
                       fontSize: responsiveFontSize(3.4), //24px
                       fontWeight: "600",
                       textAlign: 'center',
@@ -361,7 +361,7 @@ const ResearchingScreen = () => {
               style={{
                 color: "#000",
                 fontSize: responsiveFontSize(1.98), //14px
-                fontFamily: "Poppins400",
+                fontFamily: "Inter400", 
                 textAlign: "center",
                 marginBottom: 16,
               }}
@@ -451,7 +451,7 @@ const ResearchingScreen = () => {
                 }}
                 maskElement={
                   <Text style={{
-                    fontFamily: 'Poppins600',
+                    fontFamily: 'NotoSerif600',
                     fontSize: responsiveFontSize(3.4), //24px
                     fontWeight: "600",
                     textAlign: 'center',
@@ -476,7 +476,7 @@ const ResearchingScreen = () => {
                   style={{
                     color: "#6f6f6f",
                     fontSize: responsiveFontSize(1.98), //14px
-                    fontFamily: "Poppins400",
+                    fontFamily: "Inter400",
                     textAlign: "center",
                     marginBottom: 16,
                   }}

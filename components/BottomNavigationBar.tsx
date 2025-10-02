@@ -2,6 +2,8 @@ import { useNavigation } from '@react-navigation/native';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scale, verticalScale } from 'react-native-size-matters';
 import AuvraCharacterNoShadow from './AuvraCharacterNoShadow';
 
 /**
@@ -34,6 +36,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
 }) => {
   const hookNavigation = useNavigation();
   const navigation = propNavigation || hookNavigation;
+  const insets = useSafeAreaInsets();
   
   // Character size configuration
   const characterSize = responsiveWidth(18);
@@ -141,20 +144,16 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
           ))}
         </View>
         
-        {/* Center Auvra Character - without white circle */}
-        <TouchableOpacity 
-          style={[
-            styles.characterContainer,
-            { 
-              top: -(characterSize / 2 + characterTextGap - emptyIconSize),
-              marginLeft: -(60 / 2) // Center the 60px wide container
-            }
-          ]}
-          onPress={() => handleTabPress('auvra', 'ChatbotScreen')}
-          activeOpacity={0.7}
-        >
-          <AuvraCharacterNoShadow size={characterSize} />
-        </TouchableOpacity>
+        {/* Center Auvra Character - positioned absolutely in the center */}
+        <View style={styles.characterWrapper}>
+          <TouchableOpacity 
+            style={styles.characterContainer}
+            onPress={() => handleTabPress('auvra', 'ChatbotScreen')}
+            activeOpacity={0.7}
+          >
+            <AuvraCharacterNoShadow size={characterSize} />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -166,7 +165,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: responsiveHeight(14), // Increased bar height (90px → 105px)
+    height: verticalScale(80),
+    backgroundColor: '#ffffff', // Ensure background is white
   },
   gradientOverlay: {
     position: 'absolute',
@@ -176,11 +176,11 @@ const styles = StyleSheet.create({
     height: responsiveHeight(4), // 44px
   },
   navigationBar: {
-    position: 'fixed' as any,
+    position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: responsiveHeight(8), // Increased navigation area height (72px → 82.5px)
+    height: responsiveHeight(8),
     backgroundColor: '#ffffff',
     paddingHorizontal: responsiveWidth(5), // 18.257px
     paddingVertical: responsiveHeight(1.5), // Increased padding
@@ -225,13 +225,23 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter600',
     color: '#bb4471',
   },
-  characterContainer: {
+  characterWrapper: {
     position: 'absolute',
-    left: '50%',
+    left: scale(50),
+    // top: -responsiveHeight(2), // Position above the navigation bar
     alignItems: 'center',
     justifyContent: 'center',
-    width: 60, // Fixed reasonable touch area
-    height: 60,
+    zIndex: 1,
+    marginLeft: -30, // Half of the character container width (60/2)
+  },
+  characterContainer: {
+    position: 'absolute',
+    left: scale(125),
+    alignItems: 'center',
+    top: -verticalScale(20),
+    // justifyContent: 'center',
+    width: scale(60), // Fixed reasonable touch area
+    height: verticalScale(60),
     zIndex: 1, // Ensure it's above other elements but doesn't block them
   },
 });

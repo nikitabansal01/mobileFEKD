@@ -25,6 +25,7 @@ import {
   View
 } from "react-native";
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
+import { verticalScale } from "react-native-size-matters";
 import TextInputContainer from "./customComponent/TextInputContainer";
 import FixedBottomContainer from "./FixedBottomContainer";
 import PrimaryButton from "./PrimaryButton";
@@ -506,7 +507,8 @@ const styles = StyleSheet.create({
     lineHeight: responsiveFontSize(1.98) * 1.25,
   },
   termsContainer: {
-    marginBottom: responsiveHeight(2),
+    marginBottom: verticalScale(20),
+    paddingBottom: verticalScale(30),
   },
   termsText: {
     fontFamily: "Inter400",

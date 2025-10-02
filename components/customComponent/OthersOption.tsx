@@ -106,13 +106,11 @@ const OthersOption: React.FC<OthersOptionProps> = ({
             flexBasis: '100%',
             minWidth: 0,
           },
-          // Expand horizontally only when chip style is selected
+          // Keep original size when selected, only change color and border
           useChipStyle && isSelected && {
-            width: '100%',
-            flexBasis: '100%',
-            minWidth: 0,
-            justifyContent: 'flex-start',
-            alignItems: 'flex-start',
+            // Remove width and flexBasis changes to maintain original size
+            justifyContent: 'center',
+            alignItems: 'center',
           },
           containerStyle
         ]}
@@ -120,7 +118,8 @@ const OthersOption: React.FC<OthersOptionProps> = ({
       >
         <Text style={[
           createInputTextStyle(isSelected ? 'selected' : 'default'),
-          useChipStyle && isSelected && { textAlign: 'left' }
+          // Keep text centered when selected
+          { textAlign: 'center' }
         ]}>
           Others (please specify)
         </Text>

@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
     paddingBottom: responsiveHeight(26),
   },
   titleText: {
-    fontFamily: "NotoSerif-SemiBold",
+    fontFamily: "NotoSerif600",
     fontSize: moderateScale(24, 1.5),
     color: "#404040",
     textAlign: "left",

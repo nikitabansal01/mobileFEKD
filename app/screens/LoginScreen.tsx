@@ -397,7 +397,8 @@ const styles = StyleSheet.create({
     lineHeight: responsiveFontSize(1.98) * 1.25,
   },
   termsContainer: {
-    marginBottom: responsiveHeight(1),
+    marginBottom: responsiveHeight(8),
+    paddingBottom: responsiveHeight(2),
   },
   termsText: {
     fontFamily: 'Inter400',

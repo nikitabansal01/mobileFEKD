@@ -7,7 +7,6 @@ import React, { useEffect, useState } from 'react';
 import {
   Dimensions,
   Image,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -296,19 +295,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     switch (hormone.toLowerCase()) {
       case 'androgens': return '💪';
       case 'progesterone': 
-        return Images.ProgesteroneCharacter;
+        return Images.ProgesteroneBothHand;
       case 'estrogen': 
-      return Images.EstrogenCharacter;
+      return Images.EstrogenBothHand;
       case 'thyroid': 
-      return Images.ThyroidCharacter;
-      case 'insulin': return Images.InsulinCharacter;
+      return Images.ThyroidBothHand;
+      case 'insulin': return Images.InsulinBothHand;
       case 'cortisol': 
-      return Images.CortisolCharacter;
+      return Images.CortisolBothHand;
       case 'fsh': return '🌱';
       case 'lh': return '🌿';
       case 'prolactin': return '🤱';
       case 'ghrelin': return '🍽️';
-      case 'testosterone': return Images.TestosteroneCharacter;
+      case 'testosterone': return Images.TestosteroneBothHand;
       default: return '💊';
     }
   };
@@ -443,16 +442,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <ScrollView 
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -607,7 +606,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -663,7 +662,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: responsiveWidth(5),
-    paddingTop: responsiveHeight(4),
+    paddingTop: responsiveHeight(6), // Increased top padding
     paddingBottom: responsiveHeight(3),
   },
   headerLeft: {

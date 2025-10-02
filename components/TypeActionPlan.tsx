@@ -1,17 +1,17 @@
 // TypeActionPlan.tsx
+import { useNavigation } from '@react-navigation/native';
 import React, { useMemo, useState } from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-    Dimensions,
-    TouchableOpacity,
-    Image
+  Dimensions,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import Svg, { Defs, Line, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
-import { useNavigation } from '@react-navigation/native';
 // import { BlurView } from 'expo-blur';
 
 
@@ -37,7 +37,7 @@ const CATEGORIES = [
   { key: 'food', emoji: '🥗', name: 'Eat' },
   { key: 'exercise', emoji: '🏃‍♀️‍', name: 'Move' },
   { key: 'mindfulness', emoji: '🧘‍♀️', name: 'Pause' },
-] as const;
+];
 
 /**
  * Time slot emoji mapping
@@ -76,7 +76,7 @@ export default function TypeActionPlan({
    */
   const handleNavigation = (actionData: any) => {
     try {
-      navigation.navigate('ActionDetailScreen', {
+      (navigation as any).navigate('ActionDetailScreen', {
         action: JSON.stringify(actionData)
       });
     } catch (error) {
@@ -360,7 +360,7 @@ export default function TypeActionPlan({
           onLongPress={!assignment.is_completed ? () => {
             // Navigate to ActionCompletedScreen (only if not completed)
             try {
-              navigation.navigate('ActionCompletedScreen', {
+              (navigation as any).navigate('ActionCompletedScreen', {
                 action: JSON.stringify({
                   id: assignment.id,
                   title: assignment.title,
@@ -389,7 +389,7 @@ export default function TypeActionPlan({
           style={{ flexDirection: 'row', alignItems: 'center' }}
         >
                                   <Text style={styles.actionTitle}>{assignment.title}</Text>
-                        <Text style={styles.actionArrow}>></Text>
+                        <Text style={styles.actionArrow}>{'>'}</Text>
         </TouchableOpacity>
         <View style={styles.actionMeta}>
           <Text style={styles.actionAmount}>{getActionAmount(assignment)}</Text>

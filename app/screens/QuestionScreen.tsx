@@ -1037,15 +1037,7 @@ const QuestionScreen = () => {
 
                  {/* Bottom gradient background and button */}
 
-       </View>
-       <FixedBottomContainer avoidKeyboard={false}> 
-         <PrimaryButton
-           title="Continue"
-           onPress={handleContinue}
-           disabled={!isCurrentStepComplete()}
-         />
-       </FixedBottomContainer>
-      {showDatePicker && (
+                 {showDatePicker && (
         <View style={styles.datePickerContainer}>
           <DateTimePicker
             value={(() => {
@@ -1068,14 +1060,25 @@ const QuestionScreen = () => {
               return new Date();
             })()}
             mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            display={Platform.OS === 'ios' ? 'inline' : 'default'}
             onChange={handleDateChange}
             style={styles.datePicker}
             textColor="#000000"
             themeVariant="light"
+            accentColor="#C17EC9"
           />
         </View>
       )}
+
+       </View>
+       <FixedBottomContainer avoidKeyboard={false}> 
+         <PrimaryButton
+           title="Continue"
+           onPress={handleContinue}
+           disabled={!isCurrentStepComplete()}
+         />
+       </FixedBottomContainer>
+     
     </SafeAreaView>
   );
 };
@@ -1109,7 +1112,7 @@ const styles = StyleSheet.create({
 
     mainContent: {
         paddingHorizontal: scale(5),
-        paddingTop: responsiveHeight(2),
+        paddingTop: responsiveHeight(1),
         paddingBottom: responsiveHeight(15), // Sufficient space for gradient area
         // marginBottom: responsiveHeight(10),
         alignItems: 'center',
@@ -1273,7 +1276,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14, 1.5), // 12px
     color: '#6f6f6f', // Figma: #6f6f6f
     textAlign: 'center',
-    lineHeight: responsiveFontSize(1.6) * 1.25, // line-height 1.25
+    lineHeight: moderateScale(14, 1.5) * 1.25, // line-height 1.25
   },
   categoryContainer: {
     flexDirection: 'row',
@@ -1352,10 +1355,13 @@ const styles = StyleSheet.create({
     // lineHeight: moderateScale(16, 1.5) * 1.25,
   },
   datePickerContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: responsiveWidth(5),
+    right: responsiveWidth(5),
+    transform: [{ translateY: -responsiveHeight(15) }],
     backgroundColor: '#ffffff',
     borderRadius: 8,
-    marginTop: responsiveHeight(1),
-    marginHorizontal: responsiveWidth(5),
     paddingVertical: responsiveHeight(2),
     paddingBottom: responsiveHeight(5),
     shadowColor: '#000',
@@ -1366,6 +1372,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
+    zIndex: 1000,
   },
   datePicker: {
     width: '100%',

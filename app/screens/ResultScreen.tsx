@@ -3,15 +3,17 @@ import GraphicTestosterone1 from '@/assets/images/SVG/GraphicTestosterone1';
 import AuvraCharacter from '@/components/AuvraCharacter';
 import BackButton from '@/components/BackButton';
 import FixedBottomContainer from '@/components/FixedBottomContainer';
-import GradientText from "@/components/GradientText";
 import PrimaryButton from '@/components/PrimaryButton';
+import MaskedView from '@react-native-masked-view/masked-view';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { moderateScale } from 'react-native-size-matters';
 
 type RootStackParamList = {
   OnboardingScreen: undefined;
@@ -76,11 +78,23 @@ const ResultScreen = () => {
             </View>
             
             <View style={styles.titleContainer}>
-              <GradientText
-                text="Some of your hormone buddies are feeling off"
-                textStyle={styles.title}
-                containerStyle={styles.maskedView}
-              />
+              <View style={styles.maskedView}>
+                <MaskedView
+                  style={{ height: 60, width: '100%' }}
+                  maskElement={
+                    <Text style={[styles.title, { color: 'black' }]}>
+                      Some of your hormone buddies are feeling off
+                    </Text>
+                  }
+                >
+                  <LinearGradient
+                    colors={['#A29AEA', '#C17EC9', '#D482B9', '#E98BAC']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{ height: 60, width: '100%' }}
+                  />
+                </MaskedView>
+              </View>
             </View>
           </View>
 
@@ -217,9 +231,10 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'NotoSerif600',
-    fontSize: responsiveFontSize(2.27),
+    fontSize: moderateScale(16, 1.5),
     textAlign: 'center',
-    lineHeight: responsiveHeight(2.8),
+    lineHeight: moderateScale(16, 1.5) * 1.5, // 150% line height
+    letterSpacing: 0,
   },
   cardsContainer: {
     width: responsiveWidth(78),
