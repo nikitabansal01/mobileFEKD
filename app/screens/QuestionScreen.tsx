@@ -71,7 +71,7 @@ const questionSteps: QuestionStep[] = [
   },
   {
     step: 2,
-    dialogue: "How would you describe your periods?🩸",
+    dialogue: "How would you describe \n your periods?🩸",
     questions: [
       {
         id: 3,
@@ -207,7 +207,7 @@ const questionSteps: QuestionStep[] = [
   // Additional questions based on Figma design (step 6)
   {
     step: 6,
-    dialogue: "Is there any diagnosed health condition that I should know about?",
+    dialogue: "Has your doctor diagnosed you with any of these?",
     subtitle: "Choose any one to get started",
     questions: [
       {
@@ -235,7 +235,7 @@ const questionSteps: QuestionStep[] = [
   // Additional questions - family history
   {
     step: 7,
-    dialogue: "Have any immediate family members been diagnosed with any of these conditions?",
+    dialogue: "Have any immediate family members been diagnosed with?",
     subtitle: "Choose all the diagnosis that apply",
     questions: [
       {
@@ -1027,6 +1027,7 @@ const QuestionScreen = () => {
                   <NotSureButton
                     text={q.notSureText}
                     onPress={() => handleAnswer(q.key, q.notSureText || '', q.inputType)}
+                    style={{ marginTop: -verticalScale(8) }}
                   />
                 )}
               </View>
@@ -1060,7 +1061,7 @@ const QuestionScreen = () => {
               return new Date();
             })()}
             mode="date"
-            display={Platform.OS === 'ios' ? 'inline' : 'default'}
+            display={Platform.OS === 'ios' ? 'inline' : 'inline'}
             onChange={handleDateChange}
             style={styles.datePicker}
             textColor="#000000"
@@ -1095,8 +1096,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: responsiveWidth(5),
-        paddingVertical: responsiveHeight(2),
-        height: responsiveHeight(9),
+        // paddingVertical: responsiveHeight(2),
+        // height: responsiveHeight(5),
     },
     progressBarBackground: {
         flex: 1,
@@ -1112,7 +1113,7 @@ const styles = StyleSheet.create({
 
     mainContent: {
         paddingHorizontal: scale(5),
-        paddingTop: responsiveHeight(1),
+        // paddingTop: verticalScale(),
         paddingBottom: responsiveHeight(15), // Sufficient space for gradient area
         // marginBottom: responsiveHeight(10),
         alignItems: 'center',
@@ -1122,7 +1123,7 @@ const styles = StyleSheet.create({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: responsiveHeight(3),
+        gap: verticalScale(4),
         marginBottom: responsiveHeight(3),
     },
     characterContainer: {
@@ -1130,13 +1131,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     questionTextContainer: {
-        width: responsiveWidth(85),
+        width: responsiveWidth(90),
         alignItems: 'center',
         justifyContent: 'center',
     },
     maskedView: {
         width: '100%',
-        height: responsiveHeight(10),
+        height: verticalScale(43),
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -1164,7 +1165,7 @@ const styles = StyleSheet.create({
         alignItems: 'stretch',
     },
     inputFieldItem: {
-        gap: responsiveHeight(1.5),
+        gap: responsiveHeight(2),
         alignItems: 'center',
     },
   subQuestionText: {
@@ -1183,7 +1184,7 @@ const styles = StyleSheet.create({
   },
 
       optionsContainer: {
-        gap: responsiveHeight(2.25),
+        gap: 0,
         alignSelf: 'stretch',
     },
 
@@ -1367,7 +1368,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 0,
     },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,

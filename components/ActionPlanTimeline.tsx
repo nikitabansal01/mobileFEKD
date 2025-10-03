@@ -1,15 +1,15 @@
 // ActionPlanTimeline.tsx
 import Images from '@/assets/images';
 import { useNavigation } from '@react-navigation/native';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated,
-  Dimensions,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Animated,
+    Dimensions,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import Svg, { Defs, Path, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
@@ -387,7 +387,7 @@ export default function ActionPlanTimeline({
     switch (hormone.toLowerCase()) {
       case 'androgens': return '💪';
       case 'progesterone': 
-        return Images.ProgesteroneBothHand;
+        return Images.ProgesteroneLeftHand;
       case 'estrogen': 
       return Images.EstrogenBothHand;
       case 'thyroid': 

@@ -41,7 +41,7 @@ const Images = {
     CortisolCharacter: require('./hormoneBuddy/CortisolCharacter.png'),
     TestosteroneCharacter: require('./hormoneBuddy/TedtosteroneCharacter.png'),
     // BothHand Characters
-    ProgesteroneBothHand: require('./hormoneBuddy/ProgesteroneBothHand.png'),
+    ProgesteroneLeftHand: require('./hormoneBuddy/ProgesteroneLeftHand.png'),
     EstrogenBothHand: require('./hormoneBuddy/EstrogenBothHand.png'),
     ThyroidBothHand: require('./hormoneBuddy/ThyroidBothHand.png'),
     InsulinBothHand: require('./hormoneBuddy/InsulinBothHand.png'),

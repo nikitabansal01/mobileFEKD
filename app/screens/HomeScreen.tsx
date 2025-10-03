@@ -14,7 +14,7 @@ import {
   View
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
-import { scale, verticalScale } from 'react-native-size-matters';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import Svg, { Circle, Defs, Stop, RadialGradient as SvgRadialGradient } from 'react-native-svg';
 import TypeActionPlan from '../../components/TypeActionPlan';
 
@@ -295,7 +295,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     switch (hormone.toLowerCase()) {
       case 'androgens': return '💪';
       case 'progesterone': 
-        return Images.ProgesteroneBothHand;
+        return Images.ProgesteroneLeftHand;
       case 'estrogen': 
       return Images.EstrogenBothHand;
       case 'thyroid': 
@@ -663,20 +663,20 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingHorizontal: responsiveWidth(5),
     paddingTop: responsiveHeight(6), // Increased top padding
-    paddingBottom: responsiveHeight(3),
+    paddingBottom: verticalScale(30),
   },
   headerLeft: {
     flex: 1,
   },
   greeting: {
-    fontSize: responsiveFontSize(1.5),
+    fontSize: moderateScale(12, 1.5),
     fontFamily: 'Inter500',
     color: '#000000',
     opacity: 0.77,
-    marginBottom: responsiveHeight(0.3),
+    marginBottom: verticalScale(3),
   },
   cycleInfo: {
-    fontSize: responsiveFontSize(1.2),
+    fontSize: moderateScale(12, 1.5),
     fontFamily: 'Inter400',
     color: '#6F6F6F',
   },

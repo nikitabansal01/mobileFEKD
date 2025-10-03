@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { responsiveFontSize } from 'react-native-responsive-dimensions';
 
 /**
@@ -51,7 +51,6 @@ const NotSureButton: React.FC<NotSureButtonProps> = ({
 const styles = StyleSheet.create({
   container: {
     alignSelf: 'flex-end',
-    marginTop: 10,
   },
   text: {
     fontFamily: 'Inter400',
