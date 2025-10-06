@@ -39,14 +39,32 @@ const Images = {
     ThyroidCharacter: require('./hormoneBuddy/ThyroidCharacter.png'),
     InsulinCharacter: require('./hormoneBuddy/InsulinCharacter.png'),
     CortisolCharacter: require('./hormoneBuddy/CortisolCharacter.png'),
-    TestosteroneCharacter: require('./hormoneBuddy/TedtosteroneCharacter.png'),
-    // BothHand Characters
+    TestosteroneCharacter: require('./hormoneBuddy/TestosteroneCharacter.png'),
+    
+    // Hand Characters
     ProgesteroneLeftHand: require('./hormoneBuddy/ProgesteroneLeftHand.png'),
+    ProgesteroneRightHand: require('./hormoneBuddy/ProgesteroneRightHand.png'),
+    ProgesteroneBothHand: require('./hormoneBuddy/ProgesteroneBothHand.png'),
+
+    EstrogenLeftHand: require('./hormoneBuddy/EstrogenLeftHand.png'),
+    EstrogenRightHand: require('./hormoneBuddy/EstrogenRightHand.png'),
     EstrogenBothHand: require('./hormoneBuddy/EstrogenBothHand.png'),
+
     ThyroidBothHand: require('./hormoneBuddy/ThyroidBothHand.png'),
+    ThyroidLeftHand: require('./hormoneBuddy/ThyroidLeftHand.png'),
+    ThyroidRightHand: require('./hormoneBuddy/ThyroidRightHand.png'),
+
     InsulinBothHand: require('./hormoneBuddy/InsulinBothHand.png'),
+    InsulinLeftHand: require('./hormoneBuddy/InsulinLeftHand.png'),
+    InsulinRightHand: require('./hormoneBuddy/InsulinRightHand.png'),
+
     CortisolBothHand: require('./hormoneBuddy/CortisolBothHand.png'),
-    TestosteroneBothHand: require('./hormoneBuddy/TedtosteroneBothHand.png'),
+    CortisolLeftHand: require('./hormoneBuddy/CortisolLeftHand.png'),
+    CortisolRightHand: require('./hormoneBuddy/CortisolRightHand.png'),
+
+    TestosteroneBothHand: require('./hormoneBuddy/TestosteroneBothHand.png'),
+    TestosteroneLeftHand: require('./hormoneBuddy/TestosteroneLeftHand.png'),
+    TestosteroneRightHand: require('./hormoneBuddy/TestosteroneRightHand.png'),
     
 }
 

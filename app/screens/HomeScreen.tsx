@@ -295,7 +295,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     switch (hormone.toLowerCase()) {
       case 'androgens': return '💪';
       case 'progesterone': 
-        return Images.ProgesteroneLeftHand;
+        return Images.ProgesteroneBothHand;
       case 'estrogen': 
       return Images.EstrogenBothHand;
       case 'thyroid': 
@@ -330,19 +330,34 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
    */
   const getProgressColor = (hormone: string) => {
     switch (hormone.toLowerCase()) {
-      case 'androgens': return '#F6C34C';
-      case 'progesterone': return '#FF6991';
+      case 'androgens': return '#FF6991';
+      case 'progesterone': return '#87CEEB';
       case 'estrogen': return '#FF8BA7';
-      case 'thyroid': return '#87CEEB';
-      case 'insulin': return '#FFD700';
-      case 'cortisol': return '#FF6B6B';
+      case 'thyroid': return '#F6C34C';
+      case 'insulin': return '#90EE90';
+      case 'cortisol': return '#FFA07A';
       case 'fsh': return '#98FB98';
-      case 'lh': return '#90EE90';
-      case 'prolactin': return '#DDA0DD';
-      case 'ghrelin': return '#FFA07A';
-      case 'testosterone': return '#F6C34C';
+      case 'lh': return '#FFD700';
+      case 'prolactin': return '#F6C34C';
+      case 'ghrelin': return '#FF6B6B';
+      case 'testosterone': return '#DDA0DD';
       default: return '#C17EC9';
     }
+  };
+
+  // Lighten a hex color by blending it toward white by the given factor (0..1)
+  const lightenColor = (hex: string, factor: number = 0.85) => {
+    const cleaned = hex.replace('#', '');
+    const num = parseInt(cleaned, 16);
+    const r = (num >> 16) & 255;
+    const g = (num >> 8) & 255;
+    const b = num & 255;
+
+    const lr = Math.round(r + (255 - r) * factor);
+    const lg = Math.round(g + (255 - g) * factor);
+    const lb = Math.round(b + (255 - b) * factor);
+
+    return `rgb(${lr}, ${lg}, ${lb})`;
   };
 
   /**
@@ -392,10 +407,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             </SvgRadialGradient>
             
             {/* Second large radial gradient */}
-            <SvgRadialGradient id="bgGrad2" cx="0.7" cy="0.6" r="0.5">
+            <SvgRadialGradient id="bgGrad2" cx="0.7" cy="0.4" r="0.5">
               <Stop offset="0%" stopColor={secondHormoneColor} stopOpacity="0.6" />
               <Stop offset="50%" stopColor={secondHormoneColor} stopOpacity="0.2" />
               <Stop offset="100%" stopColor={secondHormoneColor} stopOpacity="0" />
+            </SvgRadialGradient>
+            
+            {/* VectorSpotlight gradient - upside down V */}
+            <SvgRadialGradient id="spotlight" cx="0.5" cy="0.6" r="0.5">
+              <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+              <Stop offset="15%" stopColor="#FFFFFF" stopOpacity="0.9" />
+              <Stop offset="30%" stopColor="#FFFFFF" stopOpacity="0.7" />
+              <Stop offset="50%" stopColor="#FFFFFF" stopOpacity="0.4" />
+              <Stop offset="80%" stopColor="#FFFFFF" stopOpacity="0.1" />
+              <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
             </SvgRadialGradient>
           </Defs>
           
@@ -410,9 +435,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           {/* Second large circular gradient */}
           <Circle
             cx={screenWidth * 0.7}
-            cy={screenHeight * 0.6}
+            cy={screenHeight * 0.4}
             r={Math.max(screenWidth, screenHeight) * 0.5}
             fill="url(#bgGrad2)"
+          />
+          
+          {/* VectorSpotlight effect - upside down V */}
+          <Circle
+            cx={screenWidth * 0.5}
+            cy={screenHeight * 0.3}
+            r={Math.max(screenWidth, screenHeight) * 0.4}
+            fill="url(#spotlight)"
           />
         </Svg>
       </View>
@@ -425,19 +458,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
    * @returns Background color hex string
    */
   const getProgressBgColor = (hormone: string) => {
-    switch (hormone.toLowerCase()) {
-      case 'androgens': return '#FFFBD4';
-      case 'progesterone': return '#FDEEF5';
-      case 'estrogen': return '#FFE6F0';
-      case 'thyroid': return '#E6F3FF';
-      case 'insulin': return '#FFF8DC';
-      case 'cortisol': return '#FFE6E6';
-      case 'fsh': return '#F0FFF0';
-      case 'lh': return '#F0FFF0';
-      case 'prolactin': return '#F8F0FF';
-      case 'ghrelin': return '#FFF5EE';
-      default: return '#F0F0F0';
-    }
+    // Use a lighter shade of the main progress color for the unfilled track
+    const base = getProgressColor(hormone);
+    return lightenColor(base, 0.70);
   };
 
   if (loading) {
@@ -494,11 +517,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         <View style={styles.questSection}>
           <Text style={styles.sectionTitle}>🏆 Your Hormone Quests 🏆</Text>
           <View style={styles.questContainer}>
-              {Object.entries(progressStats.hormone_stats).map(([hormone, stats]) => {
+              {Object.entries(progressStats.hormone_stats).map(([hormone, stats], index) => {
                 const hormoneKey = hormone as keyof HormoneStats;
                 const hormoneStats = progressStats.hormone_stats[hormoneKey];
                 
                 if (!hormoneStats || hormoneStats.total === 0) return null;
+                
+                // Determine rotation based on position (left = -15deg, right = +15deg)
+                const isLeft = index % 2 === 0;
+                const rotation = isLeft ? '-5deg' : '10deg';
                 
                 return (
                   <View key={hormone} style={styles.questItem}>
@@ -509,7 +536,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                         <View style={styles.questIconImageContainer}>
                           <Image 
                             source={getHormoneIcon(hormone)} 
-                            style={styles.questIconImage}
+                            style={[styles.questIconImage, { transform: [{ rotate: rotation }] }]}
                             resizeMode="contain"
                           />
                         </View>
@@ -613,10 +640,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
   scrollView: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   scrollContent: {
     paddingBottom: responsiveHeight(5),
@@ -640,7 +668,7 @@ const styles = StyleSheet.create({
 
   whiteCircleOverlay: {
     position: 'absolute',
-    top: responsiveHeight(23),
+    top: responsiveHeight(27),
     left: (Dimensions.get('window').width / 2) - responsiveWidth(150),
     width: responsiveWidth(300),
     height: responsiveWidth(300),
