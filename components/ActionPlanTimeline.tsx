@@ -27,6 +27,20 @@ const TIME_ICONS: Record<string, string> = {
   afternoon: '☀️',
   evening: '🌙',
   anytime: '⏰',
+  // Add common variations
+  'Morning': '🌤️',
+  'Afternoon': '☀️', 
+  'Evening': '🌙',
+  'Anytime': '⏰',
+  // Add more common API variations
+  'am': '🌤️',
+  'pm': '☀️',
+  'breakfast': '🌤️',
+  'lunch': '☀️',
+  'dinner': '🌙',
+  '1': '🌤️',
+  '2': '☀️',
+  '3': '🌙',
 };
 
 // ====== Time slot Y position calculation helper ======
@@ -52,7 +66,7 @@ const DUMMY_TOMORROW_DATA: Assignment[] = [
     hormones: ["androgens", "progesterone"], // Added hormone information
     is_completed: false,
     completed_at: "",
-    advices: ["Take 1 spoon with breakfast"],
+    advices: [{ type: 'tip', title: 'Take 1 spoon with breakfast' }],
     food_amounts: ["1 spoon"],
     food_items: ["pumpkin_seeds"],
     exercise_durations: [],
@@ -217,21 +231,52 @@ export default function ActionPlanTimeline({
     // Set existing anchors to Today (for existing logic compatibility)
     setAnchors(todayNext);
 
-    // Calculate time slot icon positions - process only actual received time slots
+    // Calculate time slot icon positions - use smart detection for 'anytime' slots
     const timeSlots = Object.keys(assignments).filter(slot => assignments[slot]?.length > 0); // Exclude empty arrays
+    
+    // If we only have 'anytime' slot, create smart time slots based on assignment content
+    let smartTimeSlots = timeSlots;
+    let smartAssignments = assignments;
+    
+    if (timeSlots.length === 1 && timeSlots[0] === 'anytime') {
+      const smartSlots = new Set<string>();
+      const smartAssignmentsMap: Record<string, Assignment[]> = {};
+      
+      assignments.anytime?.forEach(assignment => {
+        const smartSlot = getSmartTimeSlot(assignment);
+        smartSlots.add(smartSlot);
+        
+        if (!smartAssignmentsMap[smartSlot]) {
+          smartAssignmentsMap[smartSlot] = [];
+        }
+        smartAssignmentsMap[smartSlot].push(assignment);
+      });
+      
+      smartTimeSlots = Array.from(smartSlots);
+      smartAssignments = smartAssignmentsMap;
+      
+      console.log('🔍 Smart time slot detection:', {
+        originalSlots: timeSlots,
+        smartSlots: smartTimeSlots,
+        smartAssignmentsMap,
+        assignments: assignments.anytime?.map(a => ({ title: a.title, smartSlot: getSmartTimeSlot(a) }))
+      });
+    }
+    
     console.log('🔍 Time slot icon calculation:', { 
       allKeys: Object.keys(assignments), 
       filteredSlots: timeSlots,
+      smartTimeSlots,
       assignmentsData: assignments 
     });
     
     const positions: TimeSlotPosition[] = [];
     
-    if (timeSlots.length > 0) {
+    if (smartTimeSlots.length > 0) {
       let previousY = BASE_TOP; // End Y coordinate of previous section
-      
-      timeSlots.forEach((timeSlot, index) => {
-        const slotAssignments = assignments[timeSlot] || [];
+
+      smartTimeSlots.forEach((timeSlot, index) => {
+        const slotAssignments = smartAssignments[timeSlot] || [];
         
         if (index === 0) {
           // First time slot: place at Cap center
@@ -385,7 +430,8 @@ export default function ActionPlanTimeline({
   // Hormone-specific icon return function (chooses left/right variant by side)
   const getHormoneIcon = (hormone: string, isLeft: boolean) => {
     switch (hormone.toLowerCase()) {
-      case 'androgens': return '💪';
+      case 'androgens': 
+        return isLeft ? Images.TestosteroneLeftHand : Images.TestosteroneRightHand;
       case 'progesterone': 
         return isLeft ? Images.ProgesteroneLeftHand : Images.ProgesteroneRightHand;
       case 'estrogen': 
@@ -416,7 +462,7 @@ export default function ActionPlanTimeline({
   const getHormoneColor = (hormone?: string) => {
     const h = (hormone || '').toLowerCase();
     switch (h) {
-      case 'androgens': return '#FF6991';
+      case 'androgens': return '#A29AEA';
       case 'progesterone': return '#CBF0FF';
       case 'estrogen': return '#FF8BA7';
       case 'thyroid': return '#F6C34C';
@@ -429,6 +475,37 @@ export default function ActionPlanTimeline({
       case 'testosterone': return '#A29AEA';
       default: return '#C17EC9';
     }
+  };
+
+  // Smart time slot detection based on assignment content
+  const getSmartTimeSlot = (assignment: Assignment): string => {
+    const title = assignment.title.toLowerCase();
+    const category = assignment.category?.toLowerCase() || '';
+    
+    // Morning indicators (breakfast foods, morning routines)
+    if (title.includes('pumpkin') || title.includes('seed') || 
+        title.includes('pomegranate') || title.includes('juice') ||
+        title.includes('breakfast') || title.includes('morning') ||
+        (category === 'food' && (title.includes('smoothie') || title.includes('cereal')))) {
+      return 'morning';
+    }
+    
+    // Afternoon indicators (exercise, lunch, afternoon activities)
+    if (title.includes('yoga') || title.includes('practice') ||
+        title.includes('lunch') || title.includes('afternoon') ||
+        (category === 'movement' && (title.includes('cardio') || title.includes('walk')))) {
+      return 'afternoon';
+    }
+    
+    // Evening indicators (dinner, evening routines, strength training)
+    if (title.includes('strength') || title.includes('training') ||
+        title.includes('dinner') || title.includes('evening') ||
+        title.includes('meditation') || title.includes('sleep')) {
+      return 'evening';
+    }
+    
+    // Default fallback
+    return 'anytime';
   };
 
   // Generate anchorMap (Today anchors only)
@@ -684,15 +761,22 @@ export default function ActionPlanTimeline({
           {/* Time-based icon display */}
           {geom && timeSlotPositions.map((position, index) => {
             const { CENTER_X } = geom;
-            const iconSize = responsiveWidth(8); // 26px equivalent
+            const iconSize = responsiveWidth(6.5); // 26px equivalent (matching Figma)
             const iconLeft = CENTER_X - iconSize / 2;
             const iconTop = position.iconY - iconSize / 2;
             
-            console.log(`🎯 Icon rendering ${index}:`, {
-              timeSlot: position.timeSlot,
-              icon: TIME_ICONS[position.timeSlot] || TIME_ICONS.anytime,
+            // Use the smart time slot from position calculation
+            const smartTimeSlot = position.timeSlot;
+            
+            console.log(`🎯 ActionPlanTimeline Icon rendering ${index}:`, {
+              originalTimeSlot: position.timeSlot,
+              smartTimeSlot,
+              icon: TIME_ICONS[smartTimeSlot] || TIME_ICONS.anytime,
               position: { iconLeft, iconTop },
-              isCapCenter: position.isCapCenter
+              isCapCenter: position.isCapCenter,
+              foundInMapping: !!TIME_ICONS[smartTimeSlot],
+              fallbackUsed: !TIME_ICONS[smartTimeSlot],
+              allAvailableKeys: Object.keys(TIME_ICONS)
             });
             
             return (
@@ -709,7 +793,7 @@ export default function ActionPlanTimeline({
                 ]}
               >
                 <Text style={styles.timeIconText} allowFontScaling={false}>
-                  {TIME_ICONS[position.timeSlot] || TIME_ICONS.anytime}
+                  {TIME_ICONS[smartTimeSlot] || TIME_ICONS.anytime}
                 </Text>
               </View>
             );
@@ -785,36 +869,47 @@ export default function ActionPlanTimeline({
                   <View style={[
                     styles.hormoneImage,
                     {
-                      // When left anchor: top left
-                      // When right anchor: top right
+                      // Revert to original working positioning
                       top: isLeft ? -responsiveHeight(5) : -responsiveHeight(3),
-                      left: isLeft ? -responsiveWidth(3) : undefined,
-                      right: isLeft ? undefined : -responsiveWidth(3),
+                      left: isLeft ? -responsiveWidth(8) : undefined,
+                      right: isLeft ? undefined : -responsiveWidth(8),
+                      
                     }
-                  ]}>
-                    {typeof getFirstHormoneIcon(a, isLeft) === 'string' ? (
-                      <Text style={styles.hormoneImageText} allowFontScaling={false}>
-                        {getFirstHormoneIcon(a, isLeft)}
-                      </Text>
-                    ) : (
-                      <Image 
-                        source={getFirstHormoneIcon(a, isLeft)} 
-                        style={[
-                          styles.hormoneImageIcon,
-                          { transform: isLeft ? [{ rotate: '333deg' }] : [{ rotate: '30deg' }] }
-                        ]}
-                        resizeMode="contain"
-                      />
-                    )}
+                  ]}
+                  pointerEvents="none">
+                    {(() => {
+                      const hormoneIcon = getFirstHormoneIcon(a, isLeft);
+                      console.log('🔍 Tomorrow hormone icon debug:', {
+                        assignment: a.title,
+                        hormones: a.hormones,
+                        hormoneIcon,
+                        isString: typeof hormoneIcon === 'string',
+                        isLeft
+                      });
+                      
+                      return typeof hormoneIcon === 'string' ? (
+                        <Text style={styles.hormoneImageText} allowFontScaling={false}>
+                          {hormoneIcon}
+                        </Text>
+                      ) : (
+                        <Image 
+                          source={hormoneIcon} 
+                          style={[
+                            styles.hormoneImageIcon,
+                            { transform: isLeft ? [{ rotate: '333deg' }] : [{ rotate: '30deg' }] }
+                          ]}
+                          resizeMode="contain"
+                        />
+                      );
+                    })()}
                   </View>
                   
                   {/* Tomorrow hormone number (relative to image) */}
                   <View style={[
                     styles.hormoneBadge,
                     {
-                      // When left anchor: left of image
-                      // When right anchor: right of image
-                      top: isLeft ? -responsiveHeight(6) : -responsiveHeight(6),
+                      // Match today section positioning
+                      top: isLeft ? -responsiveHeight(2) : -responsiveHeight(2.5),
                       left: isLeft ? -responsiveWidth(12) : undefined,
                       right: isLeft ? undefined : -responsiveWidth(12),
                       backgroundColor: getHormoneColor(a.hormones?.[0]),
@@ -1203,7 +1298,7 @@ const styles = StyleSheet.create({
   },
   hormoneBadge: {
     position: 'absolute',
-    backgroundColor: '#A36CFF',
+    // backgroundColor removed - will be set dynamically
     borderRadius: responsiveWidth(3),
     paddingHorizontal: responsiveWidth(1),
     paddingVertical: responsiveHeight(0.2),
@@ -1309,18 +1404,25 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   
-  // Time-based icon style
+  // Time-based icon style (matching Figma design)
   timeIcon: {
     position: 'absolute',
     backgroundColor: '#FFFFFF',
-    borderRadius: responsiveWidth(8) / 2,
+    borderRadius: responsiveWidth(6.5) / 2, // Fully rounded (26px diameter)
     justifyContent: 'center',
     alignItems: 'center',
+    padding: responsiveWidth(0.5), // Small padding like Figma
+    // shadowColor: '#000',
+    // shadowOffset: { width: 0, height: 1 },
+    // shadowOpacity: 0.1,
+    // shadowRadius: 2,
+    // elevation: 2, // Android shadow
   },
   timeIconText: {
-    fontSize: responsiveFontSize(2.2),
+    fontSize: responsiveFontSize(2.0), // 20px equivalent (matching Figma)
     textAlign: 'center',
     includeFontPadding: false,
     textAlignVertical: 'center',
+    color: '#949494', // Grey color from Figma
   },
 });

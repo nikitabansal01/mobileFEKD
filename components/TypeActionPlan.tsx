@@ -1,6 +1,7 @@
 // TypeActionPlan.tsx
+import Images from '@/assets/images';
 import { useNavigation } from '@react-navigation/native';
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -44,11 +45,25 @@ const CATEGORIES = [
  */
 const TIME_EMOJI_MAP: Record<string, string> = {
   completed: '', // No icon for completed
-  morning: '☀️',
-  afternoon: '🌤️',
-  evening: '🌙',
+  morning: '🌤️', // Morning cloud (matching Figma)
+  afternoon: '☀️', // Afternoon sun (matching Figma)
+  evening: '🌙', // Evening moon (matching Figma)
   anytime: '⏰',
   night: '🌙',
+  // Add common variations to handle different API formats
+  'Morning': '🌤️',
+  'Afternoon': '☀️', 
+  'Evening': '🌙',
+  'Anytime': '⏰',
+  // Add more common API variations
+  'am': '🌤️',
+  'pm': '☀️',
+  'breakfast': '🌤️',
+  'lunch': '☀️',
+  'dinner': '🌙',
+  '1': '🌤️',
+  '2': '☀️',
+  '3': '🌙',
 };
 
 /**
@@ -93,9 +108,21 @@ export default function TypeActionPlan({
     const allAssignments: (Assignment & { timeSlot: string })[] = [];
     
     // Collect actions from all time slots
+    console.log('🔍 TypeActionPlan processing assignments:', {
+      assignmentKeys: Object.keys(assignments),
+      assignmentsData: assignments
+    });
+    
     Object.entries(assignments).forEach(([timeSlot, timeAssignments]) => {
+      console.log(`🔍 Processing timeSlot: "${timeSlot}" with ${timeAssignments?.length || 0} assignments`);
       if (timeAssignments && timeAssignments.length > 0) {
         timeAssignments.forEach(assignment => {
+          console.log(`🔍 Assignment details:`, {
+            id: assignment.id,
+            title: assignment.title,
+            timeSlot: timeSlot,
+            fullAssignment: assignment
+          });
           allAssignments.push({ ...assignment, timeSlot });
         });
       }
@@ -198,12 +225,13 @@ export default function TypeActionPlan({
   // Hormone-specific icon return function
   const getHormoneIcon = (hormone: string) => {
     switch (hormone.toLowerCase()) {
-      case 'androgens': return '💪';
-      case 'progesterone': return '🌸';
-      case 'estrogen': return '🌺';
-      case 'thyroid': return '🦋';
-      case 'insulin': return '🍯';
-      case 'cortisol': return '⚡';
+      case 'androgens': return Images.TestosteroneCharacter;
+      case 'progesterone': return Images.ProgesteroneCharacter;
+      case 'estrogen': 
+        return Images.EstrogenCharacter;
+      case 'thyroid': return Images.ThyroidCharacter;
+      case 'insulin': return Images.InsulinCharacter;
+      case 'cortisol': return Images.CortisolCharacter;
       case 'fsh': return '🌱';
       case 'lh': return '🌿';
       case 'prolactin': return '🤱';
@@ -221,15 +249,57 @@ export default function TypeActionPlan({
   };
 
   // Function to return first hormone icon
-  const getFirstHormoneIcon = (assignment: Assignment): string => {
+  const getFirstHormoneIcon = (assignment: Assignment): string | any => {
     if (assignment.hormones && assignment.hormones.length > 0) {
       return getHormoneIcon(assignment.hormones[0]);
     }
     return '💊'; // Default icon
   };
 
-  const getTimeEmoji = (timeSlot: string): string => {
-    return TIME_EMOJI_MAP[timeSlot] || '⏰';
+  // Smart time slot detection based on assignment content
+  const getSmartTimeSlot = (assignment: Assignment): string => {
+    const title = assignment.title.toLowerCase();
+    const category = assignment.category?.toLowerCase() || '';
+    
+    // Morning indicators (breakfast foods, morning routines)
+    if (title.includes('pumpkin') || title.includes('seed') || 
+        title.includes('pomegranate') || title.includes('juice') ||
+        title.includes('breakfast') || title.includes('morning') ||
+        (category === 'food' && (title.includes('smoothie') || title.includes('cereal')))) {
+      return 'morning';
+    }
+    
+    // Afternoon indicators (exercise, lunch, afternoon activities)
+    if (title.includes('yoga') || title.includes('practice') ||
+        title.includes('lunch') || title.includes('afternoon') ||
+        (category === 'movement' && (title.includes('cardio') || title.includes('walk')))) {
+      return 'afternoon';
+    }
+    
+    // Evening indicators (dinner, evening routines, strength training)
+    if (title.includes('strength') || title.includes('training') ||
+        title.includes('dinner') || title.includes('evening') ||
+        title.includes('meditation') || title.includes('sleep')) {
+      return 'evening';
+    }
+    
+    // Default fallback
+    return 'anytime';
+  };
+
+  const getTimeEmoji = (timeSlot: string, assignment?: Assignment): string => {
+    // Use smart detection if we have assignment data and timeSlot is 'anytime'
+    const smartTimeSlot = (timeSlot === 'anytime' && assignment) ? getSmartTimeSlot(assignment) : timeSlot;
+    
+    console.log('🔍 TypeActionPlan getTimeEmoji:', {
+      originalTimeSlot: timeSlot,
+      smartTimeSlot,
+      assignmentTitle: assignment?.title,
+      found: TIME_EMOJI_MAP[smartTimeSlot],
+      fallback: TIME_EMOJI_MAP[smartTimeSlot] || '⏰'
+    });
+    
+    return TIME_EMOJI_MAP[smartTimeSlot] || '⏰';
   };
 
   // First line: from top to category start (gradient)
@@ -397,13 +467,21 @@ export default function TypeActionPlan({
           <Text style={styles.actionPurpose}>{getActionSymptomsConditions(assignment)}</Text>
           <View style={styles.separator} />
           <View style={styles.hormoneInfo}>
-            <Text style={[styles.hormoneCount, { color: getFirstHormoneColor(assignment) }]}>+{getHormoneCount(assignment)}</Text>
-            <View style={[styles.hormoneIcon, { backgroundColor: getFirstHormoneColor(assignment) }]}>
-              <Text style={styles.hormoneIconText}>{getFirstHormoneIcon(assignment)}</Text>
+            <Text style={[styles.hormoneCount, { color: '#949494' }]}>+{getHormoneCount(assignment)}</Text>
+            <View style={styles.hormoneIcon}>
+              {typeof getFirstHormoneIcon(assignment) === 'string' ? (
+                <Text style={styles.hormoneIconText}>{getFirstHormoneIcon(assignment)}</Text>
+              ) : (
+                <Image 
+                  source={getFirstHormoneIcon(assignment)} 
+                  style={styles.hormoneIconImage}
+                  resizeMode="contain"
+                />
+              )}
             </View>
           </View>
           <View style={styles.separator} />
-          <Text style={styles.timeEmoji}>{getTimeEmoji(assignment.timeSlot)}</Text>
+          <Text style={styles.timeEmoji}>{getTimeEmoji(assignment.timeSlot, assignment)}</Text>
         </View>
       </View>
     </View>
@@ -482,7 +560,9 @@ export default function TypeActionPlan({
              {/* First action item preview */}
              <View style={styles.tomorrowActionPreview}>
                <View style={styles.tomorrowImageContainer}>
-                 <Text style={styles.tomorrowActionImage}>📋</Text>
+                 <Text style={styles.tomorrowActionImage}>📋
+                  
+                 </Text>
                </View>
                
                <View style={styles.tomorrowActionDetails}>
@@ -493,7 +573,7 @@ export default function TypeActionPlan({
                    <Text style={styles.actionPurpose}>Acne, PCOS</Text>
                    <View style={styles.actionSeparator} />
                    <View style={styles.hormoneInfo}>
-                     <Text style={[styles.hormoneCount, { color: '#FF6991' }]}>+1</Text>
+                     <Text style={[styles.hormoneCount, { color: '#949494' }]}>+1</Text>
                      <View style={[styles.hormoneIcon, { backgroundColor: '#FF6991' }]}>
                        <Text style={styles.hormoneIconText}>H</Text>
                      </View>
@@ -614,26 +694,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: responsiveWidth(1.5),
+    flexWrap: 'wrap',
+    maxWidth: '100%',
+    paddingHorizontal: responsiveWidth(2),
+    paddingVertical: responsiveHeight(0.5),
   },
   actionAmount: {
     fontSize: responsiveFontSize(1.7), // 12px equivalent
     fontFamily: 'Inter400', // Inter Regular
     color: '#949494', // Grey Light
+    flexShrink: 1,
+    lineHeight: responsiveFontSize(1.7) * 1.2,
+    textAlign: 'left',
   },
   actionPurpose: {
     fontSize: responsiveFontSize(1.7), // 12px equivalent
     fontFamily: 'Inter400', // Inter Regular
     color: '#949494', // Grey Light
+    flexShrink: 1,
+    flex: 1,
+    lineHeight: responsiveFontSize(1.7) * 1.2,
+    textAlign: 'left',
   },
   separator: {
     width: 1,
-    height: responsiveHeight(1.5),
+    height: responsiveHeight(2),
     backgroundColor: '#E5E5EA',
+    marginHorizontal: responsiveWidth(0.5),
   },
   hormoneInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: responsiveWidth(1),
+    flexShrink: 0,
   },
   hormoneCount: {
     fontSize: responsiveFontSize(1.7), // 12px equivalent
@@ -644,7 +737,6 @@ const styles = StyleSheet.create({
     width: responsiveWidth(4),
     height: responsiveWidth(4),
     borderRadius: responsiveWidth(2),
-    backgroundColor: '#A36CFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -653,8 +745,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
   },
+  hormoneIconImage: {
+    width: '100%',
+    height: '100%',
+  },
   timeEmoji: {
-    fontSize: responsiveFontSize(2.2),
+    fontSize: responsiveFontSize(2.5), // Larger for better visibility
+    textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: responsiveFontSize(2.5),
+    flexShrink: 0,
   },
   
   // Tomorrow section styles

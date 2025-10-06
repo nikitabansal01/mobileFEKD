@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
-import Svg, { Circle, Defs, Stop, RadialGradient as SvgRadialGradient } from 'react-native-svg';
+import Svg, { Circle, Defs, Polygon, Stop, LinearGradient as SvgLinearGradient, RadialGradient as SvgRadialGradient } from 'react-native-svg';
 import TypeActionPlan from '../../components/TypeActionPlan';
 
 interface HomeScreenProps {
@@ -331,7 +331,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const getProgressColor = (hormone: string) => {
     switch (hormone.toLowerCase()) {
       case 'androgens': return '#FF6991';
-      case 'progesterone': return '#87CEEB';
+      case 'progesterone': return '#CBF0FF';
       case 'estrogen': return '#FF8BA7';
       case 'thyroid': return '#F6C34C';
       case 'insulin': return '#90EE90';
@@ -340,7 +340,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       case 'lh': return '#FFD700';
       case 'prolactin': return '#F6C34C';
       case 'ghrelin': return '#FF6B6B';
-      case 'testosterone': return '#DDA0DD';
+      case 'testosterone': return '#A29AEA';
       default: return '#C17EC9';
     }
   };
@@ -412,16 +412,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
               <Stop offset="50%" stopColor={secondHormoneColor} stopOpacity="0.2" />
               <Stop offset="100%" stopColor={secondHormoneColor} stopOpacity="0" />
             </SvgRadialGradient>
-            
-            {/* VectorSpotlight gradient - upside down V */}
-            <SvgRadialGradient id="spotlight" cx="0.5" cy="0.6" r="0.5">
-              <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
-              <Stop offset="15%" stopColor="#FFFFFF" stopOpacity="0.9" />
-              <Stop offset="30%" stopColor="#FFFFFF" stopOpacity="0.7" />
-              <Stop offset="50%" stopColor="#FFFFFF" stopOpacity="0.4" />
-              <Stop offset="80%" stopColor="#FFFFFF" stopOpacity="0.1" />
-              <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
-            </SvgRadialGradient>
           </Defs>
           
           {/* First large circular gradient */}
@@ -439,13 +429,36 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             r={Math.max(screenWidth, screenHeight) * 0.5}
             fill="url(#bgGrad2)"
           />
-          
-          {/* VectorSpotlight effect - upside down V */}
-          <Circle
-            cx={screenWidth * 0.5}
-            cy={screenHeight * 0.3}
-            r={Math.max(screenWidth, screenHeight) * 0.4}
-            fill="url(#spotlight)"
+        </Svg>
+      </View>
+    );
+  };
+
+  /**
+   * Render VectorSpotlight as a foreground overlay above gradients and white circle
+   */
+  const renderSpotlightOverlay = () => {
+    const screenWidth = Dimensions.get('window').width;
+    const screenHeight = Dimensions.get('window').height;
+    return (
+      <View style={styles.spotlightOverlayContainer} pointerEvents="none">
+        <Svg 
+          width={screenWidth} 
+          height={screenHeight}
+          viewBox={`0 0 ${screenWidth} ${screenHeight}`}
+        >
+          <Defs>
+            <SvgLinearGradient id="spotlightLinear" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.9" />
+              <Stop offset="40%" stopColor="#FFFFFF" stopOpacity="0.45" />
+              <Stop offset="70%" stopColor="#FFFFFF" stopOpacity="0.15" />
+              <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+            </SvgLinearGradient>
+          </Defs>
+          {/* Foreground triangular spotlight starting from the top */}
+          <Polygon
+            points={`${screenWidth * 0.5},0 ${screenWidth * 0.12},${screenHeight * 0.32} ${screenWidth * 0.88},${screenHeight * 0.32}`}
+            fill="url(#spotlightLinear)"
           />
         </Svg>
       </View>
@@ -460,7 +473,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const getProgressBgColor = (hormone: string) => {
     // Use a lighter shade of the main progress color for the unfilled track
     const base = getProgressColor(hormone);
-    return lightenColor(base, 0.70);
+    return lightenColor(base, 0.75);
   };
 
   if (loading) {
@@ -486,6 +499,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         
         {/* White circle overlay effect */}
         <View style={styles.whiteCircleOverlay} />
+
+        {/* Foreground VectorSpotlight overlay (on top of gradients and white circle) */}
+        {renderSpotlightOverlay()}
 
         {/* Header */}
         <View style={styles.header}>
@@ -664,6 +680,15 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: -1,
+  },
+
+  spotlightOverlayContainer: {
+    position: 'absolute',
+    top: verticalScale(-15),
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
   },
 
   whiteCircleOverlay: {
