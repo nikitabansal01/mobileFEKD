@@ -2,7 +2,8 @@ import LottieView from 'lottie-react-native';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
-const AuvraAnimation = require('@/assets/animation/Auvra_Animation.json');
+// const AuvraAnimation = require('@/assets/animation/Auvra_Animation.json');
+const AuvraAnimation = require('@/assets/animation/auvra-character.json');
 
 /**
  * Props for the AuvraCharacterNoShadow component

@@ -55,7 +55,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
     { 
       key: 'personalize', 
       label: 'Personalize', 
-      icon: require('../assets/icons/IconCalendar.png'),
+      icon: require('../assets/icons/IconPersonalize.png'),
       screen: 'PersonalizeScreen' 
     },
     { 

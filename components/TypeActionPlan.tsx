@@ -224,6 +224,19 @@ export default function TypeActionPlan({
 
   // Hormone-specific icon return function
   const getHormoneIcon = (hormone: string) => {
+    console.log('🔍 getHormoneIcon called with:', {
+      hormone,
+      hormoneLower: hormone.toLowerCase(),
+      availableImages: {
+        TestosteroneCharacter: !!Images.TestosteroneCharacter,
+        ProgesteroneCharacter: !!Images.ProgesteroneCharacter,
+        EstrogenCharacter: !!Images.EstrogenCharacter,
+        ThyroidCharacter: !!Images.ThyroidCharacter,
+        InsulinCharacter: !!Images.InsulinCharacter,
+        CortisolCharacter: !!Images.CortisolCharacter,
+      }
+    });
+    
     switch (hormone.toLowerCase()) {
       case 'androgens': return Images.TestosteroneCharacter;
       case 'progesterone': return Images.ProgesteroneCharacter;

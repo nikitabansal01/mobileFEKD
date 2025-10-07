@@ -610,7 +610,7 @@ export default function PersonalizeScreen() {
               <Ionicons name="checkmark-circle" size={16} color={COLORS.warmPurple} />
             )}
           </View>
-          {item.description && isInProgress && (
+          {item.description && item.description.trim() && isInProgress && (
             <Text style={styles.rewardDescription}>
               {item.description}
             </Text>
