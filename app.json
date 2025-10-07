@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -38,8 +38,7 @@
     "plugins": [
       "expo-font",
       "expo-router",
-      "expo-web-browser",
-      "expo-dev-client"
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {
