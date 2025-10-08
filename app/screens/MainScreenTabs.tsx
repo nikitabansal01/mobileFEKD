@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import BottomNavigationBar from '../../components/BottomNavigationBar';
-import ChatbotScreen from './ChatbotScreen';
+import ChatHistoryScreen from './ChatHistoryScreen';
 import CommunityScreen from './CommunityScreen';
 import HomeScreen from './HomeScreen';
 import PersonalizeScreen from './PersonalizeScreen';
@@ -9,8 +9,36 @@ import ProgressScreen from './ProgressScreen';
 
 type TabType = 'home' | 'personalize' | 'progress' | 'community' | 'auvra' | 'insights' | 'profile';
 
-export default function MainScreenTabs() {
+interface MainScreenTabsProps {
+  route?: {
+    params?: {
+      activeTab?: string;
+      chatContext?: {
+        chatId: string;
+        conversationContext?: {
+          initialMessage: string;
+          userResponse: string;
+          context: string;
+        };
+      };
+    };
+  };
+}
+
+export default function MainScreenTabs({ route }: MainScreenTabsProps) {
   const [activeTab, setActiveTab] = useState<TabType>('home');
+
+  // Handle route params for navigation from HomeScreen
+  React.useEffect(() => {
+    console.log('MainScreenTabs - route params received:', route?.params);
+    if (route?.params?.activeTab) {
+      console.log('MainScreenTabs - Setting activeTab to:', route.params.activeTab);
+      setActiveTab(route.params.activeTab as TabType);
+    }
+    if (route?.params?.chatContext) {
+      console.log('MainScreenTabs - chatContext received:', route.params.chatContext);
+    }
+  }, [route?.params?.activeTab, route?.params?.chatContext]);
 
   const handleBackToHome = () => {
     setActiveTab('home');
@@ -29,7 +57,12 @@ export default function MainScreenTabs() {
       case 'profile': // Map profile to community screen
         return <CommunityScreen />;
       case 'auvra':
-        return <ChatbotScreen onBackToHome={handleBackToHome} />;
+        return <ChatHistoryScreen 
+          onBackToHome={handleBackToHome} 
+          activeTab={activeTab}
+          onTabPress={handleTabPress}
+          chatContext={route?.params?.chatContext}
+        />;
       default:
         return <HomeScreen />;
     }

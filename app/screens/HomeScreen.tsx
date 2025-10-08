@@ -28,6 +28,17 @@ type RootStackParamList = {
       context: string;
     };
   };
+  MainScreenTabs: {
+    activeTab?: string;
+    chatContext?: {
+      chatId: string;
+      conversationContext?: {
+        initialMessage: string;
+        userResponse: string;
+        context: string;
+      };
+    };
+  };
 };
 
 interface HomeScreenProps {
@@ -94,15 +105,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const handleAuvraResponse = (response: 'positive' | 'negative') => {
     setShowAuvraChat(false);
     
-    // Navigate to ChatbotScreen with conversation context
+    // Navigate to MainScreenTabs with auvra tab active and chat context
     const conversationContext = {
-      initialMessage: "How does your action plan look today?",
+      initialMessage: "How does your care plan look today?",
       userResponse: response === 'positive' ? "👍 It works for me" : "👎 I want to change it",
-      context: "action_plan_feedback"
+      context: "care_plan_modal"
     };
     
-    navigation.navigate('ChatbotScreen', { 
-      conversationContext 
+    console.log('HomeScreen - Navigating to Care Plan check-in with:', {
+      activeTab: 'auvra',
+      chatContext: {
+        chatId: '1',
+        conversationContext
+      }
+    });
+    
+    navigation.navigate('MainScreenTabs', { 
+      activeTab: 'auvra',
+      chatContext: {
+        chatId: '1', // Care Plan check-in chat ID
+        conversationContext
+      }
     });
   };
 
@@ -598,8 +621,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
               </View>
             )}
           </View>
-          <TouchableOpacity style={styles.menuButton}>
-            <Text style={styles.menuIcon}>☰</Text>
+          <TouchableOpacity style={styles.calendarButton}>
+            <Image 
+              source={require('../../assets/icons/IconCalendar.png')}
+              style={styles.calendarIcon}
+              resizeMode="contain"
+            />
           </TouchableOpacity>
         </View>
 
@@ -836,12 +863,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter400',
     color: '#C17EC9',
   },
-  menuButton: {
+  calendarButton: {
     padding: responsiveWidth(1.5),
   },
-  menuIcon: {
-    fontSize: responsiveFontSize(3),
-    color: '#000000',
+  calendarIcon: {
+    width: responsiveWidth(6),
+    height: responsiveWidth(6),
+    tintColor: '#000000',
   },
   questSection: {
     paddingHorizontal: responsiveWidth(5),

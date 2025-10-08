@@ -61,7 +61,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
       key: 'auvra', 
       label: 'Auvra', 
       icon: null, // No icon - will use Auvra character
-      screen: 'ChatbotScreen' 
+      screen: 'ChatHistoryScreen' 
     },
     { 
       key: 'insights', 
@@ -120,7 +120,8 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
                 key={tab.key}
                 style={[
                   styles.tab,
-                  activeTab === tab.key && styles.activeTab
+                  activeTab === tab.key && styles.activeTab,
+                  activeTab === tab.key && tab.key === 'auvra' && styles.activeTabAuvra
                 ]}
                 onPress={() => handleTabPress(tab.key, tab.screen)}
               >
@@ -149,7 +150,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
         <View style={styles.characterWrapper}>
           <TouchableOpacity 
             style={styles.characterContainer}
-            onPress={() => handleTabPress('auvra', 'ChatbotScreen')}
+            onPress={() => handleTabPress('auvra', 'ChatHistoryScreen')}
             activeOpacity={0.7}
           >
             <AuvraCharacterNoShadow size={characterSize} />
@@ -211,9 +212,13 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   activeTab: {
-    backgroundColor: 'rgba(221,194,233,0.5)', // Lavender background
+    backgroundColor: 'rgba(221,194,233,0.5)', // Lavender background for all tabs except Auvra
     borderRadius: 10,
     opacity: 1,
+  },
+  activeTabAuvra: {
+    backgroundColor: 'transparent', // No background for Auvra tab
+    borderRadius: 0,
   },
   tabIcon: {
     width: responsiveWidth(4.4), // 16px icon

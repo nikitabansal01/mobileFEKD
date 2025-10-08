@@ -28,9 +28,10 @@ const COLORS = {
 
 interface ChatbotHeaderProps {
   onClose: () => void;
+  title?: string;
 }
 
-export default function ChatbotHeader({ onClose }: ChatbotHeaderProps) {
+export default function ChatbotHeader({ onClose, title = "Weekly Check-in" }: ChatbotHeaderProps) {
   return (
     <View style={styles.header}>
       <TouchableOpacity 
@@ -44,7 +45,7 @@ export default function ChatbotHeader({ onClose }: ChatbotHeaderProps) {
         <Ionicons name="close-outline" size={scale(32)} color={COLORS.greyMedium} />
       </TouchableOpacity>
       <View style={styles.headerCenter}>
-        <Text style={styles.headerTitle}>Weekly Check-in</Text>
+        <Text style={styles.headerTitle}>{title}</Text>
       </View>
     </View>
   );

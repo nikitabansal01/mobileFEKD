@@ -34,7 +34,7 @@ function GradientText({ children, style }: { children: string; style?: any }) {
 }
 
 
-export default function AvatarChatbot({ showMessage = true }: { showMessage?: boolean }) {
+export default function AvatarChatbot({ showMessage = true, message }: { showMessage?: boolean; message?: string }) {
   
   const Animation = () => {
     if (Platform.OS === "web") {
@@ -102,7 +102,7 @@ export default function AvatarChatbot({ showMessage = true }: { showMessage?: bo
 
       {showMessage && (
         <View style={styles.introTextContainer}>
-          <GradientText style={styles.introText}>How was your bloating this week?</GradientText>
+          <GradientText style={styles.introText}>{message || "How was your bloating this week?"}</GradientText>
         </View>
       )}
 

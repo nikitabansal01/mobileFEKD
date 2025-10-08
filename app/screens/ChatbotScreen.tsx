@@ -221,19 +221,54 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const fontsLoaded = useAppFonts();
   const [mode, setMode] = useState<Mode>("idle");
   const [value, setValue] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
-    { id: "1", text: "How was your bloating this week?", isBot: true },
-    { id: "3", text: "Were there any big changes in your week? related to food, lifestyle, stress, etc", isBot: true },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   
-  // Handle conversation context from Auvra chat
+  
+  // Handle conversation context from different chats
   useEffect(() => {
-    const conversationContext = route?.params?.conversationContext;
-    if (conversationContext) {
-      // Add the conversation context as initial messages
+    const contextFromRoute = route?.params?.conversationContext;
+    
+    if (contextFromRoute?.context === "care_plan_modal") {
+      // Care Plan check-in modal content - show the question and user response if available
+      const messages = [
+        { id: "1", text: "How does your care plan look today?", isBot: true },
+      ];
+      
+      // Add user response if available (from HomeScreen modal)
+      if (contextFromRoute.userResponse) {
+        messages.push({
+          id: "2", 
+          text: contextFromRoute.userResponse, 
+          isBot: false
+        });
+        
+        // Add follow-up question based on user response
+        let followUpQuestion = "How does your care plan look today?";
+        
+        if (contextFromRoute.userResponse === "👍 It works for me") {
+          followUpQuestion = "That's great! What's working well for you today?";
+        } else if (contextFromRoute.userResponse === "👎 I want to change it") {
+          followUpQuestion = "I understand. What would you like to change about your plan?";
+        }
+        
+        messages.push({
+          id: "3",
+          text: followUpQuestion,
+          isBot: true
+        });
+      }
+      
+      setMessages(messages);
+      // Set mode to idle so user can use yap button
+      setMode("idle");
+      // Disable slider and selected value for care plan modal
+      setShowSlider(false);
+      setShowSelectedValue(false);
+    } else {
+      // Default: Weekly check-in content
       setMessages([
-        { id: "1", text: conversationContext.initialMessage, isBot: true },
-        { id: "2", text: conversationContext.userResponse, isBot: false },
+        { id: "1", text: "How was your bloating this week?", isBot: true },
+        { id: "3", text: "Were there any big changes in your week? related to food, lifestyle, stress, etc", isBot: true },
       ]);
     }
   }, [route?.params?.conversationContext]);
@@ -246,18 +281,75 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const [showSlider, setShowSlider] = useState(true);
   const [showSelectedValue, setShowSelectedValue] = useState(false);
 
-  // Multiple choice options for tap mode
-  const choiceOptions: ChoiceOption[] = [
-    { id: "ate-out-more", text: "Ate out more" },
-    { id: "ate-more-carbs", text: "Ate more carbs" },
-    { id: "ate-more-dairy", text: "Ate more dairy" },
-    { id: "skipped-meals", text: "Skipped meals" },
-    { id: "untimely-eating", text: "Untimely eating" },
-    { id: "less-sleep", text: "Less sleep" },
-    { id: "more-stress", text: "More stress/workload" },
-    { id: "more-caffeine", text: "More caffeine" },
-    { id: "more-alcohol", text: "More alcohol" },
-  ];
+  // Get choice options based on context
+  const getChoiceOptions = (): ChoiceOption[] => {
+    const contextFromRoute = route?.params?.conversationContext;
+    
+    switch (contextFromRoute?.context) {
+      case "care_plan_modal":
+        return [
+          { id: "want-to-change", text: "👎 I want to change it" },
+          { id: "skip-actions", text: "⏩ I want to skip some actions for today" },
+          { id: "alternate-suggestions", text: "🔁 I want alternate suggestions" },
+        ];
+      case "symptom_checkin":
+        return [
+          { id: "ate-out-more", text: "Ate out more" },
+          { id: "ate-more-carbs", text: "Ate more carbs" },
+          { id: "ate-more-dairy", text: "Ate more dairy" },
+          { id: "skipped-meals", text: "Skipped meals" },
+          { id: "untimely-eating", text: "Untimely eating" },
+          { id: "less-sleep", text: "Less sleep" },
+          { id: "more-stress", text: "More stress/workload" },
+          { id: "more-caffeine", text: "More caffeine" },
+          { id: "more-alcohol", text: "More alcohol" },
+        ];
+      case "personalise":
+        return [
+          { id: "add-factors", text: "Add personalisation factors" },
+          { id: "update-preferences", text: "Update my preferences" },
+          { id: "customise-plan", text: "Customise my action plan" },
+        ];
+      case "know_body":
+        return [
+          { id: "learn-phases", text: "Learn about menstrual phases" },
+          { id: "hormone-info", text: "Understand hormone changes" },
+          { id: "body-symptoms", text: "Track body symptoms" },
+        ];
+      default:
+        return [
+          { id: "ate-out-more", text: "Ate out more" },
+          { id: "ate-more-carbs", text: "Ate more carbs" },
+          { id: "ate-more-dairy", text: "Ate more dairy" },
+          { id: "skipped-meals", text: "Skipped meals" },
+          { id: "untimely-eating", text: "Untimely eating" },
+          { id: "less-sleep", text: "Less sleep" },
+          { id: "more-stress", text: "More stress/workload" },
+          { id: "more-caffeine", text: "More caffeine" },
+          { id: "more-alcohol", text: "More alcohol" },
+        ];
+    }
+  };
+
+  const choiceOptions = getChoiceOptions();
+
+  // Get header title based on context
+  const getHeaderTitle = (): string => {
+    const contextFromRoute = route?.params?.conversationContext;
+    
+    switch (contextFromRoute?.context) {
+      case "care_plan_modal":
+        return "Care Plan Check-in";
+      case "symptom_checkin":
+        return "Symptom Check-in";
+      case "personalise":
+        return "Want to Personalise?";
+      case "know_body":
+        return "Know my body";
+      default:
+        return "Weekly Check-in";
+    }
+  };
 
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
 
@@ -332,6 +424,61 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       console.log("Sent:", messageText);
       if (!text) setValue("");
 
+      // Add bot response after a short delay
+      setTimeout(() => {
+        const contextFromRoute = route?.params?.conversationContext;
+        let botResponse: Message;
+        
+        if (contextFromRoute?.context === "care_plan_modal") {
+          // Care Plan modal - ask a follow-up question based on user response
+          const userResponse = contextFromRoute.userResponse;
+          let followUpQuestion = "How does your care plan look today?";
+          
+          if (userResponse === "👍 It works for me") {
+            followUpQuestion = "That's great! What's working well for you today?";
+          } else if (userResponse === "👎 I want to change it") {
+            followUpQuestion = "I understand. What would you like to change about your plan?";
+          }
+          
+          botResponse = {
+            id: Date.now().toString() + "_bot",
+            text: followUpQuestion,
+            isBot: true,
+          };
+        } else if (contextFromRoute?.context === "symptom_checkin") {
+          // Symptom checkin - ask the question again
+          botResponse = {
+            id: Date.now().toString() + "_bot",
+            text: "See any progress with your symptoms? Track progress, wins, difficulties...",
+            isBot: true,
+          };
+        } else if (contextFromRoute?.context === "personalise") {
+          // Personalise - ask the question again
+          botResponse = {
+            id: Date.now().toString() + "_bot",
+            text: "Want to Personalise? Add 25+ personalisation factors to improve your action plan",
+            isBot: true,
+          };
+        } else if (contextFromRoute?.context === "know_body") {
+          // Know my body - ask the question again
+          botResponse = {
+            id: Date.now().toString() + "_bot",
+            text: "Know my body. Know more about menstrual phase, hormones and how it changes",
+            isBot: true,
+          };
+        } else {
+          // Default response
+          botResponse = {
+            id: Date.now().toString() + "_bot",
+            text: "Were there any big changes in your week? related to food, lifestyle, stress, etc",
+            isBot: true,
+          };
+        }
+        
+        setMessages(prev => [...prev, botResponse]);
+        scrollToBottom();
+      }, 500);
+
       // Scroll to bottom after adding new message
       scrollToBottom();
     }
@@ -354,17 +501,6 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       const messageText = selectedTexts.join(", ");
       handleSend(messageText);
       setSelectedOptions([]); // Clear selections after sending
-
-      // Add bot response after a short delay
-      setTimeout(() => {
-        const botResponse: Message = {
-          id: Date.now().toString() + "_bot",
-          text: "Were there any big changes in your week? related to food, lifestyle, stress, etc",
-          isBot: true,
-        };
-        setMessages(prev => [...prev, botResponse]);
-        scrollToBottom();
-      }, 500);
     }
   };
 
@@ -442,96 +578,26 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     return "Extreme";
   };
 
-  const renderIdleMode = () => (
-    <View style={styles.idleModeContainer}>
-      {showSlider ? (
-        <View style={styles.sliderPageContainer}>
-          <View style={styles.sliderTopSpacer} />
-          <Avatar showMessage={true} />
-
-          <View style={styles.sliderContainer}>
-            <View style={styles.sliderNumbers}>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                <TouchableOpacity
-                  key={num}
-                  onPressIn={() => setSliderHoverValue(num)}
-                  onPress={() => handleSliderSelection(num)}
-                  activeOpacity={0.8}
-                  style={[
-                    styles.sliderNumber,
-                    { backgroundColor: getSliderTint(num) },
-                    sliderHoverValue === num && styles.sliderNumberSelected,
-                  ]}
-                >
-                  <Text style={styles.sliderNumberText}>{num}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.sliderLabels}>
-              <Text style={styles.sliderLabel}>None</Text>
-              <Text style={styles.sliderLabel}>Mild</Text>
-              <Text style={styles.sliderLabel}>Moderate</Text>
-              <Text style={styles.sliderLabel}>Strong</Text>
-              <Text style={styles.sliderLabel}>Extreme</Text>
-            </View>
-          </View>
-
-          <View style={styles.sliderBottomSpacer} />
-        </View>
-      ) : showSelectedValue ? (
-        <View style={styles.sliderPageContainer}>
-          <View style={styles.sliderTopSpacer} />
-          <Avatar showMessage={true} />
-
-          <View style={styles.selectedValueContainer}>
-            <Text style={styles.selectedValueNumber}>{sliderValue}</Text>
-            <Text style={styles.selectedValueLabel}>{getBloatingLabel(sliderValue)} bloating</Text>
-          </View>
-          {/* Keep slider visible during the 1s animation, with the selected cell highlighted */}
-          <View style={styles.sliderContainer}>
-            <View style={styles.sliderNumbers}>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                <View
-                  key={num}
-                  style={[
-                    styles.sliderNumber,
-                    { backgroundColor: getSliderTint(num) },
-                    sliderValue === num && styles.sliderNumberSelected,
-                  ]}
-                >
-                  <Text style={styles.sliderNumberText}>{num}</Text>
-                </View>
-              ))}
-            </View>
-            <View style={styles.sliderLabels}>
-              <Text style={styles.sliderLabel}>None</Text>
-              <Text style={styles.sliderLabel}>Mild</Text>
-              <Text style={styles.sliderLabel}>Moderate</Text>
-              <Text style={styles.sliderLabel}>Strong</Text>
-              <Text style={styles.sliderLabel}>Extreme</Text>
-            </View>
-          </View>
-
-          <View style={styles.sliderBottomSpacer} />
-        </View>
-      ) : (
-        <>
+  const renderIdleMode = () => {
+    const contextFromRoute = route?.params?.conversationContext;
+    const isCarePlanModal = contextFromRoute?.context === "care_plan_modal";
+    
+    console.log('renderIdleMode - contextFromRoute:', contextFromRoute);
+    console.log('renderIdleMode - isCarePlanModal:', isCarePlanModal);
+    
+    // Force Care Plan modal to work - early return
+    if (isCarePlanModal) {
+      return (
+        <View style={styles.idleModeContainer}>
           <ScrollView
             ref={idleScrollRef}
             style={styles.messagesContainer}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
           >
-            <Avatar showMessage={true} />
+            <Avatar showMessage={false} />
+            <View style={{marginTop: verticalScale(20)}}>
             <View style={styles.messagesWrapper}>
-              {/* Always show slider value as first message if available */}
-              {sliderValue > 0 && (
-                <UserMessage text={`${sliderValue} = ${getBloatingLabel(sliderValue)} bloating`} />
-              )}
-              {/* Show initial bot response if no messages yet */}
-              {messages.length === 0 && sliderValue > 0 && (
-                <BotMessage text="Were there any big changes in your week? related to food, lifestyle, stress, etc" />
-              )}
               {/* Show all messages from the messages array */}
               {messages.map((message, index) => (
                 <View key={message.id}>
@@ -542,6 +608,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                   )}
                 </View>
               ))}
+            </View>
             </View>
           </ScrollView>
 
@@ -555,10 +622,129 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               ) : null}
             </View>
           )}
-        </>
-      )}
-    </View>
-  );
+        </View>
+      );
+    }
+    
+    return (
+      <View style={styles.idleModeContainer}>
+        {showSlider ? (
+          // Default bloating slider for other contexts
+          <View style={styles.sliderPageContainer}>
+            <View style={styles.sliderTopSpacer} />
+            <Avatar showMessage={true} />
+
+            <View style={styles.sliderContainer}>
+              <View style={styles.sliderNumbers}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                  <TouchableOpacity
+                    key={num}
+                    onPressIn={() => setSliderHoverValue(num)}
+                    onPress={() => handleSliderSelection(num)}
+                    activeOpacity={0.8}
+                    style={[
+                      styles.sliderNumber,
+                      { backgroundColor: getSliderTint(num) },
+                      sliderHoverValue === num && styles.sliderNumberSelected,
+                    ]}
+                  >
+                    <Text style={styles.sliderNumberText}>{num}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.sliderLabels}>
+                <Text style={styles.sliderLabel}>None</Text>
+                <Text style={styles.sliderLabel}>Mild</Text>
+                <Text style={styles.sliderLabel}>Moderate</Text>
+                <Text style={styles.sliderLabel}>Strong</Text>
+                <Text style={styles.sliderLabel}>Extreme</Text>
+              </View>
+            </View>
+
+            <View style={styles.sliderBottomSpacer} />
+          </View>
+        ) : showSelectedValue ? (
+          <View style={styles.sliderPageContainer}>
+            <View style={styles.sliderTopSpacer} />
+            <Avatar showMessage={true} />
+
+            <View style={styles.selectedValueContainer}>
+              <Text style={styles.selectedValueNumber}>{sliderValue}</Text>
+              <Text style={styles.selectedValueLabel}>{getBloatingLabel(sliderValue)} bloating</Text>
+            </View>
+            {/* Keep slider visible during the 1s animation, with the selected cell highlighted */}
+            <View style={styles.sliderContainer}>
+              <View style={styles.sliderNumbers}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                  <View
+                    key={num}
+                    style={[
+                      styles.sliderNumber,
+                      { backgroundColor: getSliderTint(num) },
+                      sliderValue === num && styles.sliderNumberSelected,
+                    ]}
+                  >
+                    <Text style={styles.sliderNumberText}>{num}</Text>
+                  </View>
+                ))}
+              </View>
+              <View style={styles.sliderLabels}>
+                <Text style={styles.sliderLabel}>None</Text>
+                <Text style={styles.sliderLabel}>Mild</Text>
+                <Text style={styles.sliderLabel}>Moderate</Text>
+                <Text style={styles.sliderLabel}>Strong</Text>
+                <Text style={styles.sliderLabel}>Extreme</Text>
+              </View>
+            </View>
+
+            <View style={styles.sliderBottomSpacer} />
+          </View>
+        ) : (
+          <>
+            <ScrollView
+              ref={idleScrollRef}
+              style={styles.messagesContainer}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+            >
+              <Avatar showMessage={true} />
+              <View style={styles.messagesWrapper}>
+                {/* Always show slider value as first message if available - only for non-care-plan contexts */}
+                {sliderValue > 0 && !isCarePlanModal && (
+                  <UserMessage text={`${sliderValue} = ${getBloatingLabel(sliderValue)} bloating`} />
+                )}
+                {/* Show initial bot response if no messages yet - only for non-care-plan contexts */}
+                {messages.length === 0 && sliderValue > 0 && !isCarePlanModal && (
+                  <BotMessage text="Were there any big changes in your week? related to food, lifestyle, stress, etc" />
+                )}
+                {/* Show all messages from the messages array */}
+                {messages.map((message, index) => (
+                  <View key={message.id}>
+                    {message.isBot ? (
+                      <BotMessage text={message.text} />
+                    ) : (
+                      <UserMessage text={message.text} />
+                    )}
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+
+            {/* Recording status display */}
+            {(isRecording || recordingComplete) && (
+              <View style={styles.recordingStatusContainer}>
+                {isRecording ? (
+                  <Text style={styles.recordingStatusText}>{formatTime(recordingTime)}</Text>
+                ) : recordingComplete ? (
+                  <Text style={styles.recordingStatusText}>{formatTime(recordingTime)}</Text>
+                ) : null}
+              </View>
+            )}
+          </>
+        )}
+      </View>
+    );
+  };
 
   const renderTypeMode = () => (
     <>
@@ -584,7 +770,6 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             </View>
           ))}
         </View>
-          
         </View>
       </ScrollView>
 
@@ -638,6 +823,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         contentContainerStyle={styles.scrollContent}
       >
         <Avatar showMessage={false} />
+        <View style={{marginTop: verticalScale(20)}}>
         <View style={styles.messagesWrapper}>
           {messages.map((message, index) => (
             <View key={message.id}>
@@ -651,6 +837,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               )}
             </View>
           ))}
+        </View>
         </View>
         <View style={styles.choiceOptionsContainer}>
           <View style={styles.choiceOptionsGrid}>
@@ -724,7 +911,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
   const renderContent = () => (
     <View style={[styles.root, mode === "idle" && styles.rootIdle]}>
-      <Header onClose={navigateToIndex} />
+      <Header 
+        onClose={navigateToIndex} 
+        title={getHeaderTitle()} 
+      />
 
       {mode === "idle" && renderIdleMode()}
       {mode === "type" && renderTypeMode()}

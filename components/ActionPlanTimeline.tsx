@@ -206,6 +206,11 @@ export default function ActionPlanTimeline({
     return Math.min(1, done / total);
   }, [todayAssignments]);
 
+  // Find the next incomplete task for pulsing animation
+  const nextIncompleteTask = useMemo(() => {
+    return todayAssignments.find((a) => !a.is_completed);
+  }, [todayAssignments]);
+
   useEffect(() => {
     Animated.timing(progressValue, {
       toValue: doneRatio,
@@ -374,13 +379,27 @@ export default function ActionPlanTimeline({
       setTodayPathD(todayPath);
       setPathD(todayPath);
 
-      // Generate path to completed anchors (ends exactly at anchors)
-      const completedCount = todayAssignments.filter(a => a.is_completed).length;
-      if (completedCount > 0) {
-        const completedAnchors = todayAnchors.slice(0, completedCount);
+      // Generate path to next incomplete task (lavender path)
+      const nextIncompleteIndex = todayAssignments.findIndex(a => !a.is_completed);
+      if (nextIncompleteIndex >= 0) {
+        // Include all completed tasks + the next incomplete task
+        const pathUpToNextTask = todayAnchors.slice(0, nextIncompleteIndex + 1);
+        const nextTaskPath = generateCompletedPath(
+          pathUpToNextTask,
+          todayAnchors,
+          CIRCLE_RADIUS,
+          CENTER_X,
+          CAP_TOP,
+          BRIDGE_DROP,
+          ITEM_BLOCK_H,
+          BASE_TOP
+        );
+        setCompletedPathD(nextTaskPath);
+      } else {
+        // All tasks completed - show full path
         const completedPath = generateCompletedPath(
-          completedAnchors,
-          todayAnchors, // total anchors also passed (for first segment calculation)
+          todayAnchors,
+          todayAnchors,
           CIRCLE_RADIUS,
           CENTER_X,
           CAP_TOP,
@@ -389,8 +408,6 @@ export default function ActionPlanTimeline({
           BASE_TOP
         );
         setCompletedPathD(completedPath);
-      } else {
-        setCompletedPathD('');
       }
     }
 
@@ -692,8 +709,8 @@ export default function ActionPlanTimeline({
                   )}
                 </View>
 
-                {/* Pulsing animation ring for completed actions */}
-                {a.is_completed && (
+                {/* Pulsing animation ring for next incomplete task */}
+                {a.id === nextIncompleteTask?.id && (
                   <Animated.View
                     style={[
                       styles.pulsingRing,
@@ -713,7 +730,7 @@ export default function ActionPlanTimeline({
                     { 
                       left: xImage, 
                       top: yImage,
-                      borderColor: a.is_completed ? '#DDC2E9' : '#EFEFEF', // Lavender color when completed
+                      borderColor: a.is_completed ? '#DDC2E9' : (a.id === nextIncompleteTask?.id ? '#DDC2E9' : '#EFEFEF'), // Lavender for completed or next task
                     },
                   ]}
                   onLongPress={!a.is_completed ? () => {
