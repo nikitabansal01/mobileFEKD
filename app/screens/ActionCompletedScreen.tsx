@@ -22,7 +22,7 @@ type RootStackParamList = {
   LoadingScreen: undefined;
   ResultLoadingScreen: undefined;
   LoginScreen: undefined;
-  HomeScreen: { 
+  MainScreenTabs: { 
     refreshedData?: AssignmentsResponse;
     cyclePhaseData?: CyclePhaseResponse;
     skipLoading?: boolean;
@@ -228,7 +228,7 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
           <LottieView
             source={MovingGlowAnimation}
             autoPlay
-            loop={false}
+            loop={true}
             style={styles.movingGlowAnimation}
           />
         )}
@@ -359,6 +359,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    flex: 1,
   },
 
   movingGlowAnimation: {
@@ -369,6 +370,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     height: '100%',
+    flex: 1,
+    overflow: 'hidden',
   },
 
   giftUnboxingAnimation: {

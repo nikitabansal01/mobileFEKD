@@ -1,9 +1,8 @@
 import { useNavigation } from '@react-navigation/native';
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { scale, verticalScale } from 'react-native-size-matters';
 import AuvraCharacterNoShadow from './AuvraCharacterNoShadow';
 
 /**
@@ -11,7 +10,7 @@ import AuvraCharacterNoShadow from './AuvraCharacterNoShadow';
  */
 interface BottomNavigationBarProps {
   /** Currently active tab */
-  activeTab?: 'home' | 'personalize' | 'auvra' | 'progress' | 'community';
+  activeTab?: 'home' | 'personalize' | 'auvra' | 'insights' | 'profile' | 'progress' | 'community';
   /** Custom tab press handler */
   onTabPress?: (tab: string) => void;
   /** Navigation object */
@@ -39,7 +38,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
   const insets = useSafeAreaInsets();
   
   // Character size configuration
-  const characterSize = responsiveWidth(18);
+  const characterSize = responsiveWidth(20);
   // Empty string size calculation (same as tabIcon fontSize)
   const emptyIconSize = responsiveFontSize(2.5);
   // Pure gap between character and text (in pixels)
@@ -61,20 +60,20 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
     { 
       key: 'auvra', 
       label: 'Auvra', 
-      icon: null, // No icon
+      icon: null, // No icon - will use Auvra character
       screen: 'ChatbotScreen' 
     },
     { 
-      key: 'progress', 
-      label: 'Progress', 
-      icon: require('../assets/icons/IconProgress.png'),
-      screen: 'ProgressScreen' 
+      key: 'insights', 
+      label: 'Insights', 
+      icon: require('../assets/icons/IconProgress.png'), // Using progress icon for insights
+      screen: 'progress' // Map to progress tab in MainScreenTabs
     },
     { 
-      key: 'community', 
-      label: 'Community', 
-      icon: require('../assets/icons/IconCommunity.png'),
-      screen: 'CommunityScreen' 
+      key: 'profile', 
+      label: 'Profile', 
+      icon: require('../assets/icons/IconProfile.png'), // Using community icon for profile
+      screen: 'community' // Map to community tab in MainScreenTabs
     },
   ];
 
@@ -111,40 +110,42 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
 
   return (
     <View style={styles.container}>
-      
-      {/* Navigation bar */}
+      {/* Main Navigation Bar */}
       <View style={styles.navigationBar}>
-        <View style={styles.tabContainer}>
-          {tabs.map((tab, index) => (
-            <TouchableOpacity
-              key={tab.key}
-              style={[
-                styles.tab,
-                activeTab === tab.key && styles.activeTab
-              ]}
-              onPress={() => handleTabPress(tab.key, tab.screen)}
-            >
-              {tab.icon ? (
-                <Image 
-                  source={tab.icon}
-                  style={styles.tabIcon}
-                  tintColor={activeTab === tab.key ? '#bb4471' : '#000000'}
-                  resizeMode="contain"
-                />
-              ) : (
-                <View style={styles.emptyIconSpace} />
-              )}
-              <Text style={[
-                styles.tabLabel,
-                activeTab === tab.key && styles.activeTabLabel
-              ]}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        {/* White navigation background */}
+        <View style={styles.navBackground}>
+          <View style={styles.tabsRow}>
+            {tabs.map((tab) => (
+              <TouchableOpacity
+                key={tab.key}
+                style={[
+                  styles.tab,
+                  activeTab === tab.key && styles.activeTab
+                ]}
+                onPress={() => handleTabPress(tab.key, tab.screen)}
+              >
+                {tab.icon ? (
+                  <Image 
+                    source={tab.icon}
+                    style={styles.tabIcon}
+                    tintColor={activeTab === tab.key ? '#C17EC9' : '#000000'}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <View style={styles.emptyIconSpace} />
+                )}
+                <Text style={[
+                  styles.tabLabel,
+                  activeTab === tab.key && styles.activeTabLabel
+                ]}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
         
-        {/* Center Auvra Character - positioned absolutely in the center */}
+        {/* Auvra Character - positioned over the navigation */}
         <View style={styles.characterWrapper}>
           <TouchableOpacity 
             style={styles.characterContainer}
@@ -161,88 +162,95 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    position: 'fixed' as any,
+    position: Platform.OS === 'web' ? 'fixed' as any : 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: verticalScale(80),
-    backgroundColor: '#ffffff', // Ensure background is white
-  },
-  gradientOverlay: {
-    position: 'absolute',
-    top: -responsiveHeight(3), // -27px
-    left: 0,
-    right: 0,
-    height: responsiveHeight(4), // 44px
+    height: responsiveHeight(11.5), // 92px total height to accommodate Auvra character
+    zIndex: 1000,
+    backgroundColor: 'transparent', // Transparent to allow Auvra character to show
   },
   navigationBar: {
+    position: 'relative',
+    width: '100%',
+    height: '100%',
+  },
+  navBackground: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: responsiveHeight(8),
+    height: responsiveHeight(8.5), // Increased to 85px for better visibility
     backgroundColor: '#ffffff',
-    paddingHorizontal: responsiveWidth(5), // 18.257px
+    paddingHorizontal: responsiveWidth(5.1), // 18.257px
     paddingVertical: responsiveHeight(1.5), // Increased padding
+    zIndex: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -3,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  tabContainer: {
+  tabsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
+    height: '100%',
   },
   tab: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: responsiveWidth(1), // Increased button horizontal padding
-    paddingVertical: responsiveHeight(0.5), // Increased button vertical padding
+    paddingHorizontal: responsiveWidth(1.6), // 5.809px
+    paddingVertical: responsiveHeight(1), // 7.469px
     borderRadius: 28,
-    width: responsiveWidth(15), // Increased button width (55px → 66px)
+    width: responsiveWidth(15.3), // 55px width
     opacity: 0.5,
   },
   activeTab: {
-    backgroundColor: '#ffe9f1',
+    backgroundColor: 'rgba(221,194,233,0.5)', // Lavender background
     borderRadius: 10,
     opacity: 1,
   },
   tabIcon: {
-    width: responsiveWidth(6), // Icon size
-    height: responsiveWidth(6), // Icon size
-    marginBottom: responsiveHeight(0.2), // 1px
-  },
-  emptyIconSpace: {
-    width: responsiveWidth(6), // Icon size
-    height: responsiveWidth(6), // Icon size
-    marginBottom: responsiveHeight(0.2), // 1px
+    width: responsiveWidth(4.4), // 16px icon
+    height: responsiveWidth(4.4), // 16px icon
+    marginBottom: responsiveHeight(0.3), // Increased gap between icon and label
   },
   tabLabel: {
-    fontSize: responsiveFontSize(1.13), // 8px
+    fontSize: responsiveFontSize(1.1), // 8px
     fontFamily: 'Inter400',
     color: '#000000',
     textAlign: 'center',
   },
   activeTabLabel: {
-    fontFamily: 'Inter600',
-    color: '#bb4471',
+    fontFamily: 'Inter400', // Keep same font weight as inactive tabs
+    color: '#C17EC9', // Lavender color
   },
   characterWrapper: {
     position: 'absolute',
-    left: scale(50),
-    // top: -responsiveHeight(2), // Position above the navigation bar
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
-    marginLeft: -30, // Half of the character container width (60/2)
+    bottom: responsiveHeight(4.5), // Increased to avoid text overlap on web
+    left: '50%',
+    marginLeft: -responsiveWidth(7.6), // -27.5px to center 55px circle
+    zIndex: 3,
   },
   characterContainer: {
-    position: 'absolute',
-    left: scale(125),
+    width: responsiveWidth(15.3), // 55px
+    height: responsiveWidth(15.3), // 55px
+    borderRadius: responsiveWidth(7.65), // 27.5px radius for circle
+    borderWidth: 1,
+    borderColor: '#f7f7f8',
     alignItems: 'center',
-    top: -verticalScale(20),
-    // justifyContent: 'center',
-    width: scale(60), // Fixed reasonable touch area
-    height: verticalScale(60),
-    zIndex: 1, // Ensure it's above other elements but doesn't block them
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  emptyIconSpace: {
+    width: responsiveWidth(4.4),
+    height: responsiveWidth(4.4),
+    marginBottom: responsiveHeight(0.1),
   },
 });
 

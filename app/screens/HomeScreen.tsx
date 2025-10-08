@@ -1,9 +1,11 @@
 import Images from '@/assets/images';
 import ActionPlanTimeline from '@/components/ActionPlanTimeline';
+import AuvraChatModal from '@/components/AuvraChatModal';
 import apiPromiseManager from '@/services/apiPromiseManager';
 import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse } from '@/services/homeService';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
+import { StackNavigationProp } from '@react-navigation/stack';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -18,6 +20,16 @@ import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import Svg, { Circle, Defs, Polygon, Stop, LinearGradient as SvgLinearGradient, RadialGradient as SvgRadialGradient } from 'react-native-svg';
 import TypeActionPlan from '../../components/TypeActionPlan';
 
+type RootStackParamList = {
+  ChatbotScreen: {
+    conversationContext?: {
+      initialMessage: string;
+      userResponse: string;
+      context: string;
+    };
+  };
+};
+
 interface HomeScreenProps {
   route?: { 
     params?: { 
@@ -30,12 +42,16 @@ interface HomeScreenProps {
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [cycleInfo, setCycleInfo] = useState<CycleInfo | null>(null);
   const [assignments, setAssignments] = useState<AssignmentsResponse | null>(null);
   const [progressStats, setProgressStats] = useState<ProgressStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'time' | 'type'>('time');
+  
+  // Auvra chat modal state
+  const [showAuvraChat, setShowAuvraChat] = useState(false);
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Disable swipe back gesture to prevent interference with scrolling
   useFocusEffect(
@@ -51,6 +67,63 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       };
     }, [navigation])
   );
+
+  // Reset inactivity timer
+  const resetInactivityTimer = () => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+    
+    if (!showAuvraChat) {
+      inactivityTimerRef.current = setTimeout(() => {
+        setShowAuvraChat(true);
+      }, 15000); // 15 seconds
+    }
+  };
+
+  // Handle user interaction
+  const handleUserInteraction = () => {
+    // Only reset timer if Auvra chat is not showing
+    // Don't hide the chat when user interacts with screen
+    if (!showAuvraChat) {
+      resetInactivityTimer();
+    }
+  };
+
+  // Handle Auvra chat responses
+  const handleAuvraResponse = (response: 'positive' | 'negative') => {
+    setShowAuvraChat(false);
+    
+    // Navigate to ChatbotScreen with conversation context
+    const conversationContext = {
+      initialMessage: "How does your action plan look today?",
+      userResponse: response === 'positive' ? "👍 It works for me" : "👎 I want to change it",
+      context: "action_plan_feedback"
+    };
+    
+    navigation.navigate('ChatbotScreen', { 
+      conversationContext 
+    });
+  };
+
+  // Handle Auvra chat close
+  const handleAuvraClose = () => {
+    setShowAuvraChat(false);
+    resetInactivityTimer(); // Reset timer when user closes manually
+  };
+
+  // Start timer when component mounts and data is loaded
+  useEffect(() => {
+    if (!loading && assignments) {
+      resetInactivityTimer();
+    }
+    
+    return () => {
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+    };
+  }, [loading, assignments, showAuvraChat]);
 
   /**
    * Convert hormone_stats data to HormoneStats interface
@@ -493,6 +566,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         scrollEnabled={true}
+        onTouchStart={handleUserInteraction}
+        onScroll={handleUserInteraction}
       >
         {/* Large radial gradient background */}
         {renderBackgroundGradients()}
@@ -649,6 +724,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           </View>
         </View>
       </ScrollView>
+      
+      {/* Auvra Chat Modal */}
+      {showAuvraChat && (
+        <AuvraChatModal
+          onClose={handleAuvraClose}
+          onResponse={handleAuvraResponse}
+        />
+      )}
     </View>
   );
 };

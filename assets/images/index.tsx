@@ -45,6 +45,7 @@ const Images = {
     ProgesteroneLeftHand: require('./hormoneBuddy/ProgesteroneLeftHand.png'),
     ProgesteroneRightHand: require('./hormoneBuddy/ProgesteroneRightHand.png'),
     ProgesteroneBothHand: require('./hormoneBuddy/ProgesteroneBothHand.png'),
+    ProgesteroneBothHandsUp: require('./hormoneBuddy/ProgesteroneBothHandsUp.png'),
 
     EstrogenLeftHand: require('./hormoneBuddy/EstrogenLeftHand.png'),
     EstrogenRightHand: require('./hormoneBuddy/EstrogenRightHand.png'),

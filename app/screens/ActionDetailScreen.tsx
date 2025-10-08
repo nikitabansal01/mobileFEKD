@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, } from 'react-native';
-import AppIntroSlider from "react-native-app-intro-slider";
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { responsiveWidth, responsiveHeight, responsiveFontSize } from 'react-native-responsive-dimensions';
+import Images from '@/assets/images';
 import FixedBottomContainer from '@/components/FixedBottomContainer';
 import PrimaryButton from '@/components/PrimaryButton';
-import GradientText from '@/components/GradientText';
+import MaskedView from '@react-native-masked-view/masked-view';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useState } from 'react';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AppIntroSlider from "react-native-app-intro-slider";
+import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
+import { scale } from 'react-native-size-matters';
 
 type RootStackParamList = {
   OnboardingScreen: undefined;
@@ -68,6 +71,31 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
       image?: string;
     }>;
   } : null;
+
+  /**
+   * Pick the appropriate hormone character image for the first hormone
+   */
+  const getHormoneCharacter = (hormones?: string[]) => {
+    if (!hormones || hormones.length === 0) return null;
+    const hormone = hormones[0]?.toLowerCase();
+    switch (hormone) {
+      case 'progesterone':
+        return Images.ProgesteroneBothHandsUp;
+      case 'estrogen':
+        return Images.EstrogenCharacter;
+      case 'thyroid':
+        return Images.ThyroidCharacter;
+      case 'insulin':
+        return Images.InsulinCharacter;
+      case 'cortisol':
+        return Images.CortisolCharacter;
+      case 'testosterone':
+      case 'androgens':
+        return Images.TestosteroneCharacter;
+      default:
+        return null;
+    }
+  };
 
   /**
    * Get hormone-specific description text
@@ -143,18 +171,29 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
               {/* Title and Image Section */}
               <View style={styles.titleSection}>
                 <View style={styles.titleContainer}>
-                  <GradientText
-                    text={action?.specific_action || ''}
-                    textStyle={styles.title}
-                    containerStyle={styles.gradientContainer}
-                    key={`how-title-${action?.specific_action || 'default'}`}
-                  />
+                  <MaskedView
+                    style={styles.gradientContainer}
+                    maskElement={
+                      <View style={{ backgroundColor: 'transparent' }}>
+                        <Text style={styles.title}>
+                          {action?.specific_action || ''}
+                        </Text>
+                      </View>
+                    }
+                  >
+                    <LinearGradient
+                      colors={['#A29AEA', '#C17EC9', '#E98BAC']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={{ flex: 1, width: '100%', height: '100%' }}
+                    />
+                  </MaskedView>
                 </View>
                 <View style={styles.imageContainer}>
                   <View style={styles.actionImage}>
                     <Text style={styles.imageText}>📋</Text>
                   </View>
-                  <View style={styles.imageBorder} />
+                  {/* <View style={styles.imageBorder} /> */}
                 </View>
               </View>
 
@@ -244,23 +283,42 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
               {/* Title and Image Section */}
               <View style={styles.titleSection}>
                 <View style={styles.titleContainer}>
-                  <GradientText
-                    text={`💡 Why ${action?.title || 'Pumpkin Seeds'}?`}
-                    textStyle={styles.title}
-                    containerStyle={styles.gradientContainer}
-                    key={`action-title-${action?.title || 'default'}`}
-                  />
+                  <MaskedView
+                    style={styles.gradientContainer}
+                    maskElement={
+                      <View style={{ backgroundColor: 'transparent' }}>
+                        <Text style={styles.title}>
+                          💡 Why {action?.title || 'Pumpkin Seeds'}?
+                        </Text>
+                      </View>
+                    }
+                  >
+                    <LinearGradient
+                      colors={['#A29AEA', '#C17EC9', '#E98BAC']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={{ flex: 1, width: '100%', height: '100%' }}
+                    />
+                  </MaskedView>
                 </View>
                 <View style={styles.imageContainer}>
                   <View style={styles.actionImage}>
                     <Text style={styles.imageText}>📋</Text>
                   </View>
-                  <View style={styles.imageBorder} />
+                  {/* <View style={styles.imageBorder} /> */}
                 </View>
                 
                 {/* Hormone Graphic */}
                 <View style={styles.hormoneGraphic}>
-                  <Text style={styles.hormoneGraphicText}>🧬</Text>
+                  {getHormoneCharacter(action?.hormones) ? (
+                    <Image
+                      source={getHormoneCharacter(action?.hormones) as any}
+                      style={styles.hormoneGraphicImage}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <Text style={styles.hormoneGraphicText}>🧬</Text>
+                  )}
                 </View>
               </View>
 
@@ -403,27 +461,29 @@ const styles = StyleSheet.create({
     lineHeight: responsiveHeight(2.4),
   },
   titleContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: responsiveHeight(5),
+    // flexDirection: 'row',
+    // alignItems: 'center',
+    // justifyContent: 'center',
+    marginBottom: responsiveHeight(2),
     width: '100%',
   },
   gradientContainer: {
-    width: responsiveWidth(85),
     height: responsiveHeight(5),
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'center',
+    flex: 1,
   },
   imageContainer: {
     position: 'relative',
-    width: responsiveWidth(27.78),
-    height: responsiveWidth(27.78),
-    borderRadius: responsiveWidth(27.78) / 2,
+    width: responsiveWidth(35.78),
+    height: responsiveWidth(35.78),
+    borderRadius: responsiveWidth(35.78) / 2,
     backgroundColor: '#F0F0F0',
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
+    borderWidth: responsiveWidth(5.56),
+    borderColor: '#FCDDEC',
   },
   actionImage: {
     width: responsiveWidth(18),
@@ -447,23 +507,20 @@ const styles = StyleSheet.create({
     borderRadius: responsiveWidth(27.78) / 2 + responsiveWidth(5.56),
   },
   hormoneGraphic: {
-    width: responsiveWidth(36.67),
-    height: responsiveHeight(20),
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: responsiveWidth(6.11),
-    elevation: 5,
     alignSelf: 'center',
+    marginBottom: 0,
+    height: 'auto',
   },
   hormoneGraphicText: {
     fontSize: responsiveFontSize(6),
+  },
+  hormoneGraphicImage: {
+    width: responsiveWidth(30),
+    height: responsiveHeight(8),
+    marginTop: scale(10),
   },
   descriptionCard: {
     backgroundColor: '#FFFFFF',
@@ -472,6 +529,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderWidth: 0.5,
     borderColor: '#949494',
+    marginTop: 0,
     marginBottom: responsiveHeight(2.5),
     alignSelf: 'center',
   },

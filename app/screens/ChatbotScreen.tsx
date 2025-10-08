@@ -7,7 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dimensions, Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
@@ -196,16 +196,27 @@ function ChoiceButton({
 // Navigation type
 type RootStackParamList = {
   HomeScreen: undefined;
-  ChatbotScreen: undefined;
+  ChatbotScreen: {
+    conversationContext?: {
+      initialMessage: string;
+      userResponse: string;
+      context: string;
+    };
+  };
 };
 
 // Props interface
 interface ChatbotProps {
   onBackToHome?: () => void;
+  conversationContext?: {
+    initialMessage: string;
+    userResponse: string;
+    context: string;
+  };
 }
 
 // Main Component
-export default function Chatbot({ onBackToHome }: ChatbotProps = {}) {
+export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?: { params?: { conversationContext?: any } } } = {}) {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const fontsLoaded = useAppFonts();
   const [mode, setMode] = useState<Mode>("idle");
@@ -214,6 +225,19 @@ export default function Chatbot({ onBackToHome }: ChatbotProps = {}) {
     { id: "1", text: "How was your bloating this week?", isBot: true },
     { id: "3", text: "Were there any big changes in your week? related to food, lifestyle, stress, etc", isBot: true },
   ]);
+  
+  // Handle conversation context from Auvra chat
+  useEffect(() => {
+    const conversationContext = route?.params?.conversationContext;
+    if (conversationContext) {
+      // Add the conversation context as initial messages
+      setMessages([
+        { id: "1", text: conversationContext.initialMessage, isBot: true },
+        { id: "2", text: conversationContext.userResponse, isBot: false },
+      ]);
+    }
+  }, [route?.params?.conversationContext]);
+  
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [recordingComplete, setRecordingComplete] = useState(false);
@@ -692,8 +716,10 @@ export default function Chatbot({ onBackToHome }: ChatbotProps = {}) {
   const navigateToIndex = () => {
     if (onBackToHome) {
       onBackToHome();
+    } else {
+      // Fallback to navigation.goBack() if onBackToHome is not provided
+      navigation.goBack();
     }
-    // No fallback needed since this component is only used within MainScreenTabs
   };
 
   const renderContent = () => (

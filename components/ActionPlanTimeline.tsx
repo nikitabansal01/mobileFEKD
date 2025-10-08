@@ -105,6 +105,9 @@ export default function ActionPlanTimeline({
 }: Props) {
   const navigation = useNavigation<any>();
   
+  // Pulsing animation for completed actions
+  const pulsingAnimation = useRef(new Animated.Value(1)).current;
+  
   /**
    * Handles navigation to action detail screen using React Navigation
    * 
@@ -141,6 +144,28 @@ export default function ActionPlanTimeline({
   }, [assignments]);
 
   const tomorrowAssignments: Assignment[] = DUMMY_TOMORROW_DATA;
+
+  // Start pulsing animation for completed actions
+  useEffect(() => {
+    const startPulsing = () => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulsingAnimation, {
+            toValue: 1.3,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulsingAnimation, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    };
+
+    startPulsing();
+  }, [pulsingAnimation]);
 
   // All layout calculation values (container-based)
   const { width: SCREEN_W } = Dimensions.get('window');
@@ -666,6 +691,20 @@ export default function ActionPlanTimeline({
                     />
                   )}
                 </View>
+
+                {/* Pulsing animation ring for completed actions */}
+                {a.is_completed && (
+                  <Animated.View
+                    style={[
+                      styles.pulsingRing,
+                      {
+                        left: xImage - 0,
+                        top: yImage - 0,
+                        transform: [{ scale: pulsingAnimation }],
+                      },
+                    ]}
+                  />
+                )}
 
                 {/* Image circle (icon replacement) */}
                 <TouchableOpacity
@@ -1291,6 +1330,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+  },
+  pulsingRing: {
+    position: 'absolute',
+    width: responsiveWidth(19.44),
+    height: responsiveWidth(19.44),
+    borderRadius: (responsiveWidth(19.44)) / 2,
+    backgroundColor: '#DDC2E9',
+    opacity: 0.5,
   },
   imageFallback: {
     fontSize: responsiveFontSize(2.5),

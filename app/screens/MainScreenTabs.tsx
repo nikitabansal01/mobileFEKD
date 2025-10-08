@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import BottomNavigationBar from '../../components/BottomNavigationBar';
 import ChatbotScreen from './ChatbotScreen';
@@ -7,7 +7,7 @@ import HomeScreen from './HomeScreen';
 import PersonalizeScreen from './PersonalizeScreen';
 import ProgressScreen from './ProgressScreen';
 
-type TabType = 'home' | 'personalize' | 'progress' | 'community' | 'auvra';
+type TabType = 'home' | 'personalize' | 'progress' | 'community' | 'auvra' | 'insights' | 'profile';
 
 export default function MainScreenTabs() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -23,8 +23,10 @@ export default function MainScreenTabs() {
       case 'personalize':
         return <PersonalizeScreen />;
       case 'progress':
+      case 'insights': // Map insights to progress screen
         return <ProgressScreen />;
       case 'community':
+      case 'profile': // Map profile to community screen
         return <CommunityScreen />;
       case 'auvra':
         return <ChatbotScreen onBackToHome={handleBackToHome} />;
