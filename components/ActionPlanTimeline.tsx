@@ -3,13 +3,13 @@ import Images from '@/assets/images';
 import { useNavigation } from '@react-navigation/native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated,
-  Dimensions,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Animated,
+    Dimensions,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import Svg, { Defs, Path, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
@@ -817,7 +817,7 @@ export default function ActionPlanTimeline({
           {/* Time-based icon display */}
           {geom && timeSlotPositions.map((position, index) => {
             const { CENTER_X } = geom;
-            const iconSize = responsiveWidth(6.5); // 26px equivalent (matching Figma)
+            const iconSize = responsiveWidth(10); // 40px equivalent (increased from 26px)
             const iconLeft = CENTER_X - iconSize / 2;
             const iconTop = position.iconY - iconSize / 2;
             
@@ -1472,7 +1472,7 @@ const styles = StyleSheet.create({
   timeIcon: {
     position: 'absolute',
     backgroundColor: '#FFFFFF',
-    borderRadius: responsiveWidth(6.5) / 2, // Fully rounded (26px diameter)
+    borderRadius: responsiveWidth(10) / 2, // Fully rounded (40px diameter)
     justifyContent: 'center',
     alignItems: 'center',
     padding: responsiveWidth(0.5), // Small padding like Figma
@@ -1483,7 +1483,7 @@ const styles = StyleSheet.create({
     // elevation: 2, // Android shadow
   },
   timeIconText: {
-    fontSize: responsiveFontSize(2.0), // 20px equivalent (matching Figma)
+    fontSize: responsiveFontSize(3.0), // 30px equivalent (increased from 20px)
     textAlign: 'center',
     includeFontPadding: false,
     textAlignVertical: 'center',
