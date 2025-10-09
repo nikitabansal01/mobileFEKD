@@ -1,6 +1,7 @@
 import Images from '@/assets/images';
 import ActionPlanTimeline from '@/components/ActionPlanTimeline';
 import AuvraChatModal from '@/components/AuvraChatModal';
+import CalendarBottomSheet from '@/components/CalendarBottomSheet';
 import apiPromiseManager from '@/services/apiPromiseManager';
 import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse } from '@/services/homeService';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -62,6 +63,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   
   // Auvra chat modal state
   const [showAuvraChat, setShowAuvraChat] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Disable swipe back gesture to prevent interference with scrolling
@@ -127,6 +129,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         conversationContext
       }
     });
+  };
+
+  // Handle calendar button click
+  const handleCalendarPress = () => {
+    setShowCalendar(true);
   };
 
   // Handle Auvra chat close
@@ -621,7 +628,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
               </View>
             )}
           </View>
-          <TouchableOpacity style={styles.calendarButton}>
+          <TouchableOpacity style={styles.calendarButton} onPress={handleCalendarPress}>
             <Image 
               source={require('../../assets/icons/IconCalendar.png')}
               style={styles.calendarIcon}
@@ -759,6 +766,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           onResponse={handleAuvraResponse}
         />
       )}
+
+      {/* Calendar Bottom Sheet */}
+      <CalendarBottomSheet
+        visible={showCalendar}
+        onClose={() => setShowCalendar(false)}
+      />
     </View>
   );
 };

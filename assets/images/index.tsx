@@ -70,6 +70,9 @@ const Images = {
     // Chat avatars
     ChatThumbnail: require('./hormoneBuddy/ProgesteroneCharacter.png'),
     
+    // Icons
+    EditIcon: require('../icons/Edit.png'),
+    
 }
 
 export default Images;
