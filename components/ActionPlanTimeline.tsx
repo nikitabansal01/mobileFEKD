@@ -3,13 +3,13 @@ import Images from '@/assets/images';
 import { useNavigation } from '@react-navigation/native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Animated,
-    Dimensions,
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Animated,
+  Dimensions,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import Svg, { Defs, Path, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
@@ -184,7 +184,7 @@ export default function ActionPlanTimeline({
 
     // Use responsiveHeight as before, but round at the end
     const BASE_TOP      = Math.round(responsiveHeight(0));      // Container top reference point
-    const ITEM_BLOCK_H  = Math.round(responsiveHeight(18));      // Vertical spacing between items
+    const ITEM_BLOCK_H  = Math.round(responsiveHeight(14));      // Vertical spacing between items (reduced from 18)
     const CAP_TOP       = Math.round(responsiveHeight(7));
     const CAP_BOTTOM    = Math.round(responsiveHeight(7));
     const BRIDGE_DROP   = Math.round(Math.min(responsiveHeight(2.25), 0.5 * CAP_TOP));

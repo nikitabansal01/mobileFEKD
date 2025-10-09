@@ -1068,7 +1068,7 @@ const styles = StyleSheet.create({
 
     mainContent: {
         paddingHorizontal: scale(5),
-        // paddingTop: verticalScale(),
+        paddingTop: responsiveHeight(1), // Added top padding to increase distance from progress bar
         paddingBottom: responsiveHeight(15), // Sufficient space for gradient area
         // marginBottom: responsiveHeight(10),
         alignItems: 'center',
