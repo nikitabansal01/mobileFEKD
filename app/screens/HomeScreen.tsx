@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
-import Svg, { Circle, Defs, Polygon, Stop, LinearGradient as SvgLinearGradient, RadialGradient as SvgRadialGradient } from 'react-native-svg';
+import Svg, { Circle, Defs, Line, Polygon, Stop, LinearGradient as SvgLinearGradient, RadialGradient as SvgRadialGradient } from 'react-native-svg';
 import TypeActionPlan from '../../components/TypeActionPlan';
 
 type RootStackParamList = {
@@ -343,7 +343,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       case 'afternoon': return '☀️';
       case 'night': return '🌙';
       case 'anytime': return 'Anytime';
-      default: return '⏰';
+      default: return 'Anytime';
     }
   };
 
@@ -693,7 +693,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
         {/* Divider */}
         <View style={styles.dividerContainer}>
-          <View style={styles.centerDivider} />
+          <Svg width={responsiveWidth(30)} height={1} style={styles.centerDivider}>
+            <Line 
+              x1="0" 
+              y1="0" 
+              x2="100%" 
+              y2="0" 
+              stroke="#CFCFCF" 
+              strokeWidth="1" 
+              strokeDasharray="2,2"
+            />
+          </Svg>
         </View>
 
         {/* Today's Action Plan */}
@@ -794,7 +804,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: responsiveHeight(40),
+    height: '100%',
   },
   backgroundGradientsContainer: {
     position: 'absolute',
@@ -964,19 +974,17 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#CFCFCF',
     marginHorizontal: responsiveWidth(5),
-    marginVertical: responsiveHeight(3),
+    marginVertical: responsiveHeight(2),
   },
   dividerContainer: {
     alignItems: 'center',
-    marginVertical: responsiveHeight(3),
+    marginVertical: responsiveHeight(2),
   },
   centerDivider: {
     width: responsiveWidth(30),
     height: 1,
     backgroundColor: 'transparent',
-    borderTopWidth: 1,
-    borderTopColor: '#CFCFCF',
-    borderStyle: 'dashed',
+    // Custom dashed line will be implemented using SVG
   },
   actionPlanSection: {
     paddingHorizontal: responsiveWidth(5),

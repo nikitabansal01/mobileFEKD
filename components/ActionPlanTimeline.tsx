@@ -26,12 +26,12 @@ const TIME_ICONS: Record<string, string> = {
   morning: '🌤️',
   afternoon: '☀️',
   evening: '🌙',
-  anytime: '⏰',
+  anytime: 'Anytime',
   // Add common variations
   'Morning': '🌤️',
   'Afternoon': '☀️', 
   'Evening': '🌙',
-  'Anytime': '⏰',
+  'Anytime': 'Anytime',
   // Add more common API variations
   'am': '🌤️',
   'pm': '☀️',
@@ -556,7 +556,7 @@ export default function ActionPlanTimeline({
   // Common line style settings
   const commonLineStyles = {
     stroke: "#EFEFEF",        // Light gray line color
-    strokeWidth: 9,           // Reduced from 15 to 8
+    strokeWidth: 11,           // Reduced from 15 to 8
     fill: "none",
     strokeLinejoin: "round" as const,
     strokeDasharray: `${responsiveWidth(10)} ${responsiveWidth(2.5)}`,   // Adjusted dash pattern for thinner line
@@ -617,7 +617,7 @@ export default function ActionPlanTimeline({
               <Path
                 d={completedPathD}
                 stroke="url(#completedSectionGrad)"
-                strokeWidth={9}
+                strokeWidth={11}
                 fill="none"
                 strokeLinejoin="round"
                 opacity={1.0}
@@ -630,7 +630,7 @@ export default function ActionPlanTimeline({
                 ref={svgPathRef}
                 d={todayPathD}
                 stroke="url(#grad)"
-                strokeWidth={9}
+                strokeWidth={11}
                 fill="none"
                 strokeLinejoin="round"
                 strokeDasharray={`${pathLen}, ${pathLen}`}
@@ -817,7 +817,7 @@ export default function ActionPlanTimeline({
           {/* Time-based icon display */}
           {geom && timeSlotPositions.map((position, index) => {
             const { CENTER_X } = geom;
-            const iconSize = responsiveWidth(10); // 40px equivalent (increased from 26px)
+            const iconSize = responsiveWidth(8); // 40px equivalent (increased from 26px)
             const iconLeft = CENTER_X - iconSize / 2;
             const iconTop = position.iconY - iconSize / 2;
             
@@ -1475,7 +1475,7 @@ const styles = StyleSheet.create({
     borderRadius: responsiveWidth(10) / 2, // Fully rounded (40px diameter)
     justifyContent: 'center',
     alignItems: 'center',
-    padding: responsiveWidth(0.5), // Small padding like Figma
+    padding: responsiveWidth(0.2), // Small padding like Figma
     // shadowColor: '#000',
     // shadowOffset: { width: 0, height: 1 },
     // shadowOpacity: 0.1,

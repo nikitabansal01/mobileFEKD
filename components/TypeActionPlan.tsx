@@ -3,13 +3,13 @@ import Images from '@/assets/images';
 import { useNavigation } from '@react-navigation/native';
 import { useMemo, useState } from 'react';
 import {
-  Dimensions,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Dimensions,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import Svg, { Defs, Line, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
@@ -48,13 +48,13 @@ const TIME_EMOJI_MAP: Record<string, string> = {
   morning: '🌤️', // Morning cloud (matching Figma)
   afternoon: '☀️', // Afternoon sun (matching Figma)
   evening: '🌙', // Evening moon (matching Figma)
-  anytime: '⏰',
+  anytime: 'Anytime',
   night: '🌙',
   // Add common variations to handle different API formats
   'Morning': '🌤️',
   'Afternoon': '☀️', 
   'Evening': '🌙',
-  'Anytime': '⏰',
+  'Anytime': 'Anytime',
   // Add more common API variations
   'am': '🌤️',
   'pm': '☀️',
@@ -309,10 +309,10 @@ export default function TypeActionPlan({
       smartTimeSlot,
       assignmentTitle: assignment?.title,
       found: TIME_EMOJI_MAP[smartTimeSlot],
-      fallback: TIME_EMOJI_MAP[smartTimeSlot] || '⏰'
+      fallback: TIME_EMOJI_MAP[smartTimeSlot] || 'Anytime'
     });
     
-    return TIME_EMOJI_MAP[smartTimeSlot] || '⏰';
+    return TIME_EMOJI_MAP[smartTimeSlot] || 'Anytime';
   };
 
   // First line: from top to category start (gradient)

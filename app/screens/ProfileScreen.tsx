@@ -4,18 +4,19 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Dimensions,
-    Image,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Dimensions,
+  Image,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import Svg, { Circle, ClipPath, Defs, Path, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import { FONT_FAMILIES } from '../../constants/fonts';
+const IconEdit = require('../../assets/icons/IconEdit.png');
 
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -95,11 +96,11 @@ export default function Profile() {
               x2="1"
               y2="0"
             >
-              <Stop offset="14.79%" stopColor="rgba(162, 154, 234, 0.6)" />
-              <Stop offset="38.58%" stopColor="rgba(193, 126, 201, 0.6)" />
-              <Stop offset="51.96%" stopColor="rgba(212, 130, 185, 0.6)" />
-              <Stop offset="69.06%" stopColor="rgba(233, 139, 172, 0.6)" />
-              <Stop offset="89.13%" stopColor="rgba(253, 198, 209, 0.6)" />
+              <Stop offset="14.79%" stopColor="#C7C2F2" />
+              <Stop offset="38.58%" stopColor="#DAB2DF" />
+              <Stop offset="51.96%" stopColor="#E5B4D5" />
+              <Stop offset="69.06%" stopColor="#F2B9CD" />
+              <Stop offset="89.13%" stopColor="#FEDDE3" />
             </SvgLinearGradient>
             <Path
               d={`M0,0 L${screenWidth},0 L${screenWidth},${verticalScale(140)} Q${screenWidth/2},${verticalScale(170)} 0,${verticalScale(140)} Z`}
@@ -120,7 +121,7 @@ export default function Profile() {
               />
               <TouchableOpacity style={styles.editButton}>
                 <View style={styles.editIconContainer}>
-                  <Text style={styles.editIcon}><Ionicons name="pencil-outline" size={24} color={COLORS.black} /></Text>
+                  <Image source={IconEdit} style={styles.editIcon} />
                 </View>
               </TouchableOpacity>
             </View>
@@ -391,7 +392,7 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     position: 'relative',
-    marginBottom: verticalScale(15),
+    marginBottom: verticalScale(5),
   },
   avatar: {
     width: scale(120),
@@ -404,8 +405,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: scale(46),
-    height: scale(46),
+    width: scale(40),
+    height: scale(40),
     borderRadius: scale(23),
     backgroundColor: COLORS.white,
     justifyContent: 'center',
@@ -417,13 +418,15 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   editIconContainer: {
-    width: scale(24),
-    height: scale(24),
+    width: scale(15),
+    height: scale(15),
     justifyContent: 'center',
     alignItems: 'center',
   },
   editIcon: {
-    fontSize: moderateScale(16, 1.5),
+    width: scale(15),
+    height: scale(15),
+    tintColor: COLORS.black,
   },
   userInfo: {
     alignItems: 'center',
@@ -433,7 +436,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'serif',
     color: COLORS.black,
-    marginBottom: verticalScale(8),
+    marginBottom: verticalScale(3),
     textAlign: 'center',
   },
   userEmail: {
@@ -522,7 +525,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   healthSection: {
-    marginBottom: verticalScale(32),
+    marginBottom: verticalScale(15),
   },
   healthContent: {
     flexDirection: 'row',
