@@ -36,9 +36,15 @@ const SimpleDatePicker: React.FC<SimpleDatePickerProps> = ({
 
   useEffect(() => {
     if (visible) {
+      // Ensure we're showing the correct month/year for the selected date
+      const targetMonth = value.getMonth();
+      const targetYear = value.getFullYear();
+      
       setSelectedDate(value);
-      setCurrentMonth(value.getMonth());
-      setCurrentYear(value.getFullYear());
+      setCurrentMonth(targetMonth);
+      setCurrentYear(targetYear);
+      
+      console.log('Calendar opened with date:', value.toDateString(), 'Month:', targetMonth, 'Year:', targetYear);
     }
   }, [visible, value]);
 
@@ -65,6 +71,8 @@ const SimpleDatePicker: React.FC<SimpleDatePickerProps> = ({
   };
 
   const isSelected = (day: number) => {
+    // Only check the selectedDate state, not the initial value
+    // This ensures only one date can be selected at a time
     return (
       day === selectedDate.getDate() &&
       currentMonth === selectedDate.getMonth() &&
@@ -121,14 +129,14 @@ const SimpleDatePicker: React.FC<SimpleDatePickerProps> = ({
           style={[
             styles.dayCell,
             isSelectedDay && styles.selectedDay,
-            isTodayDay && styles.todayDay
+            isTodayDay && !isSelectedDay && styles.todayDay
           ]}
           onPress={() => handleDateSelect(day)}
         >
           <Text style={[
             styles.dayText,
-            isSelectedDay && styles.selectedDayText,
-            isTodayDay && styles.todayDayText
+            isTodayDay && !isSelectedDay && styles.todayDayText,
+            isSelectedDay && styles.selectedDayText
           ]}>
             {day}
           </Text>

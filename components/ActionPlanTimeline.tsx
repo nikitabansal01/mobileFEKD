@@ -556,10 +556,10 @@ export default function ActionPlanTimeline({
   // Common line style settings
   const commonLineStyles = {
     stroke: "#EFEFEF",        // Light gray line color
-    strokeWidth: 15,
+    strokeWidth: 10,           // Reduced from 15 to 8
     fill: "none",
     strokeLinejoin: "round" as const,
-    strokeDasharray: `${responsiveWidth(11)} ${responsiveWidth(2.75)}`,   // Dashed line pattern
+    strokeDasharray: `${responsiveWidth(10)} ${responsiveWidth(2.5)}`,   // Adjusted dash pattern for thinner line
   };
 
   const lineOpacity = {
@@ -617,7 +617,7 @@ export default function ActionPlanTimeline({
               <Path
                 d={completedPathD}
                 stroke="url(#completedSectionGrad)"
-                strokeWidth={15}
+                strokeWidth={10}
                 fill="none"
                 strokeLinejoin="round"
                 opacity={1.0}
@@ -630,7 +630,7 @@ export default function ActionPlanTimeline({
                 ref={svgPathRef}
                 d={todayPathD}
                 stroke="url(#grad)"
-                strokeWidth={15}
+                strokeWidth={10}
                 fill="none"
                 strokeLinejoin="round"
                 strokeDasharray={`${pathLen}, ${pathLen}`}

@@ -5,13 +5,14 @@ import LoginBottomSheet from "@/components/LoginBottomSheet";
 import PrimaryButton from "@/components/PrimaryButton";
 import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Circle, Defs, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 
 import { auth } from "@/config/firebase";
 import sessionService from "@/services/sessionService";
 import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Image, Platform, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Animated, Image, Platform, Text, View } from "react-native";
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -28,6 +29,70 @@ const options = [
 ];
 
 const finalTitle = "Perfect!\nYour personalized\naction plan is ready!";
+
+/**
+ * Custom Loading Spinner Component
+ * Creates a circular progress indicator with smooth gradient effect using SVG
+ */
+const CustomLoadingSpinner = () => {
+  const spinValue = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const spin = () => {
+      spinValue.setValue(0);
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 1200,
+        useNativeDriver: true,
+      }).start(() => spin());
+    };
+    spin();
+  }, [spinValue]);
+
+  const rotate = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  return (
+    <View style={{
+      width: 60,
+      height: 60,
+      justifyContent: 'center',
+      alignItems: 'center',
+    }}>
+      <Animated.View
+        style={{
+          width: 60,
+          height: 60,
+          transform: [{ rotate }],
+        }}
+      >
+        <Svg width="60" height="60">
+          <Defs>
+            <SvgLinearGradient id="spinnerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <Stop offset="0%" stopColor="#F293B7" stopOpacity="1" />
+              <Stop offset="30%" stopColor="#F293B7" stopOpacity="0.8" />
+              <Stop offset="60%" stopColor="#F293B7" stopOpacity="0.4" />
+              <Stop offset="100%" stopColor="#F293B7" stopOpacity="0" />
+            </SvgLinearGradient>
+          </Defs>
+          <Circle
+            cx="30"
+            cy="30"
+            r="26"
+            stroke="url(#spinnerGradient)"
+            strokeWidth="8"
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray="120 200"
+            strokeDashoffset="0"
+          />
+        </Svg>
+      </Animated.View>
+    </View>
+  );
+};
 
 /**
  * Researching screen component for recommendation generation process
@@ -208,7 +273,7 @@ const ResearchingScreen = () => {
   if (!authChecked) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: "#FFF", justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#bb4471" />
+        <CustomLoadingSpinner />
       </SafeAreaView>
     );
   }
@@ -316,7 +381,7 @@ const ResearchingScreen = () => {
             >
               {subText}
             </Text>
-            <ActivityIndicator size="large" color="#bb4471" />
+            <CustomLoadingSpinner />
           </>
         )}
         {step === 1 && (
@@ -368,7 +433,7 @@ const ResearchingScreen = () => {
             >
               {subText}
             </Text>
-            <ActivityIndicator size="large" color="#bb4471" />
+            <CustomLoadingSpinner />
           </>
         )}
         {step === 2 && (
@@ -483,7 +548,7 @@ const ResearchingScreen = () => {
                 >
                   Please wait while we complete your analysis
                 </Text>
-                <ActivityIndicator size="large" color="#bb4471" />
+                <CustomLoadingSpinner />
               </>
             )}
           </View>

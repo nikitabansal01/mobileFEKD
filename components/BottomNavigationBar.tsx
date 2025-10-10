@@ -72,8 +72,8 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
     { 
       key: 'profile', 
       label: 'Profile', 
-      icon: require('../assets/icons/IconProfile.png'), // Using community icon for profile
-      screen: 'community' // Map to community tab in MainScreenTabs
+      icon: require('../assets/icons/IconProfile.png'),
+      screen: 'profile' // Map to profile tab in MainScreenTabs
     },
   ];
 

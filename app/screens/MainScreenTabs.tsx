@@ -5,6 +5,7 @@ import ChatHistoryScreen from './ChatHistoryScreen';
 import CommunityScreen from './CommunityScreen';
 import HomeScreen from './HomeScreen';
 import PersonalizeScreen from './PersonalizeScreen';
+import ProfileScreen from './ProfileScreen';
 import ProgressScreen from './ProgressScreen';
 
 type TabType = 'home' | 'personalize' | 'progress' | 'community' | 'auvra' | 'insights' | 'profile';
@@ -54,8 +55,9 @@ export default function MainScreenTabs({ route }: MainScreenTabsProps) {
       case 'insights': // Map insights to progress screen
         return <ProgressScreen />;
       case 'community':
-      case 'profile': // Map profile to community screen
         return <CommunityScreen />;
+      case 'profile':
+        return <ProfileScreen />;
       case 'auvra':
         return <ChatHistoryScreen 
           onBackToHome={handleBackToHome} 
