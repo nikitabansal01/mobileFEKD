@@ -4,9 +4,9 @@ import BottomNavigationBar from '../../components/BottomNavigationBar';
 import ChatHistoryScreen from './ChatHistoryScreen';
 import CommunityScreen from './CommunityScreen';
 import HomeScreen from './HomeScreen';
+import InsightScreen from './InsightScreen';
 import PersonalizeScreen from './PersonalizeScreen';
 import ProfileScreen from './ProfileScreen';
-import ProgressScreen from './ProgressScreen';
 
 type TabType = 'home' | 'personalize' | 'progress' | 'community' | 'auvra' | 'insights' | 'profile';
 
@@ -52,8 +52,8 @@ export default function MainScreenTabs({ route }: MainScreenTabsProps) {
       case 'personalize':
         return <PersonalizeScreen />;
       case 'progress':
-      case 'insights': // Map insights to progress screen
-        return <ProgressScreen />;
+      case 'insights': // Map insights to insight screen
+        return <InsightScreen />;
       case 'community':
         return <CommunityScreen />;
       case 'profile':

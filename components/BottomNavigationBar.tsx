@@ -67,7 +67,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
       key: 'insights', 
       label: 'Insights', 
       icon: require('../assets/icons/IconProgress.png'), // Using progress icon for insights
-      screen: 'progress' // Map to progress tab in MainScreenTabs
+      screen: 'insights' // Map to insights tab in MainScreenTabs
     },
     { 
       key: 'profile', 
