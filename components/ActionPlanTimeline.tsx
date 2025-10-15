@@ -16,7 +16,7 @@ import Svg, { Defs, Path, Stop, LinearGradient as SvgLinearGradient } from 'reac
 // import { BlurView } from 'expo-blur';
 
 // ====== Type imports ======
-import { scale, verticalScale } from 'react-native-size-matters';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { Assignment } from '../services/homeService';
 type AssignmentsMap = Record<string, Assignment[]>;
 
@@ -848,7 +848,13 @@ export default function ActionPlanTimeline({
                   }
                 ]}
               >
-                <Text style={styles.timeIconText} allowFontScaling={false}>
+                <Text 
+                  style={[
+                    styles.timeIconText,
+                    (TIME_ICONS[smartTimeSlot] || TIME_ICONS.anytime) === 'Anytime' && styles.timeIconTextSmall
+                  ]} 
+                  allowFontScaling={false}
+                >
                   {TIME_ICONS[smartTimeSlot] || TIME_ICONS.anytime}
                 </Text>
               </View>
@@ -1488,5 +1494,9 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: 'center',
     color: '#949494', // Grey color from Figma
+  },
+  timeIconTextSmall: {
+    fontSize: moderateScale(12, 1.5), // Smaller font size for "Anytime" text
+    fontWeight: '500',
   },
 });

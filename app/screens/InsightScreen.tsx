@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View
 } from 'react-native';
 import { BarChart, LineChart } from 'react-native-gifted-charts';
@@ -23,7 +24,7 @@ const { width: screenWidth } = Dimensions.get('window');
 const InsightScreen = () => {
   const [selectedMonth, setSelectedMonth] = useState('Month');
   const cycleChartScrollRef = useRef<ScrollView>(null);
-  
+
 
   // Auto-scroll to day 23 when page loads
   useEffect(() => {
@@ -78,9 +79,9 @@ const InsightScreen = () => {
       <Text style={styles.progressText}>
         You reported <Text style={styles.highlightText}>3 more clear-skin days</Text> compared to last month
       </Text>
-      
+
       <View style={styles.chartContainer}>
-        
+
         {/* Bar Chart with Line Graph - Matching Figma Design */}
         <View style={styles.chartVisualization}>
           <View style={styles.chartVisualizationContainer}>
@@ -90,23 +91,23 @@ const InsightScreen = () => {
               <View style={[styles.chartBar, styles.standardBar]}>
                 <Text style={styles.barLabel}>Menstrual</Text>
               </View>
-              
+
               {/* Follicular Bar */}
               <View style={[styles.chartBar, styles.standardBar]}>
                 <Text style={styles.barLabel}>Follicular</Text>
               </View>
-              
+
               {/* Ovulation Bar */}
               <View style={[styles.chartBar, styles.standardBar]}>
                 <Text style={styles.barLabel}>Ovulation</Text>
               </View>
-              
+
               {/* Luteal Bar - Wider */}
               <View style={[styles.chartBar, styles.wideBar]}>
                 <Text style={styles.barLabel}>Luteal</Text>
               </View>
             </View>
-            
+
             {/* Line Graph Overlay - Matching Figma Design */}
             <View style={styles.lineGraphOverlay}>
               <View style={styles.lineGraph}>
@@ -115,7 +116,7 @@ const InsightScreen = () => {
                 <View style={[styles.lineSegment, { left: 92, top: 53, width: 70, transform: [{ rotate: '16deg' }] }]} />
                 <View style={[styles.lineSegment, { left: 156, top: 48, width: 88, transform: [{ rotate: '-20deg' }] }]} />
                 <View style={[styles.lineSegment, { left: 240, top: 37, width: 50, transform: [{ rotate: '15deg' }] }]} />
-                
+
                 {/* Data points positioned to match Figma */}
                 <View style={[styles.dataPoint, { left: 28, top: 20 }]} />
                 <View style={[styles.dataPoint, { left: 92, top: 40 }]} />
@@ -126,7 +127,7 @@ const InsightScreen = () => {
             </View>
           </View>
         </View>
-        
+
         <View style={styles.chartLabels}>
           <Text style={styles.chartLabel}>Aug{'\n'}Wk 1</Text>
           <Text style={styles.chartLabel}>Aug{'\n'}Wk 2</Text>
@@ -147,14 +148,14 @@ const InsightScreen = () => {
         </View>
         <View style={styles.actionPlanHormoneCharacter}>
           {/* Character illustration */}
-          <Image 
-            source={getCharacterImage(title)} 
+          <Image
+            source={getCharacterImage(title)}
             style={styles.actionPlanCharacterImage}
             resizeMode="contain"
           />
         </View>
       </View>
-      
+
       <View style={styles.progressSection}>
         <View style={styles.progressBarContainer}>
           <View style={[styles.progressBar, { backgroundColor: progessColor, width: `${(progress / total) * 100}%` }]} />
@@ -239,16 +240,68 @@ const InsightScreen = () => {
 
         {renderDivider('Your hormone quests till now')}
 
+        <View style={styles.concernCard}>
+          <View style={styles.concernHeader}>
+            <View style={styles.concernDot} />
+            <Text style={styles.concernTitle}>Acne can potentially worsen</Text>
+          </View>
+
+          {/* Concern slider */}
+
+        </View>
+        <View style={{flex: 1}}>
+<FlatList
+              horizontal
+              data={[
+                {
+                  id: 'c1x',
+                  title: 'Lower calming support',
+                  description: 'less skin-calming effect, so acne can worsen',
+                  color: '#FF87B4',
+                  arrow: '↓',
+                  bgColor: 'rgba(251, 144, 187, 0.12)',
+                  image: Images.EstrogenBothHand,
+                },
+                {
+                  id: 'c2x',
+                  title: 'Oil production shifts',
+                  description: 'Oil and inflammation can rise; watch pores',
+                  color: '#0E8FC1',
+                  arrow: '↑↓',
+                  bgColor: 'rgba(203, 240, 255, 0.25)',
+                  image: Images.ProgesteroneBothHand,
+                }
+              ]}
+              keyExtractor={(item) => item.id}
+              // showsHorizontalScrollIndicator={true}
+              // contentContainerStyle={styles.concernSliderContainer}
+              // ItemSeparatorComponent={() => <View style={{ flex: 1, width: responsiveWidth(3) }} />}
+              snapToInterval={responsiveWidth(100)}
+              decelerationRate="fast"
+              snapToAlignment="start"
+              renderItem={({ item }) => (
+                <TouchableWithoutFeedback onPress={() => {}}>
+                <View>
+                  {/* <Text>Hi i am suchit</Text> */}
+                  <Text style={styles.concernSlideDraft}>{item.description}</Text>
+                </View>
+                </TouchableWithoutFeedback>
+              )}
+            />
+</View>
         <View style={styles.actionPlanCard}>
           <Text style={styles.actionPlanText}>
             You completed <Text style={styles.highlightText}>80%</Text> of your action plan and your <Text style={styles.highlightText}>acne shifted from 7 → 5</Text> on the scale.
           </Text>
-          
+
+
           <View style={styles.hormoneQuestsContainer}>
+            
             <FlatList
+              horizontal
               data={[
                 {
-                  id: '1',
+                  id: 'list1',
                   title: 'Progesterone',
                   description: 'Balanced levels can reduce inflammation and calm breakouts',
                   progress: 10,
@@ -258,7 +311,7 @@ const InsightScreen = () => {
                   bgColor: '#ecf6fa'
                 },
                 {
-                  id: '2',
+                  id: 'list2',
                   title: 'Testosterone',
                   description: 'Balanced levels support clearer skin by regulating oil production',
                   progress: 11,
@@ -268,7 +321,17 @@ const InsightScreen = () => {
                   bgColor: 'rgba(162, 154, 234, 0.15)'
                 },
                 {
-                  id: '3',
+                  id: 'list3',
+                  title: 'Cortisol',
+                  description: 'Stable levels supports calm, reduces stress-related flare-ups',
+                  progress: 1,
+                  total: 5,
+                  color: '#ffa569',
+                  progessColor: '#FFA569',
+                  bgColor: 'rgba(255, 165, 105, 0.25)'
+                },
+                {
+                  id: 'list4',
                   title: 'Cortisol',
                   description: 'Stable levels supports calm, reduces stress-related flare-ups',
                   progress: 1,
@@ -278,23 +341,42 @@ const InsightScreen = () => {
                   bgColor: 'rgba(255, 165, 105, 0.25)'
                 }
               ]}
-              renderItem={({ item }) => renderHormoneQuest(
-                item.title,
-                item.description,
-                item.progress,
-                item.total,
-                item.color,
-                item.progessColor,
-                item.bgColor
-              )}
               keyExtractor={(item) => item.id}
-              horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.hormoneQuestsList}
               ItemSeparatorComponent={() => <View style={styles.hormoneQuestSeparator} />}
               snapToInterval={responsiveWidth(77.5)}
               decelerationRate="fast"
               snapToAlignment="start"
+              renderItem={({ item }) =>
+                <View style={[styles.hormoneQuest, { backgroundColor: item.bgColor }]}>
+                  <View style={styles.hormoneQuestContent}>
+                    <View style={styles.hormoneInfo}>
+                      <Text style={[styles.hormoneTitle, { color: item.color }]}>{item.title}</Text>
+                      <Text style={styles.hormoneDescription}>{item.description}</Text>
+                    </View>
+                    <View style={styles.actionPlanHormoneCharacter}>
+                      {/* Character illustration */}
+                      <Image
+                        source={getCharacterImage(item.title)}
+                        style={styles.actionPlanCharacterImage}
+                        resizeMode="contain"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.progressSection}>
+                    <View style={styles.progressBarContainer}>
+                      <View style={[styles.progressBar, { backgroundColor: item.progessColor, width: `${(item.progress / item.total) * 100}%` }]} />
+                    </View>
+                    <View style={styles.progressInfo}>
+                      <Text style={styles.hormoneProgressText}>{item.progress}/{item.total} actions completed</Text>
+                      <Ionicons name="chevron-forward" size={16} color="#949494" />
+                    </View>
+                  </View>
+                </View>
+              }
+
             />
           </View>
         </View>
@@ -306,7 +388,7 @@ const InsightScreen = () => {
           {renderActionItem('😰', 'Chronic\nStress')}
           {renderActionItem('☕️', 'Caffeine')}
           {renderActionItem('🥛', 'Dairy')}
-          
+
         </View>
 
         <Text style={styles.disclaimerText}>* Based on your weekly check-ins</Text>
@@ -317,180 +399,181 @@ const InsightScreen = () => {
           <Text style={styles.cycleText}>
             You are in your <Text style={styles.highlightText}>Luteal phase (Day 15-28)</Text>
           </Text>
-          
+
           {/* 28-Day Hormone Cycle Chart */}
-         
-            <ScrollView 
-              ref={cycleChartScrollRef}
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.cyclePhaseChartScrollView}
-            >
-              <View style={styles.cyclePhaseChartScrollContent}>
-                <View style={styles.chartWithOverlay}>
-                  {/* Bar Chart Background */}
-                  <BarChart
+
+          <ScrollView
+            ref={cycleChartScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.cyclePhaseChartScrollView}
+          >
+            <View style={styles.cyclePhaseChartScrollContent}>
+              <View style={styles.chartWithOverlay}>
+                {/* Bar Chart Background */}
+                <BarChart
+                  data={[
+                    {
+                      value: 100,
+                      frontColor: '#F7F7FF',
+                      spacing: 4,
+                      barWidth: 5 * 40,
+                      topLabelComponent: () => (
+                        <Text style={styles.barLabelText}>Menstrual</Text>
+                      )
+                    },
+                    {
+                      value: 100,
+                      frontColor: '#F7F7FF',
+                      spacing: 4,
+                      barWidth: 7 * 40,
+                      topLabelComponent: () => (
+                        <Text style={styles.barLabelText}>Follicular</Text>
+                      )
+                    },
+                    {
+                      value: 100,
+                      frontColor: '#F7F7FF',
+                      spacing: 4,
+                      barWidth: 2 * 40,
+                      topLabelComponent: () => (
+                        <Text style={styles.barLabelText}>Ovulation</Text>
+                      )
+                    },
+                    {
+                      value: 100,
+                      frontColor: '#F7F7FF',
+                      spacing: 4,
+                      barWidth: 14 * 40,
+                      topLabelComponent: () => (
+                        <Text style={styles.barLabelText}>Luteal</Text>
+                      )
+                    },
+                  ]}
+                  height={200}
+                  noOfSections={1}
+                  yAxisThickness={0}
+                  xAxisThickness={0}
+                  hideRules
+                  hideYAxisText={true}
+                  barBorderRadius={8}
+                  hideAxesAndRules={true}
+                  isAnimated
+                  animationDuration={800}
+                  spacing={0}
+                />
+
+                {/* Today's vertical line - Day 23 */}
+                <View style={styles.todayVerticalLine}>
+                  <View style={styles.todayLine} />
+                </View>
+
+                {/* Hormone characters at today's intersection points */}
+                <View style={styles.chartHormoneCharacters}>
+                  {/* LH character at day 23 value */}
+                  <View style={[styles.chartHormoneCharacter, {
+                    left: 14 + (22 * 40) + 20 - 21, // Center on day 23 line (42px icon)
+                    top: 200 - (5.4 * 200 / 10) - 21 // center vertically
+                  }]}>
+                    <Image
+                      source={require('../../assets/images/hormoneBuddy/EstrogenBothHand.png')}
+                      style={styles.chartCharacterImage}
+                      resizeMode="contain"
+                    />
+                  </View>
+                  {/* Estrogen character at day 23 value */}
+                  <View style={[styles.chartHormoneCharacter, {
+                    left: 14 + (22 * 40) + 20 - 21, // Center on day 23 line (42px icon)
+                    top: 200 - (7.2 * 200 / 10) - 21 // center vertically
+                  }]}>
+                    <Image
+                      source={require('../../assets/images/hormoneBuddy/ProgesteroneBothHand.png')}
+                      style={styles.chartCharacterImage}
+                      resizeMode="contain"
+                    />
+                  </View>
+
+                  {/* Testosterone character at day 23 value */}
+                  <View style={[styles.chartHormoneCharacter, {
+                    left: 14 + (22 * 40) + 20 - 21, // Center on day 23 line (42px icon)
+                    top: 200 - (0.7 * 200 / 10) - 21 // center vertically
+                  }]}>
+                    <Image
+                      source={require('../../assets/images/hormoneBuddy/TestosteroneBothHand.png')}
+                      style={styles.chartCharacterImage}
+                      resizeMode="contain"
+                    />
+                  </View>
+
+
+                </View>
+
+                {/* Line Chart Overlay - Positioned absolutely on top */}
+                <View style={styles.lineChartOverlay}>
+                  <LineChart
                     data={[
-                      { 
-                        value: 100, 
-                        frontColor: '#F7F7FF', 
-                        spacing: 4, 
-                        barWidth: 5 * 40,
-                        topLabelComponent: () => (
-                          <Text style={styles.barLabelText}>Menstrual</Text>
-                        )
-                      },
-                      { 
-                        value: 100, 
-                        frontColor: '#F7F7FF', 
-                        spacing: 4, 
-                        barWidth: 7 * 40,
-                        topLabelComponent: () => (
-                          <Text style={styles.barLabelText}>Follicular</Text>
-                        )
-                      },
-                      { 
-                        value: 100, 
-                        frontColor: '#F7F7FF', 
-                        spacing: 4, 
-                        barWidth: 2 * 40,
-                        topLabelComponent: () => (
-                          <Text style={styles.barLabelText}>Ovulation</Text>
-                        )
-                      },
-                      { 
-                        value: 100, 
-                        frontColor: '#F7F7FF', 
-                        spacing: 4, 
-                        barWidth: 14 * 40,
-                        topLabelComponent: () => (
-                          <Text style={styles.barLabelText}>Luteal</Text>
-                        )
-                      },
+                      { value: 1.5 }, { value: 1.5 }, { value: 1.5 }, { value: 1.6 }, { value: 1.7 },
+                      { value: 1.8 }, { value: 2 }, { value: 2.2 }, { value: 2.3 }, { value: 2.4 },
+                      { value: 2.5 }, { value: 2.8 }, { value: 4 }, { value: 8 },
+                      { value: 3 }, { value: 1.8 }, { value: 1.5 }, { value: 1.2 },
+                      { value: 1.3 }, { value: 1.8 }, { value: 2.2 }, { value: 3.5 },
+                      { value: 5.4 }, { value: 5.5 }, { value: 4 }, { value: 3 },
+                      { value: 2.5 }, { value: 2 }
                     ]}
-                    height={200}
-                    noOfSections={1}
+                    data2={[
+                      { value: 1 }, { value: 1 }, { value: 1 }, { value: 1 }, { value: 1 },
+                      { value: 1 }, { value: 1 }, { value: 1 }, { value: 1 }, { value: 1 },
+                      { value: 1 }, { value: 1 }, { value: 1.2 }, { value: 2.2 },
+                      { value: 1.2 }, { value: 1.1 }, { value: 1 }, { value: 1 },
+                      { value: 1 }, { value: 1 }, { value: 1 }, { value: 1 },
+                      { value: 1 }, { value: 1 }, { value: 1 }, { value: 1 },
+                      { value: 1 }, { value: 1 }
+                    ]}
+                    data3={[
+                      { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.5 },
+                      { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.5 },
+                      { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.7 },
+                      { value: 0.9 }, { value: 1.3 }, { value: 1.5 }, { value: 1.8 },
+                      { value: 2 }, { value: 2.2 }, { value: 3 }, { value: 5 },
+                      { value: 7 }, { value: 7.7 }, { value: 7 }, { value: 5 },
+                      { value: 2 }, { value: 1.5 }
+                    ]}
+                    color1="#FF69B4"
+                    color2="#9370DB"
+                    color3="#0188BD"
+                    curved
+                    thickness={2.5}
+                    hideDataPoints={true}
+                    showVerticalLines={false}
                     yAxisThickness={0}
                     xAxisThickness={0}
                     hideRules
-                    hideYAxisText={true}
-                    barBorderRadius={8}
-                    hideAxesAndRules={true}
+                    height={200}
+                    maxValue={10}
+                    spacing={40}
+                    adjustToWidth={true}
                     isAnimated
-                    animationDuration={800}
-                    spacing={0}
+                    initialSpacing={0}
+                    animationDuration={900}
+                    hideYAxisText
                   />
-                  
-                  {/* Today's vertical line - Day 23 */}
-                  <View style={styles.todayVerticalLine}>
-                    <View style={styles.todayLine} />
-                  </View>
-                  
-                  {/* Hormone characters at today's intersection points */}
-                  <View style={styles.chartHormoneCharacters}>
-                    {/* Estrogen character at day 23 value */}
-                    <View style={[styles.chartHormoneCharacter, { 
-                      left: 14 + (22 * 40) + 20 - 18, // Center on day 23 line
-                      top: 200 - (4 * 200 / 10) - 18 // Estrogen value 1 at day 23
-                    }]}>
-                      <Image 
-                        source={require('../../assets/images/hormoneBuddy/ProgesteroneBothHand.png')} 
-                        style={styles.chartCharacterImage}
-                        resizeMode="contain"
-                      />
-                    </View>
-                    
-                    {/* Testosterone character at day 23 value */}
-                    <View style={[styles.chartHormoneCharacter, { 
-                      left: 14 + (22 * 40) + 20 - 18, // Center on day 23 line
-                      top: 200 - (6 * 200 / 10) - 18 // Testosterone value 7 at day 23
-                    }]}>
-                      <Image 
-                        source={require('../../assets/images/hormoneBuddy/TestosteroneBothHand.png')} 
-                        style={styles.chartCharacterImage}
-                        resizeMode="contain"
-                      />
-                    </View>
-                    
-                    {/* LH character at day 23 value */}
-                    <View style={[styles.chartHormoneCharacter, { 
-                      left: 14 + (22 * 40) + 20 - 18, // Center on day 23 line
-                      top: 200 - (2 * 200 / 10) - 18 // LH value 2 at day 23
-                    }]}>
-                      <Image 
-                        source={require('../../assets/images/hormoneBuddy/EstrogenBothHand.png')} 
-                        style={styles.chartCharacterImage}
-                        resizeMode="contain"
-                      />
-                    </View>
-                  </View>
-                  
-                  {/* Line Chart Overlay - Positioned absolutely on top */}
-                  <View style={styles.lineChartOverlay}>
-                    <LineChart
-                      data={[
-                        { value: 3}, { value: 4 }, { value: 5 }, { value: 5 }, { value: 6 },
-                        { value: 7 }, { value: 6 }, { value: 5 }, { value: 8 }, { value: 6 },
-                        { value: 4 }, { value: 3 }, { value: 2 }, { value: 1},
-                        { value: 1 }, { value: 3 }, { value: 8 }, { value: 7 },
-                        { value: 6 }, { value: 5 }, { value: 4 }, { value: 3 },
-                        { value: 3 }, { value: 2 }, { value: 1 }, { value: 1 },
-                        { value: 1 }, { value: 1 }
-                      ]}
-                      data2={[
-                        { value: 2 }, { value: 1 }, { value: 1 }, { value: 1 }, { value: 1 },
-                        { value: 1 }, { value: 1 }, { value: 1 }, { value: 2 }, { value: 3 },
-                        { value: 4 }, { value: 5 }, { value: 7 }, { value: 7 },
-                        { value: 6 }, { value: 2 }, { value: 4 }, { value: 6 },
-                        { value: 2 }, { value: 4 }, { value: 6 }, { value: 8 },
-                        { value: 7 }, { value: 6 }, { value: 5 }, { value: 4 },
-                        { value: 3 }, { value: 2 }
-                      ]}
-                      data3={[
-                        { value: 1 }, { value: 1 }, { value: 1 }, { value: 1 }, { value: 1 },
-                        { value: 1 }, { value: 2 }, { value: 3 }, { value: 4 }, { value: 5 },
-                        { value: 7 }, { value: 5 }, { value: 4 }, { value: 8 },
-                        { value: 4 }, { value: 3 }, { value: 1 }, { value: 1 },
-                        { value: 1 }, { value: 2 }, { value: 4 }, { value: 2 },
-                        { value: 4 }, { value: 4 }, { value: 3 }, { value: 2 },
-                        { value: 2 }, { value: 1.5 }
-                      ]}
-                      color1="#FF69B4"
-                      color2="#9370DB"
-                      color3="#FFA500"
-                      curved
-                      thickness={2.5}
-                      hideDataPoints={true}
-                      showVerticalLines={false}
-                      yAxisThickness={0}
-                      xAxisThickness={0}
-                      hideRules
-                      height={200}
-                      maxValue={10}
-                      spacing={40}
-                      adjustToWidth={true}
-                      isAnimated
-                      initialSpacing={0}
-                      animationDuration={900}
-                      hideYAxisText
-                    />
-                  </View>
-                </View>
-                
-                {/* Day scale below - scrolls with chart */}
-                <View style={styles.dayScaleContainer}>
-                  {Array.from({ length: 28 }, (_, i) => (
-                    <View key={i} style={styles.dayScaleLine} />
-                  ))}
-                </View>
-                
-                {/* Date label for day 23 */}
-                <View style={styles.todayDateLabel}>
-                  <Text style={styles.todayDateText}>Wed{'\n'}Sep 10</Text>
                 </View>
               </View>
-            </ScrollView>
-        
+
+              {/* Day scale below - scrolls with chart */}
+              <View style={styles.dayScaleContainer}>
+                {Array.from({ length: 28 }, (_, i) => (
+                  <View key={i} style={styles.dayScaleLine} />
+                ))}
+              </View>
+
+              {/* Date label for day 23 */}
+              <View style={styles.todayDateLabel}>
+                <Text style={styles.todayDateText}>Wed{'\n'}Sep 10</Text>
+              </View>
+            </View>
+          </ScrollView>
+
         </View>
 
         {renderDivider('What this means for your concern?')}
@@ -500,7 +583,7 @@ const InsightScreen = () => {
             <View style={styles.concernDot} />
             <Text style={styles.concernTitle}>Acne can potentially worsen</Text>
           </View>
-          
+
           {/* Concern slider */}
           <FlatList
             horizontal
@@ -691,73 +774,73 @@ const styles = StyleSheet.create({
   chartContainer: {
     alignItems: 'center',
   },
-        chartVisualization: {
-          marginBottom: responsiveHeight(1),
-          position: 'relative',
-        },
-        chartVisualizationContainer: {
-          height: 150,
-          width: '100%',
-          position: 'relative',
-          overflow: 'hidden',
-        },
-        barsContainer: {
-          flexDirection: 'row',
-          height: 150,
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          paddingHorizontal: 8,
-          width: '100%',
-        },
-        chartBar: {
-          backgroundColor: '#F7F7FF',
-          height: 150,
-          borderRadius: 6,
-          justifyContent: 'flex-start',
-          alignItems: 'center',
-          paddingTop: 6,
-          maxHeight: 150,
-        },
-        standardBar: {
-          flex: 1,
-          marginHorizontal: 2,
-        },
-        wideBar: {
-          flex: 1.5,
-          marginHorizontal: 2,
-        },
-        barLabel: {
-          fontSize: 10,
-          fontFamily: FONTS['Inter-Regular'],
-          color: '#DDC2E9',
-          textAlign: 'center',
-        },
-        lineGraphOverlay: {
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          pointerEvents: 'none',
-        },
-        lineGraph: {
-          position: 'relative',
-          width: '100%',
-          height: '100%',
-        },
-        lineSegment: {
-          position: 'absolute',
-          height: 2,
-          backgroundColor: '#DDC2E9',
-          borderRadius: 1,
-        },
-        dataPoint: {
-          position: 'absolute',
-          width: 8,
-          height: 8,
-          borderRadius: 4,
-          backgroundColor: '#DDC2E9',
-        },
+  chartVisualization: {
+    marginBottom: responsiveHeight(1),
+    position: 'relative',
+  },
+  chartVisualizationContainer: {
+    height: 150,
+    width: '100%',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  barsContainer: {
+    flexDirection: 'row',
+    height: 150,
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    width: '100%',
+  },
+  chartBar: {
+    backgroundColor: '#F7F7FF',
+    height: 150,
+    borderRadius: 6,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: 6,
+    maxHeight: 150,
+  },
+  standardBar: {
+    flex: 1,
+    marginHorizontal: 2,
+  },
+  wideBar: {
+    flex: 1.5,
+    marginHorizontal: 2,
+  },
+  barLabel: {
+    fontSize: 10,
+    fontFamily: FONTS['Inter-Regular'],
+    color: '#DDC2E9',
+    textAlign: 'center',
+  },
+  lineGraphOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'none',
+  },
+  lineGraph: {
+    position: 'relative',
+    width: '100%',
+    height: '100%',
+  },
+  lineSegment: {
+    position: 'absolute',
+    height: 2,
+    backgroundColor: '#DDC2E9',
+    borderRadius: 1,
+  },
+  dataPoint: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#DDC2E9',
+  },
   chartLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -830,8 +913,9 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   hormoneQuestsList: {
-    // paddingLeft: responsiveWidth(5),
-    paddingRight: responsiveWidth(1),
+    paddingLeft: 0,
+    // paddingRight: responsiveWidth(1),
+    paddingRight: responsiveWidth(5),
   },
   hormoneQuestSeparator: {
     width: responsiveWidth(2.5),
@@ -839,7 +923,7 @@ const styles = StyleSheet.create({
   hormoneQuest: {
     borderRadius: 10,
     padding: responsiveWidth(5),
-    width: responsiveWidth(75),
+    width: responsiveWidth(50),
     marginBottom: responsiveHeight(1),
   },
   hormoneQuestContent: {
@@ -997,6 +1081,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F7FF',
     padding: responsiveWidth(4),
   },
+  concernSlideDraft:{
+    width: responsiveWidth(60),
+    borderRadius: 10,
+    backgroundColor: '#F7F7FF',
+    padding: responsiveWidth(5),
+  },
   concernSlideHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1025,46 +1115,46 @@ const styles = StyleSheet.create({
     lineHeight: moderateScale(15, 1.5),
     textAlign: 'center',
   },
-  
+
   // Cycle Phase Chart Styles
 
-  
-  
+
+
   cyclePhaseChartScrollView: {
     height: 270, // Height for chart + day labels + date label
   },
-  
+
   cyclePhaseChartScrollContent: {
     paddingHorizontal: 10,
     // minWidth: 1200, // Ensure enough width for 28 days × 40px spacing
   },
-  
+
   dayScaleContainer: {
     flexDirection: 'row',
     paddingHorizontal: 14,
   },
-  
-  
+
+
   dayScaleLine: {
     width: 1,
     height: 8,
     backgroundColor: '#DDC2E9',
     marginHorizontal: 19.5, // (40 - 1) / 2 = 19.5 to center the line
   },
-  
-  
+
+
   barLabelText: {
     fontSize: moderateScale(12, 1.5),
     fontFamily: FONTS['Inter-SemiBold'],
     color: '#333',
     textAlign: 'center',
   },
-  
+
   chartWithOverlay: {
     position: 'relative',
     overflow: 'visible',
   },
-  
+
   lineChartOverlay: {
     position: 'absolute',
     top: 0,
@@ -1075,7 +1165,7 @@ const styles = StyleSheet.create({
     overflow: 'visible',
     zIndex: 50,
   },
-  
+
   todayVerticalLine: {
     position: 'absolute',
     top: 40,
@@ -1085,28 +1175,28 @@ const styles = StyleSheet.create({
     width: 1,
     pointerEvents: 'none',
   },
-  
+
   todayLine: {
     width: 1,
     height: 200,
     backgroundColor: '#949494',
   },
-  
-  
+
+
   todayDateLabel: {
     position: 'absolute',
     bottom: 0, // Position below the X-axis
-    left: 14 + (22 * 40) +10, // Center on day 23 line
+    left: 14 + (22 * 40) + 10, // Center on day 23 line
     alignItems: 'center',
   },
-  
+
   todayDateText: {
     fontSize: moderateScale(10, 1.5),
     fontFamily: FONTS['Inter-Regular'],
     color: '#949494',
     textAlign: 'center',
   },
-  
+
   // Chart-specific hormone character styles
   chartHormoneCharacters: {
     position: 'absolute',
@@ -1117,19 +1207,19 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
     zIndex: 200,
   },
-  
+
   chartHormoneCharacter: {
     position: 'absolute',
-    width: 36,
-    height: 36,
+    width: 42,
+    height: 42,
     zIndex: 100,
   },
-  
+
   chartCharacterImage: {
-    width: 36,
-    height: 36,
+    width: 45,
+    height: 45,
   },
-  
+
   // Action plan specific hormone character styles
   actionPlanHormoneCharacter: {
     width: scale(60),
@@ -1138,7 +1228,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
+
   actionPlanCharacterImage: {
     width: scale(60),
     height: scale(60),
