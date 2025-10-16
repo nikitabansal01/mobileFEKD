@@ -5,11 +5,11 @@ import {
   Dimensions,
   FlatList,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View
 } from 'react-native';
 import { BarChart, LineChart } from 'react-native-gifted-charts';
@@ -240,55 +240,56 @@ const InsightScreen = () => {
 
         {renderDivider('Your hormone quests till now')}
 
-        <View style={styles.concernCard}>
+        {/* <View style={styles.concernCard}>
           <View style={styles.concernHeader}>
             <View style={styles.concernDot} />
             <Text style={styles.concernTitle}>Acne can potentially worsen</Text>
           </View>
 
-          {/* Concern slider */}
+       
 
         </View>
-        <View style={{flex: 1}}>
-<FlatList
-              horizontal
-              data={[
-                {
-                  id: 'c1x',
-                  title: 'Lower calming support',
-                  description: 'less skin-calming effect, so acne can worsen',
-                  color: '#FF87B4',
-                  arrow: '↓',
-                  bgColor: 'rgba(251, 144, 187, 0.12)',
-                  image: Images.EstrogenBothHand,
-                },
-                {
-                  id: 'c2x',
-                  title: 'Oil production shifts',
-                  description: 'Oil and inflammation can rise; watch pores',
-                  color: '#0E8FC1',
-                  arrow: '↑↓',
-                  bgColor: 'rgba(203, 240, 255, 0.25)',
-                  image: Images.ProgesteroneBothHand,
-                }
-              ]}
-              keyExtractor={(item) => item.id}
-              // showsHorizontalScrollIndicator={true}
-              // contentContainerStyle={styles.concernSliderContainer}
-              // ItemSeparatorComponent={() => <View style={{ flex: 1, width: responsiveWidth(3) }} />}
-              snapToInterval={responsiveWidth(100)}
-              decelerationRate="fast"
-              snapToAlignment="start"
-              renderItem={({ item }) => (
-                <TouchableWithoutFeedback onPress={() => {}}>
+        <View style={{ flex: 1 }}>
+          <FlatList
+            horizontal
+            data={[
+              {
+                id: 'c1x',
+                title: 'Lower calming support',
+                description: 'less skin-calming effect, so acne can worsen',
+                color: '#FF87B4',
+                arrow: '↓',
+                bgColor: 'rgba(251, 144, 187, 0.12)',
+                image: Images.EstrogenBothHand,
+              },
+              {
+                id: 'c2x',
+                title: 'Oil production shifts',
+                description: 'Oil and inflammation can rise; watch pores',
+                color: '#0E8FC1',
+                arrow: '↑↓',
+                bgColor: 'rgba(203, 240, 255, 0.25)',
+                image: Images.ProgesteroneBothHand,
+              }
+            ]}
+            keyExtractor={(item) => item.id}
+            // showsHorizontalScrollIndicator={true}
+            // contentContainerStyle={styles.concernSliderContainer}
+            // ItemSeparatorComponent={() => <View style={{ flex: 1, width: responsiveWidth(3) }} />}
+            snapToInterval={responsiveWidth(100)}
+            decelerationRate="fast"
+            snapToAlignment="start"
+            renderItem={({ item }) => (
+              <TouchableWithoutFeedback onPress={() => { }}>
                 <View>
-                  {/* <Text>Hi i am suchit</Text> */}
+                 
                   <Text style={styles.concernSlideDraft}>{item.description}</Text>
                 </View>
-                </TouchableWithoutFeedback>
-              )}
-            />
-</View>
+              </TouchableWithoutFeedback>
+            )}
+          />
+        </View> */}
+
         <View style={styles.actionPlanCard}>
           <Text style={styles.actionPlanText}>
             You completed <Text style={styles.highlightText}>80%</Text> of your action plan and your <Text style={styles.highlightText}>acne shifted from 7 → 5</Text> on the scale.
@@ -296,7 +297,7 @@ const InsightScreen = () => {
 
 
           <View style={styles.hormoneQuestsContainer}>
-            
+
             <FlatList
               horizontal
               data={[
@@ -685,8 +686,9 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: moderateScale(14, 1.5),
-    fontFamily: 'NotoSerif-Medium',
-    fontWeight: '500',
+    // fontFamily: 'NotoSerif-Medium',
+    fontFamily: "NotoSerif500",
+    // fontWeight: '500',
     color: '#000000',
     textAlign: 'center',
     lineHeight: moderateScale(21, 1.5), // 150% of 14px
@@ -707,8 +709,9 @@ const styles = StyleSheet.create({
   },
   mainTitle: {
     fontSize: moderateScale(22, 1.5),
-    fontFamily: 'NotoSerif-SemiBold',
-    fontWeight: '600',
+    // fontFamily: 'NotoSerif-SemiBold',
+    fontFamily: "NotoSerif600",
+    // fontWeight: '600',
     color: '#000000',
     textAlign: 'center',
     lineHeight: moderateScale(27.5, 1.5), // 125% of 22px
@@ -752,16 +755,17 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(20),
     paddingHorizontal: scale(8),
     borderRadius: 10,
-    shadowColor: '#D9D9D9',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowColor: '#868585',
+    shadowOffset: { width: 0, height: Platform.OS === 'ios' ? 2 : 3 },
+    shadowOpacity: Platform.OS === 'ios' ? 0.2 : 0.6,
+    shadowRadius: Platform.OS === 'ios' ? 6 : 10,
+    elevation: Platform.OS === 'ios' ? 2 : 6,
   },
   progressText: {
     fontSize: moderateScale(14, 1.5),
-    fontFamily: 'NotoSerif-Medium',
-    fontWeight: '500',
+    // fontFamily: 'NotoSerif-Medium',
+    fontFamily: "NotoSerif500",
+    // fontWeight: '500',
     color: '#000000',
     textAlign: 'center',
     lineHeight: moderateScale(21, 1.5), // 150% of 14px
@@ -877,8 +881,9 @@ const styles = StyleSheet.create({
   },
   cycleDividerText: {
     fontSize: moderateScale(14, 1.5),
-    fontFamily: 'NotoSerif-Medium',
-    fontWeight: '500',
+    // fontFamily: 'NotoSerif-Medium',
+    fontFamily: "NotoSerif500",
+    // fontWeight: '500',
     color: '#000000',
     textAlign: 'center',
     lineHeight: moderateScale(21, 1.5), // 150% of 14px
@@ -892,17 +897,18 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(20),
     paddingHorizontal: scale(8),
     borderRadius: 10,
-    shadowColor: '#D9D9D9',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowColor: '#868585',
+    shadowOffset: { width: 0, height: Platform.OS === 'ios' ? 2 : 3 },
+    shadowOpacity: Platform.OS === 'ios' ? 0.15 : 0.5,
+    shadowRadius: Platform.OS === 'ios' ? 6 : 10,
+    elevation: Platform.OS === 'ios' ? 2 : 5,
     zIndex: 300,
   },
   actionPlanText: {
     fontSize: moderateScale(14, 1.5),
-    fontFamily: 'NotoSerif-Medium',
-    fontWeight: '500',
+    // fontFamily: 'NotoSerif-Medium',
+    fontFamily: "NotoSerif500",
+    // fontWeight: '500',
     color: '#000000',
     textAlign: 'center',
     lineHeight: moderateScale(21, 1.5), // 150% of 14px
@@ -923,7 +929,7 @@ const styles = StyleSheet.create({
   hormoneQuest: {
     borderRadius: 10,
     padding: responsiveWidth(5),
-    width: responsiveWidth(50),
+    width: responsiveWidth(75),
     marginBottom: responsiveHeight(1),
   },
   hormoneQuestContent: {
@@ -937,8 +943,9 @@ const styles = StyleSheet.create({
   },
   hormoneTitle: {
     fontSize: moderateScale(14, 1.5),
-    fontFamily: 'NotoSerif-Medium',
-    fontWeight: '500',
+    // fontFamily: 'NotoSerif-Medium',
+    fontFamily: "NotoSerif500",
+    // fontWeight: '500',
     color: '#000000',
     // textAlign: 'center',
     lineHeight: moderateScale(21, 1.5), // 150% of 14px
@@ -1018,16 +1025,17 @@ const styles = StyleSheet.create({
     paddingTop: verticalScale(20),
     paddingBottom: verticalScale(40),
     borderRadius: 10,
-    shadowColor: '#D9D9D9',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowColor: '#868585',
+    shadowOffset: { width: 0, height: Platform.OS === 'ios' ? 2 : 3 },
+    shadowOpacity: Platform.OS === 'ios' ? 0.15 : 0.5,
+    shadowRadius: Platform.OS === 'ios' ? 6 : 10,
+    elevation: Platform.OS === 'ios' ? 2 : 5,
   },
   cycleText: {
     fontSize: moderateScale(14, 1.5),
-    fontFamily: 'NotoSerif-Medium',
-    fontWeight: '500',
+    // fontFamily: 'NotoSerif-Medium',
+    fontFamily: "NotoSerif500",
+    // fontWeight: '500',
     color: '#000000',
     textAlign: 'center',
     lineHeight: moderateScale(21, 1.5), // 150% of 14px
@@ -1041,11 +1049,11 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(20),
     paddingHorizontal: scale(8),
     borderRadius: 10,
-    shadowColor: '#D9D9D9',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowColor: '#868585',
+    shadowOffset: { width: 0, height: Platform.OS === 'ios' ? 2 : 3 },
+    shadowOpacity: Platform.OS === 'ios' ? 0.15 : 0.5,
+    shadowRadius: Platform.OS === 'ios' ? 6 : 10,
+    elevation: Platform.OS === 'ios' ? 2 : 5,
   },
   concernHeader: {
     flexDirection: 'row',
@@ -1063,8 +1071,9 @@ const styles = StyleSheet.create({
   },
   concernTitle: {
     fontSize: moderateScale(14, 1.5),
-    fontFamily: 'NotoSerif-Medium',
-    fontWeight: '500',
+    // fontFamily: 'NotoSerif-Medium',
+    fontFamily: "NotoSerif500",
+    // fontWeight: '500',
     color: '#000000',
     textAlign: 'center',
     lineHeight: moderateScale(21, 1.5), // 150% of 14px
@@ -1081,7 +1090,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F7FF',
     padding: responsiveWidth(4),
   },
-  concernSlideDraft:{
+  concernSlideDraft: {
     width: responsiveWidth(60),
     borderRadius: 10,
     backgroundColor: '#F7F7FF',

@@ -1,4 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
@@ -110,6 +111,13 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
 
   return (
     <View style={styles.container}>
+      {/* Gradient Background */}
+      <LinearGradient
+        colors={['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.15)', 'rgba(0, 0, 0, 0.25)']}
+        locations={[0, 0.6, 1]}
+        style={styles.gradientBackground}
+      />
+      
       {/* Main Navigation Bar */}
       <View style={styles.navigationBar}>
         {/* White navigation background */}
@@ -171,6 +179,14 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     backgroundColor: 'transparent', // Transparent to allow Auvra character to show
   },
+  gradientBackground: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: responsiveHeight(12.5),
+    zIndex: 1,
+  },
   navigationBar: {
     position: 'relative',
     width: '100%',
@@ -182,18 +198,20 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: responsiveHeight(8.5), // Increased to 85px for better visibility
-    backgroundColor: '#ffffff',
+    backgroundColor: 'rgba(255, 255, 255, 1)', // More transparent for better blend
     paddingHorizontal: responsiveWidth(5.1), // 18.257px
     paddingVertical: responsiveHeight(1.5), // Increased padding
     zIndex: 2,
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(0, 0, 0, 0.05)',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: -3,
+      height: -2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
   tabsRow: {
     flexDirection: 'row',
