@@ -1,5 +1,6 @@
 import Images from '@/assets/images';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
@@ -49,6 +50,38 @@ const InsightScreen = () => {
       default:
         return require('../../assets/images/hormoneBuddy/ProgesteroneBothHand.png');
     }
+  };
+
+  const getGradientColors = (color: string): [string, string] => {
+    // Handle RGB format
+    const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (rgbMatch) {
+      const r = parseInt(rgbMatch[1]);
+      const g = parseInt(rgbMatch[2]);
+      const b = parseInt(rgbMatch[3]);
+      return [
+        `rgba(${r}, ${g}, ${b}, 0.25)`,
+        `rgba(${r}, ${g}, ${b}, 0)`
+      ];
+    }
+
+    // Convert hex color to RGB for gradient
+    const hexToRgb = (hex: string) => {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : null;
+    };
+
+    const rgb = hexToRgb(color);
+    if (!rgb) return ['rgba(162, 154, 234, 0.25)', 'rgba(162, 154, 234, 0)'];
+
+    return [
+      `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.25)`,
+      `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`
+    ];
   };
 
 
@@ -140,7 +173,12 @@ const InsightScreen = () => {
   );
 
   const renderHormoneQuest = (title: string, description: string, progress: number, total: number, color: string, progessColor: string, bgColor: string) => (
-    <View style={[styles.hormoneQuest, { backgroundColor: bgColor }]}>
+    <LinearGradient
+      colors={getGradientColors(color)}
+      start={{ x: 0.59, y: 0.18 }}
+      end={{ x: 0.41, y: 0.82 }}
+      style={styles.hormoneQuest}
+    >
       <View style={styles.hormoneQuestContent}>
         <View style={styles.hormoneInfo}>
           <Text style={[styles.hormoneTitle, { color }]}>{title}</Text>
@@ -165,7 +203,7 @@ const InsightScreen = () => {
           <Ionicons name="chevron-forward" size={16} color="#949494" />
         </View>
       </View>
-    </View>
+    </LinearGradient>
   );
 
   const renderActionItem = (emoji: string, label: string) => (
@@ -301,16 +339,7 @@ const InsightScreen = () => {
             <FlatList
               horizontal
               data={[
-                {
-                  id: 'list1',
-                  title: 'Progesterone',
-                  description: 'Balanced levels can reduce inflammation and calm breakouts',
-                  progress: 10,
-                  total: 14,
-                  color: '#0188bd',
-                  progessColor: '#CBF0FF',
-                  bgColor: '#ecf6fa'
-                },
+                
                 {
                   id: 'list2',
                   title: 'Testosterone',
@@ -322,6 +351,16 @@ const InsightScreen = () => {
                   bgColor: 'rgba(162, 154, 234, 0.15)'
                 },
                 {
+                  id: 'list1',
+                  title: 'Progesterone',
+                  description: 'Balanced levels can reduce inflammation and calm breakouts',
+                  progress: 10,
+                  total: 14,
+                  color: '#0188BD',
+                  progessColor: '#CBF0FF',
+                  bgColor: 'rgb(203, 240, 255)'
+                },
+                {
                   id: 'list3',
                   title: 'Cortisol',
                   description: 'Stable levels supports calm, reduces stress-related flare-ups',
@@ -329,18 +368,9 @@ const InsightScreen = () => {
                   total: 5,
                   color: '#ffa569',
                   progessColor: '#FFA569',
-                  bgColor: 'rgba(255, 165, 105, 0.25)'
+                  bgColor: 'rgb(255, 165, 105)'
                 },
-                {
-                  id: 'list4',
-                  title: 'Cortisol',
-                  description: 'Stable levels supports calm, reduces stress-related flare-ups',
-                  progress: 1,
-                  total: 5,
-                  color: '#ffa569',
-                  progessColor: '#FFA569',
-                  bgColor: 'rgba(255, 165, 105, 0.25)'
-                }
+                
               ]}
               keyExtractor={(item) => item.id}
               showsHorizontalScrollIndicator={false}
@@ -350,7 +380,12 @@ const InsightScreen = () => {
               decelerationRate="fast"
               snapToAlignment="start"
               renderItem={({ item }) =>
-                <View style={[styles.hormoneQuest, { backgroundColor: item.bgColor }]}>
+                <LinearGradient
+                  colors={getGradientColors(item.bgColor)}
+                  start={{ x: 0.4, y: 0.18 }}
+                  end={{ x: 0.5, y: 1.5 }}
+                  style={styles.hormoneQuest}
+                >
                   <View style={styles.hormoneQuestContent}>
                     <View style={styles.hormoneInfo}>
                       <Text style={[styles.hormoneTitle, { color: item.color }]}>{item.title}</Text>
@@ -375,7 +410,7 @@ const InsightScreen = () => {
                       <Ionicons name="chevron-forward" size={16} color="#949494" />
                     </View>
                   </View>
-                </View>
+                </LinearGradient>
               }
 
             />
@@ -595,7 +630,7 @@ const InsightScreen = () => {
                 description: 'less skin-calming effect, so acne can worsen',
                 color: '#FF87B4',
                 arrow: '↓',
-                bgColor: 'rgba(251, 144, 187, 0.12)',
+                bgColor: 'rgb(251, 144, 187)',
                 image: Images.EstrogenBothHand,
               },
               {
@@ -604,7 +639,7 @@ const InsightScreen = () => {
                 description: 'Oil and inflammation can rise; watch pores',
                 color: '#0E8FC1',
                 arrow: '↑↓',
-                bgColor: 'rgba(203, 240, 255, 0.25)',
+                bgColor: 'rgb(203, 240, 255)',
                 image: Images.ProgesteroneBothHand,
               },
               {
@@ -613,7 +648,7 @@ const InsightScreen = () => {
                 description: 'Skin may get reactive; keep routine gentle',
                 color: '#FFA569',
                 arrow: '↑',
-                bgColor: 'rgba(255, 165, 105, 0.18)',
+                bgColor: 'rgb(255, 165, 105)',
                 image: Images.CortisolBothHand,
               },
             ]}
@@ -625,7 +660,12 @@ const InsightScreen = () => {
             decelerationRate="fast"
             snapToAlignment="start"
             renderItem={({ item }) => (
-              <View style={[styles.concernSlide, { backgroundColor: item.bgColor }]}>
+              <LinearGradient
+                colors={getGradientColors(item.bgColor)}
+                start={{ x: 0.4, y: 0.18 }}
+                end={{ x: 0.5, y: 1.5 }}
+                style={styles.concernSlide}
+              >
                 <View style={styles.concernSlideHeader}>
                   <Image source={item.image} style={styles.concernSlideImage} resizeMode="contain" />
                   <Ionicons
@@ -636,7 +676,7 @@ const InsightScreen = () => {
                   />
                 </View>
                 <Text style={styles.concernSlideDescription}>{item.description}</Text>
-              </View>
+              </LinearGradient>
             )}
           />
         </View>
@@ -814,7 +854,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
   },
   barLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: FONTS['Inter-Regular'],
     color: '#DDC2E9',
     textAlign: 'center',
@@ -852,8 +892,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: responsiveWidth(5),
   },
   chartLabel: {
-    fontSize: moderateScale(10, 1.5),
-    fontFamily: FONTS['Inter-Regular'],
+    fontSize: moderateScale(12, 1.5),
+    fontFamily: FONTS['Inter-SemiBold'],
     color: '#949494',
     textAlign: 'center',
   },

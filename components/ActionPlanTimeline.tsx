@@ -818,8 +818,11 @@ export default function ActionPlanTimeline({
           {geom && timeSlotPositions.map((position, index) => {
             const { CENTER_X } = geom;
             const iconSize = responsiveWidth(8); // 40px equivalent (increased from 26px)
-            const iconLeft = CENTER_X - iconSize / 2;
-            const iconTop = position.iconY - iconSize / 2;
+            const isAnytime = (TIME_ICONS[position.timeSlot] || TIME_ICONS.anytime) === 'Anytime';
+            const containerWidth = isAnytime ? responsiveWidth(20) : iconSize;
+            const containerHeight = isAnytime ? responsiveHeight(3) : iconSize;
+            const iconLeft = CENTER_X - containerWidth / 2;
+            const iconTop = position.iconY - containerHeight / 2;
             
             // Use the smart time slot from position calculation
             const smartTimeSlot = position.timeSlot;
@@ -839,12 +842,12 @@ export default function ActionPlanTimeline({
               <View
                 key={`time-icon-${position.timeSlot}`}
                 style={[
-                  styles.timeIcon,
+                  (TIME_ICONS[smartTimeSlot] || TIME_ICONS.anytime) === 'Anytime' ? styles.timeTextContainer : styles.timeIcon,
                   {
                     left: iconLeft,
                     top: iconTop,
-                    width: iconSize,
-                    height: iconSize,
+                    width: containerWidth,
+                    height: containerHeight,
                   }
                 ]}
               >
@@ -1487,6 +1490,17 @@ const styles = StyleSheet.create({
     // shadowOpacity: 0.1,
     // shadowRadius: 2,
     // elevation: 2, // Android shadow
+  },
+  timeTextContainer: {
+    position: 'absolute',
+    backgroundColor: '#FFFFFF',
+    borderRadius: responsiveWidth(1),
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: responsiveWidth(2),
+    paddingVertical: responsiveHeight(0.2),
+    minWidth: responsiveWidth(20),
+    minHeight: responsiveHeight(3),
   },
   timeIconText: {
     fontSize: responsiveFontSize(3.0), // 30px equivalent (increased from 20px)
