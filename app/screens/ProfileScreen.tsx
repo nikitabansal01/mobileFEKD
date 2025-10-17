@@ -121,7 +121,7 @@ export default function Profile() {
               />
               <TouchableOpacity style={styles.editButton}>
                 <View style={styles.editIconContainer}>
-                  <Image source={IconEdit} style={styles.editIcon} />
+                  <Image source={require('../../assets/icons/IconEdit.png')} style={styles.editIcon} />
                 </View>
               </TouchableOpacity>
             </View>
@@ -424,9 +424,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   editIcon: {
-    width: scale(15),
-    height: scale(15),
-    tintColor: COLORS.black,
+    width: scale(13),
+    height: scale(13),
+    tintColor: '#999999', // Even lighter gray
+    opacity: 0.5, // More transparency to reduce boldness
   },
   userInfo: {
     alignItems: 'center',

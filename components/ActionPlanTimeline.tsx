@@ -108,6 +108,10 @@ export default function ActionPlanTimeline({
   // Pulsing animation for completed actions
   const pulsingAnimation = useRef(new Animated.Value(1)).current;
   
+  // Full screen expansion animation
+  const [expandingCircle, setExpandingCircle] = useState<{x: number, y: number, id: string} | null>(null);
+  const expandAnimation = useRef(new Animated.Value(0)).current;
+  
   /**
    * Handles navigation to action detail screen using React Navigation
    * 
@@ -122,6 +126,28 @@ export default function ActionPlanTimeline({
       console.error('Navigation error:', error);
       console.log('Navigation data:', actionData);
     }
+  };
+
+  /**
+   * Handles the expanding circle animation and navigation
+   */
+  const handleExpandingNavigation = (actionData: any, circlePosition: {x: number, y: number}) => {
+    // Set the expanding circle position
+    setExpandingCircle({ x: circlePosition.x, y: circlePosition.y, id: actionData.id.toString() });
+    
+    // Start the expansion animation
+    Animated.timing(expandAnimation, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: false, // We need to animate scale and position
+    }).start(() => {
+      // Navigate after animation completes
+      handleNavigation(actionData);
+      
+      // Reset animation
+      expandAnimation.setValue(0);
+      setExpandingCircle(null);
+    });
   };
   
   /**
@@ -572,7 +598,7 @@ export default function ActionPlanTimeline({
     <View style={styles.container}>
       <View style={{ flex: 1 }}>
         <View 
-          style={{ height: contentHeight, overflow: 'hidden' }}
+          style={{ height: contentHeight, overflow: 'visible' }}
           onLayout={(e) => {
             const newWidth = Math.max(0, e.nativeEvent.layout.width);
             if (newWidth > 0 && newWidth !== canvasW) {
@@ -665,7 +691,7 @@ export default function ActionPlanTimeline({
             const yImage = yCenter - CIRCLE_RADIUS;
             const textLeft = isLeft 
               ? xCenter + CIRCLE_RADIUS + responsiveWidth(3) 
-              : xCenter - CIRCLE_RADIUS - responsiveWidth(45) - responsiveWidth(3);
+              : xCenter - CIRCLE_RADIUS - responsiveWidth(35) - responsiveWidth(3);
 
             // Detailed debug: Today item rendering info
             console.log(`🎯 Today item rendering ${idx}:`, {
@@ -734,23 +760,17 @@ export default function ActionPlanTimeline({
                     },
                   ]}
                   onLongPress={!a.is_completed ? () => {
-                    // Navigate to ActionCompletedScreen (only for non-completed actions)
-                    try {
-                      navigation.navigate('ActionCompletedScreen', {
-                        action: JSON.stringify({
-                          id: a.id,
-                          title: a.title,
-                          purpose: getActionPurpose(a),
-                          hormones: a.hormones || [],
-                          specific_action: a.specific_action,
-                          conditions: a.conditions,
-                          symptoms: a.symptoms,
-                          advices: a.advices,
-                        })
-                      });
-                    } catch (error) {
-                      console.error('Navigation to ActionCompletedScreen error:', error);
-                    }
+                    // Use expanding animation for ActionCompletedScreen navigation
+                    handleExpandingNavigation({
+                      id: a.id,
+                      title: a.title,
+                      purpose: getActionPurpose(a),
+                      hormones: a.hormones || [],
+                      specific_action: a.specific_action,
+                      conditions: a.conditions,
+                      symptoms: a.symptoms,
+                      advices: a.advices,
+                    }, { x: xCenter, y: yCenter });
                   } : undefined}
                   delayLongPress={2000} // 2 seconds long press
                 >
@@ -799,14 +819,14 @@ export default function ActionPlanTimeline({
                     }}
                     style={{ flexDirection: 'row', alignItems: 'center' }}
                   >
-                    <Text style={styles.itemTitle}>
+                    <Text style={[styles.itemTitle, { textAlign: isLeft ? 'right' : 'right' }]}>
                       {a.title}
                     </Text>
                     <Text style={styles.itemArrow} allowFontScaling={false}>
                       {'>'}
                     </Text>
                   </TouchableOpacity>
-                  <Text style={styles.itemSub} numberOfLines={1} allowFontScaling={false}>
+                  <Text style={[styles.itemSub, { textAlign: isLeft ? 'right' : 'left' }]} numberOfLines={1} allowFontScaling={false}>
                     {getActionAmount(a)}{getActionSymptomsConditions(a) ? ' | ' : ''}{getActionSymptomsConditions(a)}
                   </Text>
                 </View>
@@ -917,7 +937,7 @@ export default function ActionPlanTimeline({
 
             const textLeft = isLeft
               ? xCenter + CIRCLE_RADIUS + responsiveWidth(3)
-              : xCenter - CIRCLE_RADIUS - responsiveWidth(45) - responsiveWidth(3);
+              : xCenter - CIRCLE_RADIUS - responsiveWidth(35) - responsiveWidth(3);
 
             return (
               <View key={a.id.toString()} style={StyleSheet.absoluteFill} pointerEvents="box-none">
@@ -993,10 +1013,10 @@ export default function ActionPlanTimeline({
                     { left: textLeft, top: yCenter - 28, alignItems: isLeft ? 'flex-start' : 'flex-end' },
                   ]}
                 >
-                  <Text style={styles.itemTitle}>
-                    {a.title}
-                  </Text>
-                  <Text style={styles.itemSub} numberOfLines={1} allowFontScaling={false}>
+                    <Text style={[styles.itemTitle, { textAlign: isLeft ? 'right' : 'left' }]}>
+                      {a.title}
+                    </Text>
+                  <Text style={[styles.itemSub, { textAlign: isLeft ? 'right' : 'left' }]} numberOfLines={1} allowFontScaling={false}>
                     {getActionAmount(a)}{getActionSymptomsConditions(a) ? ' | ' : ''}{getActionSymptomsConditions(a)}
                   </Text>
                 </View>
@@ -1027,6 +1047,27 @@ export default function ActionPlanTimeline({
             );
           })()}
           */}
+
+          {/* Expanding circle animation overlay */}
+          {expandingCircle && (
+            <Animated.View
+              style={[
+                styles.expandingCircle,
+                {
+                  left: expandingCircle.x,
+                  top: expandingCircle.y,
+                  transform: [
+                    {
+                      scale: expandAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, Math.max(SCREEN_W, Dimensions.get('window').height) / 10], // Scale to cover full screen
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+          )}
         </View>
       </View>
     </View>
@@ -1410,12 +1451,13 @@ const styles = StyleSheet.create({
   },
   textBox: {
     position: 'absolute',
-    width: responsiveWidth(45),
+    width: responsiveWidth(35),
   },
   itemTitle: {
     fontSize: responsiveFontSize(1.98),
     fontFamily: 'NotoSerif500',
     color: '#000000',
+    lineHeight: responsiveFontSize(2.2),
   },
   itemArrow: {
     fontSize: responsiveFontSize(1.98),
@@ -1424,7 +1466,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   itemSub: {
-    marginTop: 4,
+    marginTop: 2,
     fontSize: responsiveFontSize(1.7),
     fontFamily: 'Inter400',
     color: '#949494',
@@ -1512,5 +1554,19 @@ const styles = StyleSheet.create({
   timeIconTextSmall: {
     fontSize: moderateScale(12, 1.5), // Smaller font size for "Anytime" text
     fontWeight: '500',
+  },
+  
+  // Expanding circle animation styles
+  expandingCircle: {
+    position: 'absolute',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#DDC2E9', // Same color as the pulsing ring
+    zIndex: 1000, // Ensure it's on top of everything
+    marginLeft: -10, // Center the circle on the tap point
+    marginTop: -10,
+    // Ensure it can expand beyond the container bounds
+    overflow: 'visible',
   },
 });
