@@ -760,17 +760,19 @@ export default function ActionPlanTimeline({
                     },
                   ]}
                   onLongPress={!a.is_completed ? () => {
-                    // Use expanding animation for ActionCompletedScreen navigation
-                    handleExpandingNavigation({
-                      id: a.id,
-                      title: a.title,
-                      purpose: getActionPurpose(a),
-                      hormones: a.hormones || [],
-                      specific_action: a.specific_action,
-                      conditions: a.conditions,
-                      symptoms: a.symptoms,
-                      advices: a.advices,
-                    }, { x: xCenter, y: yCenter });
+                    // Navigate to purple page first, then gift animation
+                    navigation.navigate('ActionCompletedScreen', {
+                      action: JSON.stringify({
+                        id: a.id,
+                        title: a.title,
+                        purpose: getActionPurpose(a),
+                        hormones: a.hormones || [],
+                        specific_action: a.specific_action,
+                        conditions: a.conditions,
+                        symptoms: a.symptoms,
+                        advices: a.advices,
+                      })
+                    });
                   } : undefined}
                   delayLongPress={2000} // 2 seconds long press
                 >
@@ -819,14 +821,18 @@ export default function ActionPlanTimeline({
                     }}
                     style={{ flexDirection: 'row', alignItems: 'center' }}
                   >
-                    <Text style={[styles.itemTitle, { textAlign: isLeft ? 'right' : 'right' }]}>
+                    <Text 
+                      style={[styles.itemTitle, { textAlign: isLeft ? 'right' : 'left' }]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
                       {a.title}
                     </Text>
                     <Text style={styles.itemArrow} allowFontScaling={false}>
                       {'>'}
                     </Text>
                   </TouchableOpacity>
-                  <Text style={[styles.itemSub, { textAlign: isLeft ? 'right' : 'left' }]} numberOfLines={1} allowFontScaling={false}>
+                  <Text style={[styles.itemSub, { textAlign: isLeft ? 'left' : 'right' }]} numberOfLines={1} allowFontScaling={false}>
                     {getActionAmount(a)}{getActionSymptomsConditions(a) ? ' | ' : ''}{getActionSymptomsConditions(a)}
                   </Text>
                 </View>
@@ -1013,10 +1019,10 @@ export default function ActionPlanTimeline({
                     { left: textLeft, top: yCenter - 28, alignItems: isLeft ? 'flex-start' : 'flex-end' },
                   ]}
                 >
-                    <Text style={[styles.itemTitle, { textAlign: isLeft ? 'right' : 'left' }]}>
+                    <Text style={[styles.itemTitle, { textAlign: isLeft ? 'left' : 'right' }]}>
                       {a.title}
                     </Text>
-                  <Text style={[styles.itemSub, { textAlign: isLeft ? 'right' : 'left' }]} numberOfLines={1} allowFontScaling={false}>
+                  <Text style={[styles.itemSub, { textAlign: isLeft ? 'left' : 'right' }]} numberOfLines={1} allowFontScaling={false}>
                     {getActionAmount(a)}{getActionSymptomsConditions(a) ? ' | ' : ''}{getActionSymptomsConditions(a)}
                   </Text>
                 </View>
@@ -1397,6 +1403,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    zIndex: 1,
   },
   pulsingRing: {
     position: 'absolute',
@@ -1428,12 +1435,12 @@ const styles = StyleSheet.create({
     borderRadius: responsiveWidth(6),
     paddingHorizontal: scale(1),
     paddingVertical: verticalScale(1),
-    // backgroundColor: '#F0F0F0',
+    // backgroundColor: 'rgba(255, 0, 0, 0.3)', // Temporary red background for debugging
     justifyContent: 'center',
     alignItems: 'center',
     // borderWidth: responsiveWidth(0.5),
     // borderColor: '#E0E0E0',
-    zIndex: -1,
+    zIndex: 0,
   },
   hormoneImageText: {
     fontSize: responsiveFontSize(1.7),
@@ -1442,7 +1449,7 @@ const styles = StyleSheet.create({
   hormoneImageIcon: {
     width: '100%',
     height: '100%',
-    zIndex: -1,
+    zIndex: 0,
   },
   hormoneBadgeText: {
     color: '#6F6F6F',

@@ -9,7 +9,6 @@ import React, { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIntroSlider from "react-native-app-intro-slider";
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
-import { scale } from 'react-native-size-matters';
 
 type RootStackParamList = {
   OnboardingScreen: undefined;
@@ -511,16 +510,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
-    marginBottom: 0,
-    height: 'auto',
+    marginTop: responsiveHeight(2), // Add space from top
+    marginBottom: responsiveHeight(-1), // Negative margin to extend behind description
+    height: responsiveHeight(12),
+    width: responsiveWidth(40),
+    zIndex: 1, // Behind the description card
   },
   hormoneGraphicText: {
     fontSize: responsiveFontSize(6),
   },
   hormoneGraphicImage: {
-    width: responsiveWidth(30),
-    height: responsiveHeight(8),
-    marginTop: scale(10),
+    width: responsiveWidth(40),
+    height: responsiveHeight(12),
+    marginTop: 0,
   },
   descriptionCard: {
     backgroundColor: '#FFFFFF',
@@ -532,6 +534,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
     marginBottom: responsiveHeight(2.5),
     alignSelf: 'center',
+    zIndex: 2, // Above the hormone graphic
   },
   descriptionText: {
     fontSize: responsiveFontSize(1.7),

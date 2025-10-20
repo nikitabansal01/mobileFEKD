@@ -426,8 +426,7 @@ const styles = StyleSheet.create({
   editIcon: {
     width: scale(13),
     height: scale(13),
-    tintColor: '#999999', // Even lighter gray
-    opacity: 0.5, // More transparency to reduce boldness
+    tintColor: 'rgba(0, 0, 0, 0.3)', // White at 10% opacity
   },
   userInfo: {
     alignItems: 'center',
