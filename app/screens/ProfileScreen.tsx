@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import MaskedView from '@react-native-masked-view/masked-view';
+import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Dimensions,
@@ -35,13 +35,18 @@ const COLORS = {
   gradientEnd: '#C17EC9',
 };
 
-export default function Profile() {
-  const router = useRouter();
+interface ProfileProps {
+  navigation?: any;
+}
+
+export default function Profile({ navigation: propNavigation }: ProfileProps) {
+  const hookNavigation = useNavigation();
+  const navigation = propNavigation || hookNavigation;
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationInsightsEnabled, setLocationInsightsEnabled] = useState(true);
 
   const navigateToIndex = () => {
-    router.back();
+    navigation.goBack();
   };
 
 
@@ -54,8 +59,8 @@ export default function Profile() {
   };
 
   const handlePersonalization = () => {
-    // Navigate to personalization flow
-    console.log('Navigate to personalization');
+    // Navigate to paywall screen
+    navigation.navigate('PaywallScreen');
   };
 
   const handleHealthConcerns = () => {
@@ -67,7 +72,7 @@ export default function Profile() {
     console.log(`Menu action: ${action}`);
     // Handle different menu actions
     if (action === 'Get Auvra Pro') {
-      router.push('./slides/paywall');
+      navigation.navigate('PaywallScreen');
     }
   };
 

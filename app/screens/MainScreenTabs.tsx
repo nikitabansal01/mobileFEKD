@@ -1,3 +1,4 @@
+import { useNavigation } from '@react-navigation/native';
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import BottomNavigationBar from '../../components/BottomNavigationBar';
@@ -27,6 +28,7 @@ interface MainScreenTabsProps {
 }
 
 export default function MainScreenTabs({ route }: MainScreenTabsProps) {
+  const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState<TabType>('home');
 
   // Handle route params for navigation from HomeScreen
@@ -57,7 +59,7 @@ export default function MainScreenTabs({ route }: MainScreenTabsProps) {
       case 'community':
         return <CommunityScreen />;
       case 'profile':
-        return <ProfileScreen />;
+        return <ProfileScreen navigation={navigation} />;
       case 'auvra':
         return <ChatHistoryScreen 
           onBackToHome={handleBackToHome} 

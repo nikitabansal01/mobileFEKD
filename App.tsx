@@ -21,6 +21,7 @@ import LoadingScreen from './app/screens/LoadingScreen';
 import LoginScreen from './app/screens/LoginScreen';
 import MainScreenTabs from './app/screens/MainScreenTabs';
 import OnboardingScreen from './app/screens/OnboardingScreen';
+import PaywallScreen from './app/screens/PaywallScreen';
 import QuestionScreen from './app/screens/QuestionScreen';
 import ResearchingScreen from './app/screens/ResearchingScreen';
 import ResultLoadingScreen from './app/screens/ResultLoadingScreen';
@@ -110,6 +111,7 @@ export default function App() {
               <Stack.Screen name="ChatbotScreen" component={ChatbotScreen} />
               <Stack.Screen name="ActionDetailScreen" component={ActionDetailScreen} />
               <Stack.Screen name="ActionCompletedScreen" component={ActionCompletedScreen} />
+              <Stack.Screen name="PaywallScreen" component={PaywallScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </FirstLog.Provider>
