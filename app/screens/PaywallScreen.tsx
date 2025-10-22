@@ -310,10 +310,13 @@ export default function PaywallScreen() {
                         {/* Feature Cards */}
                         <ScrollView
                             horizontal
-                            pagingEnabled
+                            pagingEnabled={false}
                             showsHorizontalScrollIndicator={false}
+                            snapToInterval={screenWidth * 0.875}
+                            decelerationRate="fast"
+                            snapToAlignment="start"
                             onMomentumScrollEnd={(event) => {
-                                const pageIndex = Math.round(event.nativeEvent.contentOffset.x / screenWidth);
+                                const pageIndex = Math.round(event.nativeEvent.contentOffset.x / (screenWidth * 0.875));
                                 setCurrentPage(pageIndex);
                             }}
                             style={styles.featuresScrollView}
@@ -630,10 +633,11 @@ const styles = StyleSheet.create({
         zIndex: 1,
         position: 'relative',
         paddingVertical: verticalScale(20),
+        paddingHorizontal: scale(20),
     },
     featureSlide: {
-        width: screenWidth,
-        paddingHorizontal: scale(20),
+        width: screenWidth * 0.875,
+        paddingHorizontal: scale(5),
         paddingVertical: verticalScale(20),
         justifyContent: 'center',
     },
@@ -642,7 +646,7 @@ const styles = StyleSheet.create({
         borderRadius: scale(10),
         paddingVertical: scale(30),
         paddingHorizontal: scale(15),
-        marginHorizontal: scale(5),
+        // marginHorizontal: scale(0.4),
         shadowColor: COLORS.black,
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.1,
@@ -654,7 +658,7 @@ const styles = StyleSheet.create({
     cardContent: {
         flex: 1,
         alignItems: 'center',
-        // justifyContent: 'space-between',
+        justifyContent: 'center',
     },
     labIconContainer: {
         position: 'relative',
@@ -727,8 +731,8 @@ const styles = StyleSheet.create({
     },
     bloodTestContainer: {
         position: 'relative',
-        width: scale(120),
-        height: scale(120),
+        // width: scale(120),
+        // height: scale(120),
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -784,6 +788,7 @@ const styles = StyleSheet.create({
     textContent: {
         alignItems: 'center',
         gap: verticalScale(6),
+        marginTop: verticalScale(15),
     },
     cardTitle: {
         fontSize: moderateScale(12),
