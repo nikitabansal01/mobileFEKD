@@ -506,13 +506,13 @@ const InsightScreen = () => {
 
                 {/* Hormone characters at today's intersection points */}
                 <View style={styles.chartHormoneCharacters}>
-                  {/* LH character at day 23 value */}
+                  {/* Progesterone character at day 23 value */}
                   <View style={[styles.chartHormoneCharacter, {
                     left: 14 + (22 * 40) + 20 - 21, // Center on day 23 line (42px icon)
-                    top: 200 - (5.4 * 200 / 10) - 21 // center vertically
+                    top: 200 - (4 * 200 / 10) - 21 // center vertically based on new data
                   }]}>
                     <Image
-                      source={require('../../assets/images/hormoneBuddy/EstrogenBothHand.png')}
+                      source={require('../../assets/images/hormoneBuddy/ProgesteroneBothHand.png')}
                       style={styles.chartCharacterImage}
                       resizeMode="contain"
                     />
@@ -520,10 +520,10 @@ const InsightScreen = () => {
                   {/* Estrogen character at day 23 value */}
                   <View style={[styles.chartHormoneCharacter, {
                     left: 14 + (22 * 40) + 20 - 21, // Center on day 23 line (42px icon)
-                    top: 200 - (7.2 * 200 / 10) - 21 // center vertically
+                    top: 200 - (2.2 * 200 / 10) - 21 // center vertically based on new data
                   }]}>
                     <Image
-                      source={require('../../assets/images/hormoneBuddy/ProgesteroneBothHand.png')}
+                      source={require('../../assets/images/hormoneBuddy/EstrogenBothHand.png')}
                       style={styles.chartCharacterImage}
                       resizeMode="contain"
                     />
@@ -532,7 +532,7 @@ const InsightScreen = () => {
                   {/* Testosterone character at day 23 value */}
                   <View style={[styles.chartHormoneCharacter, {
                     left: 14 + (22 * 40) + 20 - 21, // Center on day 23 line (42px icon)
-                    top: 200 - (0.7 * 200 / 10) - 21 // center vertically
+                    top: 200 - (0.6 * 200 / 10) - 21 // center vertically based on new data
                   }]}>
                     <Image
                       source={require('../../assets/images/hormoneBuddy/TestosteroneBothHand.png')}
@@ -548,35 +548,38 @@ const InsightScreen = () => {
                 <View style={styles.lineChartOverlay}>
                   <LineChart
                     data={[
-                      { value: 1.5 }, { value: 1.5 }, { value: 1.5 }, { value: 1.6 }, { value: 1.7 },
-                      { value: 1.8 }, { value: 2 }, { value: 2.2 }, { value: 2.3 }, { value: 2.4 },
-                      { value: 2.5 }, { value: 2.8 }, { value: 4 }, { value: 8 },
-                      { value: 3 }, { value: 1.8 }, { value: 1.5 }, { value: 1.2 },
-                      { value: 1.3 }, { value: 1.8 }, { value: 2.2 }, { value: 3.5 },
-                      { value: 5.4 }, { value: 5.5 }, { value: 4 }, { value: 3 },
-                      { value: 2.5 }, { value: 2 }
+                      // Progesterone (Blue) - Very low in Menstrual/Follicular, rises significantly in Luteal
+                      { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.5 },
+                      { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.5 },
+                      { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.8 },
+                      { value: 2}, { value: 5 }, { value: 7 }, { value: 8 },
+                      { value: 8.1 }, { value: 7.8 }, { value: 7 }, { value: 6 },
+                      { value: 5 }, { value: 4 }, { value: 3 }, { value: 2 },
+                      { value: 1 }, { value: 0.5 }, { value: 0.5 }, { value: 0.5 }
                     ]}
                     data2={[
-                      { value: 1 }, { value: 1 }, { value: 1 }, { value: 1 }, { value: 1 },
-                      { value: 1 }, { value: 1 }, { value: 1 }, { value: 1 }, { value: 1 },
-                      { value: 1 }, { value: 1 }, { value: 1.2 }, { value: 2.2 },
-                      { value: 1.2 }, { value: 1.1 }, { value: 1 }, { value: 1 },
-                      { value: 1 }, { value: 1 }, { value: 1 }, { value: 1 },
-                      { value: 1 }, { value: 1 }, { value: 1 }, { value: 1 },
-                      { value: 1 }, { value: 1 }
+                      // Estrogen (Pink) - Rises in Follicular, sharp peak at Ovulation, secondary broader peak in Luteal
+                      { value: 1.3 }, { value: 1.3 }, { value: 1.3 }, { value: 1.3}, { value: 1.3 },
+                      { value: 1.4 }, { value: 1.5 }, { value: 1.6 }, { value: 1.7 }, { value: 1.8 },
+                      { value: 2 }, { value: 3 }, { value: 7 }, { value: 8.3 },
+                      { value: 1.8 }, { value: 3 }, { value: 5 }, { value: 6 },
+                      { value: 6.3 }, { value: 6 }, { value: 5}, { value: 4 },
+                      { value: 3 }, { value: 2.2 }, { value: 1.8 }, { value: 1.5 },
+                      { value: 1.3 }, { value: 1.3}, { value: 1.3 }
                     ]}
                     data3={[
-                      { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.5 },
-                      { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.5 },
-                      { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.7 },
-                      { value: 0.9 }, { value: 1.3 }, { value: 1.5 }, { value: 1.8 },
-                      { value: 2 }, { value: 2.2 }, { value: 3 }, { value: 5 },
-                      { value: 7 }, { value: 7.7 }, { value: 7 }, { value: 5 },
-                      { value: 2 }, { value: 1.5 }
+                      // Testosterone (Purple) - Consistently low with slight rise around Ovulation
+                      { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 },
+                      { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 },
+                      { value: 0.8 }, { value: 0.8 }, { value: 0.9 }, { value: 1.5 }, { value: 0.9 },
+                      { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 },
+                      { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 },
+                      { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 },
+                      { value: 0.8 }, { value: 0.8 }
                     ]}
-                    color1="#FF69B4"
-                    color2="#9370DB"
-                    color3="#0188BD"
+                    color1="#0188BD"  // Progesterone (Blue)
+                    color2="#FF69B4"  // Estrogen (Pink) 
+                    color3="#9370DB"  // Testosterone (Purple)
                     curved
                     thickness={2.5}
                     hideDataPoints={true}
@@ -683,26 +686,29 @@ const InsightScreen = () => {
 
         {renderDivider('Also, watch out for')}
 
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={[
-            { id: 'w1', emoji: '🎈', label: 'Bloating' },
-            { id: 'w2', emoji: '🤕', label: 'Headaches/\nMigranes' },
-            { id: 'w3', emoji: '😴️', label: 'Low energy' },
-            { id: 'w4', emoji: '🍽️', label: 'Digestion issues' },
-            { id: 'w5', emoji: '🍫️', label: 'Cravings' },
-          ]}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={{ marginRight: responsiveWidth(4) }}>
-              {renderActionItem(item.emoji, item.label)}
-            </View>
-          )}
-          contentContainerStyle={{
-            paddingHorizontal: responsiveWidth(5),
-          }}
-        />
+        <View style={styles.watchOutContainer}>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={[
+              { id: 'w1', emoji: '🎈', label: 'Bloating' },
+              { id: 'w2', emoji: '🤕', label: 'Headaches/\nMigranes' },
+              { id: 'w3', emoji: '😴️', label: 'Low energy' },
+              { id: 'w4', emoji: '🍽️', label: 'Digestion issues' },
+              { id: 'w5', emoji: '🍫️', label: 'Cravings' },
+            ]}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <View style={{ marginRight: responsiveWidth(4) }}>
+                {renderActionItem(item.emoji, item.label)}
+              </View>
+            )}
+            contentContainerStyle={{
+              paddingLeft: 0,
+              paddingRight: responsiveWidth(5),
+            }}
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -721,8 +727,8 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: responsiveWidth(5),
-    paddingTop: responsiveHeight(2),
-    paddingBottom: verticalScale(20),
+    paddingTop: verticalScale(10),
+    paddingBottom: verticalScale(15),
   },
   headerTitle: {
     fontSize: moderateScale(14, 1.5),
@@ -739,7 +745,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: responsiveWidth(5),
-    paddingBottom: responsiveHeight(2),
+    paddingBottom: verticalScale(15),
   },
   navButton: {
     width: scale(36),
@@ -762,7 +768,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: responsiveWidth(5),
-    paddingBottom: responsiveHeight(2),
+    paddingBottom: verticalScale(20),
   },
   monthText: {
     fontSize: moderateScale(12, 1.5),
@@ -1060,7 +1066,7 @@ const styles = StyleSheet.create({
   cycleCard: {
     backgroundColor: '#ffffff',
     marginHorizontal: responsiveWidth(5),
-    marginBottom: responsiveHeight(2),
+    // marginBottom: responsiveHeight(2),
     paddingHorizontal: responsiveWidth(2),
     paddingTop: verticalScale(20),
     paddingBottom: verticalScale(40),
@@ -1085,7 +1091,8 @@ const styles = StyleSheet.create({
   concernCard: {
     backgroundColor: '#ffffff',
     marginHorizontal: responsiveWidth(5),
-    marginBottom: responsiveHeight(2),
+    // marginTop: verticalScale(10),
+    // marginBottom: verticalScale(10),
     paddingVertical: verticalScale(20),
     paddingHorizontal: scale(8),
     borderRadius: 10,
@@ -1281,6 +1288,11 @@ const styles = StyleSheet.create({
   actionPlanCharacterImage: {
     width: scale(60),
     height: scale(60),
+  },
+
+  watchOutContainer: {
+    paddingHorizontal: responsiveWidth(5),
+    paddingBottom: verticalScale(40),
   },
 });
 

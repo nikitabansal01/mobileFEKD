@@ -1,6 +1,7 @@
 import Images from '@/assets/images';
 import FixedBottomContainer from '@/components/FixedBottomContainer';
 import PrimaryButton from '@/components/PrimaryButton';
+import { Ionicons } from '@expo/vector-icons';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -9,6 +10,7 @@ import React, { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppIntroSlider from "react-native-app-intro-slider";
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
+import { moderateScale, verticalScale } from 'react-native-size-matters';
 
 type RootStackParamList = {
   OnboardingScreen: undefined;
@@ -132,7 +134,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
         {isHowMode ? (
           <>
             <TouchableOpacity style={styles.backButton} onPress={() => setIsHowMode(false)}>
-              <Text style={styles.backButtonText}>‹</Text>
+              <Ionicons name="chevron-back" size={responsiveFontSize(3.5)} color="#6F6F6F" />
             </TouchableOpacity>
             <View style={styles.headerTitleContainer}>
               <Text style={styles.headerTitle}>How?</Text>
@@ -145,6 +147,9 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
           </>
         ) : (
           <>
+            <View style={styles.backButton}>
+              {/* Empty space to maintain layout */}
+            </View>
             <View style={styles.headerTitleContainer}>
               <Text style={styles.headerTitle}>Why?</Text>
             </View>
@@ -334,7 +339,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
               <View style={styles.studyDetails}>
                 <TouchableOpacity style={styles.studyDetailsButton}>
                   <Text style={styles.studyDetailsText}>View study details</Text>
-                  <Text style={styles.studyDetailsArrow}>›</Text>
+                  <Ionicons name="chevron-up" size={responsiveFontSize(1.7)} color="#C17EC9" />
                 </TouchableOpacity>
               </View>
             </>
@@ -385,38 +390,38 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: responsiveWidth(5),
-    paddingVertical: responsiveHeight(1),
+    paddingHorizontal: responsiveWidth(2),
+    paddingTop: verticalScale(50),
+    paddingBottom: verticalScale(10),
     height: responsiveHeight(10),
   },
   headerTitleContainer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    height: responsiveHeight(10),
+    paddingHorizontal: responsiveWidth(5),
+    height: responsiveHeight(20),
   },
   backButton: {
-    position: 'absolute',
-    left: responsiveWidth(5),
     justifyContent: 'center',
-    alignItems: 'center',
-    height: responsiveHeight(10),
-    width: responsiveWidth(10),
+    alignItems: 'flex-start',
+    width: responsiveWidth(25),
+    height: responsiveHeight(20),
+    paddingLeft: responsiveWidth(1),
   },
   backButtonText: {
-    fontSize: responsiveFontSize(3.5),
+    fontSize: responsiveFontSize(4),
     color: '#000000',
+    fontWeight: 'bold',
   },
   closeButtonContainer: {
-    position: 'absolute',
-    right: responsiveWidth(5),
     justifyContent: 'center',
-    alignItems: 'center',
-    height: responsiveHeight(10),
+    alignItems: 'flex-end',
+    width: responsiveWidth(20),
+    height: responsiveHeight(20),
+    paddingRight: responsiveWidth(2),
   },
   headerTitle: {
     fontSize: responsiveFontSize(1.7),
@@ -445,7 +450,7 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     alignItems: 'center',
-    paddingHorizontal: responsiveWidth(10),
+    paddingHorizontal: verticalScale(20),
     width: '100%',
   },
   titleSection: {
@@ -537,14 +542,14 @@ const styles = StyleSheet.create({
     zIndex: 2, // Above the hormone graphic
   },
   descriptionText: {
-    fontSize: responsiveFontSize(1.7),
+    fontSize: moderateScale(12, 1.5),
     fontFamily: 'Inter400',
     color: '#000000',
-    lineHeight: responsiveHeight(1.8),
+    lineHeight: moderateScale(18, 1.5),
   },
   studyDetails: {
     width: '100%',
-    paddingVertical: responsiveHeight(2.5),
+    // paddingVertical: verticalScale(10),
     alignSelf: 'center',
   },
   studyDetailsButton: {
@@ -554,23 +559,23 @@ const styles = StyleSheet.create({
     gap: responsiveWidth(1.5),
   },
   studyDetailsText: {
-    fontSize: responsiveFontSize(1.7),
+    fontSize: moderateScale(12, 1.5),
     fontFamily: 'Inter400',
     color: '#C17EC9',
   },
   studyDetailsArrow: {
-    fontSize: responsiveFontSize(1.7),
+    fontSize: moderateScale(12, 1.5),
     color: '#C17EC9',
     transform: [{ rotate: '270deg' }],
   },
   // How Mode Styles
   conditionsSection: {
     alignItems: 'center',
-    marginTop: responsiveHeight(7),
+    marginTop: verticalScale(25),
     width: '100%',
   },
   conditionsSubtitle: {
-    fontSize: responsiveFontSize(1.42),
+    fontSize: moderateScale(12, 1.5),
     color: '#949494',
     fontFamily: 'Inter500',
     marginBottom: responsiveHeight(1),
@@ -581,13 +586,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: responsiveWidth(1.5),
+    gap: verticalScale(20),
   },
   conditionTag: {
     backgroundColor: 'rgba(218, 214, 219, 0.37)',
-    paddingHorizontal: responsiveWidth(1.5),
-    paddingVertical: responsiveHeight(0.5),
-    borderRadius: responsiveWidth(2.78),
+    paddingHorizontal: verticalScale(10), 
+    paddingVertical: verticalScale(5),
+    borderRadius: verticalScale(5),
   },
   conditionTagText: {
     fontSize: responsiveFontSize(1.7),

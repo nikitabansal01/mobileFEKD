@@ -413,14 +413,14 @@ const styles = StyleSheet.create({
     width: scale(40),
     height: scale(40),
     borderRadius: scale(23),
-    backgroundColor: COLORS.white,
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    // shadowColor: COLORS.black,
+    // shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.1,
+    // shadowRadius: 4,
+    // elevation: 3,
   },
   editIconContainer: {
     width: scale(15),
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
   editIcon: {
     width: scale(13),
     height: scale(13),
-    tintColor: 'rgba(0, 0, 0, 0.3)', // White at 10% opacity
+    tintColor: 'rgba(0, 0, 0, 0.9)', // White at 10% opacity
   },
   userInfo: {
     alignItems: 'center',

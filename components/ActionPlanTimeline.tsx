@@ -833,7 +833,7 @@ export default function ActionPlanTimeline({
                 <View
                   style={[
                     styles.textBox,
-                    { left: textLeft, top: yCenter - 28, alignItems: isLeft ? 'flex-start' : 'flex-end' },
+                    { left: textLeft, top: yCenter - responsiveHeight(3.5), alignItems: isLeft ? 'flex-start' : 'flex-end', justifyContent: 'center' },
                   ]}
                 >
                   <TouchableOpacity
@@ -849,10 +849,10 @@ export default function ActionPlanTimeline({
                         advices: a.advices,
                       });
                     }}
-                    style={{ flexDirection: 'row', alignItems: 'center' }}
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: isLeft ? 'flex-start' : 'flex-end' }}
                   >
                     <Text 
-                      style={[styles.itemTitle, { textAlign: isLeft ? 'right' : 'left' }]}
+                      style={[styles.itemTitle, { textAlign: isLeft ? 'left' : 'right' }]}
                       numberOfLines={1}
                       ellipsizeMode="tail"
                     >
@@ -1046,7 +1046,7 @@ export default function ActionPlanTimeline({
                 <View
                   style={[
                     styles.textBox,
-                    { left: textLeft, top: yCenter - 28, alignItems: isLeft ? 'flex-start' : 'flex-end' },
+                    { left: textLeft, top: yCenter - responsiveHeight(3.5), alignItems: isLeft ? 'flex-start' : 'flex-end', justifyContent: 'center' },
                   ]}
                 >
                     <Text style={[styles.itemTitle, { textAlign: isLeft ? 'left' : 'right' }]}>
@@ -1493,6 +1493,8 @@ const styles = StyleSheet.create({
   textBox: {
     position: 'absolute',
     width: responsiveWidth(35),
+    height: responsiveHeight(7), // Increased height to accommodate title + description
+    justifyContent: 'center', // Center content vertically
   },
   itemTitle: {
     fontSize: responsiveFontSize(1.98),

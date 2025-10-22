@@ -202,215 +202,254 @@ export default function PaywallScreen() {
         </View>
       </View> */}
 
-            {/* Curved Background with Gradient */}
-            <View style={styles.headerBackgroundContainer}>
-                <Svg width={screenWidth} height={verticalScale(180)} style={styles.headerSvg}>
-                    <Defs>
-                        <ClipPath id="headerClip">
-                            <Path
-                                d={`M0,0 L${screenWidth},0 L${screenWidth},${verticalScale(180)} Q${screenWidth / 2},${verticalScale(150)} 0,${verticalScale(180)} Z`}
-                                fill="white"
-                            />
-                        </ClipPath>
-                    </Defs>
-                    <SvgLinearGradient
-                        id="headerGradient"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                    >
-                        {/* <Stop offset="8.79%" stopColor="rgb(214, 210, 246)" /> */}
-                        <Stop offset="20.58%" stopColor="#e9c9ee" />
-                        <Stop offset="45.96%" stopColor="#E5B4D5" />
-                        <Stop offset="59.06%" stopColor="#F2B9CD" />
-                        <Stop offset="79.13%" stopColor="#FEDDE3" />
-                    </SvgLinearGradient>
-                    <Path
-                        d={`M0,0 L${screenWidth},0 L${screenWidth},${verticalScale(302)} Q${screenWidth / 2},${verticalScale(240)} 0,${verticalScale(302)} Z`}
-                        fill="url(#headerGradient)"
-                        clipPath="url(#headerClip)"
-                    />
-                </Svg>
-            </View>
-
-            {/* Close Button */}
-            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-                <Ionicons name="close" size={scale(25)} color={COLORS.grey} />
-            </TouchableOpacity>
-
-            {/* Header Section */}
-            <View style={[styles.headerSection, showPaymentPlan ? styles.headerSectionPayment : styles.headerSectionPaywall]}>
-                {/* Auvra Character */}
-                <View style={[styles.characterContainer, showPaymentPlan ? styles.characterContainerPayment : styles.characterContainerPaywall]}>
-                    <View style={styles.characterGlow}>
-                        <AuvraCharacter size={scale(120)} />
-                    </View>
-                </View>
-
-                {/* Header Text */}
-                <View style={styles.headerText}>
-                    {!showPaymentPlan ? (
-                        <>
-                            <View style={styles.maskedViewContainer}>
-                                <View style={styles.gradientTextContainer}>
-                                    <MaskedView
-                                        style={styles.maskedViewInner}
-                                        maskElement={
-                                            <Text style={[styles.headerTitleMask, { backgroundColor: 'transparent' }]}>
-                                                Clinical Accuracy. Faster results.
-                                            </Text>
-                                        }
-                                    >
-                                        <LinearGradient
-                                            colors={['#A29AEA', '#C17EC9', '#D482B9', '#E98BAC', '#FDC6D1']}
-                                            start={{ x: 0, y: 0 }}
-                                            end={{ x: 1, y: 0 }}
-                                            style={styles.gradientFill}
-                                        />
-                                    </MaskedView>
-                                </View>
-                            </View>
-                            <Text style={styles.headerSubtitle}>Try Auvra Pro today!</Text>
-                        </>
-                    ) : (
-                        <>
-                            <View style={styles.maskedViewContainer}>
-                                <View style={styles.gradientTextContainer}>
-                                    <MaskedView
-                                        style={styles.maskedViewInner}
-                                        maskElement={
-                                            <Text style={[styles.headerTitleMask, { backgroundColor: 'transparent' }]}>
-                                                Invest in your health
-                                            </Text>
-                                        }
-                                    >
-                                        <LinearGradient
-                                            colors={['#A29AEA', '#C17EC9', '#D482B9', '#E98BAC', '#FDC6D1']}
-                                            start={{ x: 0, y: 0 }}
-                                            end={{ x: 1, y: 0 }}
-                                            style={styles.gradientFill}
-                                        />
-                                    </MaskedView>
-                                </View>
-                            </View>
-                            {/* <Text style={styles.headerSubtitle}>Select the plan that works for you</Text> */}
-                        </>
-                    )}
-                </View>
-            </View>
-
-            {/* Content Section */}
-            {!showPaymentPlan ? (
-                <>
-                    {/* Feature Cards */}
-                    <ScrollView
-                        horizontal
-                        pagingEnabled
-                        showsHorizontalScrollIndicator={false}
-                        onMomentumScrollEnd={(event) => {
-                            const pageIndex = Math.round(event.nativeEvent.contentOffset.x / screenWidth);
-                            setCurrentPage(pageIndex);
-                        }}
-                        style={styles.featuresScrollView}
-                    >
-                        {features.map((feature, index) => (
-                            <View key={feature.id} style={styles.featureSlide}>
-                                {renderFeatureCard(feature, index)}
-                            </View>
-                        ))}
-                    </ScrollView>
-
-                    {/* Page Indicators */}
-                    <View style={styles.pageIndicators}>
-                        {features.map((_, index) => (
-                            <View
-                                key={index}
-                                style={[
-                                    styles.pageDot,
-                                    index === currentPage ? styles.activeDot : styles.inactiveDot,
-                                ]}
-                            />
-                        ))}
-                    </View>
-                </>
-            ) : (
-                <>
-                    {/* Payment Plan Comparison */}
-                    <View style={styles.comparisonContainer}>
-                        <View style={styles.comparisonTable}>
-                            <View style={styles.comparisonRow}>
-                                <Text style={styles.comparisonLabel}>Cost</Text>
-                                <View style={[styles.proRow, styles.proRowFirst]}>
-                                    <Text style={styles.proPrice}>$6</Text>
-                                    <Text style={styles.proPeriod}>a week</Text>
-                                </View>
-                                <Text style={styles.chatgptPrice}>$20 a month</Text>
-                                <Text style={styles.obgynPrice}>$500+ a visit</Text>
-                            </View>
-                            
-                            <View style={styles.comparisonRow}>
-                                <Text style={styles.comparisonLabel}>Accuracy</Text>
-                                <View style={styles.proRow}>
-                                    <Text style={styles.proValue}>High</Text>
-                                </View>
-                                <Text style={styles.chatgptValue}>Medium</Text>
-                                <Text style={styles.obgynValue}>High</Text>
-                            </View>
-                            
-                            <View style={styles.comparisonRow}>
-                                <Text style={styles.comparisonLabel}>Fun</Text>
-                                <View style={styles.proRow}>
-                                    <Text style={styles.proValue}>✓</Text>
-                                </View>
-                                <Text style={styles.chatgptValue}>✗</Text>
-                                <Text style={styles.obgynValue}>✗</Text>
-                            </View>
-                            
-                            <View style={styles.comparisonRow}>
-                                <Text style={styles.comparisonLabel}>Available 24/7</Text>
-                                <View style={styles.proRow}>
-                                    <Text style={styles.proValue}>✓</Text>
-                                </View>
-                                <Text style={styles.chatgptValue}>✓</Text>
-                                <Text style={styles.obgynValue}>✗</Text>
-                            </View>
-                            
-                            <View style={styles.comparisonRow}>
-                                <Text style={styles.comparisonLabel}>Personalized</Text>
-                                <View style={[styles.proRow, styles.proRowLast]}>
-                                    <Text style={styles.proValue}>✓</Text>
-                                </View>
-                                <Text style={styles.chatgptValue}>✗</Text>
-                                <Text style={styles.obgynValue}>✓</Text>
-                            </View>
-                        </View>
-                    </View>
-                    
-                    {/* Offer Card */}
-                    <View style={styles.offerCard}>
-                        <Text style={styles.offerSubtext}>Give Auvra a fair chance to see results</Text>
-                        <View style={styles.offerMainText}>
-                            <Text style={styles.offerMainText}>Try Auvra Pro for 3 months at</Text>
-                            <MaskedView
-                                style={styles.offerHighlightContainer}
-                                maskElement={
-                                    <Text style={[styles.offerHighlightText, { backgroundColor: 'transparent' }]}>
-                                        just $20/month
-                                    </Text>
-                                }
-                            >
-                                <LinearGradient
-                                    colors={['#A29AEA', '#C17EC9', '#D482B9', '#E98BAC', '#FDC6D1']}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={styles.offerHighlightGradient}
+            <ScrollView 
+                style={styles.scrollContainer}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
+            >
+                {/* Curved Background with Gradient */}
+                <View style={styles.headerBackgroundContainer}>
+                    <Svg width={screenWidth} height={verticalScale(180)} style={styles.headerSvg}>
+                        <Defs>
+                            <ClipPath id="headerClip">
+                                <Path
+                                    d={`M0,0 L${screenWidth},0 L${screenWidth},${verticalScale(180)} Q${screenWidth / 2},${verticalScale(150)} 0,${verticalScale(180)} Z`}
+                                    fill="white"
                                 />
-                            </MaskedView>
+                            </ClipPath>
+                        </Defs>
+                        <SvgLinearGradient
+                            id="headerGradient"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                        >
+                            {/* <Stop offset="8.79%" stopColor="rgb(214, 210, 246)" /> */}
+                            <Stop offset="20.58%" stopColor="#e9c9ee" />
+                            <Stop offset="45.96%" stopColor="#E5B4D5" />
+                            <Stop offset="59.06%" stopColor="#F2B9CD" />
+                            <Stop offset="79.13%" stopColor="#FEDDE3" />
+                        </SvgLinearGradient>
+                        <Path
+                            d={`M0,0 L${screenWidth},0 L${screenWidth},${verticalScale(302)} Q${screenWidth / 2},${verticalScale(240)} 0,${verticalScale(302)} Z`}
+                            fill="url(#headerGradient)"
+                            clipPath="url(#headerClip)"
+                        />
+                    </Svg>
+                </View>
+
+                {/* Close Button */}
+                <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+                    <Ionicons name="close" size={scale(25)} color={COLORS.grey} />
+                </TouchableOpacity>
+                {/* Header Section */}
+                <View style={[styles.headerSection, showPaymentPlan ? styles.headerSectionPayment : styles.headerSectionPaywall]}>
+                    {/* Auvra Character */}
+                    <View style={[styles.characterContainer, showPaymentPlan ? styles.characterContainerPayment : styles.characterContainerPaywall]}>
+                        <View style={styles.characterGlow}>
+                            <AuvraCharacter size={scale(120)} />
                         </View>
                     </View>
-                </>
-            )}
+
+                    {/* Header Text */}
+                    <View style={styles.headerText}>
+                        {!showPaymentPlan ? (
+                            <>
+                                <View style={styles.maskedViewContainer}>
+                                    <View style={styles.gradientTextContainer}>
+                                        <MaskedView
+                                            style={styles.maskedViewInner}
+                                            maskElement={
+                                                <Text style={[styles.headerTitleMask, { backgroundColor: 'transparent' }]}>
+                                                    Clinical Accuracy. Faster results.
+                                                </Text>
+                                            }
+                                        >
+                                            <LinearGradient
+                                                colors={['#A29AEA', '#C17EC9', '#D482B9', '#E98BAC', '#FDC6D1']}
+                                                start={{ x: 0, y: 0 }}
+                                                end={{ x: 1, y: 0 }}
+                                                style={styles.gradientFill}
+                                            />
+                                        </MaskedView>
+                                    </View>
+                                </View>
+                                <Text style={styles.headerSubtitle}>Try Auvra Pro today!</Text>
+                            </>
+                        ) : (
+                            <>
+                                <View style={styles.maskedViewContainer}>
+                                    <View style={styles.gradientTextContainer}>
+                                        <MaskedView
+                                            style={styles.maskedViewInner}
+                                            maskElement={
+                                                <Text style={[styles.headerTitleMask, { backgroundColor: 'transparent' }]}>
+                                                    Invest in your health
+                                                </Text>
+                                            }
+                                        >
+                                            <LinearGradient
+                                                colors={['#A29AEA', '#C17EC9', '#D482B9', '#E98BAC', '#FDC6D1']}
+                                                start={{ x: 0, y: 0 }}
+                                                end={{ x: 1, y: 0 }}
+                                                style={styles.gradientFill}
+                                            />
+                                        </MaskedView>
+                                    </View>
+                                </View>
+                                {/* <Text style={styles.headerSubtitle}>Select the plan that works for you</Text> */}
+                            </>
+                        )}
+                    </View>
+                </View>
+
+                {/* Content Section */}
+                {!showPaymentPlan ? (
+                    <>
+                        {/* Feature Cards */}
+                        <ScrollView
+                            horizontal
+                            pagingEnabled
+                            showsHorizontalScrollIndicator={false}
+                            onMomentumScrollEnd={(event) => {
+                                const pageIndex = Math.round(event.nativeEvent.contentOffset.x / screenWidth);
+                                setCurrentPage(pageIndex);
+                            }}
+                            style={styles.featuresScrollView}
+                        >
+                            {features.map((feature, index) => (
+                                <View key={feature.id} style={styles.featureSlide}>
+                                    {renderFeatureCard(feature, index)}
+                                </View>
+                            ))}
+                        </ScrollView>
+
+                        {/* Page Indicators */}
+                        <View style={styles.pageIndicators}>
+                            {features.map((_, index) => (
+                                <View
+                                    key={index}
+                                    style={[
+                                        styles.pageDot,
+                                        index === currentPage ? styles.activeDot : styles.inactiveDot,
+                                    ]}
+                                />
+                            ))}
+                        </View>
+                    </>
+                ) : (
+                    <>
+                        {/* Payment Plan Comparison */}
+                        <View style={styles.comparisonContainer}>
+                            <View style={styles.comparisonTable}>
+                            <View style={styles.comparisonRow}>
+                                    <Text style={styles.comparisonLabel}></Text>
+                                    <View style={[styles.proRow, styles.proRowFirst]}>
+                                        <LinearGradient
+                                            colors={['#A29AEA', '#C17EC9', '#D482B9', '#E98BAC', '#FDC6D1']}
+                                            locations={[0.1498, 0.6395, 0.915, 1.0, 1.0]}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 0 }}
+                                            style={styles.proLabelContainer}
+                                        >
+                                            <Text style={styles.proLabel}>PRO</Text>
+                                        </LinearGradient>
+                                    </View>
+                                    <Text style={styles.colName}>ChatGPT</Text>
+                                    <Text style={styles.colName}>OBGYN</Text>
+                                </View>
+                                <View style={styles.comparisonRow}>
+                                    <Text style={styles.comparisonLabel}>Cost</Text>
+                                    <View style={styles.proRow}>
+                                        <Text style={styles.proPrice}>$6</Text>
+                                        <Text style={styles.proPeriod}>a week</Text>
+                                    </View>
+                                    <View style={styles.priceContainer}>
+                                        <Text style={styles.chatgptPrice}>$20</Text>
+                                        <Text style={styles.chatgptPeriod}>a month</Text>
+                                    </View>
+                                    <View style={styles.priceContainer}>
+                                        <Text style={styles.obgynPrice}>$500+</Text>
+                                        <Text style={styles.obgynPeriod}>a visit</Text>
+                                    </View>
+                                </View>
+                                
+                                <View style={styles.comparisonRow}>
+                                    <Text style={styles.comparisonLabel}>Accuracy</Text>
+                                    <View style={styles.proRow}>
+                                        <Text style={styles.proValue}>High</Text>
+                                    </View>
+                                    <Text style={styles.chatgptValue}>Medium</Text>
+                                    <Text style={styles.obgynValue}>High</Text>
+                                </View>
+                                
+                                <View style={styles.comparisonRow}>
+                                    <Text style={styles.comparisonLabel}>Fun</Text>
+                                    <View style={styles.proRow}>
+                                        <Ionicons name="checkmark" size={scale(16)} color={COLORS.white} />
+                                    </View>
+                                    <View style={styles.iconContainer}>
+                                        <Ionicons name="close" size={scale(16)} color="#949494" />
+                                    </View>
+                                    <View style={styles.iconContainer}>
+                                        <Ionicons name="close" size={scale(16)} color="#949494" />
+                                    </View>
+                                </View>
+                                
+                                <View style={styles.comparisonRow}>
+                                    <Text style={styles.comparisonLabel}>Available 24/7</Text>
+                                    <View style={styles.proRow}>
+                                        <Ionicons name="checkmark" size={scale(16)} color={COLORS.white} />
+                                    </View>
+                                    <View style={styles.iconContainer}>
+                                        <Ionicons name="checkmark" size={scale(16)} color="#949494" />
+                                    </View>
+                                    <View style={styles.iconContainer}>
+                                        <Ionicons name="close" size={scale(16)} color="#949494" />
+                                    </View>
+                                </View>
+                                
+                                <View style={styles.comparisonRow}>
+                                    <Text style={styles.comparisonLabel}>Personalized</Text>
+                                    <View style={[styles.proRow, styles.proRowLast]}>
+                                        <Ionicons name="checkmark" size={scale(16)} color={COLORS.white} />
+                                    </View>
+                                    <View style={styles.iconContainer}>
+                                        <Ionicons name="close" size={scale(16)} color="#949494" />
+                                    </View>
+                                    <View style={styles.iconContainer}>
+                                        <Ionicons name="checkmark" size={scale(16)} color="#949494" />
+                                    </View>
+                                </View>
+                            </View>
+                        </View>
+                        
+                        {/* Offer Card */}
+                        <View style={styles.offerCard}>
+                            <Text style={styles.offerSubtext}>Give Auvra a fair chance to see results</Text>
+                            <View style={styles.offerMainText}>
+                                <Text style={styles.offerMainText}>Try Auvra Pro for 3 months at</Text>
+                                <MaskedView
+                                    style={styles.offerHighlightContainer}
+                                    maskElement={
+                                        <Text style={[styles.offerHighlightText, { backgroundColor: 'transparent' }]}>
+                                            just $20/month
+                                        </Text>
+                                    }
+                                >
+                                    <LinearGradient
+                                        colors={['#A29AEA', '#C17EC9', '#D482B9', '#E98BAC', '#FDC6D1']}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 0 }}
+                                        style={styles.offerHighlightGradient}
+                                    />
+                                </MaskedView>
+                            </View>
+                        </View>
+                    </>
+                )}
+            </ScrollView>
 
             {/* Bottom Section */}
             <View style={styles.bottomSection}>
@@ -455,6 +494,11 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: COLORS.white,
+    },
+    scrollContainer: {
+        flex: 1,
+    },
+    scrollContent: {
         paddingBottom: verticalScale(120), // Add padding to prevent content from being hidden behind fixed bottom section
     },
     statusBar: {
@@ -496,47 +540,39 @@ const styles = StyleSheet.create({
         borderRadius: scale(2),
     },
     headerBackgroundContainer: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: verticalScale(302),
+        position: 'relative',
+        height: verticalScale(180),
         zIndex: 0,
     },
     headerSvg: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
         width: '100%',
-        height: verticalScale(302),
+        height: verticalScale(180),
     },
     closeButton: {
         position: 'absolute',
         top: verticalScale(50),
         right: scale(15),
-        // width: scale(36),
-        // height: scale(36),
         zIndex: 10,
     },
     headerSection: {
         alignItems: 'center',
-        paddingTop: verticalScale(70),
+        paddingTop: verticalScale(20),
         paddingHorizontal: scale(40),
         zIndex: 1,
         position: 'relative',
+        marginTop: verticalScale(-120), // Move up to overlap with background
     },
     headerSectionPaywall: {
-        paddingBottom: verticalScale(30),
+        // paddingBottom: verticalScale(),
     },
     headerSectionPayment: {
-        paddingBottom: verticalScale(30),
+        paddingBottom: verticalScale(20),
     },
     characterContainer: {
         alignItems: 'center',
     },
     characterContainerPaywall: {
-        marginBottom: verticalScale(39),
+        marginBottom: verticalScale(30),
     },
     characterContainerPayment: {
         marginBottom: verticalScale(20),
@@ -619,13 +655,6 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         // justifyContent: 'space-between',
-    },
-    iconContainer: {
-        height: scale(75),
-        width: '100%',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: verticalScale(25),
     },
     labIconContainer: {
         position: 'relative',
@@ -776,8 +805,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         gap: scale(8),
-        paddingVertical: verticalScale(10),
-        marginTop: verticalScale(-10),
+        // paddingVertical: verticalScale(5),
+        marginTop: verticalScale(-25),
         zIndex: 1,
         position: 'relative',
     },
@@ -799,7 +828,7 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         paddingBottom: verticalScale(20),
-        paddingTop: verticalScale(30),
+        paddingTop: verticalScale(20),
         zIndex: 1,
     },
     gradientBase: {
@@ -847,7 +876,7 @@ const styles = StyleSheet.create({
     },
     comparisonTable: {
         backgroundColor: 'transparent',
-        paddingHorizontal: scale(20),
+        paddingHorizontal: scale(10),
     },
     comparisonRow: {
         flexDirection: 'row',
@@ -864,7 +893,8 @@ const styles = StyleSheet.create({
         width: scale(60),
         alignItems: 'center',
         backgroundColor: '#DDC2E9',
-        paddingVertical: verticalScale(10),
+        paddingTop: verticalScale(8),
+        paddingBottom: verticalScale(8),
         marginVertical: -1, // Negative margin to eliminate gaps while keeping padding
         // paddingHorizontal: scale(),
     },
@@ -875,6 +905,48 @@ const styles = StyleSheet.create({
     proRowLast: {
         borderBottomLeftRadius: scale(10),
         borderBottomRightRadius: scale(10),
+    },
+    proLabelContainer: {
+        paddingVertical: scale(5),
+        paddingHorizontal: scale(10),
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: scale(7),
+    },
+    proLabel: {
+        fontSize: moderateScale(14),
+        fontWeight: 'bold',
+        color: COLORS.white,
+        fontFamily: 'Inter-Medium',
+    },
+    colName: {
+        fontSize: moderateScale(14),
+        fontWeight: 'bold',
+        color: COLORS.neutral700,
+        fontFamily: 'Inter-Medium',
+        textAlign: 'center',
+        width: scale(60),
+    },
+    priceContainer: {
+        width: scale(60),
+        alignItems: 'center',
+    },
+    iconContainer: {
+        width: scale(60),
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    chatgptPeriod: {
+        fontSize: moderateScale(10),
+        color: '#949494',
+        fontFamily: 'Inter-Medium',
+        textAlign: 'center',
+    },
+    obgynPeriod: {
+        fontSize: moderateScale(10),
+        color: '#949494',
+        fontFamily: 'Inter-Medium',
+        textAlign: 'center',
     },
     proPrice: {
         fontSize: moderateScale(12),
@@ -899,28 +971,28 @@ const styles = StyleSheet.create({
         width: scale(60),
         textAlign: 'center',
         fontSize: moderateScale(12),
-        color: COLORS.neutral700,
+        color: '#949494',
         fontFamily: 'Inter-Medium',
     },
     chatgptValue: {
         width: scale(60),
         textAlign: 'center',
         fontSize: moderateScale(12),
-        color: COLORS.neutral700,
+        color: '#949494',
         fontFamily: 'Inter-Medium',
     },
     obgynPrice: {
         width: scale(60),
         textAlign: 'center',
         fontSize: moderateScale(12),
-        color: COLORS.neutral700,
+        color: '#949494',
         fontFamily: 'Inter-Medium',
     },
     obgynValue: {
         width: scale(60),
         textAlign: 'center',
         fontSize: moderateScale(12),
-        color: COLORS.neutral700,
+        color: '#949494',
         fontFamily: 'Inter-Medium',
     },
     
@@ -940,7 +1012,7 @@ const styles = StyleSheet.create({
     },
     offerSubtext: {
         fontSize: moderateScale(14),
-        color: COLORS.neutral700,
+        color: '#949494',
         fontFamily: 'Inter-Medium',
         textAlign: 'center',
         marginBottom: verticalScale(8),
