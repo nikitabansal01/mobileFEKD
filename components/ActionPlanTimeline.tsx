@@ -141,8 +141,10 @@ export default function ActionPlanTimeline({
       duration: 300,
       useNativeDriver: false, // We need to animate scale and position
     }).start(() => {
-      // Navigate after animation completes
-      handleNavigation(actionData);
+      // Navigate to ActionCompletedScreen (gift box animation page) after animation completes
+      navigation.navigate('ActionCompletedScreen', {
+        action: JSON.stringify(actionData)
+      });
       
       // Reset animation
       expandAnimation.setValue(0);
@@ -192,6 +194,7 @@ export default function ActionPlanTimeline({
 
     startPulsing();
   }, [pulsingAnimation]);
+
 
   // All layout calculation values (container-based)
   const { width: SCREEN_W } = Dimensions.get('window');
@@ -759,6 +762,33 @@ export default function ActionPlanTimeline({
                       borderColor: a.is_completed ? '#DDC2E9' : (a.id === nextIncompleteTask?.id ? '#DDC2E9' : '#EFEFEF'), // Lavender for completed or next task
                     },
                   ]}
+                  onPress={() => {
+                    // Trigger expanding animation for pulsing ring
+                    if (a.id === nextIncompleteTask?.id) {
+                      handleExpandingNavigation({
+                        id: a.id,
+                        title: a.title,
+                        purpose: getActionPurpose(a),
+                        hormones: a.hormones || [],
+                        specific_action: a.specific_action,
+                        conditions: a.conditions,
+                        symptoms: a.symptoms,
+                        advices: a.advices,
+                      }, { x: xImage, y: yImage });
+                    } else {
+                      // Regular navigation for other items
+                      handleNavigation({
+                        id: a.id,
+                        title: a.title,
+                        purpose: getActionPurpose(a),
+                        hormones: a.hormones || [],
+                        specific_action: a.specific_action,
+                        conditions: a.conditions,
+                        symptoms: a.symptoms,
+                        advices: a.advices,
+                      });
+                    }
+                  }}
                   onLongPress={!a.is_completed ? () => {
                     // Navigate to purple page first, then gift animation
                     navigation.navigate('ActionCompletedScreen', {
@@ -1062,11 +1092,15 @@ export default function ActionPlanTimeline({
                 {
                   left: expandingCircle.x,
                   top: expandingCircle.y,
+                  opacity: expandAnimation.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [0.8, 0.6, 0.2], // Fade out as it expands
+                  }),
                   transform: [
                     {
                       scale: expandAnimation.interpolate({
                         inputRange: [0, 1],
-                        outputRange: [1, Math.max(SCREEN_W, Dimensions.get('window').height) / 10], // Scale to cover full screen
+                        outputRange: [1, Math.max(SCREEN_W, Dimensions.get('window').height) / 20], // Scale to cover full screen
                       }),
                     },
                   ],
@@ -1566,14 +1600,15 @@ const styles = StyleSheet.create({
   // Expanding circle animation styles
   expandingCircle: {
     position: 'absolute',
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#DDC2E9', // Same color as the pulsing ring
     zIndex: 1000, // Ensure it's on top of everything
-    marginLeft: -10, // Center the circle on the tap point
-    marginTop: -10,
+    marginLeft: -20, // Center the circle on the tap point
+    marginTop: -20,
     // Ensure it can expand beyond the container bounds
     overflow: 'visible',
+    opacity: 0.8, // Make it more visible
   },
 });

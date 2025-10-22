@@ -166,6 +166,7 @@ type RootStackParamList = {
   HomeScreen: undefined;
   PersonalizeScreen: undefined;
   MainScreenTabs: undefined;
+  PaywallScreen: undefined;
 };
 
 export default function PersonalizeScreen() {
@@ -458,7 +459,7 @@ export default function PersonalizeScreen() {
       </View>
 
       <View style={styles.uploadButtonContainer}>
-        <TouchableOpacity style={styles.uploadButton}>
+        <TouchableOpacity style={styles.uploadButton} onPress={() => navigation.navigate('PaywallScreen')}>
           <View style={styles.uploadButtonContent}>
             <Text style={styles.uploadButtonText}>Upload Blood Report </Text>
             <Ionicons name="cloud-upload-outline" size={18} color={COLORS.black} />

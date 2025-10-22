@@ -799,7 +799,7 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         paddingBottom: verticalScale(20),
-        paddingTop: verticalScale(40),
+        paddingTop: verticalScale(30),
         zIndex: 1,
     },
     gradientBase: {
@@ -864,7 +864,7 @@ const styles = StyleSheet.create({
         width: scale(60),
         alignItems: 'center',
         backgroundColor: '#DDC2E9',
-        paddingVertical: verticalScale(12),
+        paddingVertical: verticalScale(10),
         marginVertical: -1, // Negative margin to eliminate gaps while keeping padding
         // paddingHorizontal: scale(),
     },
