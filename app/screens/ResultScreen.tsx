@@ -8,12 +8,11 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { moderateScale } from 'react-native-size-matters';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 
 type RootStackParamList = {
   OnboardingScreen: undefined;
@@ -122,8 +121,8 @@ const ResultScreen = () => {
                   </View>
                   <View style={[styles.graphicSection, styles.progesteroneGraphic]}>
                     <GraphicProgesterone1 
-                      width={responsiveWidth(50)} 
-                      height={responsiveWidth(50)} 
+                      width={scale(120)} 
+                      height={verticalScale(120)} 
                     />
                   </View>
                 </View>
@@ -159,8 +158,8 @@ const ResultScreen = () => {
                   </View>
                   <View style={[styles.graphicSection, styles.testosteroneGraphic]}>
                     <GraphicTestosterone1 
-                      width={responsiveWidth(50)} 
-                      height={responsiveWidth(50)} 
+                      width={scale(120)} 
+                      height={verticalScale(120)} 
                     />
                   </View>
                 </View>
@@ -294,12 +293,14 @@ const styles = StyleSheet.create({
     zIndex: 1, // Display behind text
   },
   progesteroneGraphic: {
-    right: responsiveWidth(-18), // Progesterone image position
-    bottom: responsiveHeight(-8.5), // Relative position from card bottom
+    right: scale(-22), // Progesterone image position
+    bottom: verticalScale(-38), // Relative position from card bottom
   },
   testosteroneGraphic: {
-    right: responsiveWidth(-21), // Testosterone image position (more to the right)
-    bottom: responsiveHeight(-8.5), // Relative position from card bottom
+    // right: responsiveWidth(-21), // Testosterone image position (more to the right)
+    // bottom: responsiveHeight(-8.5), // Relative position from card bottom
+    right: scale(-22), // Progesterone image position
+    bottom: verticalScale(-25)
   },
   priorityBadge: {
     position: 'absolute',
