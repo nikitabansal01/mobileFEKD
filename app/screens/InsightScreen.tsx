@@ -1,7 +1,8 @@
 import Images from '@/assets/images';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -23,8 +24,24 @@ import { FONT_FAMILIES as FONTS } from '../../constants/fonts';
 const { width: screenWidth } = Dimensions.get('window');
 
 const InsightScreen = () => {
+  const navigation = useNavigation();
   const [selectedMonth, setSelectedMonth] = useState('Month');
   const cycleChartScrollRef = useRef<ScrollView>(null);
+
+  // Disable back gesture when using horizontal scrolling
+  useFocusEffect(
+    React.useCallback(() => {
+      navigation.setOptions({
+        gestureEnabled: false,
+      });
+
+      return () => {
+        navigation.setOptions({
+          gestureEnabled: true,
+        });
+      };
+    }, [navigation])
+  );
 
 
   // Auto-scroll to day 23 when page loads
@@ -339,7 +356,7 @@ const InsightScreen = () => {
             <FlatList
               horizontal
               data={[
-                
+
                 {
                   id: 'list2',
                   title: 'Testosterone',
@@ -370,7 +387,7 @@ const InsightScreen = () => {
                   progessColor: '#FFA569',
                   bgColor: 'rgb(255, 165, 105)'
                 },
-                
+
               ]}
               keyExtractor={(item) => item.id}
               showsHorizontalScrollIndicator={false}
@@ -508,8 +525,8 @@ const InsightScreen = () => {
                 <View style={styles.chartHormoneCharacters}>
                   {/* Progesterone character at day 23 value */}
                   <View style={[styles.chartHormoneCharacter, {
-                    left: 14 + (22 * 40) + 20 - 21, // Center on day 23 line (42px icon)
-                    top: 200 - (4 * 200 / 10) - 21 // center vertically based on new data
+                    left: 14 + (20 * 40) + 20 - 21, // Center on day 21 line (42px icon)
+                    top: 200 - (7 * 200 / 10) - 21 // center vertically based on new data
                   }]}>
                     <Image
                       source={require('../../assets/images/hormoneBuddy/ProgesteroneBothHand.png')}
@@ -519,8 +536,8 @@ const InsightScreen = () => {
                   </View>
                   {/* Estrogen character at day 23 value */}
                   <View style={[styles.chartHormoneCharacter, {
-                    left: 14 + (22 * 40) + 20 - 21, // Center on day 23 line (42px icon)
-                    top: 200 - (2.2 * 200 / 10) - 21 // center vertically based on new data
+                    left: 14 + (20 * 40) + 20 - 21, // Center on day 21 line (42px icon)
+                    top: 200 - (4.5 * 200 / 10) - 21 // center vertically based on new data
                   }]}>
                     <Image
                       source={require('../../assets/images/hormoneBuddy/EstrogenBothHand.png')}
@@ -531,7 +548,7 @@ const InsightScreen = () => {
 
                   {/* Testosterone character at day 23 value */}
                   <View style={[styles.chartHormoneCharacter, {
-                    left: 14 + (22 * 40) + 20 - 21, // Center on day 23 line (42px icon)
+                    left: 14 + (20 * 40) + 20 - 21, // Center on day 21 line (42px icon)
                     top: 200 - (0.6 * 200 / 10) - 21 // center vertically based on new data
                   }]}>
                     <Image
@@ -549,33 +566,36 @@ const InsightScreen = () => {
                   <LineChart
                     data={[
                       // Progesterone (Blue) - Very low in Menstrual/Follicular, rises significantly in Luteal
-                      { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.5 },
-                      { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.5 },
-                      { value: 0.5 }, { value: 0.5 }, { value: 0.5 }, { value: 0.8 },
-                      { value: 2}, { value: 5 }, { value: 7 }, { value: 8 },
-                      { value: 8.1 }, { value: 7.8 }, { value: 7 }, { value: 6 },
-                      { value: 5 }, { value: 4 }, { value: 3 }, { value: 2 },
-                      { value: 1 }, { value: 0.5 }, { value: 0.5 }, { value: 0.5 }
+
+                      { value: 0.3 }, { value: 0.3 }, { value: 0.3 }, { value: 0.3 }, { value: 0.3 },
+                      { value: 0.3 }, { value: 0.3 }, { value: 0.3 }, { value: 0.3 }, { value: 0.3 },
+                      { value: 0.3 }, { value: 0.3 }, { value: 0.5 }, { value: 1 },
+                      { value: 2 }, { value: 3.8 }, { value: 5.5 }, { value: 6.8 },
+                      { value: 7.5 }, { value: 7.8 }, { value: 7.7 }, { value: 7 },
+                      { value: 6 }, { value: 4.5 }, { value: 2.5 }, { value: 1.5 },
+                      { value: 0.8 }, { value: 0.3 }, { value: 0.3 }
                     ]}
                     data2={[
                       // Estrogen (Pink) - Rises in Follicular, sharp peak at Ovulation, secondary broader peak in Luteal
-                      { value: 1.3 }, { value: 1.3 }, { value: 1.3 }, { value: 1.3}, { value: 1.3 },
-                      { value: 1.4 }, { value: 1.5 }, { value: 1.6 }, { value: 1.7 }, { value: 1.8 },
-                      { value: 2 }, { value: 3 }, { value: 7 }, { value: 8.3 },
-                      { value: 1.8 }, { value: 3 }, { value: 5 }, { value: 6 },
-                      { value: 6.3 }, { value: 6 }, { value: 5}, { value: 4 },
-                      { value: 3 }, { value: 2.2 }, { value: 1.8 }, { value: 1.5 },
-                      { value: 1.3 }, { value: 1.3}, { value: 1.3 }
+                      // Estrogen (Pink) - Gradual rise in Follicular, sharp peak at Ovulation, drop, broader secondary peak, ends low
+                      { value: 1.1 }, { value: 1.1 }, { value: 1.1 }, { value: 1.1 }, { value: 1.1 },
+                      { value: 1.2 }, { value: 1.4 }, { value: 1.6 }, { value: 1.8 }, { value: 2.1 }, { value: 2.6 },
+                      { value: 3.5 }, { value: 5.5 }, { value: 8.5 }, { value: 2 },
+
+                      { value: 2.3 }, { value: 3.6 }, { value: 4.5 }, { value: 5.3 },
+                      { value: 5.5 }, { value: 5.3}, { value: 4.5 }, { value: 3.8 },
+                      { value: 2.8 }, { value: 2 }, { value: 1.6 }, { value: 1.5 },
+                      { value: 1.5 }, { value: 1.5 }, { value: 1 }
                     ]}
                     data3={[
                       // Testosterone (Purple) - Consistently low with slight rise around Ovulation
                       { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 },
                       { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 },
-                      { value: 0.8 }, { value: 0.8 }, { value: 0.9 }, { value: 1.5 }, { value: 0.9 },
-                      { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 },
+                      { value: 0.8 }, { value: 0.8 }, { value: 1 }, { value: 2 },
+                      { value: 1 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 },
                       { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 },
                       { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 },
-                      { value: 0.8 }, { value: 0.8 }
+                      { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 }
                     ]}
                     color1="#0188BD"  // Progesterone (Blue)
                     color2="#FF69B4"  // Estrogen (Pink) 
@@ -1226,7 +1246,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 40,
     bottom: 0, // Start from bottom X-axis
-    left: 14 + (22 * 40) + 20, // Day 23 = index 22, so 22 * 40px + padding + center offset
+    left: 14 + (20 * 40) + 20, // Day 23 = index 22, so 22 * 40px + padding + center offset
     height: 200, // Full height from X-axis to top
     width: 1,
     pointerEvents: 'none',
@@ -1242,7 +1262,7 @@ const styles = StyleSheet.create({
   todayDateLabel: {
     position: 'absolute',
     bottom: 0, // Position below the X-axis
-    left: 14 + (22 * 40) + 10, // Center on day 23 line
+    left: 14 + (20 * 40) + 10, // Center on day 23 line
     alignItems: 'center',
   },
 

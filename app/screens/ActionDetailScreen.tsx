@@ -83,16 +83,16 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
       case 'progesterone':
         return Images.ProgesteroneBothHandsUp;
       case 'estrogen':
-        return Images.EstrogenCharacter;
+        return Images.EstrogenBothHand;
       case 'thyroid':
-        return Images.ThyroidCharacter;
+        return Images.ThyroidBothHand;
       case 'insulin':
-        return Images.InsulinCharacter;
+        return Images.InsulinBothHand;
       case 'cortisol':
-        return Images.CortisolCharacter;
+        return Images.CortisolBothHand;
       case 'testosterone':
       case 'androgens':
-        return Images.TestosteroneCharacter;
+        return Images.TestosteroneBothHand;
       default:
         return null;
     }
@@ -105,7 +105,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
    */
   const getHormoneDescription = (hormones: string[]) => {
     if (hormones.includes('progesterone')) {
-      return "I'm Progesterone — in your luteal phase, I tend to dip, causing mood swings or cramps.";
+      return "I'm Progesterone — in your luteal phase, I tend to dip, causing mood swings or cramps.\n\n";
     }
     return "";
   };
@@ -330,7 +330,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
               <View style={styles.descriptionCard}>
                 <Text style={styles.descriptionText}>
                   {getHormoneDescription(action?.hormones || [])}
-                  {'\n\n'}
+                  {/* {'\n\n'} */}
                   {action?.purpose || 'This action helps support your hormone balance.'}
                 </Text>
               </View>
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     textAlignVertical: 'center',
     includeFontPadding: false,
-    lineHeight: responsiveFontSize(1.7),
+    lineHeight: responsiveFontSize(2),
   },
   closeButton: {
     width: responsiveWidth(10),
@@ -462,20 +462,23 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(2.27),
     fontFamily: 'NotoSerif600',
     textAlign: 'center',
-    lineHeight: responsiveHeight(2.4),
+    lineHeight: responsiveHeight(3.2),
+    maxWidth: '90%',
+    alignSelf: 'center',
   },
   titleContainer: {
-    // flexDirection: 'row',
-    // alignItems: 'center',
-    // justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: responsiveHeight(2),
     width: '100%',
   },
   gradientContainer: {
-    height: responsiveHeight(5),
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
+    minHeight: responsiveHeight(8),
+    maxHeight: responsiveHeight(12),
+    width: '100%',
   },
   imageContainer: {
     position: 'relative',
@@ -532,7 +535,9 @@ const styles = StyleSheet.create({
   descriptionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: responsiveWidth(5.56),
-    padding: responsiveWidth(5.56),
+    // paddingTop: 0,
+    paddingHorizontal: responsiveWidth(5.56),
+    paddingVertical: responsiveWidth(5.56),
     width: '100%',
     borderWidth: 0.5,
     borderColor: '#949494',
@@ -544,8 +549,10 @@ const styles = StyleSheet.create({
   descriptionText: {
     fontSize: moderateScale(12, 1.5),
     fontFamily: 'Inter400',
+    lineHeight: moderateScale(16, 1.5),
     color: '#000000',
-    lineHeight: moderateScale(18, 1.5),
+    verticalAlign: 'top',
+    textAlign: 'left',
   },
   studyDetails: {
     width: '100%',

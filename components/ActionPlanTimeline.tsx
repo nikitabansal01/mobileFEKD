@@ -1500,7 +1500,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(1.98),
     fontFamily: 'NotoSerif500',
     color: '#000000',
-    lineHeight: responsiveFontSize(2.2),
+    lineHeight: responsiveFontSize(2.8),
   },
   itemArrow: {
     fontSize: responsiveFontSize(1.98),

@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import MaskedView from '@react-native-masked-view/masked-view';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
+import React, { useState } from 'react';
 const BLOOD_REPORT_IMAGE = require("../../assets/images/Blood Report.png");
 const GOAL_SHEET_ICON = require("../../assets/images/goalSheetIcon.png");
 
 import {
     Dimensions,
+    FlatList,
     Image,
     Platform,
     ScrollView,
@@ -38,6 +39,21 @@ export default function PaywallScreen() {
     const navigation = useNavigation();
     const [currentPage, setCurrentPage] = useState(0);
     const [showPaymentPlan, setShowPaymentPlan] = useState(false);
+
+    // Disable back gesture when using horizontal scrolling
+    useFocusEffect(
+        React.useCallback(() => {
+            navigation.setOptions({
+                gestureEnabled: false,
+            });
+
+            return () => {
+                navigation.setOptions({
+                    gestureEnabled: true,
+                });
+            };
+        }, [navigation])
+    );
 
     const handleClose = () => {
         navigation.goBack();
@@ -308,26 +324,30 @@ export default function PaywallScreen() {
                 {!showPaymentPlan ? (
                     <>
                         {/* Feature Cards */}
-                        <ScrollView
-                            horizontal
-                            pagingEnabled={false}
-                            showsHorizontalScrollIndicator={false}
-                            snapToInterval={screenWidth * 0.875}
-                            decelerationRate="fast"
-                            snapToAlignment="start"
-                            onMomentumScrollEnd={(event) => {
-                                const pageIndex = Math.round(event.nativeEvent.contentOffset.x / (screenWidth * 0.875));
-                                setCurrentPage(pageIndex);
-                            }}
-                            style={styles.featuresScrollView}
-                        >
-                            {features.map((feature, index) => (
-                                <View key={feature.id} style={styles.featureSlide}>
-                                    {renderFeatureCard(feature, index)}
-                                </View>
-                            ))}
-                        </ScrollView>
-
+                        <View style={styles.featuresScrollView}>
+                            <FlatList
+                                data={features}
+                                keyExtractor={(item, index) => `feature-${index}`}
+                                renderItem={({ item, index }) => (
+                                    <View style={styles.featureSlide}>
+                                        {renderFeatureCard(item, index)}
+                                    </View>
+                                )}
+                                horizontal
+                                pagingEnabled={false}
+                                showsHorizontalScrollIndicator={false}
+                                snapToInterval={screenWidth * 0.8}
+                                snapToAlignment="start"
+                                decelerationRate="fast"
+                                onMomentumScrollEnd={(event) => {
+                                    const pageIndex = Math.round(event.nativeEvent.contentOffset.x / (screenWidth * 0.8));
+                                    setCurrentPage(pageIndex);
+                                }}
+                                scrollEventThrottle={16}
+                                contentContainerStyle={styles.flatListContent}
+                            />
+                        </View>
+                        
                         {/* Page Indicators */}
                         <View style={styles.pageIndicators}>
                             {features.map((_, index) => (
@@ -431,7 +451,7 @@ export default function PaywallScreen() {
                         {/* Offer Card */}
                         <View style={styles.offerCard}>
                             <Text style={styles.offerSubtext}>Give Auvra a fair chance to see results</Text>
-                            <View style={styles.offerMainText}>
+                            <View style={styles.offerMainTextContainer}>
                                 <Text style={styles.offerMainText}>Try Auvra Pro for 3 months at</Text>
                                 <MaskedView
                                     style={styles.offerHighlightContainer}
@@ -613,7 +633,7 @@ const styles = StyleSheet.create({
     },
     headerTitleMask: {
         fontSize: moderateScale(16),
-        fontWeight: 'bold',
+        fontWeight: '600',
         textAlign: 'center',
         fontFamily: 'NotoSerif600',
         lineHeight: scale(24),
@@ -621,23 +641,22 @@ const styles = StyleSheet.create({
     },
     headerSubtitle: {
         fontSize: moderateScale(16),
-        fontWeight: 'bold',
         color: COLORS.black,
         textAlign: 'center',
         fontFamily: 'NotoSerif600',
         lineHeight: scale(24),
     },
     featuresScrollView: {
-        flex: 1,
-        // marginTop: verticalScale(60),
+        height: verticalScale(280),
         zIndex: 1,
         position: 'relative',
-        paddingVertical: verticalScale(20),
-        paddingHorizontal: scale(20),
+    },
+    flatListContent: {
+        paddingLeft: scale(20),
     },
     featureSlide: {
-        width: screenWidth * 0.875,
-        paddingHorizontal: scale(5),
+        width: screenWidth * 0.8,
+        paddingHorizontal: scale(10),
         paddingVertical: verticalScale(20),
         justifyContent: 'center',
     },
@@ -1022,14 +1041,17 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: verticalScale(8),
     },
-    offerMainText: {
+    offerMainTextContainer: {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    offerMainText: {
         fontSize: moderateScale(16),
         fontFamily: 'NotoSerif600',
         textAlign: 'center',
         lineHeight: scale(24),
+        color: COLORS.black,
     },
     offerHighlightContainer: {
         height: verticalScale(24),
