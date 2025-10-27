@@ -18,7 +18,7 @@ import {
     View
 } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
-import Svg, { ClipPath, Defs, Path, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
+import Svg, { ClipPath, Defs, Ellipse, Path, RadialGradient, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import AuvraCharacter from '../../components/AuvraCharacter';
 import { FONT_FAMILIES } from '../../constants/fonts';
 
@@ -73,11 +73,11 @@ export default function PaywallScreen() {
             title: 'Unlock the ability to upload labs',
             description: 'Labs helps us adapt the action plan with high-confidence clinical accuracy.',
             icon: '🩸',
-            testLabels: ['Testosterone',  'TSH' ,  'HbA1c','LH, FSH', 'Insulin','DHEA', 'T3' ],
+            testLabels: ['Testosterone', 'TSH', 'HbA1c', 'LH, FSH', 'Insulin', 'DHEA', 'T3'],
         },
         {
             id: 2,
-            title: 'Access to Blood test kits at a discounted price',
+            title: 'Access to Blood test kits \n at a discounted price',
             description: 'No labs? No worries! blood test for 25% off',
             icon: '🩸',
         },
@@ -159,15 +159,15 @@ export default function PaywallScreen() {
                                     end={{ x: 1, y: 0 }}
                                     style={styles.bloodTestIconGradient}
                                 >
-                                     <Image
-                                source={GOAL_SHEET_ICON}
-                                style={styles.bloodReportIcon}
-                                resizeMode="contain"
-                            />
+                                    <Image
+                                        source={GOAL_SHEET_ICON}
+                                        style={styles.bloodReportIcon}
+                                        resizeMode="contain"
+                                    />
                                 </LinearGradient>
-                               
+
                             </View>
-                            
+
                         </View>
                     ) : (
                         // Progress chart feature
@@ -218,7 +218,7 @@ export default function PaywallScreen() {
         </View>
       </View> */}
 
-            <ScrollView 
+            <ScrollView
                 style={styles.scrollContainer}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
@@ -264,7 +264,26 @@ export default function PaywallScreen() {
                     {/* Auvra Character */}
                     <View style={[styles.characterContainer, showPaymentPlan ? styles.characterContainerPayment : styles.characterContainerPaywall]}>
                         <View style={styles.characterGlow}>
-                            <AuvraCharacter size={scale(120)} />
+                            <Svg height={scale(200)} width={scale(200)} style={styles.haloSvg}>
+                                <Defs>
+                                    <RadialGradient id="haloGrad" cx="50%" cy="50%" r="50%">
+                                        <Stop offset="0%" stopColor="#FFF" stopOpacity="1" />
+                                        <Stop offset="100%" stopColor="#FFF" stopOpacity="0" />
+                                    </RadialGradient>
+                                </Defs>
+                                <Ellipse
+                                    cx="50%"
+                                    cy="50%"
+                                    rx="50%"
+                                    ry="50%"
+                                    fill="url(#haloGrad)"
+                                    opacity="0.9"
+                                />
+                            </Svg>
+                            <View style={[styles.characterWrapper, { position: 'absolute' }]}>
+                                <AuvraCharacter size={scale(120)} />
+                            </View>
+                            {/* <AuvraCharacter size={scale(120)} /> */}
                         </View>
                     </View>
 
@@ -347,7 +366,7 @@ export default function PaywallScreen() {
                                 contentContainerStyle={styles.flatListContent}
                             />
                         </View>
-                        
+
                         {/* Page Indicators */}
                         <View style={styles.pageIndicators}>
                             {features.map((_, index) => (
@@ -366,7 +385,7 @@ export default function PaywallScreen() {
                         {/* Payment Plan Comparison */}
                         <View style={styles.comparisonContainer}>
                             <View style={styles.comparisonTable}>
-                            <View style={styles.comparisonRow}>
+                                <View style={styles.comparisonRow}>
                                     <Text style={styles.comparisonLabel}></Text>
                                     <View style={[styles.proRow, styles.proRowFirst]}>
                                         <LinearGradient
@@ -397,7 +416,7 @@ export default function PaywallScreen() {
                                         <Text style={styles.obgynPeriod}>a visit</Text>
                                     </View>
                                 </View>
-                                
+
                                 <View style={styles.comparisonRow}>
                                     <Text style={styles.comparisonLabel}>Accuracy</Text>
                                     <View style={styles.proRow}>
@@ -406,7 +425,7 @@ export default function PaywallScreen() {
                                     <Text style={styles.chatgptValue}>Medium</Text>
                                     <Text style={styles.obgynValue}>High</Text>
                                 </View>
-                                
+
                                 <View style={styles.comparisonRow}>
                                     <Text style={styles.comparisonLabel}>Fun</Text>
                                     <View style={styles.proRow}>
@@ -419,7 +438,7 @@ export default function PaywallScreen() {
                                         <Ionicons name="close" size={scale(16)} color="#949494" />
                                     </View>
                                 </View>
-                                
+
                                 <View style={styles.comparisonRow}>
                                     <Text style={styles.comparisonLabel}>Available 24/7</Text>
                                     <View style={styles.proRow}>
@@ -432,9 +451,9 @@ export default function PaywallScreen() {
                                         <Ionicons name="close" size={scale(16)} color="#949494" />
                                     </View>
                                 </View>
-                                
+
                                 <View style={styles.comparisonRow}>
-                                    <Text style={styles.comparisonLabel}>Personalized</Text>
+                                    <Text style={styles.personalizedLabel}>Personalized</Text>
                                     <View style={[styles.proRow, styles.proRowLast]}>
                                         <Ionicons name="checkmark" size={scale(16)} color={COLORS.white} />
                                     </View>
@@ -447,7 +466,7 @@ export default function PaywallScreen() {
                                 </View>
                             </View>
                         </View>
-                        
+
                         {/* Offer Card */}
                         <View style={styles.offerCard}>
                             <Text style={styles.offerSubtext}>Give Auvra a fair chance to see results</Text>
@@ -504,7 +523,7 @@ export default function PaywallScreen() {
                 <TouchableOpacity style={styles.ctaButton} onPress={!showPaymentPlan ? handleInvestInHealth : () => console.log('Process payment')}>
                     <View style={styles.ctaButtonContent}>
                         <Text style={styles.ctaButtonText}>
-                            {!showPaymentPlan ? 'I will invest in my health!' : 'Get Started Now'}
+                            {!showPaymentPlan ? 'I will invest in my health!' : 'Yes! Let’s go'}
                         </Text>
                     </View>
                 </TouchableOpacity>
@@ -583,29 +602,46 @@ const styles = StyleSheet.create({
         paddingHorizontal: scale(40),
         zIndex: 1,
         position: 'relative',
-        marginTop: verticalScale(-120), // Move up to overlap with background
+        marginTop: verticalScale(-150), // Move up to overlap with background
     },
     headerSectionPaywall: {
         // paddingBottom: verticalScale(),
     },
     headerSectionPayment: {
         paddingBottom: verticalScale(20),
+        paddingTop: verticalScale(20),
+        // marginTop: verticalScale(-20),
     },
     characterContainer: {
         alignItems: 'center',
     },
     characterContainerPaywall: {
-        marginBottom: verticalScale(30),
+        marginBottom: verticalScale(10),
     },
     characterContainerPayment: {
-        marginBottom: verticalScale(20),
+        marginBottom: verticalScale(0),
     },
     characterGlow: {
         shadowColor: '#FFFFFF',
-        shadowOffset: { width: 0, height: 0 },
+        // shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.8,
         shadowRadius: scale(40),
         elevation: 15,
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: scale(200),
+        height: scale(200),
+    },
+
+    haloSvg: {
+        // position: 'absolute',
+        zIndex: 0,
+    },
+    characterWrapper: {
+        zIndex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderColor: 'red',
     },
     headerText: {
         alignItems: 'center',
@@ -632,19 +668,19 @@ const styles = StyleSheet.create({
         height: '100%',
     },
     headerTitleMask: {
-        fontSize: moderateScale(16),
+        fontSize: moderateScale(16, 1.5),
         fontWeight: '600',
         textAlign: 'center',
         fontFamily: 'NotoSerif600',
-        lineHeight: scale(24),
+        lineHeight: moderateScale(24, 1.5),
         color: 'black',
     },
     headerSubtitle: {
-        fontSize: moderateScale(16),
+        fontSize: moderateScale(16, 1.5),
         color: COLORS.black,
         textAlign: 'center',
         fontFamily: 'NotoSerif600',
-        lineHeight: scale(24),
+        lineHeight: moderateScale(24, 1.5),
     },
     featuresScrollView: {
         height: verticalScale(280),
@@ -655,7 +691,7 @@ const styles = StyleSheet.create({
         paddingLeft: scale(20),
     },
     featureSlide: {
-        width: screenWidth * 0.8,
+        width: screenWidth * 0.85,
         paddingHorizontal: scale(10),
         paddingVertical: verticalScale(20),
         justifyContent: 'center',
@@ -710,9 +746,11 @@ const styles = StyleSheet.create({
         borderRadius: scale(37.5),
         alignItems: 'center',
         justifyContent: 'center',
+        overflow: 'hidden',
     },
     centralIconText: {
-        fontSize: moderateScale(13.5),
+        fontSize: moderateScale(14, 1.5),
+        lineHeight: moderateScale(18, 1.5),
         color: '#BB4471',
         fontFamily: FONT_FAMILIES['Inter-Medium'],
     },
@@ -736,15 +774,16 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.white,
         paddingHorizontal: scale(6),
         paddingVertical: scale(2.25),
-        borderRadius: scale(30),
+        borderRadius: scale(20),
         shadowColor: COLORS.warmPurple,
-        shadowOffset: { width: scale(2.25), height: scale(2.25) },
-        shadowOpacity: 1,
-        shadowRadius: scale(14.85),
-        elevation: 5,
+        shadowOffset: { width: scale(0.5), height: scale(0.5) },
+        shadowOpacity: 0.6,
+        shadowRadius: scale(5),
+        elevation: 1,
     },
     testLabelText: {
-        fontSize: moderateScale(8),
+        fontSize: moderateScale(9, 1.5),
+        lineHeight: moderateScale(12, 1.5),
         color: COLORS.warmPurple,
         fontFamily: FONT_FAMILIES['Inter-Regular'],
     },
@@ -773,11 +812,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    bloodTestIconText: {
-        fontSize: moderateScale(13.87),
-        color: '#BB4471',
-        fontFamily: FONT_FAMILIES['Inter-Medium'],
-    },
+    
     progressIcon: {
         width: scale(77),
         height: scale(77),
@@ -807,22 +842,23 @@ const styles = StyleSheet.create({
     textContent: {
         alignItems: 'center',
         gap: verticalScale(6),
-        marginTop: verticalScale(15),
+        marginTop: verticalScale(20),
     },
     cardTitle: {
-        fontSize: moderateScale(12),
+        fontSize: moderateScale(12, 1.5),
+        lineHeight: moderateScale(16, 1.5),
         fontWeight: '600',
         color: COLORS.neutral700,
         textAlign: 'center',
         fontFamily: 'NotoSerif600',
-        lineHeight: scale(15),
     },
     cardDescription: {
-        fontSize: moderateScale(12),
+        fontSize: moderateScale(12, 1.5),
+        lineHeight: moderateScale(16, 1.5),
         color: COLORS.grey,
         textAlign: 'center',
         fontFamily: FONT_FAMILIES['Inter-Regular'],
-        lineHeight: scale(15),
+        // lineHeight: scale(15),
     },
     pageIndicators: {
         flexDirection: 'row',
@@ -880,19 +916,20 @@ const styles = StyleSheet.create({
     },
     ctaButtonContent: {
         backgroundColor: COLORS.white,
-        paddingVertical: verticalScale(11),
+        paddingVertical: verticalScale(14),
         paddingHorizontal: scale(35),
         borderRadius: scale(53),
         alignItems: 'center',
         justifyContent: 'center',
     },
     ctaButtonText: {
-        fontSize: moderateScale(14),
+        fontSize: moderateScale(14, 1.5),
+        lineHeight: moderateScale(18, 1.5),
         fontWeight: '500',
         color: COLORS.black,
         fontFamily: FONT_FAMILIES['Inter-Medium'],
     },
-    
+
     // Payment Plan Comparison Styles
     comparisonContainer: {
         paddingHorizontal: scale(20),
@@ -900,7 +937,7 @@ const styles = StyleSheet.create({
     },
     comparisonTable: {
         backgroundColor: 'transparent',
-        paddingHorizontal: scale(10),
+        // paddingHorizontal: scale(2),
     },
     comparisonRow: {
         flexDirection: 'row',
@@ -908,17 +945,25 @@ const styles = StyleSheet.create({
         gap: scale(10),
     },
     comparisonLabel: {
-        width: scale(90),
-        fontSize: moderateScale(14),
+        width: scale(100),
+        fontSize: moderateScale(14, 1.5),
+        lineHeight: moderateScale(18, 1.5),
         color: COLORS.neutral700,
-        fontFamily: 'Inter-Medium',
+        fontFamily: 'Inter-Regular',
+    },
+    personalizedLabel: {
+        width: scale(100),
+        fontSize: moderateScale(14, 1.5),
+        lineHeight: moderateScale(18, 1.5),
+        color: COLORS.warmPurple,
+        fontFamily: 'Inter-Regular',
     },
     proRow: {
-        width: scale(60),
+        width: scale(65),
         alignItems: 'center',
         backgroundColor: '#DDC2E9',
-        paddingTop: verticalScale(8),
-        paddingBottom: verticalScale(8),
+        paddingTop: verticalScale(10),
+        paddingBottom: verticalScale(10),
         marginVertical: -1, // Negative margin to eliminate gaps while keeping padding
         // paddingHorizontal: scale(),
     },
@@ -938,18 +983,20 @@ const styles = StyleSheet.create({
         borderRadius: scale(7),
     },
     proLabel: {
-        fontSize: moderateScale(14),
+        fontSize: moderateScale(14, 1.5),
+        lineHeight: moderateScale(18, 1.5),
         fontWeight: 'bold',
         color: COLORS.white,
         fontFamily: 'Inter-Medium',
     },
     colName: {
-        fontSize: moderateScale(14),
+        fontSize: moderateScale(14, 1.5),
+        lineHeight: moderateScale(18, 1.5),
         fontWeight: 'bold',
         color: COLORS.neutral700,
         fontFamily: 'Inter-Medium',
         textAlign: 'center',
-        width: scale(60),
+        width: scale(65),
     },
     priceContainer: {
         width: scale(60),
@@ -961,32 +1008,37 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     chatgptPeriod: {
-        fontSize: moderateScale(10),
+        fontSize: moderateScale(10, 1.5),
+        lineHeight: moderateScale(12, 1.5),
         color: '#949494',
         fontFamily: 'Inter-Medium',
         textAlign: 'center',
     },
     obgynPeriod: {
-        fontSize: moderateScale(10),
+        fontSize: moderateScale(10, 1.5),
+        lineHeight: moderateScale(12, 1.5),
         color: '#949494',
         fontFamily: 'Inter-Medium',
         textAlign: 'center',
     },
     proPrice: {
-        fontSize: moderateScale(12),
+        fontSize: moderateScale(12, 1.5),
+        lineHeight: moderateScale(14, 1.5),
         fontWeight: 'bold',
         color: COLORS.white,
         fontFamily: 'Inter-Bold',
     },
     proPeriod: {
-        fontSize: moderateScale(12),
+        fontSize: moderateScale(12, 1.5),
+        lineHeight: moderateScale(14, 1.5),
         fontWeight: 'bold',
         color: COLORS.white,
         fontFamily: 'Inter-Bold',
     },
     proValue: {
         textAlign: 'center',
-        fontSize: moderateScale(12),
+        fontSize: moderateScale(12, 1.5),
+        lineHeight: moderateScale(14, 1.5),
         fontWeight: 'bold',
         color: COLORS.white,
         fontFamily: 'Inter-Bold',
@@ -994,32 +1046,36 @@ const styles = StyleSheet.create({
     chatgptPrice: {
         width: scale(60),
         textAlign: 'center',
-        fontSize: moderateScale(12),
+        fontSize: moderateScale(12, 1.5),
+        lineHeight: moderateScale(14, 1.5),
         color: '#949494',
-        fontFamily: 'Inter-Medium',
+        fontFamily: 'Inter-Regular',
     },
     chatgptValue: {
         width: scale(60),
         textAlign: 'center',
-        fontSize: moderateScale(12),
+        fontSize: moderateScale(12, 1.5),
+        lineHeight: moderateScale(14, 1.5),
         color: '#949494',
-        fontFamily: 'Inter-Medium',
+        fontFamily: 'Inter-Regular',
     },
     obgynPrice: {
         width: scale(60),
         textAlign: 'center',
-        fontSize: moderateScale(12),
+        fontSize: moderateScale(12, 1.5),
+        lineHeight: moderateScale(14, 1.5),
         color: '#949494',
-        fontFamily: 'Inter-Medium',
+        fontFamily: 'Inter-Regular',
     },
     obgynValue: {
         width: scale(60),
         textAlign: 'center',
-        fontSize: moderateScale(12),
+        fontSize: moderateScale(12, 1.5),
+        lineHeight: moderateScale(14, 1.5),
         color: '#949494',
-        fontFamily: 'Inter-Medium',
+        fontFamily: 'Inter-Regular',
     },
-    
+
     // Offer Card Styles
     offerCard: {
         backgroundColor: COLORS.white,
@@ -1035,11 +1091,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     offerSubtext: {
-        fontSize: moderateScale(14),
+        fontSize: moderateScale(14, 1.5),
+        lineHeight: moderateScale(16, 1.5),
         color: '#949494',
-        fontFamily: 'Inter-Medium',
+        fontFamily: 'Inter-Regular',
         textAlign: 'center',
-        marginBottom: verticalScale(8),
+        marginBottom: verticalScale(10),
     },
     offerMainTextContainer: {
         flexDirection: 'column',
@@ -1047,10 +1104,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     offerMainText: {
-        fontSize: moderateScale(16),
+        fontSize: moderateScale(15, 1.5),
+        lineHeight: moderateScale(24, 1.5),
         fontFamily: 'NotoSerif600',
         textAlign: 'center',
-        lineHeight: scale(24),
+        // lineHeight: scale(24),
         color: COLORS.black,
     },
     offerHighlightContainer: {
@@ -1058,9 +1116,10 @@ const styles = StyleSheet.create({
         width: scale(120),
     },
     offerHighlightText: {
-        fontSize: moderateScale(16),
+        fontSize: moderateScale(15, 1.5),
+        lineHeight: moderateScale(24, 1.5),
         fontFamily: 'NotoSerif600',
-        lineHeight: scale(24),
+        // lineHeight: scale(24),
     },
     offerHighlightGradient: {
         flex: 1,

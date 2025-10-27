@@ -26,6 +26,7 @@ import QuestionScreen from './app/screens/QuestionScreen';
 import ResearchingScreen from './app/screens/ResearchingScreen';
 import ResultLoadingScreen from './app/screens/ResultLoadingScreen';
 import ResultScreen from './app/screens/ResultScreen';
+import SplashScreen from './app/screens/SplashScreen';
 
 // Context - Define FirstLog directly
 interface FirstLogContextType {
@@ -93,12 +94,13 @@ export default function App() {
           <StatusBar barStyle={"dark-content"} backgroundColor={"#FFF"} />
           <NavigationContainer>
             <Stack.Navigator 
-              initialRouteName={isLoggedIn ? "MainScreenTabs" : "OnboardingScreen"}
+              initialRouteName="SplashScreen"
               screenOptions={{ 
                 headerShown: false,
                 gestureEnabled: true,
               }}
             >
+              <Stack.Screen name="SplashScreen" component={SplashScreen} />
               <Stack.Screen name="OnboardingScreen" component={OnboardingScreen} />
               <Stack.Screen name="IntroScreen" component={IntroScreen} />
               <Stack.Screen name="QuestionScreen" component={QuestionScreen} />

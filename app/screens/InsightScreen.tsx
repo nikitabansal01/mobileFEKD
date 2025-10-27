@@ -558,6 +558,18 @@ const InsightScreen = () => {
                     />
                   </View>
 
+                  {/* LHCharacterBothHand */}
+                  {/* <View style={[styles.chartHormoneCharacter, {
+                    left: 14 + (20 * 40) + 20 - 21, // Center on day 21 line (42px icon)
+                    top: 200 - (0.6 * 200 / 10) - 21 // center vertically based on new data
+                  }]}>
+                    <Image
+                      source={require('../../assets/images/hormoneBuddy/LHCharacterBothHand.png')}
+                      style={styles.chartCharacterImage}
+                      resizeMode="contain"
+                    />
+                  </View> */}
+
 
                 </View>
 
@@ -578,10 +590,9 @@ const InsightScreen = () => {
                     data2={[
                       // Estrogen (Pink) - Rises in Follicular, sharp peak at Ovulation, secondary broader peak in Luteal
                       // Estrogen (Pink) - Gradual rise in Follicular, sharp peak at Ovulation, drop, broader secondary peak, ends low
-                      { value: 1.1 }, { value: 1.1 }, { value: 1.1 }, { value: 1.1 }, { value: 1.1 },
-                      { value: 1.2 }, { value: 1.4 }, { value: 1.6 }, { value: 1.8 }, { value: 2.1 }, { value: 2.6 },
+                      { value: 1.3 }, { value: 1.3 }, { value: 1.3 }, { value: 1.3 }, { value: 1.3 },
+                      { value: 1.4 }, { value: 1.5 }, { value: 1.6 }, { value: 1.8 }, { value: 2.1 }, { value: 2.6 },
                       { value: 3.5 }, { value: 5.5 }, { value: 8.5 }, { value: 2 },
-
                       { value: 2.3 }, { value: 3.6 }, { value: 4.5 }, { value: 5.3 },
                       { value: 5.5 }, { value: 5.3}, { value: 4.5 }, { value: 3.8 },
                       { value: 2.8 }, { value: 2 }, { value: 1.6 }, { value: 1.5 },
@@ -597,9 +608,21 @@ const InsightScreen = () => {
                       { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 },
                       { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 }
                     ]}
+                    data4={[
+                      // LH (Black) - Low baseline, sharp spike at ovulation (around day 13-14)
+                      { value: 1.1 }, { value: 1.1 }, { value: 1.1 }, { value: 1.1 }, { value: 1.1 },
+                      { value: 1.1 }, { value: 1.1 }, { value: 1.1 }, { value: 1.1 }, { value: 1.1 },
+                      { value: 1.1 }, { value: 1.2 }, { value: 2.2 }, { value: 7.5 },
+                      { value: 2.8 }, { value: 1.5 }, { value: 1.1 }, { value: 1.1 },
+                      { value: 1.1 }, { value: 1.1 }, { value: 1.1 }, { value: 1.1 },
+                      { value: 1.1 }, { value: 1.1 }, { value: 1.1 }, { value: 1.1 },
+                      { value: 1.1 }, { value: 1.1 }, { value: 1.1 }
+                    ]}
+                  
                     color1="#0188BD"  // Progesterone (Blue)
                     color2="#FF69B4"  // Estrogen (Pink) 
                     color3="#9370DB"  // Testosterone (Purple)
+                    color4="#FFC0C0"  // LH (Black)
                     curved
                     thickness={2.5}
                     hideDataPoints={true}

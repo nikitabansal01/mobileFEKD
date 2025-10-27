@@ -1,6 +1,7 @@
 // ActionPlanTimeline.tsx
 import Images from '@/assets/images';
 import { useNavigation } from '@react-navigation/native';
+import { BlurView } from 'expo-blur';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -13,7 +14,6 @@ import {
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import Svg, { Defs, Path, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
-// import { BlurView } from 'expo-blur';
 
 // ====== Type imports ======
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
@@ -976,7 +976,7 @@ export default function ActionPlanTimeline({
               : xCenter - CIRCLE_RADIUS - responsiveWidth(35) - responsiveWidth(3);
 
             return (
-              <View key={a.id.toString()} style={StyleSheet.absoluteFill} pointerEvents="box-none">
+              <View key={a.id.toString()} style={[StyleSheet.absoluteFill, styles.tomorrowItem]} pointerEvents="box-none">
                 {/* Tomorrow image circle */}
                 <View
                   style={[
@@ -1061,7 +1061,6 @@ export default function ActionPlanTimeline({
           })}
 
           {/* Tomorrow blur overlay - positioned after all items to appear on top */}
-          {/* COMMENTED OUT FOR BUILD - BlurView not working in APK
           {geom && tomorrowAnchors.length > 0 && (() => {
             const todayLastY = todayAnchors.at(-1)?.y ?? 0;
             const tomorrowTextHeight = responsiveHeight(6);
@@ -1069,20 +1068,21 @@ export default function ActionPlanTimeline({
             
             return (
               <BlurView
-                intensity={80}
+                intensity={10}
                 tint="light"
                 style={[
                   styles.tomorrowSectionBlur,
                   {
                     top: tomorrowStartY,
                     height: contentHeight - tomorrowStartY,
+                    left: -responsiveWidth(5), // Extend beyond container bounds
+                    right: -responsiveWidth(5), // Extend beyond container bounds
                     zIndex: 100, // Ensure it's on top
                   }
                 ]}
               />
             );
           })()}
-          */}
 
           {/* Expanding circle animation overlay */}
           {expandingCircle && (
@@ -1557,9 +1557,9 @@ const styles = StyleSheet.create({
   // Tomorrow section blur overlay
   tomorrowSectionBlur: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    backgroundColor: 'transparent',
+    // backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    backgroundColor: 'transparent', // Slight white overlay for better blur effect
+    borderRadius: responsiveWidth(2),
   },
   
   // Time-based icon style (matching Figma design)
