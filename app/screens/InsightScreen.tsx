@@ -1039,8 +1039,72 @@ const InsightScreen = () => {
     // Day 30
     { value: 0.8 }, { value: 0.8 }
   ]}
+  // data4={[
+  //   // LH (Black) - Flat with very sharp, narrow peak at ovulation
+  //   // Day 1
+  //   { value: 1 }, { value: 1 },
+  //   // Day 2
+  //   { value: 1 }, { value: 1 },
+  //   // Day 3
+  //   { value: 1 }, { value: 1 },
+  //   // Day 4
+  //   { value: 1 }, { value: 1 },
+  //   // Day 5
+  //   { value: 1 }, { value: 1 },
+  //   // Day 6
+  //   { value: 1 }, { value: 1 },
+  //   // Day 7
+  //   { value: 1 }, { value: 1 },
+  //   // Day 8
+  //   { value: 1 }, { value: 1 },
+  //   // Day 9
+  //   { value: 1 }, { value: 1 },
+  //   // Day 10
+  //   { value: 1 }, { value: 1 },
+  //   // Day 11
+  //   { value: 1 }, { value: 1 },
+  //   // Day 12
+  //   { value: 1 }, { value: 1 },
+  //   // Day 13
+  //   { value: 1.25 }, { value: 2.45 },
+  //   // Day 14
+  //   { value: 7.65 }, { value: 7.5 },
+  //   // Day 15
+  //   { value: 2.25 }, { value: 1.15 },
+  //   // Day 16
+  //   { value: 1.05 }, { value: 1.05 },
+  //   // Day 17
+  //   { value: 1 }, { value: 1 },
+  //   // Day 18
+  //   { value: 1 }, { value: 1 },
+  //   // Day 19
+  //   { value: 1 }, { value: 1 },
+  //   // Day 20
+  //   { value: 1 }, { value: 1 },
+  //   // Day 21
+  //   { value: 1 }, { value: 1 },
+  //   // Day 22
+  //   { value: 1 }, { value: 1 },
+  //   // Day 23
+  //   { value: 1 }, { value: 1 },
+  //   // Day 24
+  //   { value: 1 }, { value: 1 },
+  //   // Day 25
+  //   { value: 1 }, { value: 1 },
+  //   // Day 26
+  //   { value: 1 }, { value: 1 },
+  //   // Day 27
+  //   { value: 1 }, { value: 1 },
+  //   // Day 28
+  //   { value: 1 }, { value: 1 },
+  //   // Day 29
+  //   { value: 1 }, { value: 1 },
+  //   // Day 30
+  //   { value: 1 }, { value: 1 }
+  // ]}
+
   data4={[
-    // LH (Black) - Flat with very sharp, narrow peak at ovulation
+    // LH (Black) - Smooth transitions with sharp but natural peak at ovulation
     // Day 1
     { value: 1 }, { value: 1 },
     // Day 2
@@ -1064,17 +1128,17 @@ const InsightScreen = () => {
     // Day 11
     { value: 1 }, { value: 1 },
     // Day 12
-    { value: 1 }, { value: 1 },
+    { value: 1 }, { value: 1.1 },
     // Day 13
-    { value: 1.25 }, { value: 2.45 },
+    { value: 1.3 }, { value: 1.8 },
     // Day 14
-    { value: 7.65 }, { value: 7.5 },
+    { value: 3.5 }, { value: 6.5 },
     // Day 15
-    { value: 2.25 }, { value: 1.15 },
+    { value: 7.5 }, { value: 4.5 },
     // Day 16
-    { value: 1.05 }, { value: 1.05 },
+    { value: 2.2 }, { value: 1.4 },
     // Day 17
-    { value: 1 }, { value: 1 },
+    { value: 1.15 }, { value: 1.05 },
     // Day 18
     { value: 1 }, { value: 1 },
     // Day 19
