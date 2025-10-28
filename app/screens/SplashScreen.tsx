@@ -3,12 +3,12 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
 import {
-    Animated,
-    Dimensions,
-    Image,
-    StatusBar,
-    StyleSheet,
-    View
+  Animated,
+  Dimensions,
+  Image,
+  StatusBar,
+  StyleSheet,
+  View
 } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 
@@ -79,12 +79,12 @@ export default function SplashScreen() {
       <View style={styles.content}>
         <View style={styles.contentContainer}>
           {/* Blurred Gradient Background */}
-          <BlurView intensity={60} style={styles.gradientWrapper}>
+          <BlurView intensity={200} style={styles.gradientWrapper}>
             <LinearGradient
               colors={[
-                'rgba(255, 255, 255, 0.10)',
+                'rgba(255, 255, 255, 0.15)',
                 'rgba(242, 147, 183, 0.20)',
-                'rgba(255, 255, 255, 0.10)',  // Fades to transparent
+                'rgba(255, 255, 255, 0.15)',  // Fades to transparent
               ]}
               start={{ x: 0.5, y: 0 }}
               end={{ x: 0.5, y: 1 }}
@@ -116,7 +116,7 @@ export default function SplashScreen() {
               { opacity: textFadeAnim }
             ]}
           >
-            The missing piece in your hormone care
+            The missing piece in your{'\n'}hormone care
           </Animated.Text>
     
           {/* Loading Animation */}
@@ -214,9 +214,9 @@ const styles = StyleSheet.create({
     },
     gradientWrapper: {
       position: 'absolute',
-      width: scale(400),
-      height: scale(400),
-      borderRadius: scale(200),  // Circular shape
+      width: scale(600),
+      height: scale(500),
+      borderRadius: scale(250),  // Circular shape
       overflow: 'hidden',        // Important for borderRadius to work with BlurView
     },
     contentGradient: {
@@ -230,8 +230,8 @@ const styles = StyleSheet.create({
        justifyContent: 'center',
      },
      logoImage: {
-       width: scale(200),
-       height: scale(200),
+       width: scale(263),
+       height: scale(180),
      },
     tagline: {
       fontSize: moderateScale(18, 1.5),

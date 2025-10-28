@@ -3,8 +3,10 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
-const BLOOD_REPORT_IMAGE = require("../../assets/images/Blood Report.png");
-const GOAL_SHEET_ICON = require("../../assets/images/goalSheetIcon.png");
+const PAYWALL_SLIDE1_ICON = require("../../assets/images/paywallSlide1Icon.png");
+const PAYWALL_SLIDE2_ICON = require("../../assets/images/paywallSlide2Icon.png");
+const PAYWALL_SLIDE3_ICON = require("../../assets/images/paywallSlide3Icon.png");
+const PAYWALL_SLIDE4_ICON = require("../../assets/images/paywallSlide4Icon.png");
 
 import {
     Dimensions,
@@ -77,12 +79,18 @@ export default function PaywallScreen() {
         },
         {
             id: 2,
+            title: 'Add ethnicity, fitness goals, medical history to further personalize your plan',
+            description: 'So your action plan is made for the whole YOU!',
+            icon: '📋',
+        },
+        {
+            id: 3,
             title: 'Access to Blood test kits \n at a discounted price',
             description: 'No labs? No worries! blood test for 25% off',
             icon: '🩸',
         },
         {
-            id: 3,
+            id: 4,
             title: 'Fast track to significant \n results in just 3 months!',
             description: 'High accuracy action plan = faster results',
             icon: '📊',
@@ -97,26 +105,12 @@ export default function PaywallScreen() {
                     {feature.id === 1 ? (
                         // Lab upload feature with test labels
                         <View style={styles.labIconContainer}>
-                            <View style={styles.centralIcon}>
-                                <LinearGradient
-                                    colors={[
-                                        'rgba(162, 154, 234, 0.75)',
-                                        'rgba(193, 126, 201, 0.75)',
-                                        'rgba(212, 130, 185, 0.75)',
-                                        'rgba(233, 139, 172, 0.75)',
-                                        'rgba(253, 198, 209, 0.75)'
-                                    ]}
-                                    // locations={[0.0862, 0.4037, 0.5823, 0.8105, 1.0784]}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={styles.centralIconGradient}
-                                >
-                                    <Image
-                                        source={BLOOD_REPORT_IMAGE}
-                                        style={styles.bloodReportIcon}
-                                        resizeMode="contain"
-                                    />
-                                </LinearGradient>
+                            <View style={styles.centralIconContainer}>
+                                <Image
+                                    source={PAYWALL_SLIDE1_ICON}
+                                    style={styles.slideIcon}
+                                    resizeMode="contain"
+                                />
                             </View>
                             {feature.testLabels.map((label: string, labelIndex: number) => {
                                 // Exact positions from Figma design
@@ -144,55 +138,31 @@ export default function PaywallScreen() {
                             })}
                         </View>
                     ) : feature.id === 2 ? (
+                        // Personalization feature
+                        <View style={styles.slideIconContainer}>
+                            <Image
+                                source={PAYWALL_SLIDE2_ICON}
+                                style={styles.slideIcon}
+                                resizeMode="contain"
+                            />
+                        </View>
+                    ) : feature.id === 3 ? (
                         // Blood test kit feature
-                        <View style={styles.bloodTestContainer}>
-                            <View style={styles.bloodTestIcon}>
-                                <LinearGradient
-                                    colors={[
-                                        'rgba(162, 154, 234, 0.75)',
-                                        'rgba(193, 126, 201, 0.75)',
-                                        'rgba(212, 130, 185, 0.75)',
-                                        'rgba(233, 139, 172, 0.75)',
-                                        'rgba(253, 198, 209, 0.75)'
-                                    ]}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={styles.bloodTestIconGradient}
-                                >
-                                    <Image
-                                        source={GOAL_SHEET_ICON}
-                                        style={styles.bloodReportIcon}
-                                        resizeMode="contain"
-                                    />
-                                </LinearGradient>
-
-                            </View>
-
+                        <View style={styles.slideIconContainer}>
+                            <Image
+                                source={PAYWALL_SLIDE3_ICON}
+                                style={styles.slideIcon}
+                                resizeMode="contain"
+                            />
                         </View>
                     ) : (
                         // Progress chart feature
-                        <View style={styles.progressIcon}>
-                            <LinearGradient
-                                colors={[
-                                    'rgba(162, 154, 234, 0.75)',
-                                    'rgba(193, 126, 201, 0.75)',
-                                    'rgba(212, 130, 185, 0.75)',
-                                    'rgba(233, 139, 172, 0.75)',
-                                    'rgba(253, 198, 209, 0.75)'
-                                ]}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={styles.progressIconGradient}
-                            >
-                                <View style={styles.progressBars}>
-                                    {[13, 17, 21, 26, 30].map((height, barIndex) => (
-                                        <View
-                                            key={barIndex}
-                                            style={[styles.progressBar, { height: scale(height) }]}
-                                        />
-                                    ))}
-                                </View>
-                            </LinearGradient>
+                        <View style={styles.slideIconContainer}>
+                            <Image
+                                source={PAYWALL_SLIDE4_ICON}
+                                style={styles.slideIcon}
+                                resizeMode="contain"
+                            />
                         </View>
                     )}
                 </View>
@@ -264,10 +234,11 @@ export default function PaywallScreen() {
                     {/* Auvra Character */}
                     <View style={[styles.characterContainer, showPaymentPlan ? styles.characterContainerPayment : styles.characterContainerPaywall]}>
                         <View style={styles.characterGlow}>
-                            <Svg height={scale(200)} width={scale(200)} style={styles.haloSvg}>
+                            <Svg height={scale(220)} width={scale(250)} style={styles.haloSvg}>
                                 <Defs>
                                     <RadialGradient id="haloGrad" cx="50%" cy="50%" r="50%">
                                         <Stop offset="0%" stopColor="#FFF" stopOpacity="1" />
+                                        <Stop offset="60%" stopColor="#FFF" stopOpacity="0.7" />
                                         <Stop offset="100%" stopColor="#FFF" stopOpacity="0" />
                                     </RadialGradient>
                                 </Defs>
@@ -624,18 +595,20 @@ const styles = StyleSheet.create({
     characterGlow: {
         shadowColor: '#FFFFFF',
         // shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.8,
-        shadowRadius: scale(40),
+        shadowOpacity: 0.4,
+        shadowRadius: scale(50),
         elevation: 15,
         alignItems: 'center',
         justifyContent: 'center',
-        width: scale(200),
+        width: scale(250),
         height: scale(200),
     },
 
     haloSvg: {
-        // position: 'absolute',
+        position: 'absolute',
         zIndex: 0,
+        top: 0,
+        left: 0,
     },
     characterWrapper: {
         zIndex: 1,
@@ -688,11 +661,11 @@ const styles = StyleSheet.create({
         position: 'relative',
     },
     flatListContent: {
-        paddingLeft: scale(20),
+        paddingLeft: scale(10),
     },
     featureSlide: {
         width: screenWidth * 0.85,
-        paddingHorizontal: scale(10),
+        paddingHorizontal: scale(5),
         paddingVertical: verticalScale(20),
         justifyContent: 'center',
     },
@@ -719,6 +692,18 @@ const styles = StyleSheet.create({
         position: 'relative',
         width: scale(181),
         height: scale(75),
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    centralIconContainer: {
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: [{ translateX: -scale(37.5) }, { translateY: -scale(37.5) }],
+        width: scale(75),
+        height: scale(75),
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     centralIcon: {
         position: 'absolute',
@@ -787,6 +772,65 @@ const styles = StyleSheet.create({
         color: COLORS.warmPurple,
         fontFamily: FONT_FAMILIES['Inter-Regular'],
     },
+    personalizationContainer: {
+        position: 'relative',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    personalizationIcon: {
+        width: scale(75),
+        height: scale(75),
+        borderRadius: scale(37.5),
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+    },
+    personalizationIconGradient: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+        borderRadius: scale(37.5),
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    documentIcon: {
+        width: scale(50),
+        height: scale(60),
+        backgroundColor: COLORS.white,
+        borderRadius: scale(4),
+        padding: scale(8),
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    documentLines: {
+        width: '100%',
+        gap: scale(4),
+    },
+    documentLine: {
+        height: scale(2),
+        backgroundColor: COLORS.warmPurple,
+        borderRadius: scale(1),
+    },
+    documentCheckmarks: {
+        width: '100%',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    checkmarkContainer: {
+        width: scale(6),
+        height: scale(6),
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    checkmark: {
+        width: scale(4),
+        height: scale(2),
+        borderLeftWidth: scale(1),
+        borderBottomWidth: scale(1),
+        borderColor: COLORS.warmPurple,
+        transform: [{ rotate: '-45deg' }],
+    },
     bloodTestContainer: {
         position: 'relative',
         // width: scale(120),
@@ -848,7 +892,7 @@ const styles = StyleSheet.create({
         fontSize: moderateScale(12, 1.5),
         lineHeight: moderateScale(16, 1.5),
         fontWeight: '600',
-        color: COLORS.neutral700,
+        color: '#404040',
         textAlign: 'center',
         fontFamily: 'NotoSerif600',
     },
@@ -1006,6 +1050,16 @@ const styles = StyleSheet.create({
         width: scale(60),
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    slideIconContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: scale(75),
+        height: scale(75),
+    },
+    slideIcon: {
+        width: scale(75),
+        height: scale(75),
     },
     chatgptPeriod: {
         fontSize: moderateScale(10, 1.5),

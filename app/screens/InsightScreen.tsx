@@ -456,7 +456,7 @@ const InsightScreen = () => {
           {/* 28-Day Hormone Cycle Chart */}
 
           <ScrollView
-            ref={cycleChartScrollRef}
+            // ref={cycleChartScrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.cyclePhaseChartScrollView}
@@ -525,8 +525,8 @@ const InsightScreen = () => {
                 <View style={styles.chartHormoneCharacters}>
                   {/* Progesterone character at day 23 value */}
                   <View style={[styles.chartHormoneCharacter, {
-                    left: 14 + (20 * 40) + 20 - 21, // Center on day 21 line (42px icon)
-                    top: 200 - (7 * 200 / 10) - 21 // center vertically based on new data
+                    left: 14 + (44 * 20) + 10 - 21, // Center on day 23 line (index 44)
+                    top: 200 - (5.5 * 200 / 10) - 21 // center vertically based on new data
                   }]}>
                     <Image
                       source={require('../../assets/images/hormoneBuddy/ProgesteroneBothHand.png')}
@@ -536,8 +536,8 @@ const InsightScreen = () => {
                   </View>
                   {/* Estrogen character at day 23 value */}
                   <View style={[styles.chartHormoneCharacter, {
-                    left: 14 + (20 * 40) + 20 - 21, // Center on day 21 line (42px icon)
-                    top: 200 - (4.5 * 200 / 10) - 21 // center vertically based on new data
+                    left: 14 + (44 * 20) + 10 - 21, // Center on day 23 line (index 44)
+                    top: 200 - (3.8 * 200 / 10) - 21 // center vertically based on new data
                   }]}>
                     <Image
                       source={require('../../assets/images/hormoneBuddy/EstrogenBothHand.png')}
@@ -548,7 +548,7 @@ const InsightScreen = () => {
 
                   {/* Testosterone character at day 23 value */}
                   <View style={[styles.chartHormoneCharacter, {
-                    left: 14 + (20 * 40) + 20 - 21, // Center on day 21 line (42px icon)
+                    left: 14 + (44 * 20) + 10 - 21, // Center on day 23 line (index 44)
                     top: 200 - (0.6 * 200 / 10) - 21 // center vertically based on new data
                   }]}>
                     <Image
@@ -575,50 +575,260 @@ const InsightScreen = () => {
 
                 {/* Line Chart Overlay - Positioned absolutely on top */}
                 <View style={styles.lineChartOverlay}>
-                  <LineChart
+                  {/* <LineChart
                     data={[
-                      // Progesterone (Blue) - Very low in Menstrual/Follicular, rises significantly in Luteal
-
-                      { value: 0.3 }, { value: 0.3 }, { value: 0.3 }, { value: 0.3 }, { value: 0.3 },
-                      { value: 0.3 }, { value: 0.3 }, { value: 0.3 }, { value: 0.3 }, { value: 0.3 },
-                      { value: 0.3 }, { value: 0.3 }, { value: 0.5 }, { value: 1 },
-                      { value: 2 }, { value: 3.8 }, { value: 5.5 }, { value: 6.8 },
-                      { value: 7.5 }, { value: 7.8 }, { value: 7.7 }, { value: 7 },
-                      { value: 6 }, { value: 4.5 }, { value: 2.5 }, { value: 1.5 },
-                      { value: 0.8 }, { value: 0.3 }, { value: 0.3 }
+                      // Progesterone (Blue) - Half-day data points (56 total)
+                      // Day 1
+                      { value: 0.3 }, { value: 0.3 },
+                      // Day 2
+                      { value: 0.3 }, { value: 0.3 },
+                      // Day 3
+                      { value: 0.3 }, { value: 0.3 },
+                      // Day 4
+                      { value: 0.3 }, { value: 0.3 },
+                      // Day 5
+                      { value: 0.3 }, { value: 0.3 },
+                      // Day 6
+                      { value: 0.3 }, { value: 0.3 },
+                      // Day 7
+                      { value: 0.3 }, { value: 0.3 },
+                      // Day 8
+                      { value: 0.3 }, { value: 0.3 },
+                      // Day 9
+                      { value: 0.3 }, { value: 0.3 },
+                      // Day 10
+                      { value: 0.3 }, { value: 0.3 },
+                      // Day 11
+                      { value: 0.3 }, { value: 0.3 },
+                      // Day 12
+                      { value: 0.3 }, { value: 0.3 },
+                      // Day 13
+                      { value: 0.4 }, { value: 0.6 },
+                      // Day 14
+                      { value: 0.8 }, { value: 1.2 },
+                      // Day 15
+                      { value: 1.6 }, { value: 2.4 },
+                      // Day 16
+                      { value: 3.2 }, { value: 4.4 },
+                      // Day 17
+                      { value: 5.1 }, { value: 5.9 },
+                      // Day 18
+                      { value: 6.2 }, { value: 6.6 },
+                      // Day 19
+                      { value: 6.8 }, { value: 7.0 },
+                      // Day 20
+                      { value: 7.1 }, { value: 7.2 },
+                      // Day 21
+                      { value: 7.0 }, { value: 6.8 },
+                      // Day 22
+                      { value: 6.5 }, { value: 6.2 },
+                      // Day 23
+                      { value: 5.8 }, { value: 5.4 },
+                      // Day 24
+                      { value: 5.0 }, { value: 4.6 },
+                      // Day 25
+                      { value: 4.2 }, { value: 3.8 },
+                      // Day 26
+                      { value: 3.4 }, { value: 3.0 },
+                      // Day 27
+                      { value: 2.6 }, { value: 2.2 },
+                      // Day 28
+                      { value: 1.8 }, { value: 1.4 },
+                      // Day 29
+                      { value: 1.0 }, { value: 0.6 },
+                      // Day 30
+                      { value: 0.4 }, { value: 0.3 }
                     ]}
                     data2={[
-                      // Estrogen (Pink) - Rises in Follicular, sharp peak at Ovulation, secondary broader peak in Luteal
-                      // Estrogen (Pink) - Gradual rise in Follicular, sharp peak at Ovulation, drop, broader secondary peak, ends low
-                      { value: 1.3 }, { value: 1.3 }, { value: 1.3 }, { value: 1.3 }, { value: 1.3 },
-                      { value: 1.4 }, { value: 1.5 }, { value: 1.6 }, { value: 1.8 }, { value: 2.1 }, { value: 2.6 },
-                      { value: 3.5 }, { value: 5.5 }, { value: 8.5 }, { value: 2 },
-                      { value: 2.3 }, { value: 3.6 }, { value: 4.5 }, { value: 5.3 },
-                      { value: 5.5 }, { value: 5.3}, { value: 4.5 }, { value: 3.8 },
-                      { value: 2.8 }, { value: 2 }, { value: 1.6 }, { value: 1.5 },
-                      { value: 1.5 }, { value: 1.5 }, { value: 1 }
+                      // Estrogen (Pink) - Half-day data points (56 total)
+                      // Day 1
+                      { value: 1.3 }, { value: 1.3 },
+                      // Day 2
+                      { value: 1.3 }, { value: 1.3 },
+                      // Day 3
+                      { value: 1.3 }, { value: 1.3 },
+                      // Day 4
+                      { value: 1.33 }, { value: 1.351 },
+                      // Day 5
+                      { value: 1.4 }, { value: 1.450 },
+                      // Day 6
+                      { value: 1.5 }, { value: 1.550 },
+                      // Day 7
+                      { value: 1.6 }, { value: 1.650 },
+                      // Day 8
+                      { value: 1.7 }, { value: 1.75 },
+                      // Day 9
+                      { value: 1.82 }, { value: 1.89},
+                      // Day 10
+                      { value: 2.1 }, { value: 2.3 },
+                      // Day 11
+                      { value: 2.6 }, { value: 3.0 },
+                      // Day 12
+                      { value: 3.38 }, { value: 4.0 },
+                      // Day 13
+                      { value: 5.5 }, { value: 8.3 },
+                      // Day 14
+                      { value: 8.3 }, { value: 5.5 },
+                      // Day 15
+                      { value: 2.5 }, { value: 2.0 },
+                      // Day 16
+                      { value: 2.75 }, { value: 3.5 },
+                      // Day 17
+                      { value: 4 }, { value: 4.5 },
+                      // Day 18
+                      { value: 4.85 }, { value: 5.15 },
+                      // Day 19
+                      { value: 5.35 }, { value: 5.55},
+                      // Day 20
+                      { value: 5.65 }, { value: 5.6 },
+                      // Day 21
+                      { value: 5.5 }, { value: 5.2 },
+                      // Day 22
+                      { value: 4.9 }, { value: 4.6 },
+                      // Day 23
+                      { value: 4.2 }, { value: 3.85 },
+                      // Day 24
+                      { value: 3.6 }, { value: 3.25 },
+                      // Day 25
+                      { value: 3 }, { value: 2.65 },
+                      // Day 26
+                      { value: 2.25 }, { value: 1.98 },
+                      // Day 27
+                      { value: 1.8 }, { value: 1.7 },
+                      // Day 28
+                      { value: 1.8 }, { value: 2 },
+                      // Day 29
+                      { value: 2.2 }, { value: 2.0 },
+                      // Day 30
+                      { value: 1.6 }, { value: 1.3 }
                     ]}
                     data3={[
-                      // Testosterone (Purple) - Consistently low with slight rise around Ovulation
-                      { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 },
-                      { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 },
-                      { value: 0.8 }, { value: 0.8 }, { value: 1 }, { value: 2 },
-                      { value: 1 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 },
-                      { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 },
-                      { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 },
-                      { value: 0.8 }, { value: 0.8 }, { value: 0.8 }, { value: 0.8 }
+                      // Testosterone (Purple) - Half-day data points (56 total)
+                      // Day 1
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 2
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 3
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 4
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 5
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 6
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 7
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 8
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 9
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 10
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 11
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 12
+                      { value: 0.8 }, { value: 0.9 },
+                      // Day 13
+                      { value: 1.0 }, { value: 1.2 },
+                      // Day 14
+                      { value: 1.5 }, { value: 2.0 },
+                      // Day 15
+                      { value: 2.5 }, { value: 2.0 },
+                      // Day 16
+                      { value: 1.5 }, { value: 1.2 },
+                      // Day 17
+                      { value: 1.0 }, { value: 0.9 },
+                      // Day 18
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 19
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 20
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 21
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 22
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 23
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 24
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 25
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 26
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 27
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 28
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 29
+                      { value: 0.8 }, { value: 0.8 },
+                      // Day 30
+                      { value: 0.8 }, { value: 0.8 }
                     ]}
                     data4={[
-                      // LH (Black) - Low baseline, sharp spike at ovulation (around day 13-14)
-                      { value: 1.1 }, { value: 1.1 }, { value: 1.1 }, { value: 1.1 }, { value: 1.1 },
-                      { value: 1.1 }, { value: 1.1 }, { value: 1.1 }, { value: 1.1 }, { value: 1.1 },
-                      { value: 1.1 }, { value: 1.2 }, { value: 2.2 }, { value: 7.5 },
-                      { value: 2.8 }, { value: 1.5 }, { value: 1.1 }, { value: 1.1 },
-                      { value: 1.1 }, { value: 1.1 }, { value: 1.1 }, { value: 1.1 },
-                      { value: 1.1 }, { value: 1.1 }, { value: 1.1 }, { value: 1.1 },
-                      { value: 1.1 }, { value: 1.1 }, { value: 1.1 }
+                      // LH (Black) - Half-day data points (56 total)
+                      // Day 1
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 2
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 3
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 4
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 5
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 6
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 7
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 8
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 9
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 10
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 11
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 12
+                      { value: 1.1 }, { value: 1.2 },
+                      // Day 13
+                      { value: 1.3 }, { value: 1.8 },
+                      // Day 14
+                      { value: 2.5 }, { value: 5.0 },
+                      // Day 15
+                      { value: 7.5 }, { value: 4.0 },
+                      // Day 16
+                      { value: 2.5 }, { value: 1.8 },
+                      // Day 17
+                      { value: 1.5 }, { value: 1.2 },
+                      // Day 18
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 19
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 20
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 21
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 22
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 23
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 24
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 25
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 26
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 27
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 28
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 29
+                      { value: 1.1 }, { value: 1.1 },
+                      // Day 30
+                      { value: 1.1 }, { value: 1.1 }
                     ]}
-                  
+
                     color1="#0188BD"  // Progesterone (Blue)
                     color2="#FF69B4"  // Estrogen (Pink) 
                     color3="#9370DB"  // Testosterone (Purple)
@@ -632,13 +842,287 @@ const InsightScreen = () => {
                     hideRules
                     height={200}
                     maxValue={10}
-                    spacing={40}
+                    spacing={20}
                     adjustToWidth={true}
                     isAnimated
                     initialSpacing={0}
                     animationDuration={900}
                     hideYAxisText
-                  />
+                  /> */}
+                  <LineChart
+  data={[
+    // Progesterone (Blue) - Stays flat until after ovulation, then rises smoothly
+    // Day 1
+    { value: 0.3 }, { value: 0.3 },
+    // Day 2
+    { value: 0.3 }, { value: 0.3 },
+    // Day 3
+    { value: 0.3 }, { value: 0.3 },
+    // Day 4
+    { value: 0.3 }, { value: 0.3 },
+    // Day 5
+    { value: 0.3 }, { value: 0.3 },
+    // Day 6
+    { value: 0.3 }, { value: 0.3 },
+    // Day 7
+    { value: 0.3 }, { value: 0.3 },
+    // Day 8
+    { value: 0.3 }, { value: 0.3 },
+    // Day 9
+    { value: 0.3 }, { value: 0.3 },
+    // Day 10
+    { value: 0.3 }, { value: 0.3 },
+    // Day 11
+    { value: 0.3 }, { value: 0.3 },
+    // Day 12
+    { value: 0.3 }, { value: 0.3 },
+    // Day 13
+    { value: 0.3 }, { value: 0.3 },
+    // Day 14
+    { value: 0.4 }, { value: 0.6 },
+    // Day 15
+    { value: 1.0 }, { value: 1.6 },
+    // Day 16
+    { value: 2.4 }, { value: 3.4 },
+    // Day 17
+    { value: 4.5 }, { value: 5.5 },
+    // Day 18
+    { value: 6.3 }, { value: 6.9 },
+    // Day 19
+    { value: 7.3 }, { value: 7.5 },
+    // Day 20
+    { value: 7.6 }, { value: 7.6 },
+    // Day 21
+    { value: 7.5 }, { value: 7.3 },
+    // Day 22
+    { value: 7.0 }, { value: 6.6 },
+    // Day 23
+    { value: 6.1 }, { value: 5.5 },
+    // Day 24
+    { value: 4.9 }, { value: 4.3 },
+    // Day 25
+    { value: 3.7 }, { value: 3.1 },
+    // Day 26
+    { value: 2.6 }, { value: 2.1 },
+    // Day 27
+    { value: 1.7 }, { value: 1.3 },
+    // Day 28
+    { value: 1.0 }, { value: 0.7 },
+    // Day 29
+    { value: 0.5 }, { value: 0.4 },
+    // Day 30
+    { value: 0.3 }, { value: 0.3 }
+  ]}
+  data2={[
+    // Estrogen (Pink) - Keep your updated values
+    // Day 1
+    { value: 1.3 }, { value: 1.3 },
+    // Day 2
+    { value: 1.3 }, { value: 1.3 },
+    // Day 3
+    { value: 1.3 }, { value: 1.3 },
+    // Day 4
+    { value: 1.33 }, { value: 1.351 },
+    // Day 5
+    { value: 1.4 }, { value: 1.450 },
+    // Day 6
+    { value: 1.5 }, { value: 1.550 },
+    // Day 7
+    { value: 1.6 }, { value: 1.650 },
+    // Day 8
+    { value: 1.7 }, { value: 1.75 },
+    // Day 9
+    { value: 1.82 }, { value: 1.89},
+    // Day 10
+    { value: 2.1 }, { value: 2.3 },
+    // Day 11
+    { value: 2.6 }, { value: 3.0 },
+    // Day 12
+    { value: 3.38 }, { value: 4.0 },
+    // Day 13
+    { value: 5.5 }, { value: 8.3 },
+    // Day 14
+    { value: 8.3 }, { value: 5.5 },
+    // Day 15
+    { value: 2.5 }, { value: 2.0 },
+    // Day 16
+    { value: 2.75 }, { value: 3.5 },
+    // Day 17
+    { value: 4 }, { value: 4.5 },
+    // Day 18
+    { value: 4.85 }, { value: 5.15 },
+    // Day 19
+    { value: 5.35 }, { value: 5.55},
+    // Day 20
+    { value: 5.65 }, { value: 5.6 },
+    // Day 21
+    { value: 5.5 }, { value: 5.2 },
+    // Day 22
+    { value: 4.9 }, { value: 4.6 },
+    // Day 23
+    { value: 4.2 }, { value: 3.85 },
+    // Day 24
+    { value: 3.6 }, { value: 3.25 },
+    // Day 25
+    { value: 3 }, { value: 2.65 },
+    // Day 26
+    { value: 2.25 }, { value: 1.98 },
+    // Day 27
+    { value: 1.8 }, { value: 1.7 },
+    // Day 28
+    { value: 1.8 }, { value: 2 },
+    // Day 29
+    { value: 2.2 }, { value: 2.0 },
+    // Day 30
+    { value: 1.6 }, { value: 1.3 }
+  ]}
+  data3={[
+    // Testosterone (Purple) - Flat line with tiny peak at ovulation only
+    // Day 1
+    { value: 0.8 }, { value: 0.8 },
+    // Day 2
+    { value: 0.8 }, { value: 0.8 },
+    // Day 3
+    { value: 0.8 }, { value: 0.8 },
+    // Day 4
+    { value: 0.8 }, { value: 0.8 },
+    // Day 5
+    { value: 0.8 }, { value: 0.8 },
+    // Day 6
+    { value: 0.8 }, { value: 0.8 },
+    // Day 7
+    { value: 0.8 }, { value: 0.8 },
+    // Day 8
+    { value: 0.8 }, { value: 0.8 },
+    // Day 9
+    { value: 0.8 }, { value: 0.8 },
+    // Day 10
+    { value: 0.8 }, { value: 0.8 },
+    // Day 11
+    { value: 0.8 }, { value: 0.8 },
+    // Day 12
+    { value: 0.8 }, { value: 0.85 },
+    // Day 13
+    { value: 1.1 }, { value: 1.5 },
+    // Day 14
+    { value: 2.2 }, { value: 2.2 },
+    // Day 15
+    { value: 1.35 }, { value: 1 },
+    // Day 16
+    { value: 0.85 }, { value: 0.8 },
+    // Day 17
+    { value: 0.8 }, { value: 0.8 },
+    // Day 18
+    { value: 0.8 }, { value: 0.8 },
+    // Day 19
+    { value: 0.8 }, { value: 0.8 },
+    // Day 20
+    { value: 0.8 }, { value: 0.8 },
+    // Day 21
+    { value: 0.8 }, { value: 0.8 },
+    // Day 22
+    { value: 0.8 }, { value: 0.8 },
+    // Day 23
+    { value: 0.8 }, { value: 0.8 },
+    // Day 24
+    { value: 0.8 }, { value: 0.8 },
+    // Day 25
+    { value: 0.8 }, { value: 0.8 },
+    // Day 26
+    { value: 0.8 }, { value: 0.8 },
+    // Day 27
+    { value: 0.8 }, { value: 0.8 },
+    // Day 28
+    { value: 0.8 }, { value: 0.8 },
+    // Day 29
+    { value: 0.8 }, { value: 0.8 },
+    // Day 30
+    { value: 0.8 }, { value: 0.8 }
+  ]}
+  data4={[
+    // LH (Black) - Flat with very sharp, narrow peak at ovulation
+    // Day 1
+    { value: 1 }, { value: 1 },
+    // Day 2
+    { value: 1 }, { value: 1 },
+    // Day 3
+    { value: 1 }, { value: 1 },
+    // Day 4
+    { value: 1 }, { value: 1 },
+    // Day 5
+    { value: 1 }, { value: 1 },
+    // Day 6
+    { value: 1 }, { value: 1 },
+    // Day 7
+    { value: 1 }, { value: 1 },
+    // Day 8
+    { value: 1 }, { value: 1 },
+    // Day 9
+    { value: 1 }, { value: 1 },
+    // Day 10
+    { value: 1 }, { value: 1 },
+    // Day 11
+    { value: 1 }, { value: 1 },
+    // Day 12
+    { value: 1 }, { value: 1 },
+    // Day 13
+    { value: 1.25 }, { value: 2.45 },
+    // Day 14
+    { value: 7.65 }, { value: 7.5 },
+    // Day 15
+    { value: 2.25 }, { value: 1.15 },
+    // Day 16
+    { value: 1.05 }, { value: 1.05 },
+    // Day 17
+    { value: 1 }, { value: 1 },
+    // Day 18
+    { value: 1 }, { value: 1 },
+    // Day 19
+    { value: 1 }, { value: 1 },
+    // Day 20
+    { value: 1 }, { value: 1 },
+    // Day 21
+    { value: 1 }, { value: 1 },
+    // Day 22
+    { value: 1 }, { value: 1 },
+    // Day 23
+    { value: 1 }, { value: 1 },
+    // Day 24
+    { value: 1 }, { value: 1 },
+    // Day 25
+    { value: 1 }, { value: 1 },
+    // Day 26
+    { value: 1 }, { value: 1 },
+    // Day 27
+    { value: 1 }, { value: 1 },
+    // Day 28
+    { value: 1 }, { value: 1 },
+    // Day 29
+    { value: 1 }, { value: 1 },
+    // Day 30
+    { value: 1 }, { value: 1 }
+  ]}
+
+  color1="#0188BD"  // Progesterone (Blue)
+  color2="#FF69B4"  // Estrogen (Pink) 
+  color3="#9370DB"  // Testosterone (Purple)
+  color4="#FFC0C0"  // LH (Black)
+  curved
+  thickness={2.5}
+  hideDataPoints={true}
+  showVerticalLines={false}
+  yAxisThickness={0}
+  xAxisThickness={0}
+  hideRules
+  height={200}
+  maxValue={10}
+  spacing={20}
+  adjustToWidth={true}
+  isAnimated
+  initialSpacing={0}
+  animationDuration={900}
+  hideYAxisText
+/>
                 </View>
               </View>
 
@@ -1258,7 +1742,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    width: 1120, // 28 days × 40px spacing
+    width: 1120, // 56 half-days × 20px spacing = 1120px
     height: 200,
     pointerEvents: 'none',
     overflow: 'visible',
@@ -1269,7 +1753,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 40,
     bottom: 0, // Start from bottom X-axis
-    left: 14 + (20 * 40) + 20, // Day 23 = index 22, so 22 * 40px + padding + center offset
+    left: 14 + (44 * 20) + 10, // Day 23 = index 44 (22 * 2), so 44 * 20px + padding + center offset
     height: 200, // Full height from X-axis to top
     width: 1,
     pointerEvents: 'none',
@@ -1285,7 +1769,7 @@ const styles = StyleSheet.create({
   todayDateLabel: {
     position: 'absolute',
     bottom: 0, // Position below the X-axis
-    left: 14 + (20 * 40) + 10, // Center on day 23 line
+    left: 14 + (44 * 20) + 5, // Center on day 23 line (index 44)
     alignItems: 'center',
   },
 
