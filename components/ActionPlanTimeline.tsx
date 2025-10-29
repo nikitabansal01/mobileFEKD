@@ -1069,7 +1069,7 @@ export default function ActionPlanTimeline({
             
             return (
               <BlurView
-                intensity={18}
+                intensity={Platform.OS === 'android' ? 8 : 18}
                 tint="light"
                 // Use a more compatible blur method for Android to better handle SVG content behind
                 {...(Platform.OS === 'android' ? { experimentalBlurMethod: 'dimezisBlurView' as any } : {})}
