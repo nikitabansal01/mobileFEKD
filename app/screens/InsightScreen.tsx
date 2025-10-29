@@ -27,6 +27,14 @@ const InsightScreen = () => {
   const navigation = useNavigation();
   const [selectedMonth, setSelectedMonth] = useState('Month');
   const cycleChartScrollRef = useRef<ScrollView>(null);
+  // Current date label like "Wed\nSep 10"
+  const todayLabel = (() => {
+    const now = new Date();
+    const weekday = now.toLocaleDateString('en-US', { weekday: 'short' });
+    const month = now.toLocaleDateString('en-US', { month: 'short' });
+    const day = now.getDate();
+    return `${weekday}\n${month} ${day}`;
+  })();
 
   // Disable back gesture when using horizontal scrolling
   useFocusEffect(
@@ -1199,7 +1207,7 @@ const InsightScreen = () => {
 
               {/* Date label for day 23 */}
               <View style={styles.todayDateLabel}>
-                <Text style={styles.todayDateText}>Wed{'\n'}Sep 10</Text>
+                <Text style={styles.todayDateText}>{todayLabel}</Text>
               </View>
             </View>
           </ScrollView>
