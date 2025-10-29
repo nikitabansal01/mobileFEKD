@@ -239,7 +239,8 @@ const styles = StyleSheet.create({
       color: '#6E4B6F',
       textAlign: 'center',
       lineHeight: moderateScale(26, 1.5),
-      marginTop: verticalScale(20),
+      // marginTop: verticalScale(0),
+      paddingTop: verticalScale(5),
       zIndex: 10,
     },
     loadingContainer: {
