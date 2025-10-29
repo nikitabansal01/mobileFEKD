@@ -203,8 +203,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: responsiveHeight(5), // Move Auvra character position up
     paddingHorizontal: responsiveWidth(5),
-    paddingBottom: responsiveHeight(20), // Sufficient space for bottom button
-    flexGrow: 1, // Use full height even when content is small
+    paddingBottom: responsiveHeight(10), // Sufficient space for bottom button
+    // flexGrow: 1, // Use full height even when content is small
   },
   headerSection: {
     alignItems: 'center',

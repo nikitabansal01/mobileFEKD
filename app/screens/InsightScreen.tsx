@@ -456,7 +456,7 @@ const InsightScreen = () => {
           {/* 28-Day Hormone Cycle Chart */}
 
           <ScrollView
-            // ref={cycleChartScrollRef}
+            ref={cycleChartScrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.cyclePhaseChartScrollView}
@@ -932,39 +932,39 @@ const InsightScreen = () => {
     // Day 8
     { value: 1.7 }, { value: 1.75 },
     // Day 9
-    { value: 1.82 }, { value: 1.89},
+    { value: 1.82 }, { value: 1.95},
     // Day 10
     { value: 2.1 }, { value: 2.3 },
     // Day 11
-    { value: 2.6 }, { value: 3.0 },
+    { value: 2.5 }, { value: 2.8 },
     // Day 12
-    { value: 3.38 }, { value: 4.0 },
+    { value: 3.3 }, { value: 4.10 },
     // Day 13
     { value: 5.5 }, { value: 8.3 },
     // Day 14
     { value: 8.3 }, { value: 5.5 },
     // Day 15
-    { value: 2.5 }, { value: 2.0 },
+    { value: 2.65 }, { value: 1.9 },
     // Day 16
-    { value: 2.75 }, { value: 3.5 },
+    { value: 2.5 }, { value: 3.25 },
     // Day 17
-    { value: 4 }, { value: 4.5 },
+    { value: 3.9 }, { value: 4.5 },
     // Day 18
-    { value: 4.85 }, { value: 5.15 },
+    { value: 4.95 }, { value: 5.28 },
     // Day 19
-    { value: 5.35 }, { value: 5.55},
+    { value: 5.55 }, { value: 5.68},
     // Day 20
-    { value: 5.65 }, { value: 5.6 },
+    { value: 5.75 }, { value: 5.7 },
     // Day 21
-    { value: 5.5 }, { value: 5.2 },
+    { value: 5.53 }, { value: 5.28 },
     // Day 22
-    { value: 4.9 }, { value: 4.6 },
+    { value: 4.96 }, { value: 4.58 },
     // Day 23
-    { value: 4.2 }, { value: 3.85 },
+    { value: 4.25 }, { value: 3.85 },
     // Day 24
-    { value: 3.6 }, { value: 3.25 },
+    { value: 3.5 }, { value: 3.15 },
     // Day 25
-    { value: 3 }, { value: 2.65 },
+    { value: 2.85 }, { value: 2.55 },
     // Day 26
     { value: 2.25 }, { value: 1.98 },
     // Day 27
@@ -1003,11 +1003,11 @@ const InsightScreen = () => {
     // Day 12
     { value: 0.8 }, { value: 0.85 },
     // Day 13
-    { value: 1.1 }, { value: 1.5 },
+    { value: 1.105 }, { value: 1.805 },
     // Day 14
-    { value: 2.2 }, { value: 2.2 },
+    { value: 2.41 }, { value: 2.35 },
     // Day 15
-    { value: 1.35 }, { value: 1 },
+    { value: 1.66 }, { value: 1.09 },
     // Day 16
     { value: 0.85 }, { value: 0.8 },
     // Day 17
@@ -1039,72 +1039,8 @@ const InsightScreen = () => {
     // Day 30
     { value: 0.8 }, { value: 0.8 }
   ]}
-  // data4={[
-  //   // LH (Black) - Flat with very sharp, narrow peak at ovulation
-  //   // Day 1
-  //   { value: 1 }, { value: 1 },
-  //   // Day 2
-  //   { value: 1 }, { value: 1 },
-  //   // Day 3
-  //   { value: 1 }, { value: 1 },
-  //   // Day 4
-  //   { value: 1 }, { value: 1 },
-  //   // Day 5
-  //   { value: 1 }, { value: 1 },
-  //   // Day 6
-  //   { value: 1 }, { value: 1 },
-  //   // Day 7
-  //   { value: 1 }, { value: 1 },
-  //   // Day 8
-  //   { value: 1 }, { value: 1 },
-  //   // Day 9
-  //   { value: 1 }, { value: 1 },
-  //   // Day 10
-  //   { value: 1 }, { value: 1 },
-  //   // Day 11
-  //   { value: 1 }, { value: 1 },
-  //   // Day 12
-  //   { value: 1 }, { value: 1 },
-  //   // Day 13
-  //   { value: 1.25 }, { value: 2.45 },
-  //   // Day 14
-  //   { value: 7.65 }, { value: 7.5 },
-  //   // Day 15
-  //   { value: 2.25 }, { value: 1.15 },
-  //   // Day 16
-  //   { value: 1.05 }, { value: 1.05 },
-  //   // Day 17
-  //   { value: 1 }, { value: 1 },
-  //   // Day 18
-  //   { value: 1 }, { value: 1 },
-  //   // Day 19
-  //   { value: 1 }, { value: 1 },
-  //   // Day 20
-  //   { value: 1 }, { value: 1 },
-  //   // Day 21
-  //   { value: 1 }, { value: 1 },
-  //   // Day 22
-  //   { value: 1 }, { value: 1 },
-  //   // Day 23
-  //   { value: 1 }, { value: 1 },
-  //   // Day 24
-  //   { value: 1 }, { value: 1 },
-  //   // Day 25
-  //   { value: 1 }, { value: 1 },
-  //   // Day 26
-  //   { value: 1 }, { value: 1 },
-  //   // Day 27
-  //   { value: 1 }, { value: 1 },
-  //   // Day 28
-  //   { value: 1 }, { value: 1 },
-  //   // Day 29
-  //   { value: 1 }, { value: 1 },
-  //   // Day 30
-  //   { value: 1 }, { value: 1 }
-  // ]}
-
   data4={[
-    // LH (Black) - Smooth transitions with sharp but natural peak at ovulation
+    // LH (Black) - Flat with very sharp, narrow peak at ovulation
     // Day 1
     { value: 1 }, { value: 1 },
     // Day 2
@@ -1128,17 +1064,17 @@ const InsightScreen = () => {
     // Day 11
     { value: 1 }, { value: 1 },
     // Day 12
-    { value: 1 }, { value: 1.1 },
+    { value: 1.03 }, { value: 1.1 },
     // Day 13
-    { value: 1.3 }, { value: 1.8 },
+    { value: 1.5 }, { value: 2.98 },
     // Day 14
-    { value: 3.5 }, { value: 6.5 },
+    { value: 7.65 }, { value: 7.5 },
     // Day 15
-    { value: 7.5 }, { value: 4.5 },
+    { value: 2.47 }, { value: 1.2 },
     // Day 16
-    { value: 2.2 }, { value: 1.4 },
+    { value: 1 }, { value: 1 },
     // Day 17
-    { value: 1.15 }, { value: 1.05 },
+    { value: 1 }, { value: 1 },
     // Day 18
     { value: 1 }, { value: 1 },
     // Day 19
@@ -1166,6 +1102,70 @@ const InsightScreen = () => {
     // Day 30
     { value: 1 }, { value: 1 }
   ]}
+
+  // data4={[
+  //   // LH (Black) - Smooth transitions with sharp but natural peak at ovulation
+  //   // Day 1
+  //   { value: 1 }, { value: 1 },
+  //   // Day 2
+  //   { value: 1 }, { value: 1 },
+  //   // Day 3
+  //   { value: 1 }, { value: 1 },
+  //   // Day 4
+  //   { value: 1 }, { value: 1 },
+  //   // Day 5
+  //   { value: 1 }, { value: 1 },
+  //   // Day 6
+  //   { value: 1 }, { value: 1 },
+  //   // Day 7
+  //   { value: 1 }, { value: 1 },
+  //   // Day 8
+  //   { value: 1 }, { value: 1 },
+  //   // Day 9
+  //   { value: 1 }, { value: 1 },
+  //   // Day 10
+  //   { value: 1 }, { value: 1 },
+  //   // Day 11
+  //   { value: 1 }, { value: 1 },
+  //   // Day 12
+  //   { value: 1 }, { value: 1.1 },
+  //   // Day 13
+  //   { value: 1.3 }, { value: 1.8 },
+  //   // Day 14
+  //   { value: 3.5 }, { value: 6.5 },
+  //   // Day 15
+  //   { value: 7.5 }, { value: 4.5 },
+  //   // Day 16
+  //   { value: 2.2 }, { value: 1.4 },
+  //   // Day 17
+  //   { value: 1.15 }, { value: 1.05 },
+  //   // Day 18
+  //   { value: 1 }, { value: 1 },
+  //   // Day 19
+  //   { value: 1 }, { value: 1 },
+  //   // Day 20
+  //   { value: 1 }, { value: 1 },
+  //   // Day 21
+  //   { value: 1 }, { value: 1 },
+  //   // Day 22
+  //   { value: 1 }, { value: 1 },
+  //   // Day 23
+  //   { value: 1 }, { value: 1 },
+  //   // Day 24
+  //   { value: 1 }, { value: 1 },
+  //   // Day 25
+  //   { value: 1 }, { value: 1 },
+  //   // Day 26
+  //   { value: 1 }, { value: 1 },
+  //   // Day 27
+  //   { value: 1 }, { value: 1 },
+  //   // Day 28
+  //   { value: 1 }, { value: 1 },
+  //   // Day 29
+  //   { value: 1 }, { value: 1 },
+  //   // Day 30
+  //   { value: 1 }, { value: 1 }
+  // ]}
 
   color1="#0188BD"  // Progesterone (Blue)
   color2="#FF69B4"  // Estrogen (Pink) 

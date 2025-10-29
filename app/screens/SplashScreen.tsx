@@ -79,12 +79,12 @@ export default function SplashScreen() {
       <View style={styles.content}>
         <View style={styles.contentContainer}>
           {/* Blurred Gradient Background */}
-          <BlurView intensity={200} style={styles.gradientWrapper}>
+          <BlurView intensity={20} style={styles.gradientWrapper}>
             <LinearGradient
               colors={[
-                'rgba(255, 255, 255, 0.15)',
+                'rgba(255, 255, 255, 0.01)',
                 'rgba(242, 147, 183, 0.20)',
-                'rgba(255, 255, 255, 0.15)',  // Fades to transparent
+                'rgba(255, 255, 255, 0.1)',  // Fades to transparent
               ]}
               start={{ x: 0.5, y: 0 }}
               end={{ x: 0.5, y: 1 }}
@@ -116,7 +116,7 @@ export default function SplashScreen() {
               { opacity: textFadeAnim }
             ]}
           >
-            The missing piece in your{'\n'}hormone care
+            The missing piece in your{'\n'}hormonal care
           </Animated.Text>
     
           {/* Loading Animation */}
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     gradientWrapper: {
       position: 'absolute',
       width: scale(600),
-      height: scale(500),
+      height: scale(400),
       borderRadius: scale(250),  // Circular shape
       overflow: 'hidden',        // Important for borderRadius to work with BlurView
     },
@@ -238,8 +238,8 @@ const styles = StyleSheet.create({
       fontFamily: 'Poppins400',
       color: '#6E4B6F',
       textAlign: 'center',
-      lineHeight: moderateScale(24, 1.5),
-      marginBottom: verticalScale(30),
+      lineHeight: moderateScale(26, 1.5),
+      marginTop: verticalScale(30),
       zIndex: 10,
     },
     loadingContainer: {

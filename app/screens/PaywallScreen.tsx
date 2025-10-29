@@ -12,7 +12,6 @@ import {
     Dimensions,
     FlatList,
     Image,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -234,11 +233,11 @@ export default function PaywallScreen() {
                     {/* Auvra Character */}
                     <View style={[styles.characterContainer, showPaymentPlan ? styles.characterContainerPayment : styles.characterContainerPaywall]}>
                         <View style={styles.characterGlow}>
-                            <Svg height={scale(220)} width={scale(250)} style={styles.haloSvg}>
+                            <Svg height={scale(364)} width={scale(359)} style={styles.haloSvg}>
                                 <Defs>
                                     <RadialGradient id="haloGrad" cx="50%" cy="50%" r="50%">
                                         <Stop offset="0%" stopColor="#FFF" stopOpacity="1" />
-                                        <Stop offset="60%" stopColor="#FFF" stopOpacity="0.7" />
+                                        <Stop offset="60%" stopColor="#FFF" stopOpacity="0.8" />
                                         <Stop offset="100%" stopColor="#FFF" stopOpacity="0" />
                                     </RadialGradient>
                                 </Defs>
@@ -514,15 +513,15 @@ const styles = StyleSheet.create({
     scrollContent: {
         paddingBottom: verticalScale(120), // Add padding to prevent content from being hidden behind fixed bottom section
     },
-    statusBar: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: scale(20),
-        paddingTop: Platform.OS === 'ios' ? verticalScale(50) : verticalScale(20),
-        paddingBottom: verticalScale(10),
-        zIndex: 10,
-    },
+    // statusBar: {
+    //     flexDirection: 'row',
+    //     justifyContent: 'space-between',
+    //     alignItems: 'center',
+    //     paddingHorizontal: scale(20),
+    //     paddingTop: Platform.OS === 'ios' ? verticalScale(50) : verticalScale(20),
+    //     paddingBottom: verticalScale(10),
+    //     zIndex: 10,
+    // },
     timeText: {
         fontSize: moderateScale(15),
         fontWeight: '600',
@@ -563,24 +562,25 @@ const styles = StyleSheet.create({
     },
     closeButton: {
         position: 'absolute',
-        top: verticalScale(50),
+        top: verticalScale(40),
         right: scale(15),
         zIndex: 10,
     },
     headerSection: {
         alignItems: 'center',
-        paddingTop: verticalScale(20),
+        // paddingTop: verticalScale(20),
         paddingHorizontal: scale(40),
-        zIndex: 1,
+        zIndex: 0,
         position: 'relative',
-        marginTop: verticalScale(-150), // Move up to overlap with background
+        marginTop: verticalScale(-180), // Move up to overlap with background
+        
     },
     headerSectionPaywall: {
         // paddingBottom: verticalScale(),
     },
     headerSectionPayment: {
         paddingBottom: verticalScale(20),
-        paddingTop: verticalScale(20),
+        // paddingTop: verticalScale(20),
         // marginTop: verticalScale(-20),
     },
     characterContainer: {
@@ -600,13 +600,13 @@ const styles = StyleSheet.create({
         elevation: 15,
         alignItems: 'center',
         justifyContent: 'center',
-        width: scale(250),
+        width: scale(359),
         height: scale(200),
     },
 
     haloSvg: {
         position: 'absolute',
-        zIndex: 0,
+        zIndex: -1,
         top: 0,
         left: 0,
     },
@@ -615,9 +615,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         borderColor: 'red',
+        paddingTop: verticalScale(80),
     },
     headerText: {
         alignItems: 'center',
+        paddingTop: verticalScale(40),
     },
     maskedViewContainer: {
         alignItems: 'center',

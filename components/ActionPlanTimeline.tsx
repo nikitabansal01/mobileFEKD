@@ -6,7 +6,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
-  Image, Platform, StyleSheet,
+  Image,
+  Platform,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View
@@ -1065,33 +1067,20 @@ export default function ActionPlanTimeline({
             const tomorrowTextHeight = responsiveHeight(6);
             const tomorrowStartY = todayLastY + geom.ITEM_BLOCK_H / 2 + geom.CAP_BOTTOM + responsiveHeight(8) + tomorrowTextHeight;
             
-            return Platform.OS === 'ios' ? (
+            return (
               <BlurView
-                intensity={10}
+                intensity={18}
                 tint="light"
+                // Use a more compatible blur method for Android to better handle SVG content behind
+                {...(Platform.OS === 'android' ? { experimentalBlurMethod: 'dimezisBlurView' as any } : {})}
                 style={[
                   styles.tomorrowSectionBlur,
                   {
                     top: tomorrowStartY,
                     height: contentHeight - tomorrowStartY,
-                    left: -responsiveWidth(5), // Extend beyond container bounds
-                    right: -responsiveWidth(5), // Extend beyond container bounds
-                    zIndex: 100, // Ensure it's on top
-                  }
-                ]}
-              />
-            ) : (
-              // Android fallback with semi-transparent overlay
-              <View
-                style={[
-                  styles.tomorrowSectionBlur,
-                  styles.tomorrowSectionBlurAndroid,
-                  {
-                    top: tomorrowStartY,
-                    height: contentHeight - tomorrowStartY,
-                    left: -responsiveWidth(5), // Extend beyond container bounds
-                    right: -responsiveWidth(5), // Extend beyond container bounds
-                    zIndex: 100, // Ensure it's on top
+                    left: -responsiveWidth(5),
+                    right: -responsiveWidth(5),
+                    zIndex: 100,
                   }
                 ]}
               />
@@ -1578,13 +1567,18 @@ const styles = StyleSheet.create({
   
   // Android fallback for blur effect
   tomorrowSectionBlurAndroid: {
-    backgroundColor: 'rgba(255, 255, 255, 0.8)', // Semi-transparent white overlay
-    // Add a subtle gradient effect to simulate blur
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 0, // Avoid curved edges causing visible borders on Android
+    borderWidth: 0,
+    borderColor: 'transparent',
+    shadowColor: 'transparent', // Remove shadow to prevent border-like halo
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0, // Disable elevation halo
+    // Slightly expand vertically to hide potential subpixel seams
+    marginTop: -1,
+    marginBottom: -1,
   },
   
   // Time-based icon style (matching Figma design)
