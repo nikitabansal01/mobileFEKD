@@ -237,7 +237,7 @@ export default function PaywallScreen() {
                                 <Defs>
                                     <RadialGradient id="haloGrad" cx="50%" cy="50%" r="50%">
                                         <Stop offset="0%" stopColor="#FFF" stopOpacity="1" />
-                                        <Stop offset="60%" stopColor="#FFF" stopOpacity="0.8" />
+                                        <Stop offset="50%" stopColor="#FFF" stopOpacity="0.8" />
                                         <Stop offset="100%" stopColor="#FFF" stopOpacity="0" />
                                     </RadialGradient>
                                 </Defs>
