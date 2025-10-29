@@ -61,7 +61,7 @@ export default function SplashScreen() {
     // Navigate to onboarding after 3 seconds
     const timer = setTimeout(() => {
       navigation.replace('OnboardingScreen');
-    }, 3000);
+    }, 5000);
 
     return () => clearTimeout(timer);
   }, [navigation]);
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
       color: '#6E4B6F',
       textAlign: 'center',
       lineHeight: moderateScale(26, 1.5),
-      marginTop: verticalScale(30),
+      marginTop: verticalScale(20),
       zIndex: 10,
     },
     loadingContainer: {
