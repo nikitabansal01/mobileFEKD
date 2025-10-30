@@ -944,7 +944,7 @@ export default function ActionPlanTimeline({
                   top: gapCenterY - responsiveHeight(1.5), // Adjust to avoid overlap with line
                 }]}>
                   <Text style={styles.tomorrowSectionTitle}>Tomorrow</Text>
-                  <Text style={styles.tomorrowDateText}>{tomorrowDate}th {tomorrowMonth}, {tomorrow.getFullYear()}</Text>
+                  <Text style={styles.tomorrowDateText}>{`${tomorrowMonth} ${tomorrowDate}, ${tomorrow.getFullYear()}`}</Text>
                   
                   {/* Lock icon - render below the line */}
                   <View style={styles.tomorrowLockContainer}>
