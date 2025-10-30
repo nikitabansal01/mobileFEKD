@@ -664,6 +664,7 @@ const styles = StyleSheet.create({
     },
     flatListContent: {
         paddingLeft: scale(10),
+        paddingRight: scale(10),
     },
     featureSlide: {
         width: screenWidth * 0.85,
