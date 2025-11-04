@@ -1,6 +1,4 @@
-import { useNavigation } from '@react-navigation/native';
-import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import BottomNavigationBar from '../../components/BottomNavigationBar';
 import ChatHistoryScreen from './ChatHistoryScreen';
 import CommunityScreen from './CommunityScreen';
@@ -27,76 +25,60 @@ interface MainScreenTabsProps {
   };
 }
 
+const Tab = createBottomTabNavigator();
+
 export default function MainScreenTabs({ route }: MainScreenTabsProps) {
-  const navigation = useNavigation();
-  const [activeTab, setActiveTab] = useState<TabType>('home');
-
-  // Handle route params for navigation from HomeScreen
-  React.useEffect(() => {
-    console.log('MainScreenTabs - route params received:', route?.params);
-    if (route?.params?.activeTab) {
-      console.log('MainScreenTabs - Setting activeTab to:', route.params.activeTab);
-      setActiveTab(route.params.activeTab as TabType);
-    }
-    if (route?.params?.chatContext) {
-      console.log('MainScreenTabs - chatContext received:', route.params.chatContext);
-    }
-  }, [route?.params?.activeTab, route?.params?.chatContext]);
-
-  const handleBackToHome = () => {
-    setActiveTab('home');
-  };
-
-  const renderScreen = () => {
-    switch (activeTab) {
-      case 'home':
-        return <HomeScreen />;
-      case 'personalize':
-        return <PersonalizeScreen />;
-      case 'progress':
-      case 'insights': // Map insights to insight screen
-        return <InsightScreen />;
-      case 'community':
-        return <CommunityScreen />;
-      case 'profile':
-        return <ProfileScreen navigation={navigation} />;
-      case 'auvra':
-        return <ChatHistoryScreen 
-          onBackToHome={handleBackToHome} 
-          activeTab={activeTab}
-          onTabPress={handleTabPress}
-          chatContext={route?.params?.chatContext}
-        />;
-      default:
-        return <HomeScreen />;
-    }
-  };
-
-  const handleTabPress = (tab: string) => {
-    setActiveTab(tab as TabType);
-  };
+  const initialTab = route?.params?.activeTab || 'home';
+  const chatContext = route?.params?.chatContext;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        {renderScreen()}
-      </View>
-      {activeTab !== 'auvra' && (
-        <BottomNavigationBar 
-          activeTab={activeTab} 
-          onTabPress={handleTabPress}
-        />
-      )}
-    </View>
+    <Tab.Navigator
+      initialRouteName={initialTab}
+      screenOptions={{
+        headerShown: false,
+        // lazy: false, // Render all screens immediately - keeps them mounted
+      }}
+      tabBar={(props) => {
+        // Hide tab bar on auvra screen
+        const currentRoute = props.state.routes[props.state.index].name;
+        if (currentRoute === 'auvra') {
+          return null;
+        }
+        return <BottomNavigationBar {...props} />;
+      }}
+    >
+      <Tab.Screen 
+        name="home" 
+        component={HomeScreen}
+      />
+      <Tab.Screen 
+        name="personalize" 
+        component={PersonalizeScreen}
+      />
+      <Tab.Screen 
+        name="insights" 
+        component={InsightScreen}
+      />
+      <Tab.Screen 
+        name="progress" 
+        component={InsightScreen}
+      />
+      <Tab.Screen 
+        name="community" 
+        component={CommunityScreen}
+      />
+      <Tab.Screen 
+        name="profile" 
+        component={ProfileScreen}
+      />
+      <Tab.Screen 
+        name="auvra" 
+        component={ChatHistoryScreen}
+        initialParams={{ 
+          chatContext: chatContext,
+          onBackToHome: () => {}, // This will be handled by navigation
+        }}
+      />
+    </Tab.Navigator>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  content: {
-    flex: 1,
-  },
-});

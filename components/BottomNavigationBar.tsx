@@ -1,21 +1,27 @@
+import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AuvraCharacterNoShadow from './AuvraCharacterNoShadow';
 
 /**
- * Props for the BottomNavigationBar component
+ * Props for backwards compatibility
  */
-interface BottomNavigationBarProps {
-  /** Currently active tab */
+interface LegacyBottomNavigationBarProps {
   activeTab?: 'home' | 'personalize' | 'auvra' | 'insights' | 'profile' | 'progress' | 'community';
-  /** Custom tab press handler */
   onTabPress?: (tab: string) => void;
-  /** Navigation object */
   navigation?: any;
+}
+
+type BottomNavigationBarProps = BottomTabBarProps | LegacyBottomNavigationBarProps;
+
+/**
+ * Type guard to check if props are from React Navigation
+ */
+function isReactNavigationProps(props: BottomNavigationBarProps): props is BottomTabBarProps {
+  return 'state' in props && 'navigation' in props && props.state !== undefined;
 }
 
 /**
@@ -23,91 +29,77 @@ interface BottomNavigationBarProps {
  * 
  * A custom bottom navigation bar with 5 tabs including a centered Auvra character.
  * Provides navigation between main app screens with visual feedback.
- * 
- * @param props - Component props
- * @param props.activeTab - Currently active tab
- * @param props.onTabPress - Custom tab press handler
- * @returns JSX.Element
  */
-const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
-  activeTab = 'home',
-  onTabPress,
-  navigation: propNavigation
-}) => {
+const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
   const hookNavigation = useNavigation();
-  const navigation = propNavigation || hookNavigation;
-  const insets = useSafeAreaInsets();
-  
-  // Character size configuration
   const characterSize = responsiveWidth(20);
-  // Empty string size calculation (same as tabIcon fontSize)
-  const emptyIconSize = responsiveFontSize(2.5);
-  // Pure gap between character and text (in pixels)
-  const characterTextGap = 8;
 
   const tabs = [
     { 
       key: 'home', 
       label: 'Home', 
       icon: require('../assets/icons/IconHome.png'),
-      screen: 'HomeScreen' 
     },
     { 
       key: 'personalize', 
       label: 'Personalize', 
       icon: require('../assets/icons/IconPersonalize.png'),
-      screen: 'PersonalizeScreen' 
     },
     { 
       key: 'auvra', 
       label: 'Auvra', 
-      icon: null, // No icon - will use Auvra character
-      screen: 'ChatHistoryScreen' 
+      icon: null,
     },
     { 
       key: 'insights', 
       label: 'Insights', 
-      icon: require('../assets/icons/IconProgress.png'), // Using progress icon for insights
-      screen: 'insights' // Map to insights tab in MainScreenTabs
+      icon: require('../assets/icons/IconProgress.png'),
     },
     { 
       key: 'profile', 
       label: 'Profile', 
       icon: require('../assets/icons/IconProfile.png'),
-      screen: 'profile' // Map to profile tab in MainScreenTabs
     },
   ];
 
-  /**
-   * Handles tab press events
-   * 
-   * @param tabKey - Tab identifier
-   * @param screenName - Screen name to navigate to
-   */
-  const handleTabPress = (tabKey: string, screenName: string) => {
-    console.log(`Attempting to navigate to ${screenName}`);
+  // Determine which mode we're in
+  let activeTab: string;
+  let handleTabPress: (routeName: string) => void;
+
+  if (isReactNavigationProps(props)) {
+    // React Navigation mode
+    const { state, navigation } = props;
+    activeTab = state.routes[state.index].name;
     
-    // If onTabPress callback is provided, use it and skip direct navigation
-    if (onTabPress) {
-      console.log('Using onTabPress callback for navigation');
-      onTabPress(tabKey);
-      return;
-    }
-    
-    // Fallback to direct navigation only if no callback is provided
-    if (screenName && navigation) {
-      try {
-        console.log('Navigation object:', navigation);
-        // @ts-ignore - Ignore navigation type check
-        navigation.navigate(screenName);
-        console.log(`Successfully navigated to ${screenName}`);
-      } catch (error) {
-        console.log(`Cannot navigate to screen ${screenName}:`, error);
+    handleTabPress = (routeName: string) => {
+      const event = navigation.emit({
+        type: 'tabPress',
+        target: state.routes.find(r => r.name === routeName)?.key || '',
+        canPreventDefault: true,
+      });
+
+      if (!event.defaultPrevented) {
+        navigation.navigate(routeName);
       }
-    } else {
-      console.log('No screen name or navigation object available');
-    }
-  };
+    };
+  } else {
+    // Legacy mode
+    const { activeTab: legacyActiveTab = 'home', onTabPress, navigation: propNavigation } = props;
+    activeTab = legacyActiveTab;
+    const navigation = propNavigation || hookNavigation;
+    
+    handleTabPress = (routeName: string) => {
+      if (onTabPress) {
+        onTabPress(routeName);
+      } else if (navigation) {
+        try {
+          navigation.navigate(routeName);
+        } catch (error) {
+          console.log(`Cannot navigate to ${routeName}:`, error);
+        }
+      }
+    };
+  }
 
   return (
     <View style={styles.container}>
@@ -123,34 +115,38 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
         {/* White navigation background */}
         <View style={styles.navBackground}>
           <View style={styles.tabsRow}>
-            {tabs.map((tab) => (
-              <TouchableOpacity
-                key={tab.key}
-                style={[
-                  styles.tab,
-                  activeTab === tab.key && styles.activeTab,
-                  activeTab === tab.key && tab.key === 'auvra' && styles.activeTabAuvra
-                ]}
-                onPress={() => handleTabPress(tab.key, tab.screen)}
-              >
-                {tab.icon ? (
-                  <Image 
-                    source={tab.icon}
-                    style={styles.tabIcon}
-                    tintColor={activeTab === tab.key ? '#C17EC9' : '#000000'}
-                    resizeMode="contain"
-                  />
-                ) : (
-                  <View style={styles.emptyIconSpace} />
-                )}
-                <Text style={[
-                  styles.tabLabel,
-                  activeTab === tab.key && styles.activeTabLabel
-                ]}>
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.key;
+              
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.tab,
+                    isActive && styles.activeTab,
+                    isActive && tab.key === 'auvra' && styles.activeTabAuvra
+                  ]}
+                  onPress={() => handleTabPress(tab.key)}
+                >
+                  {tab.icon ? (
+                    <Image 
+                      source={tab.icon}
+                      style={styles.tabIcon}
+                      tintColor={isActive ? '#C17EC9' : '#000000'}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <View style={styles.emptyIconSpace} />
+                  )}
+                  <Text style={[
+                    styles.tabLabel,
+                    isActive && styles.activeTabLabel
+                  ]}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
         
@@ -158,7 +154,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
         <View style={styles.characterWrapper}>
           <TouchableOpacity 
             style={styles.characterContainer}
-            onPress={() => handleTabPress('auvra', 'ChatHistoryScreen')}
+            onPress={() => handleTabPress('auvra')}
             activeOpacity={0.7}
           >
             <AuvraCharacterNoShadow size={characterSize} />
@@ -175,9 +171,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: responsiveHeight(11.5), // 92px total height to accommodate Auvra character
+    height: responsiveHeight(11.5),
     zIndex: 1000,
-    backgroundColor: 'transparent', // Transparent to allow Auvra character to show
+    backgroundColor: 'transparent',
   },
   gradientBackground: {
     position: 'absolute',
@@ -197,10 +193,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: responsiveHeight(8.5), // Increased to 85px for better visibility
-    backgroundColor: 'rgba(255, 255, 255, 1)', // More transparent for better blend
-    paddingHorizontal: responsiveWidth(5.1), // 18.257px
-    paddingVertical: responsiveHeight(1.5), // Increased padding
+    height: responsiveHeight(8.5),
+    backgroundColor: 'rgba(255, 255, 255, 1)',
+    paddingHorizontal: responsiveWidth(5.1),
+    paddingVertical: responsiveHeight(1.5),
     zIndex: 2,
     borderTopWidth: 0.5,
     borderTopColor: 'rgba(0, 0, 0, 0.05)',
@@ -223,47 +219,47 @@ const styles = StyleSheet.create({
   tab: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: responsiveWidth(1.6), // 5.809px
-    paddingVertical: responsiveHeight(1), // 7.469px
+    paddingHorizontal: responsiveWidth(1.6),
+    paddingVertical: responsiveHeight(1),
     borderRadius: 28,
-    width: responsiveWidth(15.3), // 55px width
+    width: responsiveWidth(15.3),
     opacity: 0.5,
   },
   activeTab: {
-    backgroundColor: 'rgba(221,194,233,0.5)', // Lavender background for all tabs except Auvra
+    backgroundColor: 'rgba(221,194,233,0.5)',
     borderRadius: 10,
     opacity: 1,
   },
   activeTabAuvra: {
-    backgroundColor: 'transparent', // No background for Auvra tab
+    backgroundColor: 'transparent',
     borderRadius: 0,
   },
   tabIcon: {
-    width: responsiveWidth(4.4), // 16px icon
-    height: responsiveWidth(4.4), // 16px icon
-    marginBottom: responsiveHeight(0.3), // Increased gap between icon and label
+    width: responsiveWidth(4.4),
+    height: responsiveWidth(4.4),
+    marginBottom: responsiveHeight(0.3),
   },
   tabLabel: {
-    fontSize: responsiveFontSize(1.1), // 8px
+    fontSize: responsiveFontSize(1.1),
     fontFamily: 'Inter400',
     color: '#000000',
     textAlign: 'center',
   },
   activeTabLabel: {
-    fontFamily: 'Inter400', // Keep same font weight as inactive tabs
-    color: '#C17EC9', // Lavender color
+    fontFamily: 'Inter400',
+    color: '#C17EC9',
   },
   characterWrapper: {
     position: 'absolute',
-    bottom: responsiveHeight(4.5), // Increased to avoid text overlap on web
+    bottom: responsiveHeight(4.5),
     left: '50%',
-    marginLeft: -responsiveWidth(7.6), // -27.5px to center 55px circle
+    marginLeft: -responsiveWidth(7.6),
     zIndex: 3,
   },
   characterContainer: {
-    width: responsiveWidth(15.3), // 55px
-    height: responsiveWidth(15.3), // 55px
-    borderRadius: responsiveWidth(7.65), // 27.5px radius for circle
+    width: responsiveWidth(15.3),
+    height: responsiveWidth(15.3),
+    borderRadius: responsiveWidth(7.65),
     borderWidth: 1,
     borderColor: '#f7f7f8',
     alignItems: 'center',

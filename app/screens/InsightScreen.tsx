@@ -27,6 +27,361 @@ const InsightScreen = () => {
   const navigation = useNavigation();
   const [selectedMonth, setSelectedMonth] = useState('Month');
   const cycleChartScrollRef = useRef<ScrollView>(null);
+  
+  // Cycle start date (Oct 25, 2024) - This should come from user data in real app
+  const CYCLE_START_DATE = new Date(2025, 15, 25); // Oct 25, 2024 (month is 0-indexed, so 9 = October)
+  const CYCLE_LENGTH = 28; // 28-day cycle
+  
+  // Calculate current day in cycle (1-28, then loops)
+  const getCurrentCycleDay = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const cycleStart = new Date(CYCLE_START_DATE);
+    cycleStart.setHours(0, 0, 0, 0);
+    
+    const diffTime = today.getTime() - cycleStart.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Calculate day in current cycle (1-28), loops back to 1 after day 28
+    // Handle negative days (if today is before cycle start) and modulo for looping
+    const cycleDay = ((diffDays % CYCLE_LENGTH) + CYCLE_LENGTH) % CYCLE_LENGTH;
+    return cycleDay === 0 ? CYCLE_LENGTH : cycleDay;
+  };
+  
+  const currentCycleDay = getCurrentCycleDay();
+  
+  // Calculate vertical line position based on current cycle day
+  const todayVerticalLineLeft = 14 + ((currentCycleDay - 1) * 2 * 20) + 10;
+  
+  // Get hormone value for a specific day in cycle (1-28, maps to data index since 2 points per day)
+  const getHormoneValue = (day: number, hormoneType: 'progesterone' | 'estrogen' | 'testosterone' | 'lh') => {
+    // Validate day parameter
+    if (!day || day < 1 || day > CYCLE_LENGTH) {
+      console.warn(`Invalid day value: ${day}. Using day 1 as fallback.`);
+      day = 1;
+    }
+    
+    // Map cycle day (1-28) to data index
+    // Each day has 2 data points: day 1 = indices 0,1; day 2 = indices 2,3; etc.
+    const firstPointIndex = (day - 1) * 2;
+    const secondPointIndex = firstPointIndex + 1;
+    
+    // Progesterone data - EXACT copy from your LineChart data prop
+    const progesteroneData = [
+      // Day 1
+      0.3, 0.3,
+      // Day 2
+      0.3, 0.3,
+      // Day 3
+      0.3, 0.3,
+      // Day 4
+      0.3, 0.3,
+      // Day 5
+      0.3, 0.3,
+      // Day 6
+      0.3, 0.3,
+      // Day 7
+      0.3, 0.3,
+      // Day 8
+      0.3, 0.3,
+      // Day 9
+      0.3, 0.3,
+      // Day 10
+      0.3, 0.3,
+      // Day 11
+      0.3, 0.3,
+      // Day 12
+      0.3, 0.3,
+      // Day 13
+      0.3, 0.3,
+      // Day 14
+      0.4, 0.6,
+      // Day 15
+      1.0, 1.6,
+      // Day 16
+      2.4, 3.4,
+      // Day 17
+      4.5, 5.5,
+      // Day 18
+      6.3, 6.9,
+      // Day 19
+      7.3, 7.5,
+      // Day 20
+      7.6, 7.6,
+      // Day 21
+      7.5, 7.3,
+      // Day 22
+      7.0, 6.6,
+      // Day 23
+      6.1, 5.5,
+      // Day 24
+      4.9, 4.3,
+      // Day 25
+      3.7, 3.1,
+      // Day 26
+      2.6, 2.1,
+      // Day 27
+      1.7, 1.3,
+      // Day 28
+      1.0, 0.7,
+      // Day 29
+      0.5, 0.4,
+      // Day 30
+      0.3, 0.3
+    ];
+    
+    // Estrogen data - EXACT copy from your LineChart data2 prop
+    const estrogenData = [
+      // Day 1
+      1.3, 1.3,
+      // Day 2
+      1.3, 1.3,
+      // Day 3
+      1.3, 1.3,
+      // Day 4
+      1.33, 1.351,
+      // Day 5
+      1.4, 1.450,
+      // Day 6
+      1.5, 1.550,
+      // Day 7
+      1.6, 1.650,
+      // Day 8
+      1.7, 1.75,
+      // Day 9
+      1.82, 1.95,
+      // Day 10
+      2.1, 2.3,
+      // Day 11
+      2.5, 2.8,
+      // Day 12
+      3.3, 4.10,
+      // Day 13
+      5.5, 8.3,
+      // Day 14
+      8.3, 5.5,
+      // Day 15
+      2.65, 1.9,
+      // Day 16
+      2.5, 3.25,
+      // Day 17
+      3.9, 4.5,
+      // Day 18
+      4.95, 5.28,
+      // Day 19
+      5.55, 5.68,
+      // Day 20
+      5.75, 5.7,
+      // Day 21
+      5.53, 5.28,
+      // Day 22
+      4.96, 4.58,
+      // Day 23
+      4.25, 3.85,
+      // Day 24
+      3.5, 3.15,
+      // Day 25
+      2.85, 2.55,
+      // Day 26
+      2.25, 1.98,
+      // Day 27
+      1.8, 1.7,
+      // Day 28
+      1.8, 2,
+      // Day 29
+      2.2, 2.0,
+      // Day 30
+      1.6, 1.3
+    ];
+    
+    // Testosterone data - EXACT copy from your LineChart data3 prop
+    const testosteroneData = [
+      // Day 1
+      0.8, 0.8,
+      // Day 2
+      0.8, 0.8,
+      // Day 3
+      0.8, 0.8,
+      // Day 4
+      0.8, 0.8,
+      // Day 5
+      0.8, 0.8,
+      // Day 6
+      0.8, 0.8,
+      // Day 7
+      0.8, 0.8,
+      // Day 8
+      0.8, 0.8,
+      // Day 9
+      0.8, 0.8,
+      // Day 10
+      0.8, 0.8,
+      // Day 11
+      0.8, 0.8,
+      // Day 12
+      0.8, 0.85,
+      // Day 13
+      1.105, 1.805,
+      // Day 14
+      2.41, 2.35,
+      // Day 15
+      1.66, 1.09,
+      // Day 16
+      0.85, 0.8,
+      // Day 17
+      0.8, 0.8,
+      // Day 18
+      0.8, 0.8,
+      // Day 19
+      0.8, 0.8,
+      // Day 20
+      0.8, 0.8,
+      // Day 21
+      0.8, 0.8,
+      // Day 22
+      0.8, 0.8,
+      // Day 23
+      0.8, 0.8,
+      // Day 24
+      0.8, 0.8,
+      // Day 25
+      0.8, 0.8,
+      // Day 26
+      0.8, 0.8,
+      // Day 27
+      0.8, 0.8,
+      // Day 28
+      0.8, 0.8,
+      // Day 29
+      0.8, 0.8,
+      // Day 30
+      0.8, 0.8
+    ];
+    
+    // LH data - EXACT copy from your LineChart data4 prop
+    const lhData = [
+      // Day 1
+      1, 1,
+      // Day 2
+      1, 1,
+      // Day 3
+      1, 1,
+      // Day 4
+      1, 1,
+      // Day 5
+      1, 1,
+      // Day 6
+      1, 1,
+      // Day 7
+      1, 1,
+      // Day 8
+      1, 1,
+      // Day 9
+      1, 1,
+      // Day 10
+      1, 1,
+      // Day 11
+      1, 1,
+      // Day 12
+      1.03, 1.1,
+      // Day 13
+      1.5, 2.98,
+      // Day 14
+      7.65, 7.5,
+      // Day 15
+      2.47, 1.2,
+      // Day 16
+      1, 1,
+      // Day 17
+      1, 1,
+      // Day 18
+      1, 1,
+      // Day 19
+      1, 1,
+      // Day 20
+      1, 1,
+      // Day 21
+      1, 1,
+      // Day 22
+      1, 1,
+      // Day 23
+      1, 1,
+      // Day 24
+      1, 1,
+      // Day 25
+      1, 1,
+      // Day 26
+      1, 1,
+      // Day 27
+      1, 1,
+      // Day 28
+      1, 1,
+      // Day 29
+      1, 1,
+      // Day 30
+      1, 1
+    ];
+    
+    // Get average of both points for the day
+    switch (hormoneType) {
+      case 'progesterone':
+        return (progesteroneData[firstPointIndex] + progesteroneData[secondPointIndex])/2 + 2 ;
+      case 'estrogen':
+        return (estrogenData[firstPointIndex] + estrogenData[secondPointIndex]) / 2 + 2;
+      case 'testosterone':
+        return (testosteroneData[firstPointIndex] + testosteroneData[secondPointIndex]) / 2 + 2;
+      case 'lh':
+        return (lhData[firstPointIndex] + lhData[secondPointIndex]) / 2 + 2;
+      default:
+        return 0;
+    }
+  };
+  // LineChart coordinate system parameters
+const CHART_HEIGHT = 200;
+const MAX_VALUE = 10;
+const SPACING = 20;
+const INITIAL_SPACING = 0;
+
+// Calculate the exact x position the LineChart uses for current cycle day
+const dataPointIndex = (currentCycleDay - 1) * 2; // Day 1 = index 0, Day 15 = index 28
+const chartXPosition = INITIAL_SPACING + (dataPointIndex * SPACING);
+
+// Character positioning should match chart's X exactly
+const hormoneCharacterLeft = chartXPosition + 14 - 11; // 14 is your padding, 21 is half character width
+
+// Helper function to match LineChart's Y position calculation
+// const getChartYPosition = (value: number) => {
+//   const normalizedValue = value / MAX_VALUE; // 0 to 1
+//   const yPosition = CHART_HEIGHT - (normalizedValue * CHART_HEIGHT); // Flip because chart grows upward
+//   return yPosition - 21; // Subtract half character height to center vertically
+// };
+// Simpler Y position calculation - matching chart exactly
+const getChartYPosition = (value: number) => {
+  if (!value || value === 0) {
+    console.warn('Invalid hormone value:', value);
+    return 0;
+  }
+  // Direct calculation matching LineChart's internal logic
+  const yPixels = (value / MAX_VALUE) * CHART_HEIGHT;
+  const flippedY = CHART_HEIGHT - yPixels; // Chart draws from bottom up
+  return flippedY + 40 - 11; // 40 is top offset for bar labels, 21 is half character height
+};
+
+const progesteroneTop = getChartYPosition(getHormoneValue(currentCycleDay, 'progesterone'));
+const estrogenTop = getChartYPosition(getHormoneValue(currentCycleDay, 'estrogen'));
+const testosteroneTop = getChartYPosition(getHormoneValue(currentCycleDay, 'testosterone'));
+
+// Debug: Log the actual values
+console.log('=== Hormone Values for Day', currentCycleDay, '===');
+console.log('Progesterone value:', getHormoneValue(currentCycleDay, 'progesterone'), 'Y pos:', progesteroneTop);
+console.log('Estrogen value:', getHormoneValue(currentCycleDay, 'estrogen'), 'Y pos:', estrogenTop);
+console.log('Testosterone value:', getHormoneValue(currentCycleDay, 'testosterone'), 'Y pos:', testosteroneTop);
+  // Debug: Log current cycle day being used
+  console.log('Current cycle day:', currentCycleDay);
+  
+  // Calculate date label position based on current cycle day
+  const todayDateLabelLeft = 14 + ((currentCycleDay - 1) * 2 * 20) + 5;
+  
   // Current date label like "Wed\nSep 10"
   const todayLabel = (() => {
     const now = new Date();
@@ -52,17 +407,19 @@ const InsightScreen = () => {
   );
 
 
-  // Auto-scroll to day 23 when page loads
+  // Auto-scroll to current cycle day when page loads
   useEffect(() => {
     if (cycleChartScrollRef.current) {
       setTimeout(() => {
+        // Calculate position: (currentCycleDay - 1) * 2 * 20px spacing (2 points per day, 20px spacing) - offset for centering
+        const scrollPosition = ((currentCycleDay - 1) * 2 * 20) - 100;
         cycleChartScrollRef.current?.scrollTo({
-          x: (22 * 40) - 100, // Day 23 position
+          x: Math.max(0, scrollPosition),
           animated: true
         });
       }, 1000); // Delay to ensure chart is rendered
     }
-  }, []);
+  }, [currentCycleDay]);
 
   const getCharacterImage = (title: string) => {
     switch (title) {
@@ -524,17 +881,20 @@ const InsightScreen = () => {
                   spacing={0}
                 />
 
-                {/* Today's vertical line - Day 23 */}
-                <View style={styles.todayVerticalLine}>
+                {/* Today's vertical line - positioned at current cycle day */}
+                <View style={[
+                  styles.todayVerticalLine,
+                  { left: todayVerticalLineLeft }
+                ]}>
                   <View style={styles.todayLine} />
                 </View>
 
-                {/* Hormone characters at today's intersection points */}
+                {/* Hormone characters at today's intersection points - positioned based on current cycle day */}
                 <View style={styles.chartHormoneCharacters}>
-                  {/* Progesterone character at day 23 value */}
+                  {/* Progesterone character at current cycle day value - positioned at data point intersection */}
                   <View style={[styles.chartHormoneCharacter, {
-                    left: 14 + (44 * 20) + 10 - 21, // Center on day 23 line (index 44)
-                    top: 200 - (5.5 * 200 / 10) - 21 // center vertically based on new data
+                    left: hormoneCharacterLeft,
+                    top: progesteroneTop
                   }]}>
                     <Image
                       source={require('../../assets/images/hormoneBuddy/ProgesteroneBothHand.png')}
@@ -542,10 +902,10 @@ const InsightScreen = () => {
                       resizeMode="contain"
                     />
                   </View>
-                  {/* Estrogen character at day 23 value */}
+                  {/* Estrogen character at current cycle day value - positioned at data point intersection */}
                   <View style={[styles.chartHormoneCharacter, {
-                    left: 14 + (44 * 20) + 10 - 21, // Center on day 23 line (index 44)
-                    top: 200 - (3.8 * 200 / 10) - 21 // center vertically based on new data
+                    left: hormoneCharacterLeft,
+                    top: estrogenTop
                   }]}>
                     <Image
                       source={require('../../assets/images/hormoneBuddy/EstrogenBothHand.png')}
@@ -554,10 +914,10 @@ const InsightScreen = () => {
                     />
                   </View>
 
-                  {/* Testosterone character at day 23 value */}
+                  {/* Testosterone character at current cycle day value - positioned at data point intersection */}
                   <View style={[styles.chartHormoneCharacter, {
-                    left: 14 + (44 * 20) + 10 - 21, // Center on day 23 line (index 44)
-                    top: 200 - (0.6 * 200 / 10) - 21 // center vertically based on new data
+                    left: hormoneCharacterLeft,
+                    top: testosteroneTop
                   }]}>
                     <Image
                       source={require('../../assets/images/hormoneBuddy/TestosteroneBothHand.png')}
@@ -1205,8 +1565,10 @@ const InsightScreen = () => {
                 ))}
               </View>
 
-              {/* Date label for day 23 */}
-              <View style={styles.todayDateLabel}>
+              {/* Date label for current cycle day */}
+              <View style={[styles.todayDateLabel, {
+                left: todayDateLabelLeft
+              }]}>
                 <Text style={styles.todayDateText}>{todayLabel}</Text>
               </View>
             </View>
@@ -1825,7 +2187,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 40,
     bottom: 0, // Start from bottom X-axis
-    left: 14 + (44 * 20) + 10, // Day 23 = index 44 (22 * 2), so 44 * 20px + padding + center offset
+    // left position is set dynamically based on currentCycleDay
     height: 200, // Full height from X-axis to top
     width: 1,
     pointerEvents: 'none',
@@ -1841,7 +2203,7 @@ const styles = StyleSheet.create({
   todayDateLabel: {
     position: 'absolute',
     bottom: 0, // Position below the X-axis
-    left: 14 + (44 * 20) + 5, // Center on day 23 line (index 44)
+    // left position is set dynamically based on currentCycleDay
     alignItems: 'center',
   },
 
