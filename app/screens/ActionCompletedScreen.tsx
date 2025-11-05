@@ -1,3 +1,4 @@
+import Images from '@/assets/images';
 import FixedBottomContainer from '@/components/FixedBottomContainer';
 import PrimaryButton from '@/components/PrimaryButton';
 import apiPromiseManager from '@/services/apiPromiseManager';
@@ -5,9 +6,11 @@ import homeService, { AssignmentsResponse, CyclePhaseResponse } from '@/services
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import LottieView from 'lottie-react-native';
-import React, { useEffect, useState } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
+
+const { height: screenHeight } = Dimensions.get('window');
 
 const GiftBoxAnimation = require('@/assets/animation/Gift_Box_Bouncing.json');
 const MovingGlowAnimation = require('@/assets/animation/Moving_glow.json');
@@ -48,10 +51,15 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
   const [todayAssignments, setTodayAssignments] = useState<AssignmentsResponse | null>(null);
   const [cyclePhaseData, setCyclePhaseData] = useState<CyclePhaseResponse | null>(null);
   const [unboxingFinished, setUnboxingFinished] = useState(false);
+  const [showHormoneIcon, setShowHormoneIcon] = useState(false);
+  const [playUnboxing, setPlayUnboxing] = useState(false);
   
-  // Animation values
-  const fadeAnim = new Animated.Value(1);
-  const scaleAnim = new Animated.Value(1);
+  // Animation values - use useRef to persist across renders
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const unboxingFadeAnim = useRef(new Animated.Value(1)).current;
+  const hormoneIconFadeAnim = useRef(new Animated.Value(0)).current;
+  const hormoneIconScaleAnim = useRef(new Animated.Value(0.8)).current;
 
   // Parse action object from route params
   const action = actionParam ? (typeof actionParam === 'string' ? JSON.parse(actionParam) : actionParam) as {
@@ -70,11 +78,6 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
     }>;
   } : null;
 
-  /**
-   * Get hormone name from hormones array (uses first hormone)
-   * @param hormones - Array of hormone names
-   * @returns Capitalized hormone name or default 'Progesterone'
-   */
   const getHormoneName = (hormones: string[]) => {
     if (hormones.length > 0) {
       const hormone = hormones[0];
@@ -83,21 +86,32 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
     return 'Progesterone';
   };
 
-  /**
-   * Call background APIs to complete assignment and refresh data
-   * @returns Promise with API call results
-   */
+  const getHormoneIcon = (hormone: string) => {
+    switch (hormone.toLowerCase()) {
+      case 'androgens': return '💪';
+      case 'progesterone': return Images.ProgesteroneBothHand;
+      case 'estrogen': return Images.EstrogenBothHand;
+      case 'thyroid': return Images.ThyroidBothHand;
+      case 'insulin': return Images.InsulinBothHand;
+      case 'cortisol': return Images.CortisolBothHand;
+      case 'fsh': return '🌱';
+      case 'lh': return '🌿';
+      case 'prolactin': return '🤱';
+      case 'ghrelin': return '🍽️';
+      case 'testosterone': return Images.TestosteroneBothHand;
+      default: return '💊';
+    }
+  };
+
   const callBackgroundAPIs = async () => {
     try {
       if (!action?.id) {
         return { success: false, assignmentCompleted: false, todayAssignments: null, cyclePhaseData: null };
       }
 
-      // Complete assignment
       const completeSuccess = await homeService.completeAssignment(action.id);
       
       if (completeSuccess) {
-        // Refresh assignments and cycle phase data in parallel
         const [refreshedAssignments, refreshedCyclePhase] = await Promise.all([
           homeService.getTodayAssignments(),
           homeService.getCyclePhase()
@@ -105,7 +119,6 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
         
         if (refreshedAssignments) {
           setTodayAssignments(refreshedAssignments);
-
         }
 
         if (refreshedCyclePhase) {
@@ -127,11 +140,9 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
   };
 
   useEffect(() => {
-    // Phase transitions and API call setup
     const timer1 = setTimeout(() => {
       setCurrentPhase('white');
       
-      // Register API promise for background processing
       if (action?.id) {
         const apiPromise = callBackgroundAPIs();
         apiPromiseManager.setActivePromise(action.id, apiPromise);
@@ -148,50 +159,75 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
     };
   }, [action?.id]);
 
-  /**
-   * Handle continue button press - navigate to HomeScreen with appropriate data
-   */
+  // 2-second delay for hormone icon
+  useEffect(() => {
+    if (unboxingFinished) {
+      console.log('✨ Unboxing finished, starting 2-second delay');
+      const timer = setTimeout(() => {
+        console.log('⏰ 2 seconds passed, showing hormone icon');
+        setShowHormoneIcon(true);
+      }, 200);
+
+      return () => clearTimeout(timer);
+    }
+  }, [unboxingFinished]);
+
+  // Animate hormone icon when it appears
+  useEffect(() => {
+    console.log('🔄 Animation effect triggered. showHormoneIcon:', showHormoneIcon);
+    
+    if (showHormoneIcon) {
+      console.log('🎯 Starting hormone icon animation');
+      
+      hormoneIconFadeAnim.setValue(0);
+      hormoneIconScaleAnim.setValue(0.8);
+      
+      Animated.parallel([
+        Animated.timing(hormoneIconFadeAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.spring(hormoneIconScaleAnim, {
+          toValue: 1,
+          tension: 50,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        console.log('✅ Hormone icon animation completed');
+      });
+    }
+  }, [showHormoneIcon]);
+
   const handleContinue = () => {
     if (todayAssignments && cyclePhaseData) {
-      // Both APIs completed - pass full data
       navigation.navigate('MainScreenTabs', { 
         refreshedData: todayAssignments,
         cyclePhaseData: cyclePhaseData,
         skipLoading: true 
       });
     } else if (todayAssignments) {
-      // Only Today API completed - pass partial data
       navigation.navigate('MainScreenTabs', { 
         refreshedData: todayAssignments,
         skipTodayLoading: true 
       });
     } else {
-      // APIs still in progress or failed - let HomeScreen handle promise
       navigation.navigate('MainScreenTabs', {});
     }
   };
 
-  // Initial purple background phase
   if (currentPhase === 'initial') {
-    return (
-      <View style={styles.initialContainer}>
-      </View>
-    );
+    return <View style={styles.initialContainer} />;
   }
 
-  // White background phase (animation waiting)
   if (currentPhase === 'white') {
-    return (
-      <View style={styles.whiteContainer}>
-      </View>
-    );
+    return <View style={styles.whiteContainer} />;
   }
 
-  // Gift phase (waiting for touch)
   if (currentPhase === 'gift') {
     return (
       <View style={styles.giftContainer}>
-        {/* Gift Box bouncing animation */}
         <View style={styles.giftAnimationContainer}>
           <LottieView
             source={GiftBoxAnimation}
@@ -203,12 +239,12 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
         
         <Text style={styles.tapToUnlockText}>Tap to unlock your gift!</Text>
         
-        {/* Touch area for phase transition */}
         <TouchableOpacity 
           style={styles.touchArea}
           onPress={() => {
             setCurrentPhase('final');
             setShowContent(true);
+            setPlayUnboxing(true); // Start unboxing animation
           }}
           activeOpacity={0.8}
         >
@@ -218,35 +254,78 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
     );
   }
 
-  // Final phase with animations and content
   return (
     <View style={styles.container}>
-      {/* Background animations */}
       <View style={styles.backgroundContainer}>
-        {/* Moving Glow animation - only shown after unboxing finishes */}
-        {unboxingFinished && (
-          <LottieView
-            source={MovingGlowAnimation}
-            autoPlay
-            loop={true}
-            style={styles.movingGlowAnimation}
-          />
+        {/* Moving Glow appears immediately when currentPhase is 'final' */}
+        {currentPhase === 'final' && (
+          <View style={[styles.movingGlowAnimation, { pointerEvents: 'none' }]}>
+            <LottieView
+              source={MovingGlowAnimation}
+              autoPlay
+              loop={true}
+              resizeMode="cover"
+              style={StyleSheet.absoluteFill}
+            />
+          </View>
         )}
-        {/* Gift Unboxing animation - always shown (maintains last frame) */}
-        <LottieView
-          source={GiftUnboxingAnimation}
-          autoPlay
-          loop={false}
-          style={styles.giftUnboxingAnimation}
-          onAnimationFinish={() => {
-            setUnboxingFinished(true);
-            setShowContent(true);
-          }}
-        />
+        
+        {/* Only show unboxing animation when playUnboxing is true */}
+        {playUnboxing && (
+          <Animated.View style={[styles.giftUnboxingAnimation, { opacity: unboxingFadeAnim }]}>
+            <LottieView
+              source={GiftUnboxingAnimation}
+              autoPlay
+              loop={false}
+              style={styles.giftUnboxingAnimation}
+              onAnimationFinish={() => {
+                console.log('🎁 Unboxing animation finished');
+                setUnboxingFinished(true);
+                
+                // Fade out the unboxing animation
+                Animated.timing(unboxingFadeAnim, {
+                  toValue: 0,
+                  duration: 300,
+                  useNativeDriver: true,
+                }).start();
+              }}
+            />
+          </Animated.View>
+        )}
       </View>
 
-      {/* Main content - only shown after unboxing finishes */}
-      {unboxingFinished && (
+      {showHormoneIcon && action?.hormones && action.hormones.length > 0 && (
+        <View style={styles.hormoneIconOverlay}>
+          {typeof getHormoneIcon(action.hormones[0]) === 'string' ? (
+            <Animated.Text 
+              style={[
+                styles.hormoneIconEmoji,
+                {
+                  opacity: hormoneIconFadeAnim,
+                  transform: [{ scale: hormoneIconScaleAnim }],
+                }
+              ]}
+            >
+              {getHormoneIcon(action.hormones[0])}
+            </Animated.Text>
+          ) : (
+            <Animated.Image 
+              source={getHormoneIcon(action.hormones[0])} 
+              style={[
+                styles.hormoneIconImage,
+                {
+                  opacity: hormoneIconFadeAnim,
+                  transform: [{ scale: hormoneIconScaleAnim }],
+                }
+              ]}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      )}
+
+      {/* Text appears immediately when currentPhase is 'final' */}
+      {currentPhase === 'final' && (
         <Animated.View 
           style={[
             styles.contentContainer,
@@ -256,7 +335,6 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
             }
           ]}
         >
-          {/* Text section */}
           <View style={styles.textSection}>
             <Text style={styles.title}>
               You brought {getHormoneName(action?.hormones || [])} one step closer to harmony!
@@ -268,37 +346,41 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
         </Animated.View>
       )}
 
-      {/* Bottom button - only shown after unboxing finishes */}
-      {unboxingFinished && (
-        <FixedBottomContainer>
-          <PrimaryButton
-            title="Continue"
-            onPress={handleContinue}
-          />
-        </FixedBottomContainer>
+      {/* Button appears immediately when currentPhase is 'final' */}
+      {currentPhase === 'final' && (
+        <>
+          {/* Gradient background - lower z-index */}
+          <View style={styles.buttonContainer}>
+            <FixedBottomContainer containerStyle={styles.buttonGradientContainer}>
+              <View />
+            </FixedBottomContainer>
+          </View>
+          {/* Button content - highest z-index */}
+          <View style={styles.buttonContent}>
+            <PrimaryButton
+              title="Continue"
+              onPress={handleContinue}
+            />
+          </View>
+        </>
       )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  // Initial purple background
   initialContainer: {
     flex: 1,
     backgroundColor: '#DDC2E9',
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  // White background
   whiteContainer: {
     flex: 1,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  // Gift phase container
   giftContainer: {
     flex: 1,
     backgroundColor: '#FFFFFF',
@@ -306,23 +388,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
   },
-
   giftAnimationContainer: {
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: responsiveHeight(4),
   },
-
-  giftBox: {
-    fontSize: responsiveFontSize(20),
-    textAlign: 'center',
-  },
-
   lottieAnimation: {
     width: responsiveWidth(50),
     height: responsiveWidth(50),
   },
-
   tapToUnlockText: {
     fontSize: responsiveFontSize(1.98),
     fontFamily: 'Inter400',
@@ -331,7 +405,6 @@ const styles = StyleSheet.create({
     opacity: 0.5,
     lineHeight: responsiveHeight(2.5),
   },
-
   touchArea: {
     position: 'absolute',
     top: 0,
@@ -341,18 +414,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   touchOverlay: {
     width: '100%',
     height: '100%',
   },
-
-  // Final phase container
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-
   backgroundContainer: {
     position: 'absolute',
     top: 0,
@@ -361,7 +430,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     flex: 1,
   },
-
   movingGlowAnimation: {
     position: 'absolute',
     top: 0,
@@ -369,11 +437,9 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     width: '100%',
-    height: '100%',
-    flex: 1,
-    overflow: 'hidden',
+    height: screenHeight,
+    zIndex: 1,
   },
-
   giftUnboxingAnimation: {
     position: 'absolute',
     top: 0,
@@ -382,8 +448,19 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     height: '100%',
+    zIndex: 1,
   },
-
+  hormoneIconOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 15,
+    pointerEvents: 'none',
+  },
   contentContainer: {
     position: 'absolute',
     top: 0,
@@ -394,15 +471,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: responsiveWidth(10),
     paddingTop: responsiveHeight(15),
+    zIndex: 20,
   },
-
+  buttonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 0, // Lower than movingGlowAnimation (5) so gradient background is behind it
+  },
+  buttonGradientContainer: {
+    zIndex: 0, // Lower than movingGlowAnimation (5) so gradient background is behind it
+  },
+  buttonContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100, // Highest z-index so button is always clickable and on top
+    paddingBottom: responsiveHeight(2),
+    paddingHorizontal: responsiveWidth(6),
+    alignItems: 'center',
+  },
   textSection: {
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
     marginTop: responsiveHeight(50),
   },
-
+  hormoneIconEmoji: {
+    fontSize: responsiveFontSize(5),
+    textAlign: 'center',
+    lineHeight: responsiveFontSize(5),
+    includeFontPadding: false,
+  },
+  hormoneIconImage: {
+    width: responsiveWidth(45),
+    height: responsiveHeight(40),
+  },
   title: {
     fontSize: responsiveFontSize(3.12),
     fontFamily: 'NotoSerif600',
@@ -411,7 +517,6 @@ const styles = StyleSheet.create({
     lineHeight: responsiveHeight(3.9),
     marginBottom: responsiveHeight(2.5),
   },
-
   subtitle: {
     fontSize: responsiveFontSize(1.7),
     fontFamily: 'Inter400',

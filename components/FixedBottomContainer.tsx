@@ -12,6 +12,8 @@ interface FixedBottomContainerProps {
   children: React.ReactNode;
   /** Additional styles for the container */
   style?: any;
+  /** Additional styles for the outer container (affects gradient background) */
+  containerStyle?: any;
   /** Horizontal padding for the container */
   paddingHorizontal?: number;
   /** Gap between child elements */
@@ -36,7 +38,8 @@ interface FixedBottomContainerProps {
  */
 const FixedBottomContainer = ({ 
   children, 
-  style, 
+  style,
+  containerStyle,
   paddingHorizontal = responsiveWidth(6),
   gap = responsiveHeight(0.3),
   avoidKeyboard = true
@@ -44,7 +47,7 @@ const FixedBottomContainer = ({
   const insets = useSafeAreaInsets();
   
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       {/* Background gradient - exact match from Figma design */}
       {/* Background Gradients */}
       <LinearGradient
