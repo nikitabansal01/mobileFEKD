@@ -12,7 +12,7 @@ import { FONT_FAMILIES, useAppFonts } from '../../constants/fonts';
 // Constants from Figma design
 const BACKGROUND_VECTOR_IMAGE = "http://localhost:3845/assets/cf926b4d5ec2719e28f1af07e084ed30c131abe4.svg";
 // const MILESTONE_BG_IMAGE = require("../../assets/images/milestone-bg.png");
-const BLOOD_REPORT_IMAGE = require("../../assets/images/blood-report-logo.png");
+const BLOOD_REPORT_IMAGE = require("../../assets/images/paywallSlide1Icon.png");
 
 // Responsive dimensions
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');

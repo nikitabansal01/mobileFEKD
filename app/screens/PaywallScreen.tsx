@@ -318,7 +318,10 @@ export default function PaywallScreen() {
                                 data={features}
                                 keyExtractor={(item, index) => `feature-${index}`}
                                 renderItem={({ item, index }) => (
-                                    <View style={styles.featureSlide}>
+                                    <View style={[
+                                        styles.featureSlide,
+                                        // Make 2nd slide (index 1) smaller to make room for last slide's padding
+                                    ]}>
                                         {renderFeatureCard(item, index)}
                                     </View>
                                 )}
@@ -334,6 +337,9 @@ export default function PaywallScreen() {
                                 }}
                                 scrollEventThrottle={16}
                                 contentContainerStyle={styles.flatListContent}
+                                // ListFooterComponent={() => (
+                                //     <View style={styles.flatListFooter} />
+                                // )}
                             />
                         </View>
 
@@ -664,13 +670,18 @@ const styles = StyleSheet.create({
     },
     flatListContent: {
         paddingLeft: scale(10),
-        paddingRight: scale(10),
+        paddingRight: scale(10), // Reduced padding right
     },
+    
     featureSlide: {
-        width: screenWidth * 0.85,
+        width: screenWidth * 0.84,
         paddingHorizontal: scale(5),
         paddingVertical: verticalScale(20),
         justifyContent: 'center',
+    },
+    featureSlideSmaller: {
+        // Make 2nd slide smaller to make room for last slide's padding to be visible
+        width: screenWidth * 0.75, // Reduced from 0.85 to 0.75
     },
     featureCard: {
         backgroundColor: COLORS.white,
