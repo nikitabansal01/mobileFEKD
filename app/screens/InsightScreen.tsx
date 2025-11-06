@@ -391,7 +391,7 @@ console.log('Testosterone value:', getHormoneValue(currentCycleDay, 'testosteron
     return `${weekday}\n${month} ${day}`;
   })();
 
-  // Disable back gesture when using horizontal scrolling
+  // Disable back gesture when using AppIntroSlider
   useFocusEffect(
     React.useCallback(() => {
       navigation.setOptions({

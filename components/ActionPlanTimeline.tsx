@@ -139,7 +139,7 @@ export default function ActionPlanTimeline({
     // Start the expansion animation
     Animated.timing(expandAnimation, {
       toValue: 1,
-      duration: 300,
+      duration: 600, // Increased from 300 to 600ms for slower animation
       useNativeDriver: false, // We need to animate scale and position
     }).start(() => {
       // Navigate to ActionCompletedScreen (gift box animation page) after animation completes
@@ -1096,8 +1096,8 @@ export default function ActionPlanTimeline({
                   left: expandingCircle.x,
                   top: expandingCircle.y,
                   opacity: expandAnimation.interpolate({
-                    inputRange: [0, 0.5, 1],
-                    outputRange: [0.8, 0.6, 0.2], // Fade out as it expands
+                    inputRange: [0, 0.3, 1],
+                    outputRange: [0.8, 0.4, 0], // Fade out completely as it expands
                   }),
                   transform: [
                     {
@@ -1624,7 +1624,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#DDC2E9', // Same color as the pulsing ring
+    backgroundColor: '#DDC2E9', // Same color as pulsing animation
     zIndex: 1000, // Ensure it's on top of everything
     marginLeft: -20, // Center the circle on the tap point
     marginTop: -20,

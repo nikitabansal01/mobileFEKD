@@ -46,7 +46,7 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
   const actionParam = route?.params?.action;
 
   // State management
-  const [currentPhase, setCurrentPhase] = useState<'initial' | 'white' | 'gift' | 'final'>('initial');
+  const [currentPhase, setCurrentPhase] = useState<'initial' | 'white' | 'gift' | 'final'>('gift');
   const [showContent, setShowContent] = useState(false);
   const [todayAssignments, setTodayAssignments] = useState<AssignmentsResponse | null>(null);
   const [cyclePhaseData, setCyclePhaseData] = useState<CyclePhaseResponse | null>(null);
@@ -140,23 +140,11 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
   };
 
   useEffect(() => {
-    const timer1 = setTimeout(() => {
-      setCurrentPhase('white');
-      
-      if (action?.id) {
-        const apiPromise = callBackgroundAPIs();
-        apiPromiseManager.setActivePromise(action.id, apiPromise);
-      }
-    }, 1000);
-
-    const timer2 = setTimeout(() => {
-      setCurrentPhase('gift');
-    }, 2000);
-
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-    };
+    // Call API immediately in background, no blank screens
+    if (action?.id) {
+      const apiPromise = callBackgroundAPIs();
+      apiPromiseManager.setActivePromise(action.id, apiPromise);
+    }
   }, [action?.id]);
 
   // 2-second delay for hormone icon
@@ -371,7 +359,7 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
 const styles = StyleSheet.create({
   initialContainer: {
     flex: 1,
-    backgroundColor: '#DDC2E9',
+    backgroundColor: '#FFFFFF', // Changed from purple to white
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -438,6 +426,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     height: screenHeight,
+    opacity: 0.3,
     zIndex: 1,
   },
   giftUnboxingAnimation: {
