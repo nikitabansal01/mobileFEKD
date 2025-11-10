@@ -7,7 +7,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { registerRootComponent } from 'expo';
 import { useFonts } from "expo-font";
 import React, { createContext, useEffect, useState } from 'react';
-import { ActivityIndicator, StatusBar, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, StatusBar, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import "react-native-reanimated";
 import { auth } from './config/firebase';
@@ -97,7 +97,7 @@ export default function App() {
               initialRouteName="SplashScreen"
               screenOptions={{ 
                 headerShown: false,
-                gestureEnabled: true,
+                gestureEnabled: Platform.OS === 'ios', // Disable gestures on Android to prevent interference with scrolling
               }}
             >
               <Stack.Screen name="SplashScreen" component={SplashScreen} />

@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import MaskedView from '@react-native-masked-view/masked-view';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import React, { useState } from "react";
 import { Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
@@ -174,6 +174,21 @@ export default function PersonalizeScreen() {
   const fontsLoaded = useAppFonts();
   const [currentStreakDays, setCurrentStreakDays] = useState(9); // Current streak from the UI
   const [claimedRewards, setClaimedRewards] = useState<Set<string>>(new Set());
+
+  // Disable back gesture to prevent interference with scrolling
+  useFocusEffect(
+    React.useCallback(() => {
+      navigation.setOptions({
+        gestureEnabled: false,
+      });
+
+      return () => {
+        navigation.setOptions({
+          gestureEnabled: false, // Keep disabled on Android
+        });
+      };
+    }, [navigation])
+  );
 
   const navigateToIndex = () => {
     navigation.navigate('MainScreenTabs');

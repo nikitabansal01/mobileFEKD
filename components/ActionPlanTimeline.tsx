@@ -136,18 +136,29 @@ export default function ActionPlanTimeline({
     // Set the expanding circle position
     setExpandingCircle({ x: circlePosition.x, y: circlePosition.y, id: actionData.id.toString() });
     
+    let hasNavigated = false; // Flag to prevent multiple navigations
+    
+    // Add listener to detect when animation reaches full screen
+    const listenerId = expandAnimation.addListener(({ value }) => {
+      // Navigate when animation reaches ~80% (full screen coverage)
+      // This ensures the circle has expanded enough to cover the screen
+      if (value >= 0.8 && !hasNavigated) {
+        hasNavigated = true;
+        // Navigate immediately when full screen is reached
+        navigation.navigate('ActionCompletedScreen', {
+          action: JSON.stringify(actionData)
+        });
+      }
+    });
+    
     // Start the expansion animation
     Animated.timing(expandAnimation, {
       toValue: 1,
       duration: 600, // Increased from 300 to 600ms for slower animation
       useNativeDriver: false, // We need to animate scale and position
     }).start(() => {
-      // Navigate to ActionCompletedScreen (gift box animation page) after animation completes
-      navigation.navigate('ActionCompletedScreen', {
-        action: JSON.stringify(actionData)
-      });
-      
-      // Reset animation
+      // Remove listener and reset animation after completion
+      expandAnimation.removeListener(listenerId);
       expandAnimation.setValue(0);
       setExpandingCircle(null);
     });
@@ -791,19 +802,17 @@ export default function ActionPlanTimeline({
                     }
                   }}
                   onLongPress={!a.is_completed ? () => {
-                    // Navigate to purple page first, then gift animation
-                    navigation.navigate('ActionCompletedScreen', {
-                      action: JSON.stringify({
-                        id: a.id,
-                        title: a.title,
-                        purpose: getActionPurpose(a),
-                        hormones: a.hormones || [],
-                        specific_action: a.specific_action,
-                        conditions: a.conditions,
-                        symptoms: a.symptoms,
-                        advices: a.advices,
-                      })
-                    });
+                    // Trigger expanding animation before navigating to ActionCompletedScreen
+                    handleExpandingNavigation({
+                      id: a.id,
+                      title: a.title,
+                      purpose: getActionPurpose(a),
+                      hormones: a.hormones || [],
+                      specific_action: a.specific_action,
+                      conditions: a.conditions,
+                      symptoms: a.symptoms,
+                      advices: a.advices,
+                    }, { x: xImage, y: yImage });
                   } : undefined}
                   delayLongPress={2000} // 2 seconds long press
                 >
@@ -1624,8 +1633,8 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#DDC2E9', // Same color as pulsing animation
-    zIndex: 1000, // Ensure it's on top of everything
+    backgroundColor: '#C17EC9', // Darker purple color
+    zIndex: 10, // Ensure it's on top of everything
     marginLeft: -20, // Center the circle on the tap point
     marginTop: -20,
     // Ensure it can expand beyond the container bounds
