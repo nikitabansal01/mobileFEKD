@@ -1,19 +1,21 @@
 // TypeActionPlan.tsx
 import Images from '@/assets/images';
 import { useNavigation } from '@react-navigation/native';
+import { BlurView } from 'expo-blur';
 import { useMemo, useState } from 'react';
 import {
-    Dimensions,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Dimensions,
+  Image,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
+import { moderateScale } from 'react-native-size-matters';
 import Svg, { Defs, Line, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
-// import { BlurView } from 'expo-blur';
 
 
 // ====== Type imports ======
@@ -176,16 +178,16 @@ export default function TypeActionPlan({
 
   // Helper functions
   const getActionAmount = (assignment: Assignment): string => {
+    let amount = '';
     if (assignment.food_amounts && assignment.food_amounts.length > 0) {
-      return assignment.food_amounts[0];
+      amount = assignment.food_amounts[0];
+    } else if (assignment.exercise_durations && assignment.exercise_durations.length > 0) {
+      amount = assignment.exercise_durations[0];
+    } else if (assignment.mindfulness_durations && assignment.mindfulness_durations.length > 0) {
+      amount = assignment.mindfulness_durations[0];
     }
-    if (assignment.exercise_durations && assignment.exercise_durations.length > 0) {
-      return assignment.exercise_durations[0];
-    }
-    if (assignment.mindfulness_durations && assignment.mindfulness_durations.length > 0) {
-      return assignment.mindfulness_durations[0];
-    }
-    return '';
+    // Replace "tablespoon" with "tbsp" (case-insensitive)
+    return amount.replace(/tablespoon/gi, 'tbsp');
   };
 
   const getActionPurpose = (assignment: Assignment): string => {
@@ -342,9 +344,9 @@ export default function TypeActionPlan({
             x1={centerX}
             y1={0}
             x2={centerX}
-            y2={lineHeight}
+            y2={lineHeight * 0.8}
             stroke="url(#topGrad)"
-            strokeWidth="15"
+            strokeWidth="11"
             fill="none"
             strokeLinejoin="round"
           />
@@ -370,12 +372,12 @@ export default function TypeActionPlan({
             x1={centerX}
             y1={0}
             x2={centerX}
-            y2={lineHeight}
+            y2={lineHeight * 0.8}
             stroke="#EFEFEF"
-            strokeWidth="15"
+            strokeWidth="11"
             fill="none"
             strokeLinejoin="round"
-            strokeDasharray={`${responsiveWidth(8)} ${responsiveWidth(2)}`}
+            strokeDasharray={`${responsiveWidth(6)} ${responsiveWidth(2)}`}
           />
         </Svg>
       </View>
@@ -399,12 +401,12 @@ export default function TypeActionPlan({
             x1={centerX}
             y1={0}
             x2={centerX}
-            y2={lineHeight}
+            y2={lineHeight * 0.7}
             stroke="#EFEFEF"
-            strokeWidth="15"
+            strokeWidth="11"
             fill="none"
             strokeLinejoin="round"
-            strokeDasharray={`${responsiveWidth(8)} ${responsiveWidth(2)}`}
+            strokeDasharray={`${responsiveWidth(6)} ${responsiveWidth(2)}`}
           />
           
           {/* Lock icon */}
@@ -494,7 +496,15 @@ export default function TypeActionPlan({
             </View>
           </View>
           <View style={styles.separator} />
-          <Text style={styles.timeEmoji}>{getTimeEmoji(assignment.timeSlot, assignment)}</Text>
+          {(() => {
+            const timeEmojiText = getTimeEmoji(assignment.timeSlot, assignment);
+            return (
+              <Text style={[
+                styles.timeEmoji,
+                timeEmojiText === 'Anytime' && styles.timeEmojiSmall
+              ]}>{timeEmojiText}</Text>
+            );
+          })()}
         </View>
       </View>
     </View>
@@ -528,6 +538,8 @@ export default function TypeActionPlan({
     );
   };
 
+     const screenWidth = Dimensions.get('window').width;
+     
      return (
      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
        <View style={styles.content}>
@@ -553,13 +565,20 @@ export default function TypeActionPlan({
 
          {/* Tomorrow action plan preview */}
          <View style={styles.tomorrowPreview}>
-           {/* Tomorrow blur overlay - COMMENTED OUT FOR BUILD
+           {/* Tomorrow blur overlay - matching time view */}
            <BlurView
-             intensity={80}
+             intensity={Platform.OS === 'android' ? 6 : 15}
              tint="light"
-             style={styles.tomorrowSectionBlur}
+             {...(Platform.OS === 'android' ? { experimentalBlurMethod: 'dimezisBlurView' as any } : {})}
+             style={[
+               styles.tomorrowSectionBlur,
+               {
+                 left: -responsiveWidth(15),
+                 right: -responsiveWidth(15),
+                 zIndex: 100,
+               }
+             ]}
            />
-           */}
            <View style={styles.tomorrowBlurredContent}>
              {/* Category header */}
              <View style={styles.tomorrowCategoryHeader}>
@@ -621,6 +640,9 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: responsiveWidth(8),
+    paddingBottom: responsiveHeight(2), // Add bottom padding to prevent content from hiding behind navbar
+    backgroundColor: 'transparent', // Transparent to show circular white overlay from HomeScreen
+    overflow: 'visible', // Allow blur to extend beyond padding
     // Remove paddingVertical to start flush with ActionPlanTimeline
   },
   
@@ -634,17 +656,18 @@ const styles = StyleSheet.create({
   middleLineContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: responsiveHeight(2), // Match ActionPlanTimeline
+    marginBottom: responsiveHeight(0.5), // Reduced spacing before Tomorrow title
   },
   
   bottomLineContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: responsiveHeight(2), // Match ActionPlanTimeline
+    marginTop: responsiveHeight(0.5), // Reduced spacing before tomorrow preview
+    marginBottom: responsiveHeight(0.5), // Reduced spacing after path
   },
   
   categorySection: {
-    marginBottom: responsiveHeight(3),
+    marginBottom: responsiveHeight(1.5), // Reduced spacing before path
   },
   categoryHeader: {
     flexDirection: 'row',
@@ -769,11 +792,17 @@ const styles = StyleSheet.create({
     textAlignVertical: 'center',
     lineHeight: responsiveFontSize(2.5),
     flexShrink: 0,
+    color: '#949494', // Grey color matching time view
+  },
+  timeEmojiSmall: {
+    fontSize: moderateScale(12, 1.5), // Smaller font size for "Anytime" text (matching time view)
+    fontWeight: '500',
+    color: '#949494', // Grey color matching time view
   },
   
   // Tomorrow section styles
   tomorrowSection: {
-    marginTop: responsiveHeight(1),
+    marginTop: responsiveHeight(0.5), // Reduced spacing after path
     marginBottom: responsiveHeight(1),
   },
   tomorrowHeader: {
@@ -803,9 +832,14 @@ const styles = StyleSheet.create({
   },
   tomorrowPreview: {
     position: 'relative',
+    borderRadius: 0, // Remove inner curve
+    overflow: 'visible', // Ensure no clipping
+    backgroundColor: '#FFFFFF', // White background to prevent grey appearance
   },
   tomorrowBlurredContent: {
     position: 'relative',
+    borderRadius: 0, // Remove inner curve
+    backgroundColor: '#FFFFFF', // White background to prevent grey appearance
   },
   tomorrowCategoryHeader: {
     flexDirection: 'row',
@@ -903,14 +937,14 @@ const styles = StyleSheet.create({
     tintColor: '#949494',
   },
   
-  // Tomorrow section blur overlay
+  // Tomorrow section blur overlay - matching time view
   tomorrowSectionBlur: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 100,
-    backgroundColor: 'transparent',
+    top: 0, // Extend upward to increase height
+    bottom: 0, // Extend downward to increase height
+    backgroundColor: 'transparent', // Matching time view
+    borderRadius: responsiveWidth(2),
+    left: -responsiveWidth(15),
+    right: -responsiveWidth(15), // Matching time view
   },
 });

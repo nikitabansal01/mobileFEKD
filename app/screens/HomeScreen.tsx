@@ -602,7 +602,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         {/* Large radial gradient background */}
         {renderBackgroundGradients()}
         
-        {/* White circle overlay effect */}
+        {/* White circle overlay effect - show in both views */}
         <View style={styles.whiteCircleOverlay} />
 
         {/* Foreground VectorSpotlight overlay (on top of gradients and white circle) */}
@@ -829,7 +829,7 @@ const styles = StyleSheet.create({
     top: responsiveHeight(27),
     left: (Dimensions.get('window').width / 2) - responsiveWidth(150),
     width: responsiveWidth(300),
-    height: responsiveWidth(300),
+    height: responsiveWidth(400),
     backgroundColor: '#FFFFFF',
     borderRadius: responsiveWidth(150),
     zIndex: 0,
