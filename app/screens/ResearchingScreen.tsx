@@ -285,14 +285,15 @@ const ResearchingScreen = () => {
         <View
           style={{
             position: "absolute",
-            top: responsiveHeight(8),
+            top: responsiveHeight(3),
             left: responsiveWidth(0),
-            width: responsiveWidth(23),
+            width: responsiveWidth(30),
             aspectRatio: 0.46,
           }}
         >
           <Image 
-            source={Images.GraphicEstrogenDefault} 
+            // source={Images.GraphicEstrogenDefault} 
+            source={Images.EstrogenBothHand} 
             style={{ width: '100%', height: '100%' }}
             resizeMode="contain"
           />
@@ -300,15 +301,15 @@ const ResearchingScreen = () => {
         <View
           style={{
             position: "absolute",
-            top: responsiveHeight(0),
-            right: responsiveWidth(18),
-            width: responsiveWidth(38),
+            top: responsiveHeight(2),
+            right: responsiveWidth(20),
+            width: responsiveWidth(28),
             aspectRatio: 1.45,
-            transform: [{ rotate: "325deg" }],
+            transform: [{ rotate: "340deg" }],
           }}
         >
           <Image 
-            source={Images.GraphicLHDefault} 
+            source={Images.LHCharacterBothHand} 
             style={{ width: '100%', height: '100%' }}
             resizeMode="contain"
           />
@@ -316,15 +317,15 @@ const ResearchingScreen = () => {
         <View
           style={{
             position: "absolute",
-            bottom: responsiveHeight(3),
-            right: responsiveWidth(-8),
-            width: responsiveWidth(47),
+            bottom: responsiveHeight(8),
+            right: responsiveWidth(-3),
+            width: responsiveWidth(30),
             aspectRatio: 1.195,
 
           }}
         >
           <Image 
-            source={Images.GraphicTestosteroneDefault} 
+            source={Images.TestosteroneBothHand} 
             style={{ width: '100%', height: '100%' }}
             resizeMode="contain"
           />
@@ -575,14 +576,14 @@ const ResearchingScreen = () => {
         <View
           style={{
             position: "absolute",
-            top: responsiveHeight(7),
-            right: responsiveWidth(-8),
-            width: responsiveWidth(53),
+            top: responsiveHeight(8),
+            right: responsiveWidth(-5),
+            width: responsiveWidth(30),
             aspectRatio: 1.56,
           }}
         >
           <Image 
-            source={Images.GraphicProgesteroneDefault} 
+            source={Images.ProgesteroneBothHand} 
             style={{ width: '100%', height: '100%' }}
             resizeMode="contain"
           />

@@ -14,7 +14,7 @@ import {
   View
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
-import { moderateScale } from 'react-native-size-matters';
+import { moderateScale, scale } from 'react-native-size-matters';
 import Svg, { Defs, Line, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 
 
@@ -471,40 +471,41 @@ export default function TypeActionPlan({
       <View style={styles.actionDetails}>
         <TouchableOpacity 
           onPress={handleActionPress}
-          style={{ flexDirection: 'row', alignItems: 'center' }}
+          style={styles.actionTitleContainer}
         >
-                                  <Text style={styles.actionTitle}>{assignment.title}</Text>
-                        <Text style={styles.actionArrow}>{'>'}</Text>
+          <Text style={styles.actionTitle}>{assignment.title}</Text>
+          <Text style={styles.actionArrow}>{'>'}</Text>
         </TouchableOpacity>
         <View style={styles.actionMeta}>
-          <Text style={styles.actionAmount}>{getActionAmount(assignment)}</Text>
-          <View style={styles.separator} />
-          <Text style={styles.actionPurpose}>{getActionSymptomsConditions(assignment)}</Text>
-          <View style={styles.separator} />
-          <View style={styles.hormoneInfo}>
-            <Text style={[styles.hormoneCount, { color: '#949494' }]}>+{getHormoneCount(assignment)}</Text>
-            <View style={styles.hormoneIcon}>
-              {typeof getFirstHormoneIcon(assignment) === 'string' ? (
-                <Text style={styles.hormoneIconText}>{getFirstHormoneIcon(assignment)}</Text>
-              ) : (
-                <Image 
-                  source={getFirstHormoneIcon(assignment)} 
-                  style={styles.hormoneIconImage}
-                  resizeMode="contain"
-                />
-              )}
+          <View style={styles.actionMetaRow}>
+            <Text style={styles.actionAmount}>{getActionAmount(assignment)}</Text>
+            <View style={styles.separator} />
+            <View style={styles.hormoneInfo}>
+              <Text style={[styles.hormoneCount, { color: '#949494' }]}>+{getHormoneCount(assignment)}</Text>
+              <View style={styles.hormoneIcon}>
+                {typeof getFirstHormoneIcon(assignment) === 'string' ? (
+                  <Text style={styles.hormoneIconText}>{getFirstHormoneIcon(assignment)}</Text>
+                ) : (
+                  <Image 
+                    source={getFirstHormoneIcon(assignment)} 
+                    style={styles.hormoneIconImage}
+                    resizeMode="contain"
+                  />
+                )}
+              </View>
             </View>
+            <View style={styles.separator} />
+            {(() => {
+              const timeEmojiText = getTimeEmoji(assignment.timeSlot, assignment);
+              return (
+                <Text style={[
+                  styles.timeEmoji,
+                  timeEmojiText === 'Anytime' && styles.timeEmojiSmall
+                ]}>{timeEmojiText}</Text>
+              );
+            })()}
           </View>
-          <View style={styles.separator} />
-          {(() => {
-            const timeEmojiText = getTimeEmoji(assignment.timeSlot, assignment);
-            return (
-              <Text style={[
-                styles.timeEmoji,
-                timeEmojiText === 'Anytime' && styles.timeEmojiSmall
-              ]}>{timeEmojiText}</Text>
-            );
-          })()}
+          <Text style={styles.actionPurpose}>{getActionSymptomsConditions(assignment)}</Text>
         </View>
       </View>
     </View>
@@ -639,7 +640,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   content: {
-    paddingHorizontal: responsiveWidth(8),
+    paddingHorizontal: responsiveWidth(5),
     paddingBottom: responsiveHeight(2), // Add bottom padding to prevent content from hiding behind navbar
     backgroundColor: 'transparent', // Transparent to show circular white overlay from HomeScreen
     overflow: 'visible', // Allow blur to extend beyond padding
@@ -656,7 +657,7 @@ const styles = StyleSheet.create({
   middleLineContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: responsiveHeight(0.5), // Reduced spacing before Tomorrow title
+    marginBottom: responsiveHeight(0.1), // Reduced spacing before Tomorrow title
   },
   
   bottomLineContainer: {
@@ -672,7 +673,8 @@ const styles = StyleSheet.create({
   categoryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: responsiveHeight(3),
+    marginBottom: responsiveHeight(2),
+    marginTop: responsiveHeight(1),
   },
   dividerLeft: {
     flex: 1,
@@ -701,9 +703,9 @@ const styles = StyleSheet.create({
     gap: responsiveWidth(3),
   },
   imageContainer: {
-    width: responsiveWidth(12.5),
-    height: responsiveWidth(12.5),
-    borderRadius: responsiveWidth(6.25),
+    width: scale(50),
+    height: scale(50),
+    borderRadius: scale(25),
     backgroundColor: '#F2F2F7',
     justifyContent: 'center',
     alignItems: 'center',
@@ -714,6 +716,12 @@ const styles = StyleSheet.create({
   actionDetails: {
     flex: 1,
     gap: responsiveHeight(0.5),
+  },
+  actionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: responsiveWidth(1),
+    paddingTop: responsiveHeight(1),
   },
   actionTitle: {
     fontSize: responsiveFontSize(1.98), // 14px equivalent
@@ -727,13 +735,17 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   actionMeta: {
+    flexDirection: 'column',
+    maxWidth: '100%',
+    paddingHorizontal: responsiveWidth(1),
+    paddingVertical: responsiveHeight(0.5),
+  },
+  actionMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: responsiveWidth(1.5),
     flexWrap: 'wrap',
-    maxWidth: '100%',
-    paddingHorizontal: responsiveWidth(2),
-    paddingVertical: responsiveHeight(0.5),
+    marginBottom: responsiveHeight(0.5),
   },
   actionAmount: {
     fontSize: responsiveFontSize(1.7), // 12px equivalent
@@ -748,7 +760,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter400', // Inter Regular
     color: '#949494', // Grey Light
     flexShrink: 1,
-    flex: 1,
     lineHeight: responsiveFontSize(1.7) * 1.2,
     textAlign: 'left',
   },
@@ -802,7 +813,7 @@ const styles = StyleSheet.create({
   
   // Tomorrow section styles
   tomorrowSection: {
-    marginTop: responsiveHeight(0.5), // Reduced spacing after path
+    // marginTop: responsiveHeight(0.1), // Reduced spacing after path
     marginBottom: responsiveHeight(1),
   },
   tomorrowHeader: {

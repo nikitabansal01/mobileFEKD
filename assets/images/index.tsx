@@ -66,6 +66,8 @@ const Images = {
     TestosteroneBothHand: require('./hormoneBuddy/TestosteroneBothHand.png'),
     TestosteroneLeftHand: require('./hormoneBuddy/TestosteroneLeftHand.png'),
     TestosteroneRightHand: require('./hormoneBuddy/TestosteroneRightHand.png'),
+
+    LHCharacterBothHand: require('./hormoneBuddy/LHCharacterBothHand.png'),
     
     // Chat avatars
     ChatThumbnail: require('./hormoneBuddy/ProgesteroneCharacter.png'),
