@@ -194,12 +194,22 @@ export default function TypeActionPlan({
     return assignment.purpose || '';
   };
 
-  const getActionSymptomsConditions = (assignment: Assignment): string => {
+  const getActionSymptomsConditions = (assignment: Assignment, maxItems: number = 2): string => {
     // Collect symptoms and conditions in order and return (for timeline display)
     const symptoms = assignment.symptoms || [];
     const conditions = assignment.conditions || [];
     
     const allItems = [...symptoms, ...conditions];
+    
+    if (allItems.length === 0) {
+      return '';
+    }
+    
+    // Show only first maxItems items, add "..." if there are more
+    if (allItems.length > maxItems) {
+      return allItems.slice(0, maxItems).join(', ') + '...';
+    }
+    
     return allItems.join(', ');
   };
 
@@ -504,8 +514,25 @@ export default function TypeActionPlan({
                 ]}>{timeEmojiText}</Text>
               );
             })()}
+            {(() => {
+              const causesText = getActionSymptomsConditions(assignment);
+              if (causesText) {
+                return (
+                  <>
+                    <View style={styles.separator} />
+                    <Text 
+                      style={styles.actionPurpose} 
+                      numberOfLines={1} 
+                      ellipsizeMode="tail"
+                    >
+                      {causesText}
+                    </Text>
+                  </>
+                );
+              }
+              return null;
+            })()}
           </View>
-          <Text style={styles.actionPurpose}>{getActionSymptomsConditions(assignment)}</Text>
         </View>
       </View>
     </View>
@@ -640,7 +667,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   content: {
-    paddingHorizontal: responsiveWidth(5),
+    paddingHorizontal: responsiveWidth(2),
     paddingBottom: responsiveHeight(2), // Add bottom padding to prevent content from hiding behind navbar
     backgroundColor: 'transparent', // Transparent to show circular white overlay from HomeScreen
     overflow: 'visible', // Allow blur to extend beyond padding
@@ -744,14 +771,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: responsiveWidth(1.5),
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
     marginBottom: responsiveHeight(0.5),
   },
   actionAmount: {
     fontSize: responsiveFontSize(1.7), // 12px equivalent
     fontFamily: 'Inter400', // Inter Regular
     color: '#949494', // Grey Light
-    flexShrink: 1,
+    flexShrink: 0, // Don't shrink, use content width
     lineHeight: responsiveFontSize(1.7) * 1.2,
     textAlign: 'left',
   },
@@ -760,6 +787,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter400', // Inter Regular
     color: '#949494', // Grey Light
     flexShrink: 1,
+    maxWidth: responsiveWidth(30), // Limit the width for causes
     lineHeight: responsiveFontSize(1.7) * 1.2,
     textAlign: 'left',
   },

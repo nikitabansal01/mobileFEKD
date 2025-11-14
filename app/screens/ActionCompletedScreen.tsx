@@ -53,6 +53,7 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
   const [unboxingFinished, setUnboxingFinished] = useState(false);
   const [showHormoneIcon, setShowHormoneIcon] = useState(false);
   const [playUnboxing, setPlayUnboxing] = useState(false);
+  const [showMovingGlow, setShowMovingGlow] = useState(false);
   
   // Animation values - use useRef to persist across renders
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -147,18 +148,31 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
     }
   }, [action?.id]);
 
+  // Show moving glow 500ms after unboxing animation starts
+  useEffect(() => {
+    if (playUnboxing) {
+      console.log('🎁 Unboxing started, starting 500ms delay for moving glow');
+      const timer = setTimeout(() => {
+        console.log('✨ 500ms passed, showing moving glow');
+        setShowMovingGlow(true);
+      }, 800);
+
+      return () => clearTimeout(timer);
+    }
+  }, [playUnboxing]);
+
   // 2-second delay for hormone icon
   useEffect(() => {
-    if (unboxingFinished) {
+    if (playUnboxing) {
       console.log('✨ Unboxing finished, starting 2-second delay');
       const timer = setTimeout(() => {
         console.log('⏰ 2 seconds passed, showing hormone icon');
         setShowHormoneIcon(true);
-      }, 200);
+      }, 1000);
 
       return () => clearTimeout(timer);
     }
-  }, [unboxingFinished]);
+  }, [playUnboxing]);
 
   // Animate hormone icon when it appears
   useEffect(() => {
@@ -245,8 +259,8 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
   return (
     <View style={styles.container}>
       <View style={styles.backgroundContainer}>
-        {/* Moving Glow appears immediately when currentPhase is 'final' */}
-        {currentPhase === 'final' && (
+        {/* Moving Glow appears 500ms after unboxing animation starts */}
+        {showMovingGlow && (
           <View style={[styles.movingGlowAnimation, { pointerEvents: 'none' }]}>
             <LottieView
               source={MovingGlowAnimation}
@@ -312,8 +326,8 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
         </View>
       )}
 
-      {/* Text appears immediately when currentPhase is 'final' */}
-      {currentPhase === 'final' && (
+      {/* Text appears when hormone icon (character) appears */}
+      {showHormoneIcon && (
         <Animated.View 
           style={[
             styles.contentContainer,
@@ -334,8 +348,8 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
         </Animated.View>
       )}
 
-      {/* Button appears immediately when currentPhase is 'final' */}
-      {currentPhase === 'final' && (
+      {/* Button appears when hormone icon (character) appears */}
+      {showHormoneIcon && (
         <>
           {/* Gradient background - lower z-index */}
           <View style={styles.buttonContainer}>
@@ -426,7 +440,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     height: screenHeight,
-    opacity: 0.3,
+    opacity: 0.5,
     zIndex: 1,
   },
   giftUnboxingAnimation: {
