@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     height: screenHeight,
-    opacity: 0.5,
+    // opacity: 0.5,
     zIndex: 1,
   },
   giftUnboxingAnimation: {
