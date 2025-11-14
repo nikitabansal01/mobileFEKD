@@ -13,7 +13,9 @@ import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-nat
 const { height: screenHeight } = Dimensions.get('window');
 
 const GiftBoxAnimation = require('@/assets/animation/Gift_Box_Bouncing.json');
-const MovingGlowAnimation = require('@/assets/animation/Moving_glow.json');
+// const MovingGlowAnimation = require('@/assets/animation/Moving_glow.json');
+const MovingGlowAnimation = require('@/assets/animation/moving-glow-1.json');
+
 const GiftUnboxingAnimation = require('@/assets/animation/Gift_unboxing.json');
 
 type RootStackParamList = {
