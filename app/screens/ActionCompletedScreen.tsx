@@ -14,7 +14,10 @@ const { height: screenHeight } = Dimensions.get('window');
 
 const GiftBoxAnimation = require('@/assets/animation/Gift_Box_Bouncing.json');
 // const MovingGlowAnimation = require('@/assets/animation/Moving_glow.json');
-const MovingGlowAnimation = require('@/assets/animation/moving-glow-1.json');
+const MovingGlowAnimation = require('@/assets/animation/moving-purple-glow.json');
+// const MovingGlowAnimation = require('@/assets/animation/confetti-1.json');
+// const MovingGlowAnimation = require('@/assets/animation/confetti-1.json');
+
 
 const GiftUnboxingAnimation = require('@/assets/animation/Gift_unboxing.json');
 
@@ -269,7 +272,10 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
               autoPlay
               loop={true}
               resizeMode="cover"
-              style={StyleSheet.absoluteFill}
+              style={{
+                width: '100%',
+                height: '100%',
+              }}
             />
           </View>
         )}
@@ -406,7 +412,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter400',
     color: '#000000',
     textAlign: 'center',
-    opacity: 0.5,
+    opacity: 1,
     lineHeight: responsiveHeight(2.5),
   },
   touchArea: {
@@ -440,9 +446,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    width: '100%',
-    height: screenHeight,
-    // opacity: 0.5,
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+    opacity: 1,
     zIndex: 1,
   },
   giftUnboxingAnimation: {
