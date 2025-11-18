@@ -237,6 +237,15 @@ class SessionService {
             });
             responseData[mappedKey] = processedAnswer;
             console.log(`Mapped (Others processing): ${q.key} -> ${mappedKey} =`, processedAnswer);
+          } else if (q.key === 'familyHistory' && Array.isArray(answer)) {
+            const processedAnswer = answer.map(item => {
+              if (item === 'Others (please specify)' && answers.familyHistoryText) {
+                return `Others: ${answers.familyHistoryText}`;
+              }
+              return item;
+            });
+            responseData[mappedKey] = processedAnswer;
+            console.log(`Mapped (Others processing): ${q.key} -> ${mappedKey} =`, processedAnswer);
           } else {
             responseData[mappedKey] = answer;
             console.log(`Mapped: ${q.key} -> ${mappedKey} =`, answer);
@@ -508,6 +517,45 @@ class SessionService {
       return normalizedResult;
     } catch (error) {
       console.error('❌ Recommendation status check error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Fetches hormone analysis results for the current session
+   *
+   * Uses the backend /sessions/{session_id}/hormone-analysis endpoint
+   * and returns the parsed JSON response including hormone_cards.
+   */
+  async getHormoneAnalysis(): Promise<any | null> {
+    try {
+      const sessionId = await this.getSessionId();
+      if (!sessionId) {
+        console.error('❌ No session ID available for hormone analysis.');
+        return null;
+      }
+
+      const url = `${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/hormone-analysis`;
+      console.log('🔍 Fetching hormone analysis:', url);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Hormone analysis fetch failed:', errorText);
+        throw new Error(`Hormone analysis fetch failed: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('🧬 Hormone analysis response:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Hormone analysis fetch error:', error);
       return null;
     }
   }

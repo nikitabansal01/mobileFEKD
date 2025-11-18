@@ -1,24 +1,10 @@
 import { getAuth } from 'firebase/auth';
-import { Platform } from 'react-native';
+import { getDynamicApiUrl } from '@/utils/apiConfig';
 
 /**
- * Gets the API base URL based on platform and environment
- * 
- * @returns The appropriate API base URL for the current platform
+ * Gets the API base URL - now dynamically detects the correct URL
  */
-const getApiBaseUrl = () => {
-  const envUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (envUrl) return envUrl;
-  
-  // Platform-specific default values
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:8000';
-  } else {
-    return 'http://localhost:8000';
-  }
-};
-
-const API_BASE_URL = getApiBaseUrl();
+const API_BASE_URL = getDynamicApiUrl();
 
 /**
  * Retrieves Firebase authentication token for API requests
