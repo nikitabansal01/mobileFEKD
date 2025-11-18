@@ -102,7 +102,16 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
           try {
             const linkSuccess = await sessionService.linkSessionToUser(result.user);
             if (linkSuccess) {
-              Alert.alert('Success', 'Google signup successful! Your survey data has been linked.');
+              // Wait until user data is actually ready
+              console.log('✅ Session linked successfully, waiting for data to be ready...');
+              const dataReady = await sessionService.waitForUserDataReady(result.user);
+              
+              if (dataReady) {
+                Alert.alert('Success', 'Google signup successful! Your personalized plan is ready.');
+              } else {
+                Alert.alert('Success', 'Google signup successful! Your plan is being prepared.');
+              }
+              
               onClose();
               navigation.navigate('MainScreenTabs');
             } else {
@@ -170,7 +179,16 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
         try {
           const linkSuccess = await sessionService.linkSessionToUser(result.user);
           if (linkSuccess) {
-            Alert.alert("Success", "Signup successful! Your survey data has been linked.");
+            // Wait until user data is actually ready
+            console.log('✅ Session linked successfully, waiting for data to be ready...');
+            const dataReady = await sessionService.waitForUserDataReady(result.user);
+            
+            if (dataReady) {
+              Alert.alert("Success", "Signup successful! Your personalized plan is ready.");
+            } else {
+              Alert.alert("Success", "Signup successful! Your plan is being prepared.");
+            }
+            
             onClose();
             navigation.navigate('MainScreenTabs');
           } else {
@@ -231,7 +249,16 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       try {
         const linkSuccess = await sessionService.linkSessionToUser(result.user);
         if (linkSuccess) {
-          Alert.alert("Success", "Apple signup successful! Your survey data has been linked.");
+          // Wait until user data is actually ready
+          console.log('✅ Session linked successfully, waiting for data to be ready...');
+          const dataReady = await sessionService.waitForUserDataReady(result.user);
+          
+          if (dataReady) {
+            Alert.alert("Success", "Apple signup successful! Your personalized plan is ready.");
+          } else {
+            Alert.alert("Success", "Apple signup successful! Your plan is being prepared.");
+          }
+          
           onClose();
           navigation.navigate('MainScreenTabs');
         } else {

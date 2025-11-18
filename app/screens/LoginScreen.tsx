@@ -64,6 +64,9 @@ const LoginScreen = () => {
           // Get Firebase token for authentication
           const token = await result.user.getIdToken();
           
+          // Small delay to ensure auth state is propagated
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
           Alert.alert('Success', 'Google login successful!');
           navigation.navigate('MainScreenTabs');
         })
@@ -89,6 +92,9 @@ const LoginScreen = () => {
       if (result.success) {
         // Get Firebase token for authentication
         const token = await auth.currentUser?.getIdToken();
+        
+        // Small delay to ensure auth state is propagated
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         Alert.alert("Success", "Login successful!");
         navigation.navigate('MainScreenTabs');
@@ -137,6 +143,9 @@ const LoginScreen = () => {
       
       // Get Firebase token for authentication
       const token = await result.user.getIdToken();
+      
+      // Small delay to ensure auth state is propagated
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       Alert.alert("Success", "Apple login successful!");
       navigation.navigate('MainScreenTabs');

@@ -277,7 +277,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         setProgressStats(null);
       }
     } catch (error) {
-      // Handle error silently
+      console.error('❌ Error loading home data:', error);
+      // Set empty data to prevent white screen
+      setCycleInfo(null);
+      setAssignments(null);
+      setProgressStats(null);
     } finally {
       setLoading(false);
     }
@@ -303,7 +307,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         setProgressStats(null);
       }
     } catch (error) {
-      // Handle error silently
+      console.error('❌ Error loading home data (no loading state):', error);
+      // Set empty data to prevent white screen
+      setCycleInfo(null);
+      setAssignments(null);
+      setProgressStats(null);
     }
   };
 

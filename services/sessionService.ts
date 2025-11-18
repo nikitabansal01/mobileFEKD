@@ -559,6 +559,66 @@ class SessionService {
       return null;
     }
   }
+
+  /**
+   * Waits for user data to be available after session linking
+   * Polls the API until assignments exist or timeout
+   * 
+   * @param firebaseUser - Firebase user object to get auth token
+   * @param maxAttempts - Maximum number of polling attempts (default: 15)
+   * @param delayMs - Delay between attempts in milliseconds (default: 1000)
+   * @returns Promise resolving to true if data is ready, false if timeout
+   */
+  async waitForUserDataReady(firebaseUser: any, maxAttempts: number = 15, delayMs: number = 1000): Promise<boolean> {
+    console.log('⏳ Waiting for user data to be ready...');
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        console.log(`🔄 Attempt ${attempt}/${maxAttempts} - Checking if user data exists...`);
+        
+        // Get Firebase token
+        const token = await firebaseUser.getIdToken();
+        
+        // Check if user has any assignments
+        const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/assignments/today`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Check if user has assignments
+          if (data && data.assignments && Object.keys(data.assignments).length > 0) {
+            console.log('✅ User data is ready! Found assignments:', Object.keys(data.assignments).length);
+            return true;
+          }
+          
+          console.log(`⏳ Attempt ${attempt}: No assignments yet, waiting...`);
+        } else {
+          console.log(`⏳ Attempt ${attempt}: API returned ${response.status}, waiting...`);
+        }
+        
+        // Wait before next attempt (except on last attempt)
+        if (attempt < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      } catch (error) {
+        console.error(`❌ Error checking user data (attempt ${attempt}):`, error);
+        
+        // Wait before retry
+        if (attempt < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      }
+    }
+    
+    console.log('⚠️ Timeout: User data not ready after maximum attempts');
+    return false;
+  }
 }
 
 export default new SessionService(); 
