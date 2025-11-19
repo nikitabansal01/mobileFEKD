@@ -812,8 +812,8 @@ const styles = StyleSheet.create({
     color: '#949494', // Grey Light
   },
   hormoneIcon: {
-    width: responsiveWidth(4),
-    height: responsiveWidth(4),
+    width: responsiveWidth(6),
+    height: responsiveWidth(6),
     borderRadius: responsiveWidth(2),
     justifyContent: 'center',
     alignItems: 'center',
