@@ -510,7 +510,8 @@ export default function TypeActionPlan({
               return (
                 <Text style={[
                   styles.timeEmoji,
-                  timeEmojiText === 'Anytime' && styles.timeEmojiSmall
+                  timeEmojiText === 'Anytime' && styles.timeEmojiSmall,
+                  timeEmojiText === '🌙' && styles.timeEmojiMoon
                 ]}>{timeEmojiText}</Text>
               );
             })()}
@@ -752,6 +753,7 @@ const styles = StyleSheet.create({
   },
   actionTitle: {
     fontSize: responsiveFontSize(1.98), // 14px equivalent
+    lineHeight: responsiveFontSize(1.98) * 1.3,
     fontFamily: 'NotoSerif500', // Noto Serif Medium
     color: '#000000', // Black
   },
@@ -829,7 +831,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     includeFontPadding: false,
     textAlignVertical: 'center',
-    lineHeight: responsiveFontSize(2.5),
+    lineHeight: responsiveFontSize(2.7),
     flexShrink: 0,
     color: '#949494', // Grey color matching time view
   },
@@ -837,6 +839,10 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(12, 1.5), // Smaller font size for "Anytime" text (matching time view)
     fontWeight: '500',
     color: '#949494', // Grey color matching time view
+  },
+  timeEmojiMoon: {
+    fontSize: responsiveFontSize(1.9), // Smaller size for moon emoji
+    lineHeight: responsiveFontSize(2.5),
   },
   
   // Tomorrow section styles

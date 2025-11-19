@@ -920,7 +920,8 @@ export default function ActionPlanTimeline({
                 <Text 
                   style={[
                     styles.timeIconText,
-                    (TIME_ICONS[smartTimeSlot] || TIME_ICONS.anytime) === 'Anytime' && styles.timeIconTextSmall
+                    (TIME_ICONS[smartTimeSlot] || TIME_ICONS.anytime) === 'Anytime' && styles.timeIconTextSmall,
+                    (TIME_ICONS[smartTimeSlot] || TIME_ICONS.anytime) === '🌙' && styles.timeIconTextMoon
                   ]} 
                   allowFontScaling={false}
                 >
@@ -1625,6 +1626,10 @@ const styles = StyleSheet.create({
   timeIconTextSmall: {
     fontSize: moderateScale(12, 1.5), // Smaller font size for "Anytime" text
     fontWeight: '500',
+  },
+  timeIconTextMoon: {
+    fontSize: responsiveFontSize(1.9), // Smaller size for moon emoji
+    lineHeight: responsiveFontSize(2.5),
   },
   
   // Expanding circle animation styles
