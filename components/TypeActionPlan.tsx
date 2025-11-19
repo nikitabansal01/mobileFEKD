@@ -279,7 +279,7 @@ export default function TypeActionPlan({
     if (assignment.hormones && assignment.hormones.length > 0) {
       return getHormoneIcon(assignment.hormones[0]);
     }
-    return 'a'; // Default icon
+    return '💊'; // Default icon
   };
 
   // Smart time slot detection based on assignment content
