@@ -257,6 +257,7 @@ export default function TypeActionPlan({
       case 'thyroid': return Images.ThyroidCharacter;
       case 'insulin': return Images.InsulinCharacter;
       case 'cortisol': return Images.CortisolCharacter;
+      case 'testosterone': return Images.TestosteroneCharacter;
       case 'fsh': return '🌱';
       case 'lh': return '🌿';
       case 'prolactin': return '🤱';
@@ -278,7 +279,7 @@ export default function TypeActionPlan({
     if (assignment.hormones && assignment.hormones.length > 0) {
       return getHormoneIcon(assignment.hormones[0]);
     }
-    return '💊'; // Default icon
+    return 'a'; // Default icon
   };
 
   // Smart time slot detection based on assignment content
