@@ -169,6 +169,30 @@ export default function ActionPlanTimeline({
    */
   const todayAssignments: Assignment[] = useMemo(() => {
     const arr: Assignment[] = [];
+    
+    // Add static "Weekly Check-in" assignment at the beginning
+    const weeklyCheckIn: Assignment = {
+      id: -1, // Special ID for static assignment
+      recommendation_id: -1,
+      title: 'Weekly Check-in',
+      purpose: 'Vent your concerns & progress | Acne | 🌤️',
+      category: 'mindfulness',
+      conditions: [],
+      symptoms: [],
+      hormones: [],
+      is_completed: false,
+      completed_at: '',
+      advices: [],
+      food_amounts: [],
+      food_items: [],
+      exercise_durations: [],
+      exercise_types: [],
+      exercise_intensities: [],
+      mindfulness_durations: [],
+      mindfulness_techniques: [],
+    };
+    arr.push(weeklyCheckIn);
+    
     Object.values(assignments).forEach((group) => {
       group?.forEach((a) => arr.push(a));
     });
@@ -723,35 +747,37 @@ export default function ActionPlanTimeline({
 
             return (
               <View key={a.id.toString()} style={StyleSheet.absoluteFill} pointerEvents="box-none">
-                {/* Hormone image behind the circle */}
-                <View
-                  style={[
-                    styles.hormoneImage,
-                    {
-                      top: isLeft ? (yImage - responsiveHeight(4)) : (yImage - responsiveHeight(4)),
-                      left: isLeft ? (xImage - responsiveWidth(6)) : (xImage + responsiveWidth(11)),
-                    }
-                  ]}
-                  pointerEvents="none"
-                >
-                  {typeof getFirstHormoneIcon(a, isLeft) === 'string' ? (
-                    <Text style={styles.hormoneImageText} allowFontScaling={false}>
-                      {getFirstHormoneIcon(a, isLeft)}
-                    </Text>
-                  ) : (
-                    <Image 
-                      source={getFirstHormoneIcon(a, isLeft)} 
-                      style={[
-                        styles.hormoneImageIcon,
-                        { transform: isLeft ? [{ rotate: '333deg' }] : [{ rotate: '15deg' }] }
-                      ]}
-                      resizeMode="contain"
-                    />
-                  )}
-                </View>
+                {/* Hormone image behind the circle - hide for Weekly Check-in */}
+                {a.id !== -1 && (
+                  <View
+                    style={[
+                      styles.hormoneImage,
+                      {
+                        top: isLeft ? (yImage - responsiveHeight(4)) : (yImage - responsiveHeight(4)),
+                        left: isLeft ? (xImage - responsiveWidth(6)) : (xImage + responsiveWidth(11)),
+                      }
+                    ]}
+                    pointerEvents="none"
+                  >
+                    {typeof getFirstHormoneIcon(a, isLeft) === 'string' ? (
+                      <Text style={styles.hormoneImageText} allowFontScaling={false}>
+                        {getFirstHormoneIcon(a, isLeft)}
+                      </Text>
+                    ) : (
+                      <Image 
+                        source={getFirstHormoneIcon(a, isLeft)} 
+                        style={[
+                          styles.hormoneImageIcon,
+                          { transform: isLeft ? [{ rotate: '333deg' }] : [{ rotate: '15deg' }] }
+                        ]}
+                        resizeMode="contain"
+                      />
+                    )}
+                  </View>
+                )}
 
                 {/* Pulsing animation ring for next incomplete task */}
-                {a.id === nextIncompleteTask?.id && (
+                {a.id === nextIncompleteTask?.id && a.id !== -1 && (
                   <Animated.View
                     style={[
                       styles.pulsingRing,
@@ -775,6 +801,18 @@ export default function ActionPlanTimeline({
                     },
                   ]}
                   onPress={() => {
+                    // Special handling for Weekly Check-in - navigate to ChatbotScreen
+                    if (a.id === -1) {
+                      navigation.navigate('ChatbotScreen', {
+                        conversationContext: {
+                          initialMessage: 'Weekly Check-in',
+                          userResponse: 'Continue conversation',
+                          context: 'weekly_checkin',
+                        },
+                      });
+                      return;
+                    }
+                    
                     // Trigger expanding animation for pulsing ring
                     if (a.id === nextIncompleteTask?.id) {
                       handleExpandingNavigation({
@@ -821,22 +859,24 @@ export default function ActionPlanTimeline({
                   </Text>
                   {/* (hormone image rendered behind the circle) */}
                   
-                  {/* Hormone number (relative to image) */}
-                  <View style={[
-                    styles.hormoneBadge,
-                    {
-                      // When left anchor: left of image
-                      // When right anchor: right of image
-                      top: isLeft ? -responsiveHeight(2) : -responsiveHeight(2.5),
-                      left: isLeft ? -responsiveWidth(12) : undefined,
-                      right: isLeft ? undefined : -responsiveWidth(12),
-                      backgroundColor: getHormoneColor(a.hormones?.[0]),
-                    }
-                  ]}>
-                    <Text style={styles.hormoneBadgeText} allowFontScaling={false}>
-                      +{a.hormones?.length || 0}
-                    </Text>
-                  </View>
+                  {/* Hormone number (relative to image) - hide for Weekly Check-in */}
+                  {a.id !== -1 && (
+                    <View style={[
+                      styles.hormoneBadge,
+                      {
+                        // When left anchor: left of image
+                        // When right anchor: right of image
+                        top: isLeft ? -responsiveHeight(2) : -responsiveHeight(2.5),
+                        left: isLeft ? -responsiveWidth(12) : undefined,
+                        right: isLeft ? undefined : -responsiveWidth(12),
+                        backgroundColor: getHormoneColor(a.hormones?.[0]),
+                      }
+                    ]}>
+                      <Text style={styles.hormoneBadgeText} allowFontScaling={false}>
+                        +{a.hormones?.length || 0}
+                      </Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
 
                 {/* Text */}
@@ -848,6 +888,18 @@ export default function ActionPlanTimeline({
                 >
                   <TouchableOpacity
                     onPress={() => {
+                      // Special handling for Weekly Check-in - navigate to ChatbotScreen
+                      if (a.id === -1) {
+                        navigation.navigate('ChatbotScreen', {
+                          conversationContext: {
+                            initialMessage: 'Weekly Check-in',
+                            userResponse: 'Continue conversation',
+                            context: 'weekly_checkin',
+                          },
+                        });
+                        return;
+                      }
+                      
                       handleNavigation({
                         id: a.id,
                         title: a.title,
@@ -873,7 +925,9 @@ export default function ActionPlanTimeline({
                     </Text>
                   </TouchableOpacity>
                   <Text style={[styles.itemSub, { textAlign: isLeft ? 'left' : 'right' }]} numberOfLines={1} allowFontScaling={false}>
-                    {getActionAmount(a)}{getActionSymptomsConditions(a) ? ' | ' : ''}{getActionSymptomsConditions(a)}
+                    {a.id === -1 
+                      ? (a.purpose || 'Vent your concerns & progress | Acne | 🌤️')
+                      : `${getActionAmount(a)}${getActionSymptomsConditions(a) ? ' | ' : ''}${getActionSymptomsConditions(a)}`}
                   </Text>
                 </View>
               </View>

@@ -93,6 +93,18 @@ export default function TypeActionPlan({
    */
   const handleNavigation = (actionData: any) => {
     try {
+      // Special handling for Weekly Check-in - navigate to ChatbotScreen
+      if (actionData.id === -1) {
+        (navigation as any).navigate('ChatbotScreen', {
+          conversationContext: {
+            initialMessage: 'Weekly Check-in',
+            userResponse: 'Continue conversation',
+            context: 'weekly_checkin',
+          },
+        });
+        return;
+      }
+      
       (navigation as any).navigate('ActionDetailScreen', {
         action: JSON.stringify(actionData)
       });
@@ -108,6 +120,30 @@ export default function TypeActionPlan({
    */
   const categorizedAssignments = useMemo(() => {
     const allAssignments: (Assignment & { timeSlot: string })[] = [];
+    
+    // Add static "Weekly Check-in" assignment at the beginning
+    const weeklyCheckIn: Assignment & { timeSlot: string } = {
+      id: -1, // Special ID for static assignment
+      recommendation_id: -1,
+      title: 'Weekly Check-in',
+      purpose: 'Vent your concerns & progress | Acne',
+      category: 'food', // Categorized as food to appear in Eat section
+      conditions: [],
+      symptoms: [],
+      hormones: [],
+      is_completed: false,
+      completed_at: '',
+      advices: [],
+      food_amounts: [],
+      food_items: [],
+      exercise_durations: [],
+      exercise_types: [],
+      exercise_intensities: [],
+      mindfulness_durations: [],
+      mindfulness_techniques: [],
+      timeSlot: 'anytime',
+    };
+    allAssignments.push(weeklyCheckIn);
     
     // Collect actions from all time slots
     console.log('🔍 TypeActionPlan processing assignments:', {
@@ -137,7 +173,11 @@ export default function TypeActionPlan({
       mindfulness: [],
     };
 
-    allAssignments.forEach(assignment => {
+    // Separate Weekly Check-in from other assignments
+    const weeklyCheckInItem = allAssignments.find(a => a.id === -1);
+    const otherAssignments = allAssignments.filter(a => a.id !== -1);
+
+    otherAssignments.forEach(assignment => {
       // Category determination logic - prioritize API category field
       const category = assignment.category?.toLowerCase() || '';
       
@@ -173,7 +213,7 @@ export default function TypeActionPlan({
       }
     });
 
-    return categorized;
+    return { categorized, weeklyCheckInItem };
   }, [assignments]);
 
   // Helper functions
@@ -453,8 +493,8 @@ export default function TypeActionPlan({
         {/* Image circle */}
         <TouchableOpacity 
           style={styles.imageContainer} 
-          onLongPress={!assignment.is_completed ? () => {
-            // Navigate to ActionCompletedScreen (only if not completed)
+          onLongPress={!assignment.is_completed && assignment.id !== -1 ? () => {
+            // Navigate to ActionCompletedScreen (only if not completed and not Weekly Check-in)
             try {
               (navigation as any).navigate('ActionCompletedScreen', {
                 action: JSON.stringify({
@@ -489,25 +529,30 @@ export default function TypeActionPlan({
         </TouchableOpacity>
         <View style={styles.actionMeta}>
           <View style={styles.actionMetaRow}>
-            <Text style={styles.actionAmount}>{getActionAmount(assignment)}</Text>
-            <View style={styles.separator} />
-            <View style={styles.hormoneInfo}>
-              <Text style={[styles.hormoneCount, { color: '#949494' }]}>+{getHormoneCount(assignment)}</Text>
-              <View style={styles.hormoneIcon}>
-                {typeof getFirstHormoneIcon(assignment) === 'string' ? (
-                  <Text style={styles.hormoneIconText}>{getFirstHormoneIcon(assignment)}</Text>
-                ) : (
-                  <Image 
-                    source={getFirstHormoneIcon(assignment)} 
-                    style={styles.hormoneIconImage}
-                    resizeMode="contain"
-                  />
-                )}
-              </View>
-            </View>
-            <View style={styles.separator} />
+            {assignment.id !== -1 && (
+              <>
+                <Text style={styles.actionAmount}>{getActionAmount(assignment)}</Text>
+                <View style={styles.separator} />
+                <View style={styles.hormoneInfo}>
+                  <Text style={[styles.hormoneCount, { color: '#949494' }]}>+{getHormoneCount(assignment)}</Text>
+                  <View style={styles.hormoneIcon}>
+                    {typeof getFirstHormoneIcon(assignment) === 'string' ? (
+                      <Text style={styles.hormoneIconText}>{getFirstHormoneIcon(assignment)}</Text>
+                    ) : (
+                      <Image 
+                        source={getFirstHormoneIcon(assignment)} 
+                        style={styles.hormoneIconImage}
+                        resizeMode="contain"
+                      />
+                    )}
+                  </View>
+                </View>
+                <View style={styles.separator} />
+              </>
+            )}
             {(() => {
-              const timeEmojiText = getTimeEmoji(assignment.timeSlot, assignment);
+              // For Weekly Check-in, use morning emoji, otherwise use getTimeEmoji
+              const timeEmojiText = assignment.id === -1 ? '🌤️' : getTimeEmoji(assignment.timeSlot, assignment);
               return (
                 <Text style={[
                   styles.timeEmoji,
@@ -516,24 +561,35 @@ export default function TypeActionPlan({
                 ]}>{timeEmojiText}</Text>
               );
             })()}
-            {(() => {
-              const causesText = getActionSymptomsConditions(assignment);
-              if (causesText) {
-                return (
-                  <>
-                    <View style={styles.separator} />
-                    <Text 
-                      style={styles.actionPurpose} 
-                      numberOfLines={1} 
-                      ellipsizeMode="tail"
-                    >
-                      {causesText}
-                    </Text>
-                  </>
-                );
-              }
-              return null;
-            })()}
+            {assignment.id === -1 ? (
+              <>
+                <View style={styles.separator} />
+                <Text 
+                  style={styles.actionPurpose}
+                >
+                  Vent your concerns & progress
+                </Text>
+              </>
+            ) : (
+              (() => {
+                const causesText = getActionSymptomsConditions(assignment);
+                if (causesText) {
+                  return (
+                    <>
+                      <View style={styles.separator} />
+                      <Text 
+                        style={styles.actionPurpose} 
+                        numberOfLines={1} 
+                        ellipsizeMode="tail"
+                      >
+                        {causesText}
+                      </Text>
+                    </>
+                  );
+                }
+                return null;
+              })()
+            )}
           </View>
         </View>
       </View>
@@ -541,9 +597,12 @@ export default function TypeActionPlan({
     );
   };
 
+  // Extract categorized assignments and weekly check-in
+  const { categorized: categorizedAssignmentsObj, weeklyCheckInItem } = categorizedAssignments;
+
   // Category section rendering
   const renderCategorySection = (category: typeof CATEGORIES[0]) => {
-    const categoryAssignments = categorizedAssignments[category.key];
+    const categoryAssignments = categorizedAssignmentsObj[category.key];
     
     if (categoryAssignments.length === 0) {
       return null;
@@ -575,6 +634,9 @@ export default function TypeActionPlan({
        <View style={styles.content}>
          {/* First line: top gradient line */}
          {renderTopLine()}
+         
+         {/* Weekly Check-in - rendered above all categories */}
+         {weeklyCheckInItem && renderActionItem(weeklyCheckInItem)}
          
          {/* Actions by category */}
          {CATEGORIES.map(renderCategorySection)}
@@ -790,7 +852,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter400', // Inter Regular
     color: '#949494', // Grey Light
     flexShrink: 1,
-    maxWidth: responsiveWidth(30), // Limit the width for causes
+    flex: 1,
     lineHeight: responsiveFontSize(1.7) * 1.2,
     textAlign: 'left',
   },

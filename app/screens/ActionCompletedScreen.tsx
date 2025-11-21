@@ -14,7 +14,7 @@ const { height: screenHeight } = Dimensions.get('window');
 
 const GiftBoxAnimation = require('@/assets/animation/Gift_Box_Bouncing.json');
 // const MovingGlowAnimation = require('@/assets/animation/Moving_glow.json');
-const MovingGlowAnimation = require('@/assets/animation/moving-purple-glow-2.json');
+const MovingGlowAnimation = require('@/assets/animation/moving-purple-glow-3.json');
 // const MovingGlowAnimation = require('@/assets/animation/confetti-1.json');
 // const MovingGlowAnimation = require('@/assets/animation/confetti-1.json');
 
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height,
-    opacity: 0.4,
+    opacity: 0.3,
     zIndex: 1,
   },
   giftUnboxingAnimation: {
