@@ -43,13 +43,14 @@ type RootStackParamList = {
 };
 
 interface HomeScreenProps {
-  route?: { 
-    params?: { 
+  route?: {
+    params?: {
       refreshedData?: AssignmentsResponse;
       cyclePhaseData?: any;
       skipLoading?: boolean;
       skipTodayLoading?: boolean;
-    }; 
+      forceRefresh?: boolean;
+    };
   };
 }
 
@@ -60,7 +61,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const [progressStats, setProgressStats] = useState<ProgressStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'time' | 'type'>('time');
-  
+
   // Auvra chat modal state
   const [showAuvraChat, setShowAuvraChat] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -86,7 +87,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
-    
+
     if (!showAuvraChat) {
       inactivityTimerRef.current = setTimeout(() => {
         setShowAuvraChat(true);
@@ -106,14 +107,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   // Handle Auvra chat responses
   const handleAuvraResponse = (response: 'positive' | 'negative') => {
     setShowAuvraChat(false);
-    
+
     // Navigate to MainScreenTabs with auvra tab active and chat context
     const conversationContext = {
       initialMessage: "How does your care plan look today?",
       userResponse: response === 'positive' ? "👍 It works for me" : "👎 I want to change it",
       context: "care_plan_modal"
     };
-    
+
     console.log('HomeScreen - Navigating to Care Plan check-in with:', {
       activeTab: 'auvra',
       chatContext: {
@@ -121,8 +122,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         conversationContext
       }
     });
-    
-    navigation.navigate('MainScreenTabs', { 
+
+    navigation.navigate('MainScreenTabs', {
       activeTab: 'auvra',
       chatContext: {
         chatId: '1', // Care Plan check-in chat ID
@@ -147,7 +148,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     if (!loading && assignments) {
       resetInactivityTimer();
     }
-    
+
     return () => {
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
@@ -163,7 +164,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const convertHormoneStats = (hormoneStatsData: any) => {
     const hormoneStats: HormoneStats = {};
     const supportedHormones = ['androgens', 'progesterone', 'estrogen', 'thyroid', 'insulin', 'cortisol', 'FSH', 'LH', 'prolactin', 'ghrelin', 'testosterone'];
-    
+
     supportedHormones.forEach(hormone => {
       if (hormoneStatsData[hormone]) {
         hormoneStats[hormone as keyof HormoneStats] = {
@@ -172,38 +173,45 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         };
       }
     });
-    
+
     return hormoneStats;
   };
 
   useEffect(() => {
-    // Check for refreshed data from ActionCompletedScreen
     const refreshedData = route?.params?.refreshedData;
     const cyclePhaseData = route?.params?.cyclePhaseData;
     const skipLoading = route?.params?.skipLoading;
     const skipTodayLoading = route?.params?.skipTodayLoading;
+    const forceRefresh = route?.params?.forceRefresh;
+
+    // If forceRefresh is set (e.g., after signup), reload data
+    if (forceRefresh) {
+      console.log('🔄 Force refresh triggered - reloading home data');
+      loadHomeData();
+      return;
+    }
 
     if (refreshedData && skipLoading) {
       // All data completed - use refreshed data
       setAssignments(refreshedData);
-      
+
       if (refreshedData?.hormone_stats) {
         setProgressStats({ hormone_stats: convertHormoneStats(refreshedData.hormone_stats) });
       }
-      
+
       if (cyclePhaseData?.cycle_info) {
         setCycleInfo(cyclePhaseData.cycle_info);
       }
-      
+
       setLoading(false);
     } else if (refreshedData && skipTodayLoading) {
       // Only Today API completed - use partial data
       setAssignments(refreshedData);
-      
+
       if (refreshedData?.hormone_stats) {
         setProgressStats({ hormone_stats: convertHormoneStats(refreshedData.hormone_stats) });
       }
-      
+
       // Load cycle data separately without loading state
       homeService.getCyclePhase().then(cycleData => {
         setCycleInfo(cycleData?.cycle_info || null);
@@ -212,17 +220,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     } else {
       // Check for active API promise from ActionCompletedScreen
       const activePromise = apiPromiseManager.getActivePromise();
-      
+
       if (activePromise) {
         setLoading(true);
-        
+
         // Wait for API promise result
         activePromise
           .then(result => {
             if (result.success) {
               if (result.todayAssignments) {
                 setAssignments(result.todayAssignments);
-                
+
                 if (result.todayAssignments.hormone_stats) {
                   setProgressStats({ hormone_stats: convertHormoneStats(result.todayAssignments.hormone_stats) });
                 }
@@ -261,7 +269,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const loadHomeData = async () => {
     try {
       setLoading(true);
-      
+
       // Call APIs in parallel
       const [cycleData, assignmentsData] = await Promise.all([
         homeService.getCyclePhase(),
@@ -270,7 +278,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
       setCycleInfo(cycleData?.cycle_info || null);
       setAssignments(assignmentsData);
-      
+
       if (assignmentsData?.hormone_stats) {
         setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
       } else {
@@ -300,7 +308,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
       setCycleInfo(cycleData?.cycle_info || null);
       setAssignments(assignmentsData);
-      
+
       if (assignmentsData?.hormone_stats) {
         setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
       } else {
@@ -382,18 +390,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
    */
   const getActionPurpose = (assignment: any) => {
     const allItems = [];
-    
+
     if (assignment.symptoms && assignment.symptoms.length > 0) {
       allItems.push(...assignment.symptoms);
     }
     if (assignment.conditions && assignment.conditions.length > 0) {
       allItems.push(...assignment.conditions);
     }
-    
+
     if (allItems.length > 0) {
       return allItems.join(', ');
     }
-    
+
     return assignment.purpose || 'Health';
   };
 
@@ -405,15 +413,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const getHormoneIcon = (hormone: string) => {
     switch (hormone.toLowerCase()) {
       case 'androgens': return '💪';
-      case 'progesterone': 
+      case 'progesterone':
         return Images.ProgesteroneBothHand;
-      case 'estrogen': 
-      return Images.EstrogenBothHand;
-      case 'thyroid': 
-      return Images.ThyroidBothHand;
+      case 'estrogen':
+        return Images.EstrogenBothHand;
+      case 'thyroid':
+        return Images.ThyroidBothHand;
       case 'insulin': return Images.InsulinBothHand;
-      case 'cortisol': 
-      return Images.CortisolBothHand;
+      case 'cortisol':
+        return Images.CortisolBothHand;
       case 'fsh': return '🌱';
       case 'lh': return '🌿';
       case 'prolactin': return '🤱';
@@ -477,19 +485,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
    */
   const getHormoneQuestColors = () => {
     const allHormones: string[] = [];
-    
+
     // Get hormones directly from hormone_stats
     if (assignments?.hormone_stats) {
       Object.keys(assignments.hormone_stats).forEach(hormone => {
         allHormones.push(hormone);
       });
     }
-    
+
     // Remove duplicates and get first and second hormone colors
     const uniqueHormones = [...new Set(allHormones)];
     const firstHormoneColor = uniqueHormones.length > 0 ? getProgressColor(uniqueHormones[0]) : '#C17EC9';
     const secondHormoneColor = uniqueHormones.length > 1 ? getProgressColor(uniqueHormones[1]) : '#87CEEB';
-    
+
     return { firstHormoneColor, secondHormoneColor };
   };
 
@@ -501,11 +509,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     const { firstHormoneColor, secondHormoneColor } = getHormoneQuestColors();
     const screenWidth = Dimensions.get('window').width;
     const screenHeight = Dimensions.get('window').height;
-    
+
     return (
       <View style={styles.backgroundGradientsContainer}>
-        <Svg 
-          width={screenWidth} 
+        <Svg
+          width={screenWidth}
           height={screenHeight}
           viewBox={`0 0 ${screenWidth} ${screenHeight}`}
         >
@@ -516,7 +524,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
               <Stop offset="50%" stopColor={firstHormoneColor} stopOpacity="0.2" />
               <Stop offset="100%" stopColor={firstHormoneColor} stopOpacity="0" />
             </SvgRadialGradient>
-            
+
             {/* Second large radial gradient */}
             <SvgRadialGradient id="bgGrad2" cx="0.7" cy="0.4" r="0.5">
               <Stop offset="0%" stopColor={secondHormoneColor} stopOpacity="0.6" />
@@ -524,7 +532,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
               <Stop offset="100%" stopColor={secondHormoneColor} stopOpacity="0" />
             </SvgRadialGradient>
           </Defs>
-          
+
           {/* First large circular gradient */}
           <Circle
             cx={screenWidth * 0.3}
@@ -532,7 +540,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             r={Math.max(screenWidth, screenHeight) * 0.5}
             fill="url(#bgGrad1)"
           />
-          
+
           {/* Second large circular gradient */}
           <Circle
             cx={screenWidth * 0.7}
@@ -553,8 +561,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     const screenHeight = Dimensions.get('window').height;
     return (
       <View style={styles.spotlightOverlayContainer} pointerEvents="none">
-        <Svg 
-          width={screenWidth} 
+        <Svg
+          width={screenWidth}
           height={screenHeight}
           viewBox={`0 0 ${screenWidth} ${screenHeight}`}
         >
@@ -599,7 +607,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
   return (
     <View style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -609,7 +617,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       >
         {/* Large radial gradient background */}
         {renderBackgroundGradients()}
-        
+
         {/* White circle overlay effect - show in both views */}
         <View style={styles.whiteCircleOverlay} />
 
@@ -637,7 +645,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             )}
           </View>
           <TouchableOpacity style={styles.calendarButton} onPress={handleCalendarPress}>
-            <Image 
+            <Image
               source={require('../../assets/icons/IconCalendar.png')}
               style={styles.calendarIcon}
               resizeMode="contain"
@@ -647,68 +655,68 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
         {/* Hormone Quests Section */}
         {progressStats?.hormone_stats && Object.keys(progressStats.hormone_stats).length > 0 && (
-        <View style={styles.questSection}>
-          <Text style={styles.sectionTitle}>🏆 Your Hormone Quests 🏆</Text>
-          <View style={styles.questContainer}>
+          <View style={styles.questSection}>
+            <Text style={styles.sectionTitle}>🏆 Your Hormone Quests 🏆</Text>
+            <View style={styles.questContainer}>
               {Object.entries(progressStats.hormone_stats).map(([hormone, stats], index) => {
                 const hormoneKey = hormone as keyof HormoneStats;
                 const hormoneStats = progressStats.hormone_stats[hormoneKey];
-                
+
                 if (!hormoneStats || hormoneStats.total === 0) return null;
-                
+
                 // Determine rotation based on position (left = -15deg, right = +15deg)
                 const isLeft = index % 2 === 0;
                 const rotation = isLeft ? '-5deg' : '10deg';
-                
+
                 return (
                   <View key={hormone} style={styles.questItem}>
-              <View style={styles.questImageContainer}>
+                    <View style={styles.questImageContainer}>
                       {typeof getHormoneIcon(hormone) === 'string' ? (
                         <Text style={styles.questIcon}>{getHormoneIcon(hormone)}</Text>
                       ) : (
                         <View style={styles.questIconImageContainer}>
-                          <Image 
-                            source={getHormoneIcon(hormone)} 
+                          <Image
+                            source={getHormoneIcon(hormone)}
                             style={[styles.questIconImage, { transform: [{ rotate: rotation }] }]}
                             resizeMode="contain"
                           />
                         </View>
                       )}
-              </View>
+                    </View>
                     <Text style={styles.questName}>{hormone.charAt(0).toUpperCase() + hormone.slice(1)}</Text>
-              <View style={styles.progressContainer}>
+                    <View style={styles.progressContainer}>
                       <View style={[styles.progressBar, { backgroundColor: getProgressBgColor(hormone) }]}>
-                  <View 
-                    style={[
-                      styles.progressFill, 
-                      { 
+                        <View
+                          style={[
+                            styles.progressFill,
+                            {
                               backgroundColor: getProgressColor(hormone),
                               width: `${getProgressPercentage(hormoneStats.completed, hormoneStats.total)}%`
-                      }
-                    ]} 
-                  />
-                </View>
-                <Text style={styles.progressText}>
+                            }
+                          ]}
+                        />
+                      </View>
+                      <Text style={styles.progressText}>
                         {hormoneStats.completed}/{hormoneStats.total}
-                </Text>
-              </View>
-            </View>
+                      </Text>
+                    </View>
+                  </View>
                 );
               })}
+            </View>
           </View>
-        </View>
         )}
 
         {/* Divider */}
         <View style={styles.dividerContainer}>
           <Svg width={responsiveWidth(30)} height={1} style={styles.centerDivider}>
-            <Line 
-              x1="0" 
-              y1="0" 
-              x2="100%" 
-              y2="0" 
-              stroke="#CFCFCF" 
-              strokeWidth="1" 
+            <Line
+              x1="0"
+              y1="0"
+              x2="100%"
+              y2="0"
+              stroke="#CFCFCF"
+              strokeWidth="1"
               strokeDasharray="2,2"
             />
           </Svg>
@@ -746,9 +754,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
             {/* Sort buttons - positioned absolutely */}
             <View style={styles.sortContainer}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[
-                  styles.sortButton, 
+                  styles.sortButton,
                   styles.sortButtonLeft,
                   sortBy === 'type' && styles.sortButtonActive
                 ]}
@@ -759,9 +767,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                   sortBy === 'type' && styles.sortButtonTextActive
                 ]}>Type</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[
-                  styles.sortButton, 
+                  styles.sortButton,
                   styles.sortButtonRight,
                   sortBy === 'time' && styles.sortButtonActive
                 ]}
@@ -776,7 +784,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           </View>
         </View>
       </ScrollView>
-      
+
       {/* Auvra Chat Modal */}
       {showAuvraChat && (
         <AuvraChatModal

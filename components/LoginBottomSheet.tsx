@@ -49,7 +49,7 @@ type RootStackParamList = {
   ResultLoadingScreen: undefined;
   LoginScreen: undefined;
   HomeScreen: undefined;
-  MainScreenTabs: undefined;
+  MainScreenTabs: { forceRefresh?: boolean } | undefined;
 };
 
 type LoginBottomSheetNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -133,17 +133,17 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
               }
 
               onClose();
-              navigation.navigate('MainScreenTabs');
+              navigation.navigate('MainScreenTabs', { forceRefresh: true });
             } else {
               Alert.alert('Success', 'Google signup successful! But failed to link survey data.');
               onClose();
-              navigation.navigate('MainScreenTabs');
+              navigation.navigate('MainScreenTabs', { forceRefresh: true });
             }
           } catch (linkError) {
             console.error('Session linking failed:', linkError);
             Alert.alert('Success', 'Google signup successful! But failed to link survey data.');
             onClose();
-            navigation.navigate('MainScreenTabs');
+            navigation.navigate('MainScreenTabs', { forceRefresh: true });
           }
         })
         .catch((error) => {
@@ -217,17 +217,17 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
             }
 
             onClose();
-            navigation.navigate('MainScreenTabs');
+            navigation.navigate('MainScreenTabs', { forceRefresh: true });
           } else {
             Alert.alert("Success", "Signup successful! But failed to link survey data.");
             onClose();
-            navigation.navigate('MainScreenTabs');
+            navigation.navigate('MainScreenTabs', { forceRefresh: true });
           }
         } catch (linkError) {
           console.error('Session linking failed:', linkError);
           Alert.alert("Success", "Signup successful! But failed to link survey data.");
           onClose();
-          navigation.navigate('MainScreenTabs');
+          navigation.navigate('MainScreenTabs', { forceRefresh: true });
         }
       } else {
         Alert.alert("Error", result.error || "Signup failed");
@@ -287,17 +287,17 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
           }
 
           onClose();
-          navigation.navigate('MainScreenTabs');
+          navigation.navigate('MainScreenTabs', { forceRefresh: true });
         } else {
           Alert.alert("Success", "Apple signup successful! But failed to link survey data.");
           onClose();
-          navigation.navigate('MainScreenTabs');
+          navigation.navigate('MainScreenTabs', { forceRefresh: true });
         }
       } catch (linkError) {
         console.error('Session linking failed:', linkError);
         Alert.alert("Success", "Apple signup successful! But failed to link survey data.");
         onClose();
-        navigation.navigate('MainScreenTabs');
+        navigation.navigate('MainScreenTabs', { forceRefresh: true });
       }
     } catch (error: any) {
       Alert.alert("Error", error.message || "Apple signup failed");

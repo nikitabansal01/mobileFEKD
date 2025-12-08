@@ -38,7 +38,7 @@ type RootStackParamList = {
   ResultLoadingScreen: undefined;
   LoginScreen: undefined;
   HomeScreen: undefined;
-  MainScreenTabs: undefined;
+  MainScreenTabs: { forceRefresh?: boolean } | undefined;
 };
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'LoginScreen'>;
@@ -88,7 +88,7 @@ const LoginScreen = () => {
           await new Promise(resolve => setTimeout(resolve, 500));
 
           Alert.alert('Success', 'Google login successful!');
-          navigation.navigate('MainScreenTabs');
+          navigation.navigate('MainScreenTabs', { forceRefresh: true });
         })
         .catch((error) => {
           Alert.alert('Error', error.message || 'Google login failed');
@@ -124,7 +124,7 @@ const LoginScreen = () => {
         await new Promise(resolve => setTimeout(resolve, 500));
 
         Alert.alert("Success", "Login successful!");
-        navigation.navigate('MainScreenTabs');
+        navigation.navigate('MainScreenTabs', { forceRefresh: true });
       } else {
         Alert.alert("Error", result.error || "Login failed");
       }
@@ -175,7 +175,7 @@ const LoginScreen = () => {
       await new Promise(resolve => setTimeout(resolve, 500));
 
       Alert.alert("Success", "Apple login successful!");
-      navigation.navigate('MainScreenTabs');
+      navigation.navigate('MainScreenTabs', { forceRefresh: true });
     } catch (error: any) {
       Alert.alert("Error", error.message || "Apple login failed");
     }
