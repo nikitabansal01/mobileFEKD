@@ -26,9 +26,13 @@ import {
 } from "react-native";
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
 import { verticalScale } from "react-native-size-matters";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import TextInputContainer from "./customComponent/TextInputContainer";
 import FixedBottomContainer from "./FixedBottomContainer";
 import PrimaryButton from "./PrimaryButton";
+
+// Storage key for Remember Me
+const REMEMBER_EMAIL_KEY = 'rememberMeEmail';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -85,6 +89,22 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
   const [loading, setLoading] = useState(false);
   const [slideAnim] = useState(new Animated.Value(SCREEN_HEIGHT));
 
+  // Load saved email on mount
+  useEffect(() => {
+    const loadSavedEmail = async () => {
+      try {
+        const savedEmail = await AsyncStorage.getItem(REMEMBER_EMAIL_KEY);
+        if (savedEmail) {
+          setEmail(savedEmail);
+          setRememberMe(true);
+        }
+      } catch (error) {
+        console.log('Error loading saved email:', error);
+      }
+    };
+    loadSavedEmail();
+  }, []);
+
   const [googleRequest, googleResponse, googlePromptAsync] = Google.useIdTokenAuthRequest({
     clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
   });
@@ -105,13 +125,13 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
               // Wait until user data is actually ready
               console.log('✅ Session linked successfully, waiting for data to be ready...');
               const dataReady = await sessionService.waitForUserDataReady(result.user);
-              
+
               if (dataReady) {
                 Alert.alert('Success', 'Google signup successful! Your personalized plan is ready.');
               } else {
                 Alert.alert('Success', 'Google signup successful! Your plan is being prepared.');
               }
-              
+
               onClose();
               navigation.navigate('MainScreenTabs');
             } else {
@@ -173,8 +193,15 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
     setLoading(true);
     try {
       const result = await signUpWithEmail(email, password);
-      
+
       if (result.success) {
+        // Save or remove email based on Remember Me preference
+        if (rememberMe) {
+          await AsyncStorage.setItem(REMEMBER_EMAIL_KEY, email);
+        } else {
+          await AsyncStorage.removeItem(REMEMBER_EMAIL_KEY);
+        }
+
         // Attempt to link session
         try {
           const linkSuccess = await sessionService.linkSessionToUser(result.user);
@@ -182,13 +209,13 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
             // Wait until user data is actually ready
             console.log('✅ Session linked successfully, waiting for data to be ready...');
             const dataReady = await sessionService.waitForUserDataReady(result.user);
-            
+
             if (dataReady) {
               Alert.alert("Success", "Signup successful! Your personalized plan is ready.");
             } else {
               Alert.alert("Success", "Signup successful! Your plan is being prepared.");
             }
-            
+
             onClose();
             navigation.navigate('MainScreenTabs');
           } else {
@@ -225,7 +252,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
   const handleAppleSignin = async () => {
     try {
       const isAvailable = await AppleAuthentication.isAvailableAsync();
-      
+
       if (!isAvailable) {
         Alert.alert("Error", "Apple authentication is not available on this device");
         return;
@@ -242,9 +269,9 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       const firebaseCredential = provider.credential({
         idToken: credential.identityToken!,
       });
-      
+
       const result = await signInWithCredential(auth, firebaseCredential);
-      
+
       // Attempt to link session
       try {
         const linkSuccess = await sessionService.linkSessionToUser(result.user);
@@ -252,13 +279,13 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
           // Wait until user data is actually ready
           console.log('✅ Session linked successfully, waiting for data to be ready...');
           const dataReady = await sessionService.waitForUserDataReady(result.user);
-          
+
           if (dataReady) {
             Alert.alert("Success", "Apple signup successful! Your personalized plan is ready.");
           } else {
             Alert.alert("Success", "Apple signup successful! Your plan is being prepared.");
           }
-          
+
           onClose();
           navigation.navigate('MainScreenTabs');
         } else {
@@ -292,7 +319,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
         ]}
       >
         <View style={styles.handleBar} />
-        
+
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -372,7 +399,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
               <GoogleIconSvg />
               <Text style={styles.socialButtonText}>Sign up with Google</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.socialButton}
               onPress={handleAppleSignin}

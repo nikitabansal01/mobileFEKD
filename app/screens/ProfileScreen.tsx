@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import {
+  Alert,
   Dimensions,
   Image,
   Platform,
@@ -16,6 +17,8 @@ import {
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import Svg, { Circle, ClipPath, Defs, Path, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import { FONT_FAMILIES } from '../../constants/fonts';
+import { signOutUser } from '@/config/firebase';
+import sessionService from '@/services/sessionService';
 const IconEdit = require('../../assets/icons/IconEdit.png');
 
 
@@ -76,10 +79,37 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
     }
   };
 
+  /**
+   * Handle user logout with confirmation dialog
+   */
+  const handleLogout = () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Logout",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await signOutUser();
+              await sessionService.logout();
+              // Navigation handled automatically by onAuthStateChanged in App.tsx
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Error', 'Failed to logout. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
-      <ScrollView 
-        style={styles.scrollView} 
+      <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -89,7 +119,7 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
             <Defs>
               <ClipPath id="headerClip">
                 <Path
-                  d={`M0,0 L${screenWidth},0 L${screenWidth},${verticalScale(140)} Q${screenWidth/2},${verticalScale(170)} 0,${verticalScale(140)} Z`}
+                  d={`M0,0 L${screenWidth},0 L${screenWidth},${verticalScale(140)} Q${screenWidth / 2},${verticalScale(170)} 0,${verticalScale(140)} Z`}
                   fill="white"
                 />
               </ClipPath>
@@ -108,7 +138,7 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
               <Stop offset="89.13%" stopColor="#FEDDE3" />
             </SvgLinearGradient>
             <Path
-              d={`M0,0 L${screenWidth},0 L${screenWidth},${verticalScale(140)} Q${screenWidth/2},${verticalScale(170)} 0,${verticalScale(140)} Z`}
+              d={`M0,0 L${screenWidth},0 L${screenWidth},${verticalScale(140)} Q${screenWidth / 2},${verticalScale(170)} 0,${verticalScale(140)} Z`}
               fill="url(#headerGradient)"
               clipPath="url(#headerClip)"
             />
@@ -130,7 +160,7 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
                 </View>
               </TouchableOpacity>
             </View>
-            
+
             {/* User Info */}
             <View style={styles.userInfo}>
               <Text style={styles.userName}>Jessica</Text>
@@ -143,48 +173,48 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
             <View style={styles.personalizationContent}>
               {/* Progress Indicator */}
               <View style={styles.progressContainer}>
-                  <View style={styles.progressCircle}>
-                    <Svg width={scale(50)} height={scale(50)}>
-                      <Defs>
-                        <SvgLinearGradient id="grad" x1="0" y1="0" x2="1" y2="0">
-                          <Stop offset="14.79%" stopColor="#A29AEA" />
-                          <Stop offset="38.58%" stopColor="#C17EC9" />
-                          <Stop offset="51.96%" stopColor="#D482B9" />
-                          <Stop offset="69.06%" stopColor="#E98BAC" />
-                          <Stop offset="89.13%" stopColor="#FDC6D1" />
-                        </SvgLinearGradient>
-                      </Defs>
+                <View style={styles.progressCircle}>
+                  <Svg width={scale(50)} height={scale(50)}>
+                    <Defs>
+                      <SvgLinearGradient id="grad" x1="0" y1="0" x2="1" y2="0">
+                        <Stop offset="14.79%" stopColor="#A29AEA" />
+                        <Stop offset="38.58%" stopColor="#C17EC9" />
+                        <Stop offset="51.96%" stopColor="#D482B9" />
+                        <Stop offset="69.06%" stopColor="#E98BAC" />
+                        <Stop offset="89.13%" stopColor="#FDC6D1" />
+                      </SvgLinearGradient>
+                    </Defs>
 
-                      {/* Background Circle */}
-                      <Circle
-                        cx={scale(25)}
-                        cy={scale(25)}
-                        r={scale(15)}
-                        stroke="#E5E5E5"
-                        strokeWidth={scale(5)}
-                        fill="none"
-                      />
+                    {/* Background Circle */}
+                    <Circle
+                      cx={scale(25)}
+                      cy={scale(25)}
+                      r={scale(15)}
+                      stroke="#E5E5E5"
+                      strokeWidth={scale(5)}
+                      fill="none"
+                    />
 
-                      {/* Progress Circle with gradient */}
-                      <Circle
-                        cx={scale(25)}
-                        cy={scale(25)}
-                        r={scale(15)}
-                        stroke="url(#grad)"
-                        strokeWidth={scale(5)}
-                        fill="none"
-                        strokeDasharray={scale(94.25)} // 2 * π * r
-                        strokeDashoffset={scale(47.125)} // 50% of circumference
-                        strokeLinecap="round"
-                        rotation="-90"
-                        originX={scale(25)}
-                        originY={scale(25)}
-                      />
-                    </Svg>
-                    <View style={styles.progressTextContainer}>
-                      <Text style={styles.progressText}>50%</Text>
-                    </View>
+                    {/* Progress Circle with gradient */}
+                    <Circle
+                      cx={scale(25)}
+                      cy={scale(25)}
+                      r={scale(15)}
+                      stroke="url(#grad)"
+                      strokeWidth={scale(5)}
+                      fill="none"
+                      strokeDasharray={scale(94.25)} // 2 * π * r
+                      strokeDashoffset={scale(47.125)} // 50% of circumference
+                      strokeLinecap="round"
+                      rotation="-90"
+                      originX={scale(25)}
+                      originY={scale(25)}
+                    />
+                  </Svg>
+                  <View style={styles.progressTextContainer}>
+                    <Text style={styles.progressText}>50%</Text>
                   </View>
+                </View>
               </View>
 
               {/* Text Content */}
@@ -234,8 +264,8 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
 
           {/* Menu Items */}
           <View style={styles.menuSection}>
-            <TouchableOpacity 
-              style={styles.menuItem} 
+            <TouchableOpacity
+              style={styles.menuItem}
               onPress={() => handleMenuAction('Get Auvra Pro')}
             >
               <View style={styles.menuIcon}>
@@ -244,8 +274,8 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
               <Text style={styles.menuText}>Get Auvra Pro</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.menuItem} 
+            <TouchableOpacity
+              style={styles.menuItem}
               onPress={() => handleMenuAction('Integration with Cycle app')}
             >
               <View style={styles.menuIcon}>
@@ -254,8 +284,8 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
               <Text style={styles.menuText}>Integration with Cycle app</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.menuItem} 
+            <TouchableOpacity
+              style={styles.menuItem}
               onPress={() => handleMenuAction('Invite your friend')}
             >
               <View style={styles.menuIcon}>
@@ -270,8 +300,8 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
                 <Ionicons name="notifications-outline" size={24} color={COLORS.black} />
               </View>
               <Text style={styles.menuText}>Notifications</Text>
-              <TouchableOpacity 
-                style={styles.toggleContainer} 
+              <TouchableOpacity
+                style={styles.toggleContainer}
                 onPress={toggleNotifications}
               >
                 {notificationsEnabled ? (
@@ -298,8 +328,8 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
                 <Ionicons name="location-outline" size={24} color={COLORS.black} />
               </View>
               <Text style={styles.menuText}>Location based insights</Text>
-              <TouchableOpacity 
-                style={styles.toggleContainer} 
+              <TouchableOpacity
+                style={styles.toggleContainer}
                 onPress={toggleLocationInsights}
               >
                 {locationInsightsEnabled ? (
@@ -320,8 +350,8 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity 
-              style={styles.menuItem} 
+            <TouchableOpacity
+              style={styles.menuItem}
               onPress={() => handleMenuAction('Contact us')}
             >
               <View style={styles.menuIcon}>
@@ -330,8 +360,8 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
               <Text style={styles.menuText}>Contact us</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.menuItem} 
+            <TouchableOpacity
+              style={styles.menuItem}
               onPress={() => handleMenuAction('Help & Support')}
             >
               <View style={styles.menuIcon}>
@@ -340,14 +370,25 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
               <Text style={styles.menuText}>Help & Support</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.menuItem} 
+            <TouchableOpacity
+              style={styles.menuItem}
               onPress={() => handleMenuAction('Privacy policy')}
             >
               <View style={styles.menuIcon}>
                 <Text style={styles.menuIconText}><Ionicons name="lock-closed-outline" size={24} color={COLORS.black} /></Text>
               </View>
               <Text style={styles.menuText}>Privacy policy</Text>
+            </TouchableOpacity>
+
+            {/* Logout Button */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={handleLogout}
+            >
+              <View style={styles.menuIcon}>
+                <Ionicons name="log-out-outline" size={24} color={COLORS.black} />
+              </View>
+              <Text style={styles.menuText}>Logout</Text>
             </TouchableOpacity>
           </View>
         </View>

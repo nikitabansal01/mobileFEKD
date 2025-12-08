@@ -26,22 +26,22 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 interface Question {
-    id: number;
-    question: string;
-    inputType: 'text' | 'number' | 'single-choice' | 'multiple-choice' | 'date';
-    placeholder?: string;
-    key: string;
-    options?: string[];
-    notSureText?: string;
-    isSubheading?: boolean;
-    optionsLayout?: 'default' | 'wrap' | 'row';
+  id: number;
+  question: string;
+  inputType: 'text' | 'number' | 'single-choice' | 'multiple-choice' | 'date';
+  placeholder?: string;
+  key: string;
+  options?: string[];
+  notSureText?: string;
+  isSubheading?: boolean;
+  optionsLayout?: 'default' | 'wrap' | 'row';
 }
 
 interface QuestionStep {
-    step: number;
-    dialogue: string;
-    subtitle?: string;
-    questions: Question[];
+  step: number;
+  dialogue: string;
+  subtitle?: string;
+  questions: Question[];
 }
 
 /**
@@ -95,23 +95,23 @@ const questionSteps: QuestionStep[] = [
     step: 3,
     dialogue: "Tell me more about your periods",
     questions: [
-        {
-            id: 5,
-            question: 'When did your last period start?',
-            inputType: 'date',
-            placeholder: 'MM/DD/YYYY',
-            key: 'lastPeriodDate',
-            notSureText: "I'm not sure",
-        },
-        {
-            id: 6,
-            question: 'What is your average cycle length?',
-            inputType: 'single-choice',
-            options: ['Less than 21 days', '21-25 days', '26-30 days', '31-35 days', '35+ days'],
-            key: 'cycleLength',
-            notSureText: "I'm not sure",
-            optionsLayout: 'wrap',
-        },
+      {
+        id: 5,
+        question: 'When did your last period start?',
+        inputType: 'date',
+        placeholder: 'MM/DD/YYYY',
+        key: 'lastPeriodDate',
+        notSureText: "I'm not sure",
+      },
+      {
+        id: 6,
+        question: 'What is your average cycle length?',
+        inputType: 'single-choice',
+        options: ['Less than 21 days', '21-25 days', '26-30 days', '31-35 days', '35+ days'],
+        key: 'cycleLength',
+        notSureText: "I'm not sure",
+        optionsLayout: 'wrap',
+      },
     ],
   },
   {
@@ -273,7 +273,7 @@ const questionSteps: QuestionStep[] = [
         optionsLayout: "wrap",
         options: [
           "Low",
-          "Moderate", 
+          "Moderate",
           "High"
         ],
         key: "workoutIntensity",
@@ -333,7 +333,7 @@ const QuestionScreen = () => {
   const scrollToInput = (node: any) => {
     try {
       scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
-    } catch {}
+    } catch { }
   };
 
   // Storage key for persisting answers
@@ -379,11 +379,11 @@ const QuestionScreen = () => {
       try {
         // Load saved answers first
         await loadSavedAnswers();
-        
+
         // Validate session and recreate if necessary
         const sessionValid = await sessionService.validateAndRefreshSession();
         if (sessionValid) {
-            setSessionCreated(true);
+          setSessionCreated(true);
         } else {
           console.error('Session initialization failed');
         }
@@ -435,13 +435,13 @@ const QuestionScreen = () => {
   const handleAnswer = (key: string, value: string, type: Question['inputType']) => {
     // Normalize value
     const normalizedValue = normalizeQuotes(value);
-    
+
     // Handle "I'm not sure" as null
     if (normalizedValue === "I'm not sure") {
       setAnswers(prev => ({ ...prev, [key]: null }));
       return;
     }
-    
+
     if (type === 'multiple-choice') {
       setAnswers(prev => {
         const existingAnswers = (prev[key] as string[]) || [];
@@ -468,7 +468,7 @@ const QuestionScreen = () => {
     }
     return answers[key] === option;
   };
-  
+
 
   /**
    * Handle "Others" option selection with auto-scroll and focus
@@ -491,40 +491,40 @@ const QuestionScreen = () => {
    */
   const isCurrentStepComplete = () => {
     const currentQuestions = currentStepData.questions;
-    
+
     return currentQuestions.every(q => {
       const answer = answers[q.key];
-      
+
       // Subheadings don't require answers
       if (q.isSubheading) {
         return true;
       }
-      
+
       // Text input validation
       if (q.inputType === 'text') {
         return answer && typeof answer === 'string' && answer.trim().length > 0;
       }
-      
+
       // Number input validation (age)
       if (q.inputType === 'number') {
         return answer && typeof answer === 'number' && answer > 0;
       }
-      
+
       // Date input validation (handles "I'm not sure" button)
       if (q.inputType === 'date') {
         return answer !== undefined && answer !== '';
       }
-      
+
       // Single choice validation (handles "I'm not sure" button)
       if (q.inputType === 'single-choice') {
         return answer !== undefined && answer !== '';
       }
-      
+
       // Multiple choice validation
       if (q.inputType === 'multiple-choice') {
         return Array.isArray(answer) && answer.length > 0;
       }
-      
+
       return false;
     });
   };
@@ -554,29 +554,29 @@ const QuestionScreen = () => {
     } else if (currentStep === 7) {
       // Save answers and navigate to result screen after step 8 completion
       setShowLoading(true);
-      
+
       try {
         // Collect all questions into a single array
         const allQuestions = questionSteps.flatMap(step => step.questions);
-        
+
         // Record answer saving start time
         const startTime = Date.now();
-        
+
         // Save answers
         const saveSuccess = await sessionService.saveAnswers(answers, allQuestions);
-        
+
         // Calculate save completion time
         const saveTime = Date.now() - startTime;
-        
+
         if (saveSuccess) {
           // Clear saved answers from AsyncStorage after successful submission
           await clearSavedAnswers();
-          
+
           // Set minimum 1 second, maximum 3 seconds loading time
           const minLoadingTime = 1000;
           const maxLoadingTime = 3000;
           const loadingTime = Math.max(minLoadingTime, Math.min(saveTime + 500, maxLoadingTime));
-          
+
           setTimeout(() => {
             setShowLoading(false);
             navigation.navigate('ResultScreen');
@@ -616,29 +616,29 @@ const QuestionScreen = () => {
   const handleAdditionalQuestionsSkip = async () => {
     // Skip additional questions - save answers and navigate to result screen immediately
     setShowLoading(true);
-    
+
     try {
       // Collect all questions into a single array
       const allQuestions = questionSteps.flatMap(step => step.questions);
-      
+
       // Record answer saving start time
       const startTime = Date.now();
-      
+
       // Save answers
       const saveSuccess = await sessionService.saveAnswers(answers, allQuestions);
-      
+
       // Calculate save completion time
       const saveTime = Date.now() - startTime;
-      
+
       if (saveSuccess) {
         // Clear saved answers from AsyncStorage after successful submission
         await clearSavedAnswers();
-        
+
         // Set minimum 1 second, maximum 3 seconds loading time
         const minLoadingTime = 1000;
         const maxLoadingTime = 3000;
         const loadingTime = Math.max(minLoadingTime, Math.min(saveTime + 500, maxLoadingTime));
-        
+
         setTimeout(() => {
           setShowLoading(false);
           navigation.navigate('ResultScreen');
@@ -661,7 +661,78 @@ const QuestionScreen = () => {
     }
   };
 
-  const currentStepData = questionSteps[currentStep];
+
+  /**
+   * Get dynamic step data - computes options dynamically for Step 5 (topConcern)
+   * based on user's selections from Step 4 (concerns)
+   */
+  const getDynamicStepData = (): QuestionStep => {
+    const baseStepData = questionSteps[currentStep];
+
+    // Step 5 (index 4) - Top Concern: dynamically generate options from Step 4 selections
+    if (currentStep === 4) {
+      // Collect all selected concerns from Step 4
+      const selectedConcerns: string[] = [];
+
+      // Period concerns
+      const periodConcerns = answers.periodConcerns as string[] || [];
+      selectedConcerns.push(...periodConcerns);
+
+      // Body concerns
+      const bodyConcerns = answers.bodyConcerns as string[] || [];
+      selectedConcerns.push(...bodyConcerns);
+
+      // Skin and hair concerns
+      const skinHairConcerns = answers.skinAndHairConcerns as string[] || [];
+      selectedConcerns.push(...skinHairConcerns);
+
+      // Mental health concerns
+      const mentalHealthConcerns = answers.mentalHealthConcerns as string[] || [];
+      selectedConcerns.push(...mentalHealthConcerns);
+
+      // Other concerns (including custom "Others" text)
+      const otherConcerns = answers.otherConcerns as string[] || [];
+      otherConcerns.forEach(concern => {
+        if (concern === 'Others (please specify)') {
+          // Add the custom text if user typed something
+          const customText = answers.otherConcernsText as string;
+          if (customText && customText.trim()) {
+            selectedConcerns.push(`Others: ${customText.trim()}`);
+          }
+        } else if (concern !== 'None of these') {
+          selectedConcerns.push(concern);
+        }
+      });
+
+      // Filter out empty values and duplicates
+      const uniqueConcerns = [...new Set(selectedConcerns.filter(c => c && c.trim()))];
+
+      // If no concerns selected, show a message or fallback
+      if (uniqueConcerns.length === 0) {
+        // Fallback to original options if somehow no concerns were selected
+        return baseStepData;
+      }
+
+      // Return modified step data with dynamic options
+      return {
+        ...baseStepData,
+        questions: baseStepData.questions.map(q => {
+          if (q.key === 'topConcern') {
+            return {
+              ...q,
+              options: uniqueConcerns,
+            };
+          }
+          return q;
+        }),
+      };
+    }
+
+    return baseStepData;
+  };
+
+  const currentStepData = getDynamicStepData();
+
 
 
 
@@ -684,9 +755,9 @@ const QuestionScreen = () => {
           <View style={styles.characterContainer}>
             <AuvraCharacter size={responsiveWidth(35)} />
           </View>
-          
+
           {/* Text container */}
-            <View style={styles.textContainer}>
+          <View style={styles.textContainer}>
             <View style={styles.maskedViewContainer}>
               <View style={styles.additionalQuestionsMaskedView}>
                 <MaskedView
@@ -713,10 +784,10 @@ const QuestionScreen = () => {
         <FixedBottomContainer>
           <View style={styles.additionalQuestionsButtonsContainer}>
             <View style={[{ marginBottom: verticalScale(10) }]}>
-            <PrimaryButton
-              title="Continue"
-              onPress={handleAdditionalQuestionsContinue}
-            />
+              <PrimaryButton
+                title="Continue"
+                onPress={handleAdditionalQuestionsContinue}
+              />
             </View>
             <TouchableOpacity
               style={styles.skipButton}
@@ -731,36 +802,36 @@ const QuestionScreen = () => {
   }
 
   return (
-      <SafeAreaView edges={['top']} style={styles.container}>
-        <View style={styles.flexColumnContainer}>
-          {/* Header - back button and progress bar */}
-          <View style={styles.header}>
-            <BackButton onPress={handleBackPress} />
-            <View style={styles.progressBarBackground}>
-              <View style={[styles.progressBarForeground, { width: `${progress * 100}%` }]} />
-            </View>
+    <SafeAreaView edges={['top']} style={styles.container}>
+      <View style={styles.flexColumnContainer}>
+        {/* Header - back button and progress bar */}
+        <View style={styles.header}>
+          <BackButton onPress={handleBackPress} />
+          <View style={styles.progressBarBackground}>
+            <View style={[styles.progressBarForeground, { width: `${progress * 100}%` }]} />
           </View>
+        </View>
 
-          {/* Main content - wrapped in ScrollView */}
-            <KeyboardAwareScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={[
-              styles.mainContent,
-              { minHeight: '100%' } // Set minimum height to 100% to protect gradient area
-            ]}
-            keyboardShouldPersistTaps="handled"
-            enableOnAndroid={true}
-            enableAutomaticScroll={true}
-              extraScrollHeight={responsiveHeight(12)}
-              extraHeight={responsiveHeight(4)}
-            keyboardDismissMode="interactive"
-            showsVerticalScrollIndicator={false}
-              keyboardOpeningTime={220}
-              innerRef={(ref: any) => {
-                scrollRef.current = ref;
-              }}
-          >
-            <View style={styles.mainContent}>
+        {/* Main content - wrapped in ScrollView */}
+        <KeyboardAwareScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={[
+            styles.mainContent,
+            { minHeight: '100%' } // Set minimum height to 100% to protect gradient area
+          ]}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid={true}
+          enableAutomaticScroll={true}
+          extraScrollHeight={responsiveHeight(12)}
+          extraHeight={responsiveHeight(4)}
+          keyboardDismissMode="interactive"
+          showsVerticalScrollIndicator={false}
+          keyboardOpeningTime={220}
+          innerRef={(ref: any) => {
+            scrollRef.current = ref;
+          }}
+        >
+          <View style={styles.mainContent}>
             {/* Character and question text */}
             <View style={styles.characterAndQuestion}>
               <View style={styles.characterContainer}>
@@ -792,337 +863,337 @@ const QuestionScreen = () => {
               </View>
             </View>
 
-          {/* Input fields */}
-          <View style={styles.inputFieldsContainer}>
-            {currentStepData.questions.map((q) => (
-              <View key={q.id} style={styles.inputFieldItem}>
-                {q.question ? (
-                  <View style={q.isSubheading ? (q.key === 'birthControl' ? styles.subheadingContainer : styles.categoryContainer) : null}>
-                    {q.isSubheading && q.key !== 'birthControl' && <View style={styles.dividerLine} />}
-                    <Text style={q.isSubheading ? (q.key === 'birthControl' ? styles.subQuestionTextLeft : styles.subQuestionText) : styles.inputLabelText}>
-                      {q.question}
-                    </Text>
-                    {q.isSubheading && q.key !== 'birthControl' && <View style={styles.dividerLine} />}
-                  </View>
-                ) : null}
-                {q.inputType === 'text' || q.inputType === 'number' ? (
-                  <TextInputContainer
-                    placeholder={q.placeholder || ''}
-                    value={answers[q.key] as string || ''}
-                    onChangeText={(text) => handleAnswer(q.key, text, q.inputType)}
-                    keyboardType={q.inputType === 'number' ? 'numeric' : 'default'}
-                    containerStyle={{
-                      width: '100%',
-                      alignSelf: 'stretch',
-                    }}
-                    onFocus={() => {
-                      if (othersInputRef.current) {
-                        scrollToInput(othersInputRef.current);
-                      }
-                    }}
-                  />
-                ) : q.inputType === 'date' ? (
-                  <DatePickerButton
-                    value={(() => {
-                      if (answers[q.key]) {
-                        const dateValue = answers[q.key] as string;
-                        // Try to parse the date - handle MM/DD/YYYY format
-                        if (typeof dateValue === 'string' && dateValue.includes('/')) {
-                          const [month, day, year] = dateValue.split('/');
-                          const parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                          if (!isNaN(parsedDate.getTime())) {
-                            return parsedDate;
-                          }
-                        }
-                        // Fallback to direct parsing
-                        const directParse = new Date(dateValue);
-                        if (!isNaN(directParse.getTime())) {
-                          return directParse;
-                        }
-                      }
-                      return new Date();
-                    })()}
-                    onDateChange={(date) => {
-                      const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
-                      console.log('Saving date:', formattedDate, 'to field:', q.key);
-                      handleAnswer(q.key, formattedDate, 'date');
-                    }}
-                    placeholder={q.placeholder || "Select Date"}
-                    style={[
-                      createInputStyle(answers[q.key] ? 'selected' : 'default'),
-                      {
+            {/* Input fields */}
+            <View style={styles.inputFieldsContainer}>
+              {currentStepData.questions.map((q) => (
+                <View key={q.id} style={styles.inputFieldItem}>
+                  {q.question ? (
+                    <View style={q.isSubheading ? (q.key === 'birthControl' ? styles.subheadingContainer : styles.categoryContainer) : null}>
+                      {q.isSubheading && q.key !== 'birthControl' && <View style={styles.dividerLine} />}
+                      <Text style={q.isSubheading ? (q.key === 'birthControl' ? styles.subQuestionTextLeft : styles.subQuestionText) : styles.inputLabelText}>
+                        {q.question}
+                      </Text>
+                      {q.isSubheading && q.key !== 'birthControl' && <View style={styles.dividerLine} />}
+                    </View>
+                  ) : null}
+                  {q.inputType === 'text' || q.inputType === 'number' ? (
+                    <TextInputContainer
+                      placeholder={q.placeholder || ''}
+                      value={answers[q.key] as string || ''}
+                      onChangeText={(text) => handleAnswer(q.key, text, q.inputType)}
+                      keyboardType={q.inputType === 'number' ? 'numeric' : 'default'}
+                      containerStyle={{
                         width: '100%',
                         alignSelf: 'stretch',
-                        height: responsiveHeight(7),
-                        paddingVertical: responsiveHeight(2),
-                        justifyContent: 'center',
-                        alignItems: 'flex-start',
-                      }
-                    ]}
-                  />
-                ) : q.key === 'cycleLength' || q.optionsLayout === 'wrap' ? (
-                  <>
-                  <ChipOptionContainer
-                    options={(() => {
-                      // Options with descriptions
-                      const optionsWithDescriptions = getOptionsWithDescriptions(q.key);
-                      if (optionsWithDescriptions.length > 0) {
-                        return optionsWithDescriptions.filter((option: any) => 
-                          !(option.value === 'Others (please specify)' && (q.key === 'otherConcerns' || q.key === 'diagnosedCondition' || q.key === 'familyHistory'))
-                        );
-                      }
-                      
-                      // Existing string array options
-                      return q.options?.filter(option => 
-                        !(option === 'Others (please specify)' && (q.key === 'otherConcerns' || q.key === 'diagnosedCondition' || q.key === 'familyHistory'))
-                      ) || [];
-                    })()}
-                    selectedValue={q.inputType === 'single-choice' ? answers[q.key] as string : answers[q.key] as string[]}
-                    onSelect={(value) => handleAnswer(q.key, value, q.inputType)}
-                    multiple={q.inputType === 'multiple-choice'}
-                    showOthersOption={
-                      q.key === 'otherConcerns' ||
-                      (q.key === 'diagnosedCondition' && q.options?.includes('Others (please specify)')) ||
-                      (q.key === 'familyHistory' && q.options?.includes('Others (please specify)'))
-                    }
-                    othersOptionProps={
-                      q.key === 'otherConcerns' ? {
-                        questionKey: q.key,
-                        isSelected: isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice'),
-                        onSelect: () => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice'),
-                        placeholder: "Please specify your concern",
-                        value: answers.otherConcernsText as string || '',
-                         onChangeText: (text) => handleAnswer('otherConcernsText', text, 'text'),
-                         onFocus: () => {
-                         },
-                          scrollToInput: (node) => {
-                            try {
-                              // Others has extra margin due to bottom fixed button (larger than usual)
-                              scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
-                            } catch {}
-                          },
-                      } : q.key === 'diagnosedCondition' ? {
-                        questionKey: q.key,
-                        isSelected: isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice'),
-                        onSelect: () => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice'),
-                        placeholder: "Please specify your condition",
-                        value: answers.diagnosedConditionText as string || '',
-                         onChangeText: (text) => handleAnswer('diagnosedConditionText', text, 'text'),
-                         onFocus: () => {
-                         },
-                          scrollToInput: (node) => {
-                            try {
-                              scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
-                            } catch {}
-                          },
-                      } : q.key === 'familyHistory' ? {
-                        questionKey: q.key,
-                        isSelected: isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice'),
-                        onSelect: () => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice'),
-                        placeholder: "Please specify the condition",
-                        value: answers.familyHistoryText as string || '',
-                         onChangeText: (text) => handleAnswer('familyHistoryText', text, 'text'),
-                         onFocus: () => {
-                         },
-                          scrollToInput: (node) => {
-                            try {
-                              scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
-                            } catch {}
-                          },
-                      } : undefined
-                                         }
-                    />
-                  </>
-                  ) : (
-                  <>
-                    <OptionButtonsContainer
-                      options={(() => {
-                        // Options with descriptions
-                        const optionsWithDescriptions = getOptionsWithDescriptions(q.key);
-                        if (optionsWithDescriptions.length > 0) {
-                          return optionsWithDescriptions.filter((option: any) => 
-                            !(option.value === 'Others (please specify)' && (q.key === 'diagnosedCondition' || q.key === 'otherConcerns' || q.key === 'familyHistory'))
-                          );
+                      }}
+                      onFocus={() => {
+                        if (othersInputRef.current) {
+                          scrollToInput(othersInputRef.current);
                         }
-                        
-                        // Existing string array options
-                        return q.options?.filter(option => 
-                          !(option === 'Others (please specify)' && (q.key === 'diagnosedCondition' || q.key === 'otherConcerns' || q.key === 'familyHistory'))
-                        ) || [];
-                      })()}
-                      selectedValue={q.inputType === 'single-choice' ? answers[q.key] as string : answers[q.key] as string[]}
-                      onSelect={(value) => handleAnswer(q.key, value, q.inputType)}
-                      layout={q.optionsLayout || 'default'}
-                      multiple={q.inputType === 'multiple-choice'}
+                      }}
                     />
-                    {/* Others options - rendered in default mode */}
-                     {q.key === 'otherConcerns' && (
-                      <OthersOption
-                        questionKey={q.key}
-                        isSelected={isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice')}
-                        onSelect={() => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice')}
-                        placeholder="Please specify your concern"
-                        value={answers.otherConcernsText as string || ''}
-                        onChangeText={(text) => handleAnswer('otherConcernsText', text, 'text')}
-                        onFocus={() => {
-                        }}
-                        containerStyle={{
-                          marginBottom: 0, // Remove margin
-                        }}
-                         scrollToInput={(node) => {
-                           try {
-                             scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
-                           } catch {}
-                         }}
+                  ) : q.inputType === 'date' ? (
+                    <DatePickerButton
+                      value={(() => {
+                        if (answers[q.key]) {
+                          const dateValue = answers[q.key] as string;
+                          // Try to parse the date - handle MM/DD/YYYY format
+                          if (typeof dateValue === 'string' && dateValue.includes('/')) {
+                            const [month, day, year] = dateValue.split('/');
+                            const parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                            if (!isNaN(parsedDate.getTime())) {
+                              return parsedDate;
+                            }
+                          }
+                          // Fallback to direct parsing
+                          const directParse = new Date(dateValue);
+                          if (!isNaN(directParse.getTime())) {
+                            return directParse;
+                          }
+                        }
+                        return new Date();
+                      })()}
+                      onDateChange={(date) => {
+                        const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                        console.log('Saving date:', formattedDate, 'to field:', q.key);
+                        handleAnswer(q.key, formattedDate, 'date');
+                      }}
+                      placeholder={q.placeholder || "Select Date"}
+                      style={[
+                        createInputStyle(answers[q.key] ? 'selected' : 'default'),
+                        {
+                          width: '100%',
+                          alignSelf: 'stretch',
+                          height: responsiveHeight(7),
+                          paddingVertical: responsiveHeight(2),
+                          justifyContent: 'center',
+                          alignItems: 'flex-start',
+                        }
+                      ]}
+                    />
+                  ) : q.key === 'cycleLength' || q.optionsLayout === 'wrap' ? (
+                    <>
+                      <ChipOptionContainer
+                        options={(() => {
+                          // Options with descriptions
+                          const optionsWithDescriptions = getOptionsWithDescriptions(q.key);
+                          if (optionsWithDescriptions.length > 0) {
+                            return optionsWithDescriptions.filter((option: any) =>
+                              !(option.value === 'Others (please specify)' && (q.key === 'otherConcerns' || q.key === 'diagnosedCondition' || q.key === 'familyHistory'))
+                            );
+                          }
+
+                          // Existing string array options
+                          return q.options?.filter(option =>
+                            !(option === 'Others (please specify)' && (q.key === 'otherConcerns' || q.key === 'diagnosedCondition' || q.key === 'familyHistory'))
+                          ) || [];
+                        })()}
+                        selectedValue={q.inputType === 'single-choice' ? answers[q.key] as string : answers[q.key] as string[]}
+                        onSelect={(value) => handleAnswer(q.key, value, q.inputType)}
+                        multiple={q.inputType === 'multiple-choice'}
+                        showOthersOption={
+                          q.key === 'otherConcerns' ||
+                          (q.key === 'diagnosedCondition' && q.options?.includes('Others (please specify)')) ||
+                          (q.key === 'familyHistory' && q.options?.includes('Others (please specify)'))
+                        }
+                        othersOptionProps={
+                          q.key === 'otherConcerns' ? {
+                            questionKey: q.key,
+                            isSelected: isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice'),
+                            onSelect: () => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice'),
+                            placeholder: "Please specify your concern",
+                            value: answers.otherConcernsText as string || '',
+                            onChangeText: (text) => handleAnswer('otherConcernsText', text, 'text'),
+                            onFocus: () => {
+                            },
+                            scrollToInput: (node) => {
+                              try {
+                                // Others has extra margin due to bottom fixed button (larger than usual)
+                                scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
+                              } catch { }
+                            },
+                          } : q.key === 'diagnosedCondition' ? {
+                            questionKey: q.key,
+                            isSelected: isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice'),
+                            onSelect: () => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice'),
+                            placeholder: "Please specify your condition",
+                            value: answers.diagnosedConditionText as string || '',
+                            onChangeText: (text) => handleAnswer('diagnosedConditionText', text, 'text'),
+                            onFocus: () => {
+                            },
+                            scrollToInput: (node) => {
+                              try {
+                                scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
+                              } catch { }
+                            },
+                          } : q.key === 'familyHistory' ? {
+                            questionKey: q.key,
+                            isSelected: isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice'),
+                            onSelect: () => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice'),
+                            placeholder: "Please specify the condition",
+                            value: answers.familyHistoryText as string || '',
+                            onChangeText: (text) => handleAnswer('familyHistoryText', text, 'text'),
+                            onFocus: () => {
+                            },
+                            scrollToInput: (node) => {
+                              try {
+                                scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
+                              } catch { }
+                            },
+                          } : undefined
+                        }
                       />
-                    )}
-                     {q.key === 'diagnosedCondition' && q.options?.includes('Others (please specify)') && (
-                      <OthersOption
-                        questionKey={q.key}
-                        isSelected={isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice')}
-                        onSelect={() => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice')}
-                        placeholder="Please specify your condition"
-                        value={answers.diagnosedConditionText as string || ''}
-                        onChangeText={(text) => handleAnswer('diagnosedConditionText', text, 'text')}
-                        expandedMode={true}
+                    </>
+                  ) : (
+                    <>
+                      <OptionButtonsContainer
+                        options={(() => {
+                          // Options with descriptions
+                          const optionsWithDescriptions = getOptionsWithDescriptions(q.key);
+                          if (optionsWithDescriptions.length > 0) {
+                            return optionsWithDescriptions.filter((option: any) =>
+                              !(option.value === 'Others (please specify)' && (q.key === 'diagnosedCondition' || q.key === 'otherConcerns' || q.key === 'familyHistory'))
+                            );
+                          }
+
+                          // Existing string array options
+                          return q.options?.filter(option =>
+                            !(option === 'Others (please specify)' && (q.key === 'diagnosedCondition' || q.key === 'otherConcerns' || q.key === 'familyHistory'))
+                          ) || [];
+                        })()}
+                        selectedValue={q.inputType === 'single-choice' ? answers[q.key] as string : answers[q.key] as string[]}
+                        onSelect={(value) => handleAnswer(q.key, value, q.inputType)}
+                        layout={q.optionsLayout || 'default'}
+                        multiple={q.inputType === 'multiple-choice'}
+                      />
+                      {/* Others options - rendered in default mode */}
+                      {q.key === 'otherConcerns' && (
+                        <OthersOption
+                          questionKey={q.key}
+                          isSelected={isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice')}
+                          onSelect={() => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice')}
+                          placeholder="Please specify your concern"
+                          value={answers.otherConcernsText as string || ''}
+                          onChangeText={(text) => handleAnswer('otherConcernsText', text, 'text')}
+                          onFocus={() => {
+                          }}
+                          containerStyle={{
+                            marginBottom: 0, // Remove margin
+                          }}
                           scrollToInput={(node) => {
                             try {
                               scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
-                            } catch {}
+                            } catch { }
                           }}
-                      />
-                    )}
-                     {q.key === 'familyHistory' && q.options?.includes('Others (please specify)') && (
-                      <OthersOption
-                        questionKey={q.key}
-                        isSelected={isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice')}
-                        onSelect={() => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice')}
-                        placeholder="Please specify the condition"
-                        value={answers.familyHistoryText as string || ''}
-                        onChangeText={(text) => handleAnswer('familyHistoryText', text, 'text')}
-                        expandedMode={true}
+                        />
+                      )}
+                      {q.key === 'diagnosedCondition' && q.options?.includes('Others (please specify)') && (
+                        <OthersOption
+                          questionKey={q.key}
+                          isSelected={isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice')}
+                          onSelect={() => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice')}
+                          placeholder="Please specify your condition"
+                          value={answers.diagnosedConditionText as string || ''}
+                          onChangeText={(text) => handleAnswer('diagnosedConditionText', text, 'text')}
+                          expandedMode={true}
                           scrollToInput={(node) => {
                             try {
                               scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
-                            } catch {}
+                            } catch { }
                           }}
-                      />
-                    )}
-                  </>
-                )}
-                {q.notSureText && (
-                  <NotSureButton
-                    text={q.notSureText}
-                    onPress={() => handleAnswer(q.key, q.notSureText || '', q.inputType)}
-                    style={{ marginTop: -verticalScale(8) }}
-                  />
-                )}
-              </View>
-            ))}
+                        />
+                      )}
+                      {q.key === 'familyHistory' && q.options?.includes('Others (please specify)') && (
+                        <OthersOption
+                          questionKey={q.key}
+                          isSelected={isOptionSelected(q.key, 'Others (please specify)', 'multiple-choice')}
+                          onSelect={() => handleOthersSelect(q.key, 'Others (please specify)', 'multiple-choice')}
+                          placeholder="Please specify the condition"
+                          value={answers.familyHistoryText as string || ''}
+                          onChangeText={(text) => handleAnswer('familyHistoryText', text, 'text')}
+                          expandedMode={true}
+                          scrollToInput={(node) => {
+                            try {
+                              scrollRef.current?.scrollToFocusedInput(node, responsiveHeight(28), 220);
+                            } catch { }
+                          }}
+                        />
+                      )}
+                    </>
+                  )}
+                  {q.notSureText && (
+                    <NotSureButton
+                      text={q.notSureText}
+                      onPress={() => handleAnswer(q.key, q.notSureText || '', q.inputType)}
+                      style={{ marginTop: -verticalScale(8) }}
+                    />
+                  )}
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
         </KeyboardAwareScrollView>
 
-                 {/* Bottom gradient background and button */}
+        {/* Bottom gradient background and button */}
 
 
-       </View>
-       <FixedBottomContainer avoidKeyboard={false}> 
-         <PrimaryButton
-           title="Continue"
-           onPress={handleContinue}
-           disabled={!isCurrentStepComplete()}
-         />
-       </FixedBottomContainer>
-     
+      </View>
+      <FixedBottomContainer avoidKeyboard={false}>
+        <PrimaryButton
+          title="Continue"
+          onPress={handleContinue}
+          disabled={!isCurrentStepComplete()}
+        />
+      </FixedBottomContainer>
+
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#ffffff',
-    },
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
   flexColumnContainer: {
     flex: 1,
   },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: responsiveWidth(5),
-        // paddingVertical: responsiveHeight(2),
-        // height: responsiveHeight(5),
-    },
-    progressBarBackground: {
-        flex: 1,
-        height: 10,
-        backgroundColor: '#E8E8E8',
-        borderRadius: 5,
-    },
-    progressBarForeground: {
-        height: 10,
-        backgroundColor: '#EDD9EF',
-        borderRadius: 5,
-    },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: responsiveWidth(5),
+    // paddingVertical: responsiveHeight(2),
+    // height: responsiveHeight(5),
+  },
+  progressBarBackground: {
+    flex: 1,
+    height: 10,
+    backgroundColor: '#E8E8E8',
+    borderRadius: 5,
+  },
+  progressBarForeground: {
+    height: 10,
+    backgroundColor: '#EDD9EF',
+    borderRadius: 5,
+  },
 
-    mainContent: {
-        paddingHorizontal: scale(5),
-        paddingTop: verticalScale(10), // Added top padding to increase distance from progress bar
-        paddingBottom: responsiveHeight(15), // Sufficient space for gradient area
-        // marginBottom: responsiveHeight(10),
-        alignItems: 'center',
-        flexGrow: 1, // Use full height even when content is small
-    },
-    characterAndQuestion: {
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: verticalScale(4),
-        marginBottom: responsiveHeight(3),
-    },
-    characterContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    questionTextContainer: {
-        width: responsiveWidth(90),
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    maskedView: {
-        width: '100%',
-        height: verticalScale(43),
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    // MaskedView style for additional questions screen
-    additionalQuestionsMaskedView: {
-        width: responsiveWidth(80),
-        height: responsiveHeight(12),
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    gradientText: {
-        width: '100%',
-        height: '100%',
-    },
-    questionText: {
-        fontFamily: 'NotoSerif600',
-        fontSize: moderateScale(16, 1.5), //16px
-        textAlign: 'center',
-        lineHeight: moderateScale(16, 1.5) * 1.25,
-        width: responsiveWidth(85),
-    },
-    inputFieldsContainer: {
-        width: responsiveWidth(90),
-        gap: responsiveHeight(3),
-        alignItems: 'stretch',
-    },
-    inputFieldItem: {
-        gap: responsiveHeight(2),
-        alignItems: 'center',
-    },
+  mainContent: {
+    paddingHorizontal: scale(5),
+    paddingTop: verticalScale(10), // Added top padding to increase distance from progress bar
+    paddingBottom: responsiveHeight(15), // Sufficient space for gradient area
+    // marginBottom: responsiveHeight(10),
+    alignItems: 'center',
+    flexGrow: 1, // Use full height even when content is small
+  },
+  characterAndQuestion: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: verticalScale(4),
+    marginBottom: responsiveHeight(3),
+  },
+  characterContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  questionTextContainer: {
+    width: responsiveWidth(90),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  maskedView: {
+    width: '100%',
+    height: verticalScale(43),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // MaskedView style for additional questions screen
+  additionalQuestionsMaskedView: {
+    width: responsiveWidth(80),
+    height: responsiveHeight(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gradientText: {
+    width: '100%',
+    height: '100%',
+  },
+  questionText: {
+    fontFamily: 'NotoSerif600',
+    fontSize: moderateScale(16, 1.5), //16px
+    textAlign: 'center',
+    lineHeight: moderateScale(16, 1.5) * 1.25,
+    width: responsiveWidth(85),
+  },
+  inputFieldsContainer: {
+    width: responsiveWidth(90),
+    gap: responsiveHeight(3),
+    alignItems: 'stretch',
+  },
+  inputFieldItem: {
+    gap: responsiveHeight(2),
+    alignItems: 'center',
+  },
   subQuestionText: {
     fontFamily: 'Inter500',
     fontSize: moderateScale(14, 1.5), //12px
@@ -1138,17 +1209,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-      optionsContainer: {
-        gap: 0,
-        alignSelf: 'stretch',
-    },
+  optionsContainer: {
+    gap: 0,
+    alignSelf: 'stretch',
+  },
 
 
   wrappedOptionsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
-    },
+  },
 
 
   gradientContainer: {
@@ -1307,7 +1378,7 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoSerif600',
     fontSize: responsiveFontSize(2.27), //16px
     textAlign: 'center',
-    lineHeight: responsiveHeight(2.5) *1.25,
+    lineHeight: responsiveHeight(2.5) * 1.25,
     // lineHeight: moderateScale(16, 1.5) * 1.25,
   },
   datePickerContainer: {

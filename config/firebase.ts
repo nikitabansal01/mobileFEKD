@@ -3,11 +3,16 @@ import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
   getAuth,
+  initializeAuth,
   setPersistence,
   signInWithEmailAndPassword,
+  signOut,
 } from 'firebase/auth';
+//@ts-ignore - getReactNativePersistence is exported but types may not be available
+import { getReactNativePersistence } from 'firebase/auth';
 // React Native persistence
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * Firebase configuration object loaded from environment variables
@@ -41,20 +46,24 @@ const app = initializeApp(firebaseConfig);
 
 /**
  * Firebase Auth instance with persistence configured per platform
- * - Native (iOS/Android): AsyncStorage persistence
+ * - Native (iOS/Android): AsyncStorage persistence (persists after app restart)
  * - Web: browser local persistence
  */
 export const auth = (() => {
-  const authInstance = getAuth(app);
-  
   if (Platform.OS === 'web') {
-    // Ensure web uses local (non-session) persistence
-    setPersistence(authInstance, browserLocalPersistence).catch((error) => {
-      console.log('Persistence setting failed:', error);
+    // Web: Use getAuth with browser persistence
+    const webAuth = getAuth(app);
+    setPersistence(webAuth, browserLocalPersistence).catch((error) => {
+      console.log('Web persistence setting failed:', error);
     });
+    return webAuth;
   }
-  
-  return authInstance;
+
+  // Native (iOS/Android): Use initializeAuth with AsyncStorage
+  // This ensures auth state persists after app restart
+  return initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage)
+  });
 })();
 
 /**
@@ -88,6 +97,20 @@ export const signUpWithEmail = async (email: string, password: string) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     return { success: true, user: userCredential.user };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Sign out the current user
+ * 
+ * @returns Promise with success status or error message
+ */
+export const signOutUser = async () => {
+  try {
+    await signOut(auth);
+    return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
   }

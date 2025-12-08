@@ -4,10 +4,11 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { GoogleAuthProvider, OAuthProvider, signInWithCredential } from 'firebase/auth';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Alert, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Components
 import AppleIconSvg from '@/assets/images/SVG/OnboardingSVG/AppleIconSvg';
@@ -21,6 +22,9 @@ import PrimaryButton from '@/components/PrimaryButton';
 
 // Services
 import { auth, signInWithEmail } from '@/config/firebase';
+
+// Storage key for Remember Me
+const REMEMBER_EMAIL_KEY = 'rememberMeEmail';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -51,6 +55,22 @@ const LoginScreen = () => {
   const [loading, setLoading] = useState(false);
   const [slideAnim] = useState(new Animated.Value(0));
 
+  // Load saved email on mount
+  useEffect(() => {
+    const loadSavedEmail = async () => {
+      try {
+        const savedEmail = await AsyncStorage.getItem(REMEMBER_EMAIL_KEY);
+        if (savedEmail) {
+          setEmail(savedEmail);
+          setRememberMe(true);
+        }
+      } catch (error) {
+        console.log('Error loading saved email:', error);
+      }
+    };
+    loadSavedEmail();
+  }, []);
+
   const [googleRequest, googleResponse, googlePromptAsync] = Google.useIdTokenAuthRequest({
     clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
   });
@@ -63,10 +83,10 @@ const LoginScreen = () => {
         .then(async (result) => {
           // Get Firebase token for authentication
           const token = await result.user.getIdToken();
-          
+
           // Small delay to ensure auth state is propagated
           await new Promise(resolve => setTimeout(resolve, 500));
-          
+
           Alert.alert('Success', 'Google login successful!');
           navigation.navigate('MainScreenTabs');
         })
@@ -88,14 +108,21 @@ const LoginScreen = () => {
     setLoading(true);
     try {
       const result = await signInWithEmail(email, password);
-      
+
       if (result.success) {
+        // Save or remove email based on Remember Me preference
+        if (rememberMe) {
+          await AsyncStorage.setItem(REMEMBER_EMAIL_KEY, email);
+        } else {
+          await AsyncStorage.removeItem(REMEMBER_EMAIL_KEY);
+        }
+
         // Get Firebase token for authentication
         const token = await auth.currentUser?.getIdToken();
-        
+
         // Small delay to ensure auth state is propagated
         await new Promise(resolve => setTimeout(resolve, 500));
-        
+
         Alert.alert("Success", "Login successful!");
         navigation.navigate('MainScreenTabs');
       } else {
@@ -121,7 +148,7 @@ const LoginScreen = () => {
   const handleAppleSignin = async () => {
     try {
       const isAvailable = await AppleAuthentication.isAvailableAsync();
-      
+
       if (!isAvailable) {
         Alert.alert("Error", "Apple authentication is not available on this device");
         return;
@@ -138,15 +165,15 @@ const LoginScreen = () => {
       const firebaseCredential = provider.credential({
         idToken: credential.identityToken!,
       });
-      
+
       const result = await signInWithCredential(auth, firebaseCredential);
-      
+
       // Get Firebase token for authentication
       const token = await result.user.getIdToken();
-      
+
       // Small delay to ensure auth state is propagated
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       Alert.alert("Success", "Apple login successful!");
       navigation.navigate('MainScreenTabs');
     } catch (error: any) {
@@ -168,7 +195,7 @@ const LoginScreen = () => {
         <View style={styles.characterContainer}>
           <AuvraCharacter size={responsiveWidth(20)} />
         </View>
-        
+
         <View style={styles.titleContainer}>
           <GradientText
             text="Welcome Back!"
@@ -176,14 +203,14 @@ const LoginScreen = () => {
             containerStyle={styles.maskedView}
           />
         </View>
-        
+
         <Text style={styles.subtitle}>
           Login to start taking care of your hormones
         </Text>
       </View>
 
       {/* Scrollable Form Section */}
-      <ScrollView 
+      <ScrollView
         style={styles.scrollContainer}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -221,7 +248,7 @@ const LoginScreen = () => {
             </View>
             <Text style={styles.rememberText}>Remember me</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity>
             <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
           </TouchableOpacity>
@@ -244,7 +271,7 @@ const LoginScreen = () => {
             <GoogleIconSvg />
             <Text style={styles.socialButtonText}>Continue with Google</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.socialButton}
             onPress={handleAppleSignin}
