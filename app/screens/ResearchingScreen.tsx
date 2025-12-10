@@ -115,13 +115,13 @@ const ResearchingScreen = () => {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user: any) => {
       setAuthChecked(true);
-      
+
       if (user) {
         setIsUserLoggedIn(true);
         setShowLogin(false); // Close bottom sheet when logged in
-        
-        // If user is already logged in, navigate directly to home
-        navigation.navigate('MainScreenTabs');
+        // NOTE: Do NOT navigate here - LoginBottomSheet handles navigation
+        // after session linking and data is ready. Navigating here would
+        // race ahead and show empty HomeScreen before data is ready.
       } else {
         setIsUserLoggedIn(false);
       }
@@ -136,7 +136,7 @@ const ResearchingScreen = () => {
     if (isUserLoggedIn) {
       return;
     }
-    
+
     // Skip if recommendation generation already started
     if (hasStartedRecommendation) {
       return;
@@ -160,7 +160,7 @@ const ResearchingScreen = () => {
           setRecommendationStatus('completed');
           return;
         }
-        
+
         setRecommendationStatus('error');
       }
     };
@@ -177,7 +177,7 @@ const ResearchingScreen = () => {
           const status = await sessionService.getRecommendationStatus();
           if (status) {
             setRecommendationStatus(status.status);
-            
+
             // Stop status checking when completed
             if (status.status === 'completed') {
               setCanProceedToFinal(true); // Allow progression to final step after API completion
@@ -249,9 +249,9 @@ const ResearchingScreen = () => {
       setStep(3); // Switch to "Perfect!"
       setTimeout(() => setShowLogin(true), 1500); // Show bottom sheet after 1.5 seconds
     } else if (canProceedToFinal && isUserLoggedIn) {
-      // Navigate to home screen if already logged in
+      // Navigate to main tabs if already logged in
       setStep(3);
-      setTimeout(() => navigation.navigate('HomeScreen'), 1500);
+      setTimeout(() => navigation.navigate('MainScreenTabs'), 1500);
     } else {
       // Show waiting message if API not completed
       setStep(3); // Move to final step anyway
@@ -291,9 +291,9 @@ const ResearchingScreen = () => {
             aspectRatio: 0.46,
           }}
         >
-          <Image 
+          <Image
             // source={Images.GraphicEstrogenDefault} 
-            source={Images.EstrogenBothHand} 
+            source={Images.EstrogenBothHand}
             style={{ width: '100%', height: '100%' }}
             resizeMode="contain"
           />
@@ -308,8 +308,8 @@ const ResearchingScreen = () => {
             transform: [{ rotate: "340deg" }],
           }}
         >
-          <Image 
-            source={Images.LHCharacterBothHand} 
+          <Image
+            source={Images.LHCharacterBothHand}
             style={{ width: '100%', height: '100%' }}
             resizeMode="contain"
           />
@@ -324,8 +324,8 @@ const ResearchingScreen = () => {
 
           }}
         >
-          <Image 
-            source={Images.TestosteroneBothHand} 
+          <Image
+            source={Images.TestosteroneBothHand}
             style={{ width: '100%', height: '100%' }}
             resizeMode="contain"
           />
@@ -427,7 +427,7 @@ const ResearchingScreen = () => {
               style={{
                 color: "#000",
                 fontSize: responsiveFontSize(1.98), //14px
-                fontFamily: "Inter400", 
+                fontFamily: "Inter400",
                 textAlign: "center",
                 marginBottom: 16,
               }}
@@ -438,9 +438,9 @@ const ResearchingScreen = () => {
           </>
         )}
         {step === 2 && (
-          <View style={{ 
-            width: '100%', 
-            alignItems: 'center', 
+          <View style={{
+            width: '100%',
+            alignItems: 'center',
             justifyContent: 'center',
             paddingHorizontal: responsiveWidth(5)
           }}>
@@ -479,7 +479,7 @@ const ResearchingScreen = () => {
                 </MaskedView>
               </View>
             </View>
-            
+
             <Text
               style={{
                 color: "#6f6f6f",
@@ -567,8 +567,8 @@ const ResearchingScreen = () => {
             transform: [{ rotate: "360deg" }],
           }}
         >
-          <Image 
-            source={Images.GraphicFSHDefault} 
+          <Image
+            source={Images.GraphicFSHDefault}
             style={{ width: '100%', height: '100%' }}
             resizeMode="contain"
           />
@@ -582,8 +582,8 @@ const ResearchingScreen = () => {
             aspectRatio: 1.56,
           }}
         >
-          <Image 
-            source={Images.ProgesteroneBothHand} 
+          <Image
+            source={Images.ProgesteroneBothHand}
             style={{ width: '100%', height: '100%' }}
             resizeMode="contain"
           />
@@ -598,14 +598,14 @@ const ResearchingScreen = () => {
             transform: [{ rotate: "335deg" }],
           }}
         >
-          <Image 
-            source={Images.GraphicGnRHDefault} 
+          <Image
+            source={Images.GraphicGnRHDefault}
             style={{ width: '100%', height: '100%' }}
             resizeMode="contain"
           />
         </View>
       </View>
-      
+
       {/* Bottom button - only show in step 2 */}
       {step === 2 && (
         <FixedBottomContainer>
@@ -637,7 +637,7 @@ const ResearchingScreen = () => {
           />
         </FixedBottomContainer>
       )}
-      
+
       <LoginBottomSheet visible={showLogin} onClose={() => setShowLogin(false)} />
     </SafeAreaView>
   );

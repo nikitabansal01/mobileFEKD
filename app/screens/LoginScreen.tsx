@@ -182,10 +182,17 @@ const LoginScreen = () => {
   };
 
   /**
-   * Handle back navigation
+   * Handle back navigation - go to OnboardingScreen
    */
   const handleBack = () => {
-    navigation.goBack();
+    navigation.navigate('OnboardingScreen' as never);
+  };
+
+  /**
+   * Handle signup navigation - go to OnboardingScreen to start assessment
+   */
+  const handleSignup = () => {
+    navigation.navigate('OnboardingScreen' as never);
   };
 
   return (
@@ -289,6 +296,14 @@ const LoginScreen = () => {
             {' '}and{' '}
             <Text style={styles.termsLink}>Privacy Policy</Text>
           </Text>
+        </View>
+
+        {/* Signup Link */}
+        <View style={styles.signupContainer}>
+          <Text style={styles.signupText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={handleSignup}>
+            <Text style={styles.signupLink}>Sign up</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -447,6 +462,22 @@ const styles = StyleSheet.create({
     color: '#000000',
     textDecorationLine: 'underline',
     textDecorationStyle: 'dotted',
+  },
+  signupContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: responsiveHeight(12), // Extra space for FixedBottomContainer
+  },
+  signupText: {
+    fontFamily: 'Inter400',
+    fontSize: responsiveFontSize(1.6),
+    color: '#6f6f6f',
+  },
+  signupLink: {
+    fontFamily: 'Inter600',
+    fontSize: responsiveFontSize(1.6),
+    color: '#bb4471',
   },
 });
 

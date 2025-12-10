@@ -10,7 +10,7 @@ import { Platform } from 'react-native';
 const getApiBaseUrl = () => {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
   if (envUrl) return envUrl;
-  
+
   // Platform-specific default values
   if (Platform.OS === 'android') {
     // For Android emulator
@@ -115,10 +115,10 @@ class SessionService {
   async createSession(): Promise<SessionData | null> {
     try {
       const deviceId = this.getDeviceId();
-      
+
       console.log('Attempting to create session:', `${API_BASE_URL}/api/v1/questions/sessions`);
       console.log('Request data:', { device_id: deviceId });
-      
+
       const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions`, {
         method: 'POST',
         headers: {
@@ -179,7 +179,7 @@ class SessionService {
 
       // Convert answers to new structure (excluding personal info)
       const responseData: any = {};
-      
+
       // Key mapping definition (excluding name)
       const keyMapping: Record<string, string> = {
         'age': 'age',
@@ -199,18 +199,18 @@ class SessionService {
         'sleepDuration': 'sleep_duration',
         'stressLevel': 'stress_level'
       };
-      
+
       // Map each question's answer
       questions.forEach(q => {
         const answer = answers[q.key];
         console.log(`Question ${q.key}:`, answer);
-        
+
         // Exclude name from processing
         if (q.key === 'name') {
           console.log('Name not saved to session');
           return;
         }
-        
+
         const mappedKey = keyMapping[q.key];
         if (mappedKey) {
           // Convert age to number
@@ -257,7 +257,7 @@ class SessionService {
 
       // Auto-detect user timezone
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      
+
       const requestBody = {
         session_id: sessionId,
         data: {
@@ -311,10 +311,10 @@ class SessionService {
 
       // Get name from local storage
       const userName = await AsyncStorage.getItem('userName');
-      
+
       // Auto-detect user timezone
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      
+
       const userProfile = {
         name: userName || '',
         email: firebaseUser.email || ''
@@ -344,11 +344,11 @@ class SessionService {
 
       const result = await response.json();
       console.log('Session link successful:', result);
-      
+
       // Clean up local storage after successful link
       await AsyncStorage.removeItem('userName');
       console.log('Name removed from local storage');
-      
+
       return true;
     } catch (error) {
       console.error('Session link error:', error);
@@ -420,18 +420,23 @@ class SessionService {
 
   /**
    * Logs out user and clears all stored information
+   * Note: Does NOT clear @hasCompletedOnboarding so returning users skip onboarding
    */
   async logout(): Promise<void> {
     try {
       // Clear session information
       await this.clearSession();
-      
+
       // Clear remember me information
       await AsyncStorage.removeItem('rememberMe');
       await AsyncStorage.removeItem('savedEmail');
       await AsyncStorage.removeItem('savedPassword');
-      
-      console.log('Logout complete - all stored information cleared');
+      await AsyncStorage.removeItem('rememberMeEmail');
+
+      // Clear user name
+      await AsyncStorage.removeItem('user_name');
+
+      console.log('Logout complete - session and auth data cleared');
     } catch (error) {
       console.error('Error during logout:', error);
     }
@@ -504,7 +509,7 @@ class SessionService {
 
       const result = await response.json();
       console.log('📊 Recommendation status response:', result);
-      
+
       // Normalize response structure
       let normalizedResult = {
         status: result.status || result.currentRecommendationStatus || 'pending',
@@ -512,7 +517,7 @@ class SessionService {
         recommendations_count: result.recommendations_count || 0,
         session_id: result.session_id
       };
-      
+
       console.log('✅ Normalized response:', normalizedResult);
       return normalizedResult;
     } catch (error) {
@@ -571,14 +576,14 @@ class SessionService {
    */
   async waitForUserDataReady(firebaseUser: any, maxAttempts: number = 15, delayMs: number = 1000): Promise<boolean> {
     console.log('⏳ Waiting for user data to be ready...');
-    
+
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         console.log(`🔄 Attempt ${attempt}/${maxAttempts} - Checking if user data exists...`);
-        
+
         // Get Firebase token
         const token = await firebaseUser.getIdToken();
-        
+
         // Check if user has any assignments
         const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/assignments/today`, {
           method: 'GET',
@@ -590,32 +595,38 @@ class SessionService {
 
         if (response.ok) {
           const data = await response.json();
-          
-          // Check if user has assignments
-          if (data && data.assignments && Object.keys(data.assignments).length > 0) {
-            console.log('✅ User data is ready! Found assignments:', Object.keys(data.assignments).length);
+
+          // Check if user has ACTUAL assignments (not just empty arrays)
+          // Either check total_assignments or sum up all arrays
+          const hasActualAssignments = data?.total_assignments > 0 ||
+            (data?.assignments && Object.values(data.assignments).some(
+              (arr: any) => Array.isArray(arr) && arr.length > 0
+            ));
+
+          if (hasActualAssignments) {
+            console.log('✅ User data is ready! Found assignments:', data.total_assignments);
             return true;
           }
-          
+
           console.log(`⏳ Attempt ${attempt}: No assignments yet, waiting...`);
         } else {
           console.log(`⏳ Attempt ${attempt}: API returned ${response.status}, waiting...`);
         }
-        
+
         // Wait before next attempt (except on last attempt)
         if (attempt < maxAttempts) {
           await new Promise(resolve => setTimeout(resolve, delayMs));
         }
       } catch (error) {
         console.error(`❌ Error checking user data (attempt ${attempt}):`, error);
-        
+
         // Wait before retry
         if (attempt < maxAttempts) {
           await new Promise(resolve => setTimeout(resolve, delayMs));
         }
       }
     }
-    
+
     console.log('⚠️ Timeout: User data not ready after maximum attempts');
     return false;
   }

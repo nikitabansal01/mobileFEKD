@@ -122,26 +122,20 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
           try {
             const linkSuccess = await sessionService.linkSessionToUser(result.user);
             if (linkSuccess) {
-              // Wait until user data is actually ready
+              // Wait until user data is actually ready (modal stays open showing loading)
               console.log('✅ Session linked successfully, waiting for data to be ready...');
-              const dataReady = await sessionService.waitForUserDataReady(result.user);
-
-              if (dataReady) {
-                Alert.alert('Success', 'Google signup successful! Your personalized plan is ready.');
-              } else {
-                Alert.alert('Success', 'Google signup successful! Your plan is being prepared.');
-              }
-
+              await sessionService.waitForUserDataReady(result.user);
+              // Data is ready - navigate smoothly
               onClose();
               navigation.navigate('MainScreenTabs', { forceRefresh: true });
             } else {
-              Alert.alert('Success', 'Google signup successful! But failed to link survey data.');
+              Alert.alert('Warning', 'Google signup successful but failed to link your assessment data.');
               onClose();
               navigation.navigate('MainScreenTabs', { forceRefresh: true });
             }
           } catch (linkError) {
             console.error('Session linking failed:', linkError);
-            Alert.alert('Success', 'Google signup successful! But failed to link survey data.');
+            Alert.alert('Warning', 'Google signup successful but failed to link your assessment data.');
             onClose();
             navigation.navigate('MainScreenTabs', { forceRefresh: true });
           }
@@ -206,26 +200,20 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
         try {
           const linkSuccess = await sessionService.linkSessionToUser(result.user);
           if (linkSuccess) {
-            // Wait until user data is actually ready
+            // Wait until user data is actually ready (bottom sheet stays open showing loading)
             console.log('✅ Session linked successfully, waiting for data to be ready...');
-            const dataReady = await sessionService.waitForUserDataReady(result.user);
-
-            if (dataReady) {
-              Alert.alert("Success", "Signup successful! Your personalized plan is ready.");
-            } else {
-              Alert.alert("Success", "Signup successful! Your plan is being prepared.");
-            }
-
+            await sessionService.waitForUserDataReady(result.user);
+            // Data is ready - navigate (no alert, smooth UX)
             onClose();
             navigation.navigate('MainScreenTabs', { forceRefresh: true });
           } else {
-            Alert.alert("Success", "Signup successful! But failed to link survey data.");
+            Alert.alert("Warning", "Signup successful but failed to link your assessment data. Please contact support.");
             onClose();
             navigation.navigate('MainScreenTabs', { forceRefresh: true });
           }
         } catch (linkError) {
           console.error('Session linking failed:', linkError);
-          Alert.alert("Success", "Signup successful! But failed to link survey data.");
+          Alert.alert("Warning", "Signup successful but failed to link your assessment data.");
           onClose();
           navigation.navigate('MainScreenTabs', { forceRefresh: true });
         }
@@ -276,26 +264,20 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       try {
         const linkSuccess = await sessionService.linkSessionToUser(result.user);
         if (linkSuccess) {
-          // Wait until user data is actually ready
+          // Wait until user data is actually ready (modal stays open showing loading)
           console.log('✅ Session linked successfully, waiting for data to be ready...');
-          const dataReady = await sessionService.waitForUserDataReady(result.user);
-
-          if (dataReady) {
-            Alert.alert("Success", "Apple signup successful! Your personalized plan is ready.");
-          } else {
-            Alert.alert("Success", "Apple signup successful! Your plan is being prepared.");
-          }
-
+          await sessionService.waitForUserDataReady(result.user);
+          // Data is ready - navigate smoothly
           onClose();
           navigation.navigate('MainScreenTabs', { forceRefresh: true });
         } else {
-          Alert.alert("Success", "Apple signup successful! But failed to link survey data.");
+          Alert.alert("Warning", "Apple signup successful but failed to link your assessment data.");
           onClose();
           navigation.navigate('MainScreenTabs', { forceRefresh: true });
         }
       } catch (linkError) {
         console.error('Session linking failed:', linkError);
-        Alert.alert("Success", "Apple signup successful! But failed to link survey data.");
+        Alert.alert("Warning", "Apple signup successful but failed to link your assessment data.");
         onClose();
         navigation.navigate('MainScreenTabs', { forceRefresh: true });
       }

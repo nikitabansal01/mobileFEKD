@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import MaskedView from '@react-native-masked-view/masked-view';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import {
@@ -95,7 +95,15 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
             try {
               await signOutUser();
               await sessionService.logout();
-              // Navigation handled automatically by onAuthStateChanged in App.tsx
+
+              // Reset navigation stack and go to OnboardingScreen (last slide)
+              // This clears all screens from memory for a fresh start
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'OnboardingScreen', params: { skipToEnd: true } }],
+                })
+              );
             } catch (error) {
               console.error('Logout error:', error);
               Alert.alert('Error', 'Failed to logout. Please try again.');

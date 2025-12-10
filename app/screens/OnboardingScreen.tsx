@@ -11,9 +11,13 @@ import AppIntroSlider from "react-native-app-intro-slider";
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, verticalScale } from 'react-native-size-matters';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Storage key for onboarding completion
+const HAS_COMPLETED_ONBOARDING_KEY = '@hasCompletedOnboarding';
 
 type RootStackParamList = {
-  OnboardingScreen: undefined;
+  OnboardingScreen: { skipToEnd?: boolean } | undefined;
   IntroScreen: undefined;
   QuestionScreen: undefined;
   ResultScreen: undefined;
@@ -33,7 +37,7 @@ const slides = [
     key: 1,
     render: () => (
       <View style={styles.slideContentWrapper}>
-        
+
         {/* Hormone character graphics */}
         <View>
           {/* Testosterone - right middle star shape */}
@@ -50,11 +54,11 @@ const slides = [
               resizeMode="contain"
             />
           </View>
-          
+
           {/* FSH - center oval shape */}
-          <View style={{ 
+          <View style={{
             position: 'absolute',
-            top: responsiveHeight(23), 
+            top: responsiveHeight(23),
             left: responsiveWidth(22),
             width: responsiveWidth(43),
             aspectRatio: 1.1835
@@ -65,11 +69,11 @@ const slides = [
               resizeMode="contain"
             />
           </View>
-          
+
           {/* GnRH - left bottom triangle shape */}
-          <View style={{ 
+          <View style={{
             position: 'absolute',
-            top: responsiveHeight(39), 
+            top: responsiveHeight(39),
             left: responsiveWidth(4),
             width: responsiveWidth(33),
             aspectRatio: 1
@@ -80,11 +84,11 @@ const slides = [
               resizeMode="contain"
             />
           </View>
-          
+
           {/* Progesterone - right bottom cloud shape */}
-          <View style={{ 
+          <View style={{
             position: 'absolute',
-            top: responsiveHeight(39), 
+            top: responsiveHeight(39),
             right: responsiveWidth(3),
             width: responsiveWidth(42),
             aspectRatio: 1.56
@@ -95,11 +99,11 @@ const slides = [
               resizeMode="contain"
             />
           </View>
-          
+
           {/* LH - middle top square shape */}
-          <View style={{ 
+          <View style={{
             position: 'absolute',
-            top: responsiveHeight(5), 
+            top: responsiveHeight(5),
             left: responsiveWidth(35),
             width: responsiveWidth(31),
             aspectRatio: 1.45
@@ -110,11 +114,11 @@ const slides = [
               resizeMode="contain"
             />
           </View>
-          
+
           {/* Estrogen - left top lightning shape */}
-          <View style={{ 
+          <View style={{
             position: 'absolute',
-            top: responsiveHeight(7), 
+            top: responsiveHeight(7),
             left: responsiveWidth(2),
             width: responsiveWidth(24),
             aspectRatio: 0.46
@@ -139,7 +143,7 @@ const slides = [
           locations={[0, 1]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
-          style={ styles.gradient }
+          style={styles.gradient}
         >
           {/* Graphic image */}
           <View
@@ -151,7 +155,7 @@ const slides = [
             }}
           >
             {/* Container for image and SVGs */}
-            <View style={{ 
+            <View style={{
               position: 'relative',
               alignItems: 'center',
               width: '80%',
@@ -166,7 +170,7 @@ const slides = [
                 }}
                 resizeMode="contain"
               />
-              
+
               {/* SVG 1 - outside top left of image */}
               <View
                 style={{
@@ -179,7 +183,7 @@ const slides = [
               >
                 <SVG.GraphicSparkle width={40} height={40} />
               </View>
-              
+
               {/* SVG 2 - outside top right of image */}
               <View
                 style={{
@@ -208,7 +212,7 @@ const slides = [
           locations={[0, 1]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
-          style={ styles.gradient }
+          style={styles.gradient}
         >
           {/* Graphic image */}
           <View
@@ -220,7 +224,7 @@ const slides = [
             }}
           >
             {/* Container for image and SVGs */}
-            <View style={{ 
+            <View style={{
               position: 'relative',
               alignItems: 'center',
               width: '80%',
@@ -235,7 +239,7 @@ const slides = [
                 }}
                 resizeMode="contain"
               />
-              
+
               {/* SVG 1 - outside top left of image */}
               <View
                 style={{
@@ -248,7 +252,7 @@ const slides = [
               >
                 <SVG.GraphicSparkle width={40} height={40} />
               </View>
-              
+
               {/* SVG 2 - outside top right of image */}
               <View
                 style={{
@@ -273,11 +277,11 @@ const slides = [
     render: () => (
       <View style={styles.slideContentWrapper}>
         <LinearGradient
-            colors={["#E7F5F7", "#E7F5F7"]}
-            locations={[0, 1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={ styles.gradient }
+          colors={["#E7F5F7", "#E7F5F7"]}
+          locations={[0, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.gradient}
         >
           {/* Graphic image */}
           <View
@@ -289,7 +293,7 @@ const slides = [
             }}
           >
             {/* Container for image and SVGs */}
-            <View style={{ 
+            <View style={{
               position: 'relative',
               alignItems: 'center',
               width: '80%',
@@ -304,7 +308,7 @@ const slides = [
                 }}
                 resizeMode="contain"
               />
-              
+
               {/* SVG 1 - outside top left of image */}
               <View
                 style={{
@@ -317,7 +321,7 @@ const slides = [
               >
                 <SVG.GraphicSparkle width={40} height={40} />
               </View>
-              
+
               {/* SVG 2 - outside top right of image */}
               <View
                 style={{
@@ -343,11 +347,19 @@ const slides = [
  * Onboarding screen component with auto-sliding introduction slides
  * Features hormone graphics and app screenshots with gradient backgrounds
  */
-const OnboardingScreen = () => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+const OnboardingScreen = ({ route }: { route?: { params?: { skipToEnd?: boolean } } }) => {
+  const skipToEnd = route?.params?.skipToEnd;
+  const [currentIndex, setCurrentIndex] = useState(skipToEnd ? slides.length - 1 : 0);
   const sliderRef = useRef<AppIntroSlider>(null);
   const navigation = useNavigation<OnboardingScreenNavigationProp>();
   const insets = useSafeAreaInsets();
+
+  // If skipToEnd, go to last slide on mount
+  useEffect(() => {
+    if (skipToEnd && sliderRef.current) {
+      sliderRef.current.goToSlide(slides.length - 1);
+    }
+  }, [skipToEnd]);
 
   const titleText = [
     "True healing starts with understanding your hormones.",
@@ -374,14 +386,18 @@ const OnboardingScreen = () => {
   /**
    * Handle completion of onboarding
    */
-  const handleDone = () => {
+  const handleDone = async () => {
+    // Mark onboarding as completed
+    await AsyncStorage.setItem(HAS_COMPLETED_ONBOARDING_KEY, 'true');
     navigation.navigate('IntroScreen');
   }
 
   /**
    * Handle login navigation
    */
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    // Mark onboarding as completed
+    await AsyncStorage.setItem(HAS_COMPLETED_ONBOARDING_KEY, 'true');
     navigation.navigate('LoginScreen');
   }
 
@@ -436,11 +452,11 @@ const OnboardingScreen = () => {
           <Text style={styles.description}>{description[currentIndex]}</Text>
         </ScrollView>
       </View>
-      
+
       {/* Bottom gradient background and buttons */}
       <FixedBottomContainer>
-        <PrimaryButton 
-          title="Get Started" 
+        <PrimaryButton
+          title="Get Started"
           onPress={handleDone}
           style={styles.buttonView}
         />

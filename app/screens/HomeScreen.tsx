@@ -4,6 +4,7 @@ import AuvraChatModal from '@/components/AuvraChatModal';
 import CalendarBottomSheet from '@/components/CalendarBottomSheet';
 import apiPromiseManager from '@/services/apiPromiseManager';
 import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse } from '@/services/homeService';
+import { auth } from '@/config/firebase';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useRef, useState } from 'react';
@@ -67,6 +68,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const [showCalendar, setShowCalendar] = useState(false);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Track if initial data load has happened - prevents reload on tab switches
+  const hasLoadedInitialDataRef = useRef<boolean>(false);
+
+  // Track the last processed params to avoid duplicate reloads
+  const lastForceRefreshRef = useRef<boolean | undefined>(undefined);
+  const lastRefreshedDataRef = useRef<any>(undefined);
+
   // Disable swipe back gesture to prevent interference with scrolling
   useFocusEffect(
     React.useCallback(() => {
@@ -81,6 +89,36 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       };
     }, [navigation])
   );
+
+  // Track previous auth state to detect login events
+  const wasLoggedInRef = useRef<boolean>(!!auth.currentUser);
+  const hasRefreshedAfterLoginRef = useRef<boolean>(false);
+
+  // Listen for auth state changes - reload data ONCE when user logs in
+  // This handles the case where HomeScreen was already mounted with empty data before login
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      const wasLoggedIn = wasLoggedInRef.current;
+      const isNowLoggedIn = !!user;
+
+      // Detect login event (was not logged in, now is)
+      if (!wasLoggedIn && isNowLoggedIn && !hasRefreshedAfterLoginRef.current) {
+        console.log('🔐 Auth state changed: User just logged in - reloading home data');
+        hasRefreshedAfterLoginRef.current = true;
+        loadHomeData();
+      }
+
+      // Update ref for next comparison
+      wasLoggedInRef.current = isNowLoggedIn;
+
+      // Reset refresh flag on logout so it triggers again on next login
+      if (!isNowLoggedIn) {
+        hasRefreshedAfterLoginRef.current = false;
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Reset inactivity timer
   const resetInactivityTimer = () => {
@@ -177,94 +215,103 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     return hormoneStats;
   };
 
+  // INITIAL LOAD - runs only when screen is focused (not when mounted in background)
+  useFocusEffect(
+    React.useCallback(() => {
+      // Skip if forceRefresh is set - let the param-based useEffect handle it
+      const hasForceRefresh = route?.params?.forceRefresh;
+
+      if (!hasLoadedInitialDataRef.current && !hasForceRefresh) {
+        hasLoadedInitialDataRef.current = true;
+        loadHomeData();
+      }
+    }, [route?.params?.forceRefresh])
+  );
+
   useEffect(() => {
+    // PARAM-BASED REFRESH - only react to ACTUAL changes in params
     const refreshedData = route?.params?.refreshedData;
     const cyclePhaseData = route?.params?.cyclePhaseData;
     const skipLoading = route?.params?.skipLoading;
     const skipTodayLoading = route?.params?.skipTodayLoading;
     const forceRefresh = route?.params?.forceRefresh;
 
-    // If forceRefresh is set (e.g., after signup), reload data
-    if (forceRefresh) {
+    // If forceRefresh is set (especially on first mount after signup), load data
+    if (forceRefresh && forceRefresh !== lastForceRefreshRef.current) {
       console.log('🔄 Force refresh triggered - reloading home data');
+      lastForceRefreshRef.current = forceRefresh;
+      hasLoadedInitialDataRef.current = true; // Mark as loaded
       loadHomeData();
       return;
     }
+    lastForceRefreshRef.current = forceRefresh;
 
-    if (refreshedData && skipLoading) {
-      // All data completed - use refreshed data
-      setAssignments(refreshedData);
+    // If refreshedData is NEW (not the same reference), use it
+    if (refreshedData && refreshedData !== lastRefreshedDataRef.current) {
+      lastRefreshedDataRef.current = refreshedData;
 
-      if (refreshedData?.hormone_stats) {
-        setProgressStats({ hormone_stats: convertHormoneStats(refreshedData.hormone_stats) });
-      }
-
-      if (cyclePhaseData?.cycle_info) {
-        setCycleInfo(cyclePhaseData.cycle_info);
-      }
-
-      setLoading(false);
-    } else if (refreshedData && skipTodayLoading) {
-      // Only Today API completed - use partial data
-      setAssignments(refreshedData);
-
-      if (refreshedData?.hormone_stats) {
-        setProgressStats({ hormone_stats: convertHormoneStats(refreshedData.hormone_stats) });
-      }
-
-      // Load cycle data separately without loading state
-      homeService.getCyclePhase().then(cycleData => {
-        setCycleInfo(cycleData?.cycle_info || null);
+      if (skipLoading) {
+        // All data completed - use refreshed data directly
+        setAssignments(refreshedData);
+        if (refreshedData?.hormone_stats) {
+          setProgressStats({ hormone_stats: convertHormoneStats(refreshedData.hormone_stats) });
+        }
+        if (cyclePhaseData?.cycle_info) {
+          setCycleInfo(cyclePhaseData.cycle_info);
+        }
         setLoading(false);
-      });
-    } else {
-      // Check for active API promise from ActionCompletedScreen
-      const activePromise = apiPromiseManager.getActivePromise();
+        return;
+      }
 
-      if (activePromise) {
-        setLoading(true);
-
-        // Wait for API promise result
-        activePromise
-          .then(result => {
-            if (result.success) {
-              if (result.todayAssignments) {
-                setAssignments(result.todayAssignments);
-
-                if (result.todayAssignments.hormone_stats) {
-                  setProgressStats({ hormone_stats: convertHormoneStats(result.todayAssignments.hormone_stats) });
-                }
-              }
-
-              if (result.cyclePhaseData?.cycle_info) {
-                setCycleInfo(result.cyclePhaseData.cycle_info);
-              }
-
-              // Fallback to normal load if both failed
-              if (!result.todayAssignments && !result.cyclePhaseData) {
-                loadHomeDataWithoutLoading();
-              }
-            } else {
-              // API call failed - use normal data load
-              loadHomeDataWithoutLoading();
-            }
-          })
-          .catch(error => {
-            // Promise error - use normal data load
-            loadHomeDataWithoutLoading();
-          })
-          .finally(() => {
-            setLoading(false);
-          });
-      } else {
-        // Normal data load
-        loadHomeData();
+      if (skipTodayLoading) {
+        // Only Today API completed - use partial data
+        setAssignments(refreshedData);
+        if (refreshedData?.hormone_stats) {
+          setProgressStats({ hormone_stats: convertHormoneStats(refreshedData.hormone_stats) });
+        }
+        // Load cycle data separately
+        homeService.getCyclePhase().then(cycleData => {
+          setCycleInfo(cycleData?.cycle_info || null);
+          setLoading(false);
+        });
+        return;
       }
     }
-  }, [route?.params]);
+
+    // Check for active API promise from ActionCompletedScreen
+    const activePromise = apiPromiseManager.getActivePromise();
+    if (activePromise && !hasLoadedInitialDataRef.current) {
+      setLoading(true);
+      activePromise
+        .then(result => {
+          if (result.success) {
+            if (result.todayAssignments) {
+              setAssignments(result.todayAssignments);
+              if (result.todayAssignments.hormone_stats) {
+                setProgressStats({ hormone_stats: convertHormoneStats(result.todayAssignments.hormone_stats) });
+              }
+            }
+            if (result.cyclePhaseData?.cycle_info) {
+              setCycleInfo(result.cyclePhaseData.cycle_info);
+            }
+            if (!result.todayAssignments && !result.cyclePhaseData) {
+              loadHomeDataWithoutLoading();
+            }
+          } else {
+            loadHomeDataWithoutLoading();
+          }
+        })
+        .catch(() => loadHomeDataWithoutLoading())
+        .finally(() => {
+          setLoading(false);
+          hasLoadedInitialDataRef.current = true;
+        });
+    }
+  }, [route?.params?.forceRefresh, route?.params?.refreshedData, route?.params?.skipLoading, route?.params?.skipTodayLoading]);
 
   /**
    * Load home data with loading state
+   * If logged-in user has no data, redirects to IntroScreen to complete assessment
    */
   const loadHomeData = async () => {
     try {
@@ -284,6 +331,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       } else {
         setProgressStats(null);
       }
+
+      // Note: We don't redirect to assessment here because:
+      // 1. Session linking may still be in progress
+      // 2. The onboarding flow already handles new users properly
+      // If user truly has no data, they'll see empty home state
     } catch (error) {
       console.error('❌ Error loading home data:', error);
       // Set empty data to prevent white screen

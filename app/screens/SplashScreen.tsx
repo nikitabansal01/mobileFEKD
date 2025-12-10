@@ -1,7 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -11,11 +11,16 @@ import {
   View
 } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { auth } from '@/config/firebase';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Image assets from Figma
 const imgLoading = "http://localhost:3845/assets/b0e74d06b35689a6403477cf90fbacb394b75b3e.svg";
+
+// Storage keys for user state
+const HAS_COMPLETED_ONBOARDING_KEY = '@hasCompletedOnboarding';
 
 export default function SplashScreen() {
   const navigation = useNavigation<any>();
@@ -23,6 +28,7 @@ export default function SplashScreen() {
   const logoScaleAnim = new Animated.Value(0.8);
   const textFadeAnim = new Animated.Value(0);
   const loadingRotateAnim = new Animated.Value(0);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   useEffect(() => {
     // Start animations
@@ -58,12 +64,50 @@ export default function SplashScreen() {
       })
     ).start();
 
-    // Navigate to onboarding after 3 seconds
-    const timer = setTimeout(() => {
-      navigation.replace('OnboardingScreen');
-    }, 5000);
+    /**
+     * Determine where to navigate based on auth and onboarding status
+     * Flow:
+     * - Logged in → MainScreenTabs (Home)
+     * - Completed onboarding but not logged in → LoginScreen
+     * - First time user → OnboardingScreen
+     */
+    const determineNavigation = async () => {
+      // Small delay for splash animation
+      await new Promise(resolve => setTimeout(resolve, 2500));
 
-    return () => clearTimeout(timer);
+      if (isNavigating) return;
+      setIsNavigating(true);
+
+      try {
+        const currentUser = auth.currentUser;
+        const hasCompletedOnboarding = await AsyncStorage.getItem(HAS_COMPLETED_ONBOARDING_KEY);
+
+        console.log('🔍 SplashScreen navigation check:', {
+          isLoggedIn: !!currentUser,
+          hasCompletedOnboarding: !!hasCompletedOnboarding,
+        });
+
+        if (currentUser) {
+          // User is logged in - go to home
+          console.log('✅ User logged in - navigating to MainScreenTabs');
+          navigation.replace('MainScreenTabs');
+        } else if (hasCompletedOnboarding) {
+          // User has seen onboarding but is not logged in - show onboarding final slide with login option
+          console.log('🔐 Returning user - navigating to OnboardingScreen (last slide)');
+          navigation.replace('OnboardingScreen', { skipToEnd: true });
+        } else {
+          // First time user - show onboarding
+          console.log('👋 First time user - navigating to OnboardingScreen');
+          navigation.replace('OnboardingScreen');
+        }
+      } catch (error) {
+        console.error('Navigation error:', error);
+        // Fallback to onboarding on error
+        navigation.replace('OnboardingScreen');
+      }
+    };
+
+    determineNavigation();
   }, [navigation]);
 
   const loadingRotation = loadingRotateAnim.interpolate({
@@ -74,7 +118,7 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent />
-    
+
       {/* Central Content */}
       <View style={styles.content}>
         <View style={styles.contentContainer}>
@@ -91,36 +135,36 @@ export default function SplashScreen() {
               style={styles.contentGradient}
             />
           </BlurView>
-          
-           {/* Auvra Logo */}
-           <Animated.View 
-             style={[
-               styles.logoContainer,
-               {
-                 opacity: fadeAnim,
-                 transform: [{ scale: logoScaleAnim }],
-               },
-             ]}
-           >
-             <Image 
-               source={require('@/assets/images/auvraLogoSplash.png')} 
-               style={styles.logoImage} 
-               resizeMode="contain" 
-             />
-           </Animated.View>
-    
-          {/* Tagline */}
-          <Animated.Text 
+
+          {/* Auvra Logo */}
+          <Animated.View
             style={[
-              styles.tagline, 
+              styles.logoContainer,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: logoScaleAnim }],
+              },
+            ]}
+          >
+            <Image
+              source={require('@/assets/images/auvraLogoSplash.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </Animated.View>
+
+          {/* Tagline */}
+          <Animated.Text
+            style={[
+              styles.tagline,
               { opacity: textFadeAnim }
             ]}
           >
             The missing piece in your{'\n'}hormonal care
           </Animated.Text>
-    
+
           {/* Loading Animation */}
-          <Animated.View 
+          <Animated.View
             style={[
               styles.loadingContainer,
               {
@@ -152,7 +196,7 @@ export default function SplashScreen() {
     //         end={{ x: 0, y: 1 }}
     //         style={styles.contentGradient}
     //       />
-          
+
     //       {/* Auvra Character */}
     //       <Animated.View 
     //         style={[
@@ -195,63 +239,63 @@ export default function SplashScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: '#FFFFFF',
-    },
-    content: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingHorizontal: scale(40),
-    },
-    contentContainer: {
-      width: scale(300),
-      height: scale(400),
-      justifyContent: 'center',
-      alignItems: 'center',
-      position: 'relative',
-    },
-    gradientWrapper: {
-      position: 'absolute',
-      width: scale(600),
-      height: scale(400),
-      borderRadius: scale(250),  // Circular shape
-      overflow: 'hidden',        // Important for borderRadius to work with BlurView
-    },
-    contentGradient: {
-      width: '100%',
-      height: '100%',
-    },
-     logoContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: scale(40),
+  },
+  contentContainer: {
+    width: scale(300),
+    height: scale(400),
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  gradientWrapper: {
+    position: 'absolute',
+    width: scale(600),
+    height: scale(400),
+    borderRadius: scale(250),  // Circular shape
+    overflow: 'hidden',        // Important for borderRadius to work with BlurView
+  },
+  contentGradient: {
+    width: '100%',
+    height: '100%',
+  },
+  logoContainer: {
     //    marginBottom: verticalScale(0),
-       zIndex: 10,
-       alignItems: 'center',
-       justifyContent: 'center',
-     },
-     logoImage: {
-       width: scale(263),
-       height: scale(180),
-     },
-    tagline: {
-      fontSize: moderateScale(18, 1.5),
-      fontFamily: 'Poppins400',
-      color: '#6E4B6F',
-      textAlign: 'center',
-      lineHeight: moderateScale(26, 1.5),
-      // marginTop: verticalScale(0),
-      paddingTop: verticalScale(5),
-      zIndex: 10,
-    },
-    loadingContainer: {
-      width: scale(50),
-      height: scale(50),
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 10,
-    },
-    loadingIcon: {
-      width: scale(50),
-      height: scale(50),
-    },
-  });
+    zIndex: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoImage: {
+    width: scale(263),
+    height: scale(180),
+  },
+  tagline: {
+    fontSize: moderateScale(18, 1.5),
+    fontFamily: 'Poppins400',
+    color: '#6E4B6F',
+    textAlign: 'center',
+    lineHeight: moderateScale(26, 1.5),
+    // marginTop: verticalScale(0),
+    paddingTop: verticalScale(5),
+    zIndex: 10,
+  },
+  loadingContainer: {
+    width: scale(50),
+    height: scale(50),
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  loadingIcon: {
+    width: scale(50),
+    height: scale(50),
+  },
+});
