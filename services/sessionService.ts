@@ -10,7 +10,7 @@ import { Platform } from 'react-native';
 const getApiBaseUrl = () => {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
   if (envUrl) return envUrl;
-  
+
   // Platform-specific default values
   if (Platform.OS === 'android') {
     // For Android emulator
@@ -115,10 +115,10 @@ class SessionService {
   async createSession(): Promise<SessionData | null> {
     try {
       const deviceId = this.getDeviceId();
-      
+
       console.log('Attempting to create session:', `${API_BASE_URL}/api/v1/questions/sessions`);
       console.log('Request data:', { device_id: deviceId });
-      
+
       const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions`, {
         method: 'POST',
         headers: {
@@ -179,7 +179,7 @@ class SessionService {
 
       // Convert answers to new structure (excluding personal info)
       const responseData: any = {};
-      
+
       // Key mapping definition (excluding name)
       const keyMapping: Record<string, string> = {
         'age': 'age',
@@ -199,18 +199,18 @@ class SessionService {
         'sleepDuration': 'sleep_duration',
         'stressLevel': 'stress_level'
       };
-      
+
       // Map each question's answer
       questions.forEach(q => {
         const answer = answers[q.key];
         console.log(`Question ${q.key}:`, answer);
-        
+
         // Exclude name from processing
         if (q.key === 'name') {
           console.log('Name not saved to session');
           return;
         }
-        
+
         const mappedKey = keyMapping[q.key];
         if (mappedKey) {
           // Convert age to number
@@ -248,7 +248,7 @@ class SessionService {
 
       // Auto-detect user timezone
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      
+
       const requestBody = {
         session_id: sessionId,
         data: {
@@ -302,10 +302,10 @@ class SessionService {
 
       // Get name from local storage
       const userName = await AsyncStorage.getItem('userName');
-      
+
       // Auto-detect user timezone
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      
+
       const userProfile = {
         name: userName || '',
         email: firebaseUser.email || ''
@@ -335,11 +335,11 @@ class SessionService {
 
       const result = await response.json();
       console.log('Session link successful:', result);
-      
+
       // Clean up local storage after successful link
       await AsyncStorage.removeItem('userName');
       console.log('Name removed from local storage');
-      
+
       return true;
     } catch (error) {
       console.error('Session link error:', error);
@@ -416,12 +416,12 @@ class SessionService {
     try {
       // Clear session information
       await this.clearSession();
-      
+
       // Clear remember me information
       await AsyncStorage.removeItem('rememberMe');
       await AsyncStorage.removeItem('savedEmail');
       await AsyncStorage.removeItem('savedPassword');
-      
+
       console.log('Logout complete - all stored information cleared');
     } catch (error) {
       console.error('Error during logout:', error);
@@ -495,7 +495,7 @@ class SessionService {
 
       const result = await response.json();
       console.log('📊 Recommendation status response:', result);
-      
+
       // Normalize response structure
       let normalizedResult = {
         status: result.status || result.currentRecommendationStatus || 'pending',
@@ -503,11 +503,50 @@ class SessionService {
         recommendations_count: result.recommendations_count || 0,
         session_id: result.session_id
       };
-      
+
       console.log('✅ Normalized response:', normalizedResult);
       return normalizedResult;
     } catch (error) {
       console.error('❌ Recommendation status check error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Fetches hormone analysis results for the current session
+   *
+   * Uses the backend /sessions/{session_id}/hormone-analysis endpoint
+   * and returns the parsed JSON response including hormone_cards.
+   */
+  async getHormoneAnalysis(): Promise<any | null> {
+    try {
+      const sessionId = await this.getSessionId();
+      if (!sessionId) {
+        console.error('❌ No session ID available for hormone analysis.');
+        return null;
+      }
+
+      const url = `${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/hormone-analysis`;
+      console.log('🔍 Fetching hormone analysis:', url);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Hormone analysis fetch failed:', errorText);
+        throw new Error(`Hormone analysis fetch failed: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('🧬 Hormone analysis response:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Hormone analysis fetch error:', error);
       return null;
     }
   }
