@@ -341,7 +341,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     switch (timeSlot) {
       case 'morning': return '🌤️';
       case 'afternoon': return '☀️';
-      case 'night': return '🌙';
+      case 'evening': return '🌙';  // Backend now uses 'evening'
+      case 'night': return '🌙';     // Keep for backwards compatibility
       case 'anytime': return 'Anytime';
       default: return 'Anytime';
     }
