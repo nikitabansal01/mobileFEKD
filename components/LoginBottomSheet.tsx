@@ -5,6 +5,8 @@ import RightTickSvg from "@/assets/images/SVG/OnboardingSVG/RightTickSvg";
 import GradientText from "@/components/GradientText";
 import { auth, signUpWithEmail } from "@/config/firebase";
 import sessionService from '@/services/sessionService';
+import authService from '@/services/authService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -43,9 +45,10 @@ type RootStackParamList = {
   ResearchingScreen: undefined;
   LoadingScreen: undefined;
   ResultLoadingScreen: undefined;
+  SignupLoadingScreen: undefined;
   LoginScreen: undefined;
   HomeScreen: undefined;
-  MainScreenTabs: undefined;
+  MainScreenTabs: { freshSignup?: boolean } | undefined;
 };
 
 type LoginBottomSheetNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -83,11 +86,14 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Signing up...');
   const [slideAnim] = useState(new Animated.Value(SCREEN_HEIGHT));
 
   const [googleRequest, googleResponse, googlePromptAsync] = Google.useIdTokenAuthRequest({
     clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
   });
+
+  // Note: Data waiting is now handled by SignupLoadingScreen
 
   /**
    * Handles Google OAuth response and user authentication
@@ -96,29 +102,34 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
     if (googleResponse?.type === 'success') {
       const { id_token } = googleResponse.params;
       const credential = GoogleAuthProvider.credential(id_token);
+      
+      setLoading(true);
+      setLoadingMessage('Signing in with Google...');
+      
       signInWithCredential(auth, credential)
         .then(async (result) => {
-          // Attempt to link session
-          try {
-            const linkSuccess = await sessionService.linkSessionToUser(result.user);
-            if (linkSuccess) {
-              Alert.alert('Success', 'Google signup successful! Your survey data has been linked.');
-              onClose();
-              navigation.navigate('MainScreenTabs');
-            } else {
-              Alert.alert('Success', 'Google signup successful! But failed to link survey data.');
-              onClose();
-              navigation.navigate('MainScreenTabs');
-            }
-          } catch (linkError) {
-            console.error('Session linking failed:', linkError);
-            Alert.alert('Success', 'Google signup successful! But failed to link survey data.');
-            onClose();
-            navigation.navigate('MainScreenTabs');
+          // Save login state using authService (Google doesn't store passwords)
+          await authService.setLoggedIn(result.user.uid);
+          if (rememberMe && result.user.email) {
+            await authService.saveCredentials(result.user.email, '', rememberMe);
           }
+          
+          // Start session link in background (don't await)
+          // SignupLoadingScreen will wait for completion flag
+          sessionService.linkSessionToUser(result.user).catch((linkError) => {
+            console.error('Session linking failed:', linkError);
+          });
+          
+          // Navigate to loading screen immediately
+          // It will wait for session_link_complete flag
+          onClose();
+          navigation.navigate('SignupLoadingScreen');
         })
         .catch((error) => {
           Alert.alert('Error', error.message || 'Google signup failed');
+        })
+        .finally(() => {
+          setLoading(false);
         });
     }
   }, [googleResponse]);
@@ -162,28 +173,26 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
     }
 
     setLoading(true);
+    setLoadingMessage('Creating your account...');
     try {
       const result = await signUpWithEmail(email, password);
       
       if (result.success) {
-        // Attempt to link session
-        try {
-          const linkSuccess = await sessionService.linkSessionToUser(result.user);
-          if (linkSuccess) {
-            Alert.alert("Success", "Signup successful! Your survey data has been linked.");
-            onClose();
-            navigation.navigate('MainScreenTabs');
-          } else {
-            Alert.alert("Success", "Signup successful! But failed to link survey data.");
-            onClose();
-            navigation.navigate('MainScreenTabs');
-          }
-        } catch (linkError) {
+        // Save credentials and login state using authService
+        await authService.saveCredentials(email, password, rememberMe);
+        await authService.setLoggedIn(result.user?.uid || '');
+        
+        // Start session link in background (don't await)
+        // SignupLoadingScreen will wait for completion flag
+        setLoadingMessage('Linking your survey data...');
+        sessionService.linkSessionToUser(result.user).catch((linkError) => {
           console.error('Session linking failed:', linkError);
-          Alert.alert("Success", "Signup successful! But failed to link survey data.");
-          onClose();
-          navigation.navigate('MainScreenTabs');
-        }
+        });
+        
+        // Navigate to loading screen immediately
+        // It will wait for session_link_complete flag
+        onClose();
+        navigation.navigate('SignupLoadingScreen');
       } else {
         Alert.alert("Error", result.error || "Signup failed");
       }
@@ -213,6 +222,9 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
         return;
       }
 
+      setLoading(true);
+      setLoadingMessage('Signing in with Apple...');
+
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -227,26 +239,26 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       
       const result = await signInWithCredential(auth, firebaseCredential);
       
-      // Attempt to link session
-      try {
-        const linkSuccess = await sessionService.linkSessionToUser(result.user);
-        if (linkSuccess) {
-          Alert.alert("Success", "Apple signup successful! Your survey data has been linked.");
-          onClose();
-          navigation.navigate('MainScreenTabs');
-        } else {
-          Alert.alert("Success", "Apple signup successful! But failed to link survey data.");
-          onClose();
-          navigation.navigate('MainScreenTabs');
-        }
-      } catch (linkError) {
-        console.error('Session linking failed:', linkError);
-        Alert.alert("Success", "Apple signup successful! But failed to link survey data.");
-        onClose();
-        navigation.navigate('MainScreenTabs');
+      // Save login state using authService (Apple doesn't store passwords)
+      await authService.setLoggedIn(result.user.uid);
+      if (rememberMe && result.user.email) {
+        await authService.saveCredentials(result.user.email, '', rememberMe);
       }
+      
+      // Start session link in background (don't await)
+      // SignupLoadingScreen will wait for completion flag
+      sessionService.linkSessionToUser(result.user).catch((linkError) => {
+        console.error('Session linking failed:', linkError);
+      });
+      
+      // Navigate to loading screen immediately
+      // It will wait for session_link_complete flag
+      onClose();
+      navigation.navigate('SignupLoadingScreen');
     } catch (error: any) {
       Alert.alert("Error", error.message || "Apple signup failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -369,7 +381,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
         {/* Bottom Button */}
         <FixedBottomContainer>
           <PrimaryButton
-            title={loading ? "Signing up..." : "Sign up"}
+            title={loading ? loadingMessage : "Sign up"}
             onPress={handleSignup}
             disabled={loading || !email || !password || !confirmPassword}
           />

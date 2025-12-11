@@ -4,7 +4,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { GoogleAuthProvider, OAuthProvider, signInWithCredential } from 'firebase/auth';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,6 +21,7 @@ import PrimaryButton from '@/components/PrimaryButton';
 
 // Services
 import { auth, signInWithEmail } from '@/config/firebase';
+import authService from '@/services/authService';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -51,6 +52,30 @@ const LoginScreen = () => {
   const [loading, setLoading] = useState(false);
   const [slideAnim] = useState(new Animated.Value(0));
 
+  // Load saved email on mount if remember me was enabled
+  useEffect(() => {
+    const loadSavedCredentials = async () => {
+      try {
+        const savedCredentials = await authService.getSavedCredentials();
+        if (savedCredentials) {
+          setEmail(savedCredentials.email);
+          setPassword(savedCredentials.password);
+          setRememberMe(true);
+        } else {
+          // Check if just email was saved
+          const savedEmail = await authService.getSavedEmail();
+          if (savedEmail) {
+            setEmail(savedEmail);
+            setRememberMe(true);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading saved credentials:', error);
+      }
+    };
+    loadSavedCredentials();
+  }, []);
+
   const [googleRequest, googleResponse, googlePromptAsync] = Google.useIdTokenAuthRequest({
     clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
   });
@@ -61,8 +86,10 @@ const LoginScreen = () => {
       const credential = GoogleAuthProvider.credential(id_token);
       signInWithCredential(auth, credential)
         .then(async (result) => {
-          // Get Firebase token for authentication
-          const token = await result.user.getIdToken();
+          // Save login state
+          await authService.setLoggedIn(result.user.uid);
+          // For social logins, we enable remember me by default
+          await authService.saveCredentials('', '', true);
           
           Alert.alert('Success', 'Google login successful!');
           navigation.navigate('MainScreenTabs');
@@ -86,9 +113,11 @@ const LoginScreen = () => {
     try {
       const result = await signInWithEmail(email, password);
       
-      if (result.success) {
-        // Get Firebase token for authentication
-        const token = await auth.currentUser?.getIdToken();
+      if (result.success && result.user) {
+        // Save credentials based on remember me preference
+        await authService.saveCredentials(email, password, rememberMe);
+        // Mark user as logged in
+        await authService.setLoggedIn(result.user.uid);
         
         Alert.alert("Success", "Login successful!");
         navigation.navigate('MainScreenTabs');
@@ -135,8 +164,10 @@ const LoginScreen = () => {
       
       const result = await signInWithCredential(auth, firebaseCredential);
       
-      // Get Firebase token for authentication
-      const token = await result.user.getIdToken();
+      // Save login state
+      await authService.setLoggedIn(result.user.uid);
+      // For social logins, we enable remember me by default
+      await authService.saveCredentials('', '', true);
       
       Alert.alert("Success", "Apple login successful!");
       navigation.navigate('MainScreenTabs');
@@ -242,6 +273,14 @@ const LoginScreen = () => {
           >
             <AppleIconSvg />
             <Text style={styles.socialButtonText}>Continue with Apple</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Sign Up Link */}
+        <View style={styles.signupLinkContainer}>
+          <Text style={styles.signupLinkText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('OnboardingScreen')}>
+            <Text style={styles.signupLinkAction}>Sign up</Text>
           </TouchableOpacity>
         </View>
 
@@ -395,6 +434,22 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(1.98),
     fontFamily: 'Inter500',
     lineHeight: responsiveFontSize(1.98) * 1.25,
+  },
+  signupLinkContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: responsiveHeight(1),
+  },
+  signupLinkText: {
+    fontFamily: 'Inter400',
+    fontSize: responsiveFontSize(1.7),
+    color: '#6f6f6f',
+  },
+  signupLinkAction: {
+    fontFamily: 'Inter600',
+    fontSize: responsiveFontSize(1.7),
+    color: '#C17EC9',
   },
   termsContainer: {
     marginBottom: responsiveHeight(8),

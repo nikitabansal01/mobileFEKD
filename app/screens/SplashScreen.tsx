@@ -1,7 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -11,6 +11,8 @@ import {
   View
 } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import authService from '@/services/authService';
+import { auth } from '@/config/firebase';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -19,6 +21,7 @@ const imgLoading = "http://localhost:3845/assets/b0e74d06b35689a6403477cf90fbacb
 
 export default function SplashScreen() {
   const navigation = useNavigation<any>();
+  const [authChecked, setAuthChecked] = useState(false);
   const fadeAnim = new Animated.Value(0);
   const logoScaleAnim = new Animated.Value(0.8);
   const textFadeAnim = new Animated.Value(0);
@@ -58,10 +61,59 @@ export default function SplashScreen() {
       })
     ).start();
 
-    // Navigate to onboarding after 3 seconds
+    // Check auth state and navigate accordingly
+    const checkAuthAndNavigate = async () => {
+      try {
+        // Wait for Firebase auth to initialize
+        await new Promise<void>((resolve) => {
+          const unsubscribe = auth.onAuthStateChanged((user) => {
+            unsubscribe();
+            resolve();
+          });
+        });
+
+        // Check if user is already logged in (Firebase session persists)
+        if (auth.currentUser) {
+          console.log('✅ User already logged in via Firebase, navigating to MainScreenTabs');
+          await authService.setLoggedIn(auth.currentUser.uid);
+          setAuthChecked(true);
+          navigation.replace('MainScreenTabs');
+          return;
+        }
+
+        // Attempt auto-login with saved credentials
+        const autoLoginResult = await authService.attemptAutoLogin();
+        
+        if (autoLoginResult.success) {
+          console.log('✅ Auto-login successful, navigating to MainScreenTabs');
+          setAuthChecked(true);
+          navigation.replace('MainScreenTabs');
+          return;
+        }
+
+        // If user needs to enter password (was logged in but remember me was off)
+        if (autoLoginResult.needsPassword) {
+          console.log('🔑 User needs to enter password, navigating to LoginScreen');
+          setAuthChecked(true);
+          navigation.replace('LoginScreen');
+          return;
+        }
+
+        // First time user or logged out user
+        console.log('👋 New user, navigating to OnboardingScreen');
+        setAuthChecked(true);
+        navigation.replace('OnboardingScreen');
+      } catch (error) {
+        console.error('Error during auth check:', error);
+        setAuthChecked(true);
+        navigation.replace('OnboardingScreen');
+      }
+    };
+
+    // Wait for animation to complete, then check auth
     const timer = setTimeout(() => {
-      navigation.replace('OnboardingScreen');
-    }, 5000);
+      checkAuthAndNavigate();
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, [navigation]);

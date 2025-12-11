@@ -26,6 +26,7 @@ import QuestionScreen from './app/screens/QuestionScreen';
 import ResearchingScreen from './app/screens/ResearchingScreen';
 import ResultLoadingScreen from './app/screens/ResultLoadingScreen';
 import ResultScreen from './app/screens/ResultScreen';
+import SignupLoadingScreen from './app/screens/SignupLoadingScreen';
 import SplashScreen from './app/screens/SplashScreen';
 
 // Context - Define FirstLog directly
@@ -108,6 +109,7 @@ export default function App() {
               <Stack.Screen name="ResearchingScreen" component={ResearchingScreen} />
               <Stack.Screen name="LoadingScreen" component={LoadingScreen} />
               <Stack.Screen name="ResultLoadingScreen" component={ResultLoadingScreen} />
+              <Stack.Screen name="SignupLoadingScreen" component={SignupLoadingScreen} />
               <Stack.Screen name="LoginScreen" component={LoginScreen} />
               <Stack.Screen name="MainScreenTabs" component={MainScreenTabs} />
               <Stack.Screen name="ChatbotScreen" component={ChatbotScreen} />

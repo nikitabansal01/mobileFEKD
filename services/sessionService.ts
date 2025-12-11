@@ -297,6 +297,8 @@ class SessionService {
       const sessionId = await this.getSessionId();
       if (!sessionId) {
         console.error('No session ID available.');
+        // Still set flag so SignupLoadingScreen can proceed
+        await AsyncStorage.setItem('session_link_complete', 'true');
         return false;
       }
 
@@ -340,9 +342,15 @@ class SessionService {
       await AsyncStorage.removeItem('userName');
       console.log('Name removed from local storage');
 
+      // Signal that session link is complete - SignupLoadingScreen checks this
+      await AsyncStorage.setItem('session_link_complete', 'true');
+      console.log('✅ Session link complete flag set');
+
       return true;
     } catch (error) {
       console.error('Session link error:', error);
+      // Still set flag so SignupLoadingScreen can proceed (with empty data initially)
+      await AsyncStorage.setItem('session_link_complete', 'true');
       return false;
     }
   }

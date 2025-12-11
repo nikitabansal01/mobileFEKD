@@ -6,7 +6,8 @@ import apiPromiseManager from '@/services/apiPromiseManager';
 import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse } from '@/services/homeService';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { useEffect, useRef, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Dimensions,
   Image,
@@ -49,15 +50,19 @@ interface HomeScreenProps {
       cyclePhaseData?: any;
       skipLoading?: boolean;
       skipTodayLoading?: boolean;
+      freshSignup?: boolean;
     }; 
   };
 }
+
+const FRESH_SIGNUP_FLAG = 'fresh_signup_pending_refresh';
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [cycleInfo, setCycleInfo] = useState<CycleInfo | null>(null);
   const [assignments, setAssignments] = useState<AssignmentsResponse | null>(null);
   const [progressStats, setProgressStats] = useState<ProgressStatsResponse | null>(null);
+  const [hasRetried, setHasRetried] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'time' | 'type'>('time');
   
@@ -65,6 +70,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const [showAuvraChat, setShowAuvraChat] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const freshSignupCheckRef = useRef<boolean>(false);
+  const initialDataLoadedRef = useRef<boolean>(false); // Prevent duplicate initial fetches
+
+  // Note: Fresh signup data loading is now handled by SignupLoadingScreen
+  // which waits until data is ready before navigating to HomeScreen
 
   // Disable swipe back gesture to prevent interference with scrolling
   useFocusEffect(
@@ -196,6 +206,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       }
       
       setLoading(false);
+      initialDataLoadedRef.current = true;
     } else if (refreshedData && skipTodayLoading) {
       // Only Today API completed - use partial data
       setAssignments(refreshedData);
@@ -208,8 +219,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       homeService.getCyclePhase().then(cycleData => {
         setCycleInfo(cycleData?.cycle_info || null);
         setLoading(false);
+        initialDataLoadedRef.current = true;
       });
     } else {
+      // Prevent duplicate initial fetches
+      if (initialDataLoadedRef.current && !hasRetried) {
+        return;
+      }
+      
       // Check for active API promise from ActionCompletedScreen
       const activePromise = apiPromiseManager.getActivePromise();
       
@@ -247,18 +264,25 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           })
           .finally(() => {
             setLoading(false);
+            initialDataLoadedRef.current = true;
           });
       } else {
         // Normal data load
         loadHomeData();
       }
     }
-  }, [route?.params]);
+  }, [route?.params, hasRetried]);
 
   /**
    * Load home data with loading state
    */
   const loadHomeData = async () => {
+    // Prevent duplicate fetches
+    if (initialDataLoadedRef.current) {
+      return;
+    }
+    initialDataLoadedRef.current = true;
+    
     try {
       setLoading(true);
       
@@ -278,6 +302,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       }
     } catch (error) {
       // Handle error silently
+      initialDataLoadedRef.current = false; // Allow retry on error
     } finally {
       setLoading(false);
     }
