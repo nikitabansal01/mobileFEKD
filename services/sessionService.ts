@@ -305,6 +305,10 @@ class SessionService {
       // Get name from local storage
       const userName = await AsyncStorage.getItem('userName');
 
+      // Get lifestyle focus from local storage (set in ResearchingScreen)
+      const lifestyleFocusStr = await AsyncStorage.getItem('lifestyle_focus');
+      const lifestyleFocus = lifestyleFocusStr ? JSON.parse(lifestyleFocusStr) : null;
+
       // Auto-detect user timezone
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -316,7 +320,8 @@ class SessionService {
       console.log('Attempting session link:', {
         sessionId,
         userProfile,
-        timezone: userTimezone
+        timezone: userTimezone,
+        lifestyleFocus
       });
 
       const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/link`, {
@@ -327,7 +332,8 @@ class SessionService {
         },
         body: JSON.stringify({
           user_profile: userProfile,
-          current_timezone: userTimezone  // Required!
+          current_timezone: userTimezone,  // Required!
+          lifestyle_focus: lifestyleFocus  // Eat/Move/Pause preference
         }),
       });
 
@@ -340,7 +346,8 @@ class SessionService {
 
       // Clean up local storage after successful link
       await AsyncStorage.removeItem('userName');
-      console.log('Name removed from local storage');
+      await AsyncStorage.removeItem('lifestyle_focus');
+      console.log('Name and lifestyle focus removed from local storage');
 
       // Signal that session link is complete - SignupLoadingScreen checks this
       await AsyncStorage.setItem('session_link_complete', 'true');
