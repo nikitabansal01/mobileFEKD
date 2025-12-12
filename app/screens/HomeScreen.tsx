@@ -418,26 +418,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   /**
    * Get hormone icon emoji or image
    * @param hormone - Hormone name
-   * @returns Emoji icon for hormone or image source
+   * @returns Image source for hormone
    */
   const getHormoneIcon = (hormone: string) => {
     switch (hormone.toLowerCase()) {
-      case 'androgens': return '💪';
-      case 'progesterone': 
-        return Images.ProgesteroneBothHand;
-      case 'estrogen': 
-      return Images.EstrogenBothHand;
-      case 'thyroid': 
-      return Images.ThyroidBothHand;
+      case 'androgens': return Images.TestosteroneBothHand;
+      case 'progesterone': return Images.ProgesteroneBothHand;
+      case 'estrogen': return Images.EstrogenBothHand;
+      case 'thyroid': return Images.ThyroidBothHand;
       case 'insulin': return Images.InsulinBothHand;
-      case 'cortisol': 
-      return Images.CortisolBothHand;
-      case 'fsh': return '🌱';
-      case 'lh': return '🌿';
-      case 'prolactin': return '🤱';
-      case 'ghrelin': return '🍽️';
+      case 'cortisol': return Images.CortisolBothHand;
+      case 'fsh': return Images.EstrogenBothHand;
+      case 'lh': return Images.LHCharacterBothHand;
+      case 'prolactin': return Images.ProgesteroneBothHand;
+      case 'ghrelin': return Images.InsulinBothHand;
       case 'testosterone': return Images.TestosteroneBothHand;
-      default: return '💊';
+      default: return Images.ProgesteroneBothHand;
     }
   };
 
