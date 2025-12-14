@@ -1,13 +1,16 @@
 import { initializeApp } from 'firebase/app';
 import {
-  browserLocalPersistence,
   createUserWithEmailAndPassword,
   getAuth,
+  initializeAuth,
+  getReactNativePersistence,
+  browserLocalPersistence,
   setPersistence,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
 // React Native persistence
 import { Platform } from 'react-native';
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * Firebase configuration object loaded from environment variables
@@ -45,16 +48,19 @@ const app = initializeApp(firebaseConfig);
  * - Web: browser local persistence
  */
 export const auth = (() => {
-  const authInstance = getAuth(app);
-  
   if (Platform.OS === 'web') {
+    const authInstance = getAuth(app);
     // Ensure web uses local (non-session) persistence
     setPersistence(authInstance, browserLocalPersistence).catch((error) => {
       console.log('Persistence setting failed:', error);
     });
+    return authInstance;
   }
-  
-  return authInstance;
+
+  // Native (iOS/Android): persist auth state using AsyncStorage
+  return initializeAuth(app, {
+    persistence: getReactNativePersistence(ReactNativeAsyncStorage),
+  });
 })();
 
 /**

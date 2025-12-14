@@ -293,9 +293,19 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const [sliderHoverValue, setSliderHoverValue] = useState<number | null>(null);
   const [showSlider, setShowSlider] = useState(true);
   const [showSelectedValue, setShowSelectedValue] = useState(false);
+  const [serverChoiceOptions, setServerChoiceOptions] = useState<ChoiceOption[] | null>(null);
+  const [serverSliderLabels, setServerSliderLabels] = useState<string[] | null>(null);
+
+  const effectiveSliderLabels = serverSliderLabels && serverSliderLabels.length > 0
+    ? serverSliderLabels
+    : ["None", "Mild", "Moderate", "Strong", "Extreme"];
 
   // Get choice options based on context
   const getChoiceOptions = (): ChoiceOption[] => {
+    if (serverChoiceOptions && serverChoiceOptions.length > 0) {
+      return serverChoiceOptions;
+    }
+
     const contextFromRoute = route?.params?.conversationContext;
     
     switch (contextFromRoute?.context) {
@@ -455,15 +465,33 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           inputMode
         );
 
-        if (response && response.message) {
+        if (response && typeof response.content === 'string' && response.content.trim().length > 0) {
           // Add bot response from API
           const botResponse: Message = {
             id: Date.now().toString() + "_bot",
-            text: response.message,
+            text: response.content,
             isBot: true,
           };
           setMessages(prev => [...prev, botResponse]);
           scrollToBottom();
+
+          // If backend returns dynamic choices, prefer them over hardcoded ones
+          if (Array.isArray((response as any).choices) && (response as any).choices.length > 0) {
+            const choices: string[] = (response as any).choices;
+            setServerChoiceOptions(
+              choices.map((c, idx) => ({ id: `server-choice-${idx}`, text: c }))
+            );
+          } else {
+            setServerChoiceOptions(null);
+          }
+
+          // If backend requests a slider, show it and use provided labels when possible
+          if ((response as any).slider_config && Array.isArray((response as any).slider_config.labels)) {
+            setServerSliderLabels((response as any).slider_config.labels);
+            setShowSlider(true);
+            setShowSelectedValue(false);
+            setSliderValue(0);
+          }
         } else {
           // Fallback to mock response if API fails
           console.log('⚠️ API response empty, using fallback');
@@ -546,10 +574,41 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleSliderSelection = (value: number) => {
+  const handleSliderSelection = async (value: number) => {
     setSliderValue(value);
     setShowSlider(false);
     setShowSelectedValue(true);
+
+    // Send slider value to backend (creates session if needed)
+    setIsLoading(true);
+    try {
+      const response = await ChatService.sendSliderValue(value, {
+        symptom_type: 'bloating',
+        source: 'weekly_checkin',
+      });
+
+      if (response && typeof response.content === 'string' && response.content.trim().length > 0) {
+        const botResponse: Message = {
+          id: Date.now().toString() + "_bot",
+          text: response.content,
+          isBot: true,
+        };
+        setMessages(prev => [...prev, botResponse]);
+
+        if (Array.isArray((response as any).choices) && (response as any).choices.length > 0) {
+          const choices: string[] = (response as any).choices;
+          setServerChoiceOptions(
+            choices.map((c, idx) => ({ id: `server-choice-${idx}`, text: c }))
+          );
+        } else {
+          setServerChoiceOptions(null);
+        }
+      }
+    } catch (e) {
+      console.error('❌ Error sending slider value:', e);
+    } finally {
+      setIsLoading(false);
+    }
 
     // Show selected value for 1 second, then show conversation in idle mode
     setTimeout(() => {
@@ -667,11 +726,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                 ))}
               </View>
               <View style={styles.sliderLabels}>
-                <Text style={styles.sliderLabel}>None</Text>
-                <Text style={styles.sliderLabel}>Mild</Text>
-                <Text style={styles.sliderLabel}>Moderate</Text>
-                <Text style={styles.sliderLabel}>Strong</Text>
-                <Text style={styles.sliderLabel}>Extreme</Text>
+                {effectiveSliderLabels.slice(0, 5).map((lbl) => (
+                  <Text key={lbl} style={styles.sliderLabel}>{lbl}</Text>
+                ))}
               </View>
             </View>
 
@@ -703,11 +760,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                 ))}
               </View>
               <View style={styles.sliderLabels}>
-                <Text style={styles.sliderLabel}>None</Text>
-                <Text style={styles.sliderLabel}>Mild</Text>
-                <Text style={styles.sliderLabel}>Moderate</Text>
-                <Text style={styles.sliderLabel}>Strong</Text>
-                <Text style={styles.sliderLabel}>Extreme</Text>
+                {effectiveSliderLabels.slice(0, 5).map((lbl) => (
+                  <Text key={lbl} style={styles.sliderLabel}>{lbl}</Text>
+                ))}
               </View>
             </View>
 

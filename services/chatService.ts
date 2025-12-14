@@ -63,22 +63,18 @@ export type ConversationContext =
  * Response types from the AI
  */
 export type ResponseType = 
-  | 'greeting'
-  | 'follow_up'
-  | 'action_buttons'
-  | 'slider_request'
-  | 'choice_request'
-  | 'confirmation'
-  | 'error';
+  | 'text'
+  | 'choice_buttons'
+  | 'slider'
+  | 'confirmation';
 
 /**
  * Action button returned by the AI
  */
-export interface ActionButton {
-  id: string;
-  text: string;
-  action: string;
-  action_data?: Record<string, any>;
+export interface ChatAction {
+  type: string;
+  target?: string;
+  params?: Record<string, any>;
 }
 
 /**
@@ -89,17 +85,13 @@ export interface SliderConfig {
   max: number;
   step: number;
   labels: string[];
-  question: string;
+  default_value?: number;
 }
 
 /**
  * Choice option returned by the AI
  */
-export interface ChoiceOption {
-  id: string;
-  text: string;
-  value?: string;
-}
+// Backend returns choices as string[]; UI can map to ids if needed.
 
 /**
  * Chat message request to backend
@@ -129,7 +121,7 @@ export interface VoiceMessageRequest {
  */
 export interface SliderRequest {
   user_id: string;
-  session_id: string;
+  session_id?: string;
   value: number;
   context: Record<string, any>;
 }
@@ -149,13 +141,20 @@ export interface ChoiceRequest {
  */
 export interface ChatMessageResponse {
   session_id: string;
-  message: string;
+  message_id?: string;
   response_type: ResponseType;
-  action_buttons?: ActionButton[];
+
+  // Main response text
+  content: string;
+
+  // Optional UI elements
+  choices?: string[];
   slider_config?: SliderConfig;
-  choices?: ChoiceOption[];
   transcription?: string;
   metadata?: Record<string, any>;
+  actions?: ChatAction[];
+  confidence?: number;
+  timestamp?: string;
 }
 
 /**
@@ -389,17 +388,12 @@ class ChatService {
         return null;
       }
 
-      if (!this.currentSessionId) {
-        console.error('❌ No active session for slider');
-        return null;
-      }
-
       console.log('📊 Sending slider value:', { value, context });
 
       const headers = await getHeaders();
       const request: SliderRequest = {
         user_id: userId,
-        session_id: this.currentSessionId,
+        session_id: this.currentSessionId || undefined,
         value,
         context,
       };
