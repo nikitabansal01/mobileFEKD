@@ -1,6 +1,7 @@
 import Avatar from "@/components/customComponent/AvatarChatbot";
 import Header from "@/components/customComponent/ChatbotHeader";
 import FooterCTA from "@/components/customComponent/FooterChatbotCTA";
+import ChatService, { ConversationContext as ChatContext, InputMode } from "@/services/chatService";
 import { Ionicons } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { useNavigation } from '@react-navigation/native';
@@ -8,7 +9,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
-import { Dimensions, Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Dimensions, Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { FONT_FAMILIES, useAppFonts } from '../../constants/fonts';
@@ -222,7 +223,19 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const [mode, setMode] = useState<Mode>("idle");
   const [value, setValue] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false); // Loading state for API calls
   
+  // Map conversation context from route to ChatContext type
+  const getConversationContext = (): ChatContext => {
+    const contextFromRoute = route?.params?.conversationContext;
+    switch (contextFromRoute?.context) {
+      case "care_plan_modal": return "care_plan_modal";
+      case "symptom_checkin": return "symptom_checkin";
+      case "personalise": return "personalise";
+      case "know_body": return "know_body";
+      default: return "care_plan_modal";
+    }
+  };
   
   // Handle conversation context from different chats
   useEffect(() => {
@@ -412,9 +425,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     }
   }, []);
 
-  const handleSend = (text?: string) => {
+  const handleSend = async (text?: string) => {
     const messageText = text || value.trim();
     if (messageText) {
+      // Add user message immediately
       const newMessage: Message = {
         id: Date.now().toString(),
         text: messageText,
@@ -423,64 +437,57 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       setMessages(prev => [...prev, newMessage]);
       console.log("Sent:", messageText);
       if (!text) setValue("");
-
-      // Add bot response after a short delay
-      setTimeout(() => {
-        const contextFromRoute = route?.params?.conversationContext;
-        let botResponse: Message;
-        
-        if (contextFromRoute?.context === "care_plan_modal") {
-          // Care Plan modal - ask a follow-up question based on user response
-          const userResponse = contextFromRoute.userResponse;
-          let followUpQuestion = "How does your care plan look today?";
-          
-          if (userResponse === "👍 It works for me") {
-            followUpQuestion = "That's great! What's working well for you today?";
-          } else if (userResponse === "👎 I want to change it") {
-            followUpQuestion = "I understand. What would you like to change about your plan?";
-          }
-          
-          botResponse = {
-            id: Date.now().toString() + "_bot",
-            text: followUpQuestion,
-            isBot: true,
-          };
-        } else if (contextFromRoute?.context === "symptom_checkin") {
-          // Symptom checkin - ask the question again
-          botResponse = {
-            id: Date.now().toString() + "_bot",
-            text: "See any progress with your symptoms? Track progress, wins, difficulties...",
-            isBot: true,
-          };
-        } else if (contextFromRoute?.context === "personalise") {
-          // Personalise - ask the question again
-          botResponse = {
-            id: Date.now().toString() + "_bot",
-            text: "Want to Personalise? Add 25+ personalisation factors to improve your action plan",
-            isBot: true,
-          };
-        } else if (contextFromRoute?.context === "know_body") {
-          // Know my body - ask the question again
-          botResponse = {
-            id: Date.now().toString() + "_bot",
-            text: "Know my body. Know more about menstrual phase, hormones and how it changes",
-            isBot: true,
-          };
-        } else {
-          // Default response
-          botResponse = {
-            id: Date.now().toString() + "_bot",
-            text: "Were there any big changes in your week? related to food, lifestyle, stress, etc",
-            isBot: true,
-          };
-        }
-        
-        setMessages(prev => [...prev, botResponse]);
-        scrollToBottom();
-      }, 500);
-
-      // Scroll to bottom after adding new message
       scrollToBottom();
+
+      // Show loading state
+      setIsLoading(true);
+
+      try {
+        // Determine input mode
+        let inputMode: InputMode = 'type';
+        if (mode === 'tap') inputMode = 'tap';
+        else if (mode === 'yap') inputMode = 'yap';
+
+        // Call the chat API
+        const response = await ChatService.sendMessage(
+          messageText,
+          getConversationContext(),
+          inputMode
+        );
+
+        if (response && response.message) {
+          // Add bot response from API
+          const botResponse: Message = {
+            id: Date.now().toString() + "_bot",
+            text: response.message,
+            isBot: true,
+          };
+          setMessages(prev => [...prev, botResponse]);
+          scrollToBottom();
+        } else {
+          // Fallback to mock response if API fails
+          console.log('⚠️ API response empty, using fallback');
+          const fallbackResponse: Message = {
+            id: Date.now().toString() + "_bot",
+            text: "I understand. How can I help you further?",
+            isBot: true,
+          };
+          setMessages(prev => [...prev, fallbackResponse]);
+          scrollToBottom();
+        }
+      } catch (error) {
+        console.error('❌ Error sending message:', error);
+        // Show error response
+        const errorResponse: Message = {
+          id: Date.now().toString() + "_bot",
+          text: "Sorry, I'm having trouble connecting. Please try again.",
+          isBot: true,
+        };
+        setMessages(prev => [...prev, errorResponse]);
+        scrollToBottom();
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -608,6 +615,13 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                   )}
                 </View>
               ))}
+              {/* Loading indicator when waiting for API response */}
+              {isLoading && (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={COLORS.warmPurple} />
+                  <Text style={styles.loadingText}>Auvra is thinking...</Text>
+                </View>
+              )}
             </View>
             </View>
           </ScrollView>
@@ -769,6 +783,13 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               )}
             </View>
           ))}
+          {/* Loading indicator when waiting for API response */}
+          {isLoading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={COLORS.warmPurple} />
+              <Text style={styles.loadingText}>Auvra is thinking...</Text>
+            </View>
+          )}
         </View>
         </View>
       </ScrollView>
@@ -837,6 +858,13 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               )}
             </View>
           ))}
+          {/* Loading indicator when waiting for API response */}
+          {isLoading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={COLORS.warmPurple} />
+              <Text style={styles.loadingText}>Auvra is thinking...</Text>
+            </View>
+          )}
         </View>
         </View>
         <View style={styles.choiceOptionsContainer}>
@@ -1061,6 +1089,19 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(15),
     zIndex: 1,
     width: '100%',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: verticalScale(15),
+    paddingHorizontal: scale(15),
+    paddingVertical: verticalScale(10),
+  },
+  loadingText: {
+    marginLeft: scale(10),
+    fontSize: FONT_SIZES.small,
+    color: COLORS.greyMedium,
+    fontStyle: 'italic',
   },
   botMessageBubble: {
     maxWidth: '80%',
