@@ -412,6 +412,12 @@ class ChatService {
 
       const result: ChatMessageResponse = await response.json();
       console.log('✅ Received slider response:', result);
+
+      // Update session ID from response (slider can be the first interaction)
+      if (result.session_id) {
+        this.setSessionId(result.session_id);
+      }
+
       return result;
     } catch (error) {
       console.error('❌ Error sending slider value:', error);
@@ -462,6 +468,12 @@ class ChatService {
 
       const result: ChatMessageResponse = await response.json();
       console.log('✅ Received choice response:', result);
+
+      // Keep session ID in sync (defensive)
+      if (result.session_id) {
+        this.setSessionId(result.session_id);
+      }
+
       return result;
     } catch (error) {
       console.error('❌ Error sending choice:', error);
