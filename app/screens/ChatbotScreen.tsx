@@ -8,6 +8,7 @@ import MaskedView from "@react-native-masked-view/masked-view";
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from "expo-linear-gradient";
+import * as Haptics from 'expo-haptics';
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Dimensions, Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -77,11 +78,14 @@ const COLORS = {
 // Types
 type Mode = "idle" | "tap" | "yap" | "type";
 
+type MessageStatus = 'sending' | 'sent' | 'delivered';
+
 type Message = {
   id: string;
   text: string;
   isBot: boolean;
   timestamp?: Date; // When message was sent
+  status?: MessageStatus; // For user messages
 };
 
 type ChoiceOption = {
@@ -140,8 +144,17 @@ function GradientText({ children, style }: { children: string; style?: any }) {
   );
 }
 
-// Animated typing indicator component
+// Animated typing indicator component with pulsing dots
 function TypingIndicator() {
+  const [dotIndex, setDotIndex] = useState(0);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDotIndex((prev) => (prev + 1) % 4);
+    }, 400);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <View style={styles.typingContainer}>
       <View style={styles.typingBubble}>
@@ -152,11 +165,11 @@ function TypingIndicator() {
           style={styles.typingGradient}
         >
           <View style={styles.typingDots}>
-            <View style={[styles.typingDot, styles.typingDot1]} />
-            <View style={[styles.typingDot, styles.typingDot2]} />
-            <View style={[styles.typingDot, styles.typingDot3]} />
+            <View style={[styles.typingDot, dotIndex >= 1 && styles.typingDotActive]} />
+            <View style={[styles.typingDot, dotIndex >= 2 && styles.typingDotActive]} />
+            <View style={[styles.typingDot, dotIndex >= 3 && styles.typingDotActive]} />
           </View>
-          <Text style={styles.typingText}>Auvra is typing...</Text>
+          <Text style={styles.typingText}>Auvra is thinking...</Text>
         </LinearGradient>
       </View>
     </View>
@@ -198,6 +211,37 @@ function AuvraAvatar() {
   );
 }
 
+// Helper function to format bot message text with proper line breaks and styling
+function formatBotText(text: string): React.ReactNode[] {
+  // Clean up the text first
+  let cleanText = text
+    .replace(/\n{3,}/g, '\n\n') // Max 2 line breaks
+    .replace(/\*\*/g, '') // Remove markdown bold markers for now
+    .trim();
+  
+  // Split by double newlines for paragraphs
+  const paragraphs = cleanText.split(/\n\n+/);
+  
+  return paragraphs.map((paragraph, index) => {
+    // Handle bullet points
+    if (paragraph.startsWith('• ') || paragraph.startsWith('- ')) {
+      const items = paragraph.split(/\n/).filter(item => item.trim());
+      return (
+        <View key={index} style={{ marginVertical: 4 }}>
+          {items.map((item, itemIndex) => (
+            <Text key={itemIndex} style={{ marginBottom: 2 }}>
+              {item.trim()}
+            </Text>
+          ))}
+        </View>
+      );
+    }
+    
+    // Regular paragraph
+    return paragraph + (index < paragraphs.length - 1 ? '\n\n' : '');
+  });
+}
+
 function BotMessage({ text, timestamp, showAvatar = true }: { text: string; timestamp?: Date; showAvatar?: boolean }) {
   return (
     <View style={styles.botMessageRow}>
@@ -214,15 +258,32 @@ function BotMessage({ text, timestamp, showAvatar = true }: { text: string; time
   );
 }
 
-function UserMessage({ text, timestamp }: { text: string; timestamp?: Date }) {
+function UserMessage({ text, timestamp, status = 'sent' }: { text: string; timestamp?: Date; status?: 'sending' | 'sent' | 'delivered' }) {
+  const getStatusIcon = () => {
+    switch (status) {
+      case 'sending':
+        return <Ionicons name="time-outline" size={12} color={COLORS.greyLight} />;
+      case 'delivered':
+        return <Ionicons name="checkmark-done" size={12} color={COLORS.gradPurple} />;
+      case 'sent':
+      default:
+        return <Ionicons name="checkmark" size={12} color={COLORS.greyLight} />;
+    }
+  };
+
   return (
     <View style={styles.userMessageContainer}>
       <View style={styles.userMessageBubble}>
         <Text style={styles.userMessageText}>{text}</Text>
       </View>
-      {timestamp && (
-        <Text style={[styles.messageTimestamp, styles.messageTimestampRight]}>{formatMessageTime(timestamp)}</Text>
-      )}
+      <View style={styles.messageStatusRow}>
+        {timestamp && (
+          <Text style={[styles.messageTimestamp, styles.messageTimestampRight]}>{formatMessageTime(timestamp)}</Text>
+        )}
+        <View style={styles.messageStatusIcon}>
+          {getStatusIcon()}
+        </View>
+      </View>
     </View>
   );
 }
@@ -236,13 +297,18 @@ function ChoiceButton({
   isSelected: boolean;
   onPress: () => void;
 }) {
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onPress();
+  };
+
   return (
     <TouchableOpacity
       style={[
         styles.choiceButton,
         isSelected && styles.choiceButtonSelected
       ]}
-      onPress={onPress}
+      onPress={handlePress}
       activeOpacity={0.8}
     >
       {isSelected ? (
@@ -322,9 +388,19 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     }
   };
   
+  // Get time-based greeting prefix
+  const getTimeBasedGreeting = (): string => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    if (hour < 21) return "Good evening";
+    return "Hey there";
+  };
+  
   // Handle conversation context from different chats
   useEffect(() => {
     const contextFromRoute = route?.params?.conversationContext;
+    const timeGreeting = getTimeBasedGreeting();
     
     // Helper to create personalized greeting
     const getGreeting = (template: string) => {
@@ -337,6 +413,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     if (contextFromRoute?.context === "care_plan_modal") {
       // Care Plan check-in modal content
       const initialMessages: Message[] = [];
+      const now = new Date();
       
       // Only add user response if it's a meaningful response (not "Continue conversation")
       const hasUserResponse = contextFromRoute.userResponse && 
@@ -347,12 +424,15 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         initialMessages.push({
           id: "1", 
           text: "How does your care plan look today?", 
-          isBot: true
+          isBot: true,
+          timestamp: now
         });
         initialMessages.push({
           id: "2", 
           text: contextFromRoute.userResponse, 
-          isBot: false
+          isBot: false,
+          timestamp: now,
+          status: 'delivered' as MessageStatus
         });
         
         // Personalized follow-up based on response
@@ -368,17 +448,19 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         initialMessages.push({
           id: "3",
           text: followUpQuestion,
-          isBot: true
+          isBot: true,
+          timestamp: now
         });
       } else {
-        // Fresh start - engaging personalized greeting
+        // Fresh start - engaging personalized greeting with time awareness
         const greeting = userName 
-          ? `Hey ${userName}! 💜 How's your day going? Ready to check in on your care plan?`
-          : "Hey! 💜 How's your day going? Ready to check in on your care plan?";
+          ? `${timeGreeting}, ${userName}! 💜 How's your day going? Ready to check in on your care plan?`
+          : `${timeGreeting}! 💜 How's your day going? Ready to check in on your care plan?`;
         initialMessages.push({
           id: "1",
           text: greeting,
-          isBot: true
+          isBot: true,
+          timestamp: now
         });
       }
       
@@ -387,23 +469,23 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       setShowSlider(false);
       setShowSelectedValue(false);
     } else if (contextFromRoute?.context === "symptom_checkin") {
-      // Symptom check-in - engaging opening
+      // Symptom check-in - engaging opening with time awareness
       const greeting = userName
-        ? `Hey ${userName}! Let's check in on how you're feeling! 💜`
-        : "Let's check in on how you're feeling! 💜";
+        ? `${timeGreeting}, ${userName}! Let's check in on how you're feeling 💜`
+        : `${timeGreeting}! Let's check in on how you're feeling 💜`;
       setMessages([
-        { id: "1", text: greeting, isBot: true },
+        { id: "1", text: greeting, isBot: true, timestamp: new Date() },
       ]);
       setShowSlider(true);
       setShowSelectedValue(false);
     } else if (contextFromRoute?.context === "personalise") {
-      // Personalisation - warm welcome
+      // Personalisation - warm welcome with time awareness
       const greeting = userName
-        ? `Great, ${userName}! Let's make your experience more personal 💜`
-        : "Great! Let's make your experience more personal 💜";
+        ? `${timeGreeting}, ${userName}! Let's make your experience more personal 💜`
+        : `${timeGreeting}! Let's make your experience more personal 💜`;
       setMessages([
-        { id: "1", text: greeting, isBot: true },
-        { id: "2", text: "The more I know about you, the better I can help. What would you like to tell me about?", isBot: true },
+        { id: "1", text: greeting, isBot: true, timestamp: new Date() },
+        { id: "2", text: "The more I know about you, the better I can help. What would you like to tell me about?", isBot: true, timestamp: new Date() },
       ]);
       setShowSlider(false);
       setShowSelectedValue(false);
@@ -413,18 +495,18 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         ? `${userName}, I love that you want to understand your body better! 💜`
         : "I love that you want to understand your body better! 💜";
       setMessages([
-        { id: "1", text: greeting, isBot: true },
-        { id: "2", text: "What are you curious about? Your cycle, hormones, or something specific?", isBot: true },
+        { id: "1", text: greeting, isBot: true, timestamp: new Date() },
+        { id: "2", text: "What are you curious about? Your cycle, hormones, or something specific?", isBot: true, timestamp: new Date() },
       ]);
       setShowSlider(false);
       setShowSelectedValue(false);
     } else {
-      // Default: Symptom check-in content
+      // Default: Symptom check-in content with time awareness
       const greeting = userName
-        ? `${userName}, how has your bloating been this week?`
-        : "How has your bloating been this week?";
+        ? `${timeGreeting}, ${userName}! How has your bloating been this week?`
+        : `${timeGreeting}! How has your bloating been this week?`;
       setMessages([
-        { id: "1", text: greeting, isBot: true },
+        { id: "1", text: greeting, isBot: true, timestamp: new Date() },
       ]);
       setShowSlider(true);
       setShowSelectedValue(false);
@@ -582,12 +664,19 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const handleSend = async (text?: string) => {
     const messageText = text || value.trim();
     if (messageText) {
-      // Add user message immediately
+      // Haptic feedback on send
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      
+      const messageId = Date.now().toString();
+      const botMessageId = Date.now().toString() + "_bot";
+      
+      // Add user message with 'sending' status
       const newMessage: Message = {
-        id: Date.now().toString(),
+        id: messageId,
         text: messageText,
         isBot: false,
         timestamp: new Date(),
+        status: 'sending',
       };
       setMessages(prev => [...prev, newMessage]);
       console.log("Sent:", messageText);
@@ -603,63 +692,103 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         if (mode === 'tap') inputMode = 'tap';
         else if (mode === 'yap') inputMode = 'yap';
 
-        // Call the chat API
-        const response = await ChatService.sendMessage(
+        // Add empty bot message that will fill with streaming content
+        const botResponse: Message = {
+          id: botMessageId,
+          text: '',
+          isBot: true,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, botResponse]);
+        scrollToBottom();
+
+        // Call the STREAMING chat API
+        await ChatService.sendMessageStreaming(
           messageText,
           getConversationContext(),
-          inputMode
+          inputMode,
+          undefined, // metadata
+          // onToken: Update bot message with accumulating content
+          (content: string) => {
+            setMessages(prev => prev.map(msg => 
+              msg.id === botMessageId ? { ...msg, text: content } : msg
+            ));
+            scrollToBottom();
+            setIsLoading(false); // Hide loading after first token
+          },
+          // onComplete: Handle final response with choices/slider
+          (response) => {
+            // Update message status to 'delivered' on success
+            setMessages(prev => prev.map(msg => 
+              msg.id === messageId ? { ...msg, status: 'delivered' as MessageStatus } : msg
+            ));
+
+            // Final content already updated by tokens, just handle metadata
+            console.log('✅ Streaming complete:', response);
+
+            // Haptic feedback on completion
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+            // If backend returns dynamic choices
+            if (Array.isArray(response.choices) && response.choices.length > 0) {
+              setServerChoiceOptions(
+                response.choices.map((c, idx) => ({ id: `server-choice-${idx}`, text: c }))
+              );
+            } else {
+              setServerChoiceOptions(null);
+            }
+
+            // If backend requests a slider
+            if (response.slider_config && Array.isArray(response.slider_config.labels)) {
+              setServerSliderLabels(response.slider_config.labels);
+              setShowSlider(true);
+              setShowSelectedValue(false);
+              setSliderValue(0);
+            }
+
+            setIsLoading(false);
+          },
+          // onError: Handle errors
+          (error: string) => {
+            console.error('❌ Streaming error:', error);
+            
+            // Update to sent but not delivered
+            setMessages(prev => prev.map(msg => 
+              msg.id === messageId ? { ...msg, status: 'sent' as MessageStatus } : msg
+            ));
+
+            // Update bot message with error
+            setMessages(prev => prev.map(msg => 
+              msg.id === botMessageId 
+                ? { ...msg, text: "I'm having trouble right now. Please try again in a moment. 💜" } 
+                : msg
+            ));
+
+            setIsLoading(false);
+            scrollToBottom();
+          }
         );
-
-        if (response && typeof response.content === 'string' && response.content.trim().length > 0) {
-          // Add bot response from API
-          const botResponse: Message = {
-            id: Date.now().toString() + "_bot",
-            text: response.content,
-            isBot: true,
-            timestamp: new Date(),
-          };
-          setMessages(prev => [...prev, botResponse]);
-          scrollToBottom();
-
-          // If backend returns dynamic choices, prefer them over hardcoded ones
-          if (Array.isArray((response as any).choices) && (response as any).choices.length > 0) {
-            const choices: string[] = (response as any).choices;
-            setServerChoiceOptions(
-              choices.map((c, idx) => ({ id: `server-choice-${idx}`, text: c }))
-            );
-          } else {
-            setServerChoiceOptions(null);
-          }
-
-          // If backend requests a slider, show it and use provided labels when possible
-          if ((response as any).slider_config && Array.isArray((response as any).slider_config.labels)) {
-            setServerSliderLabels((response as any).slider_config.labels);
-            setShowSlider(true);
-            setShowSelectedValue(false);
-            setSliderValue(0);
-          }
-        } else {
-          // Fallback to mock response if API fails
-          console.log('⚠️ API response empty, using fallback');
-          const fallbackResponse: Message = {
-            id: Date.now().toString() + "_bot",
-            text: "I understand. How can I help you further?",
-            isBot: true,
-            timestamp: new Date(),
-          };
-          setMessages(prev => [...prev, fallbackResponse]);
-          scrollToBottom();
-        }
       } catch (error) {
         console.error('❌ Error sending message:', error);
-        // Show error response
+        // Update message status to 'sent' (but not delivered due to error)
+        setMessages(prev => prev.map(msg => 
+          msg.id === messageId ? { ...msg, status: 'sent' as MessageStatus } : msg
+        ));
+        // Haptic feedback for error
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        // Show error response with retry option
         const errorResponse: Message = {
           id: Date.now().toString() + "_bot",
-          text: "Sorry, I'm having trouble connecting. Please try again.",
+          text: "Oops! I couldn't connect. Let's try that again 💜",
           isBot: true,
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, errorResponse]);
+        // Set retry choices
+        setServerChoiceOptions([
+          { id: 'retry', text: 'Try again 🔄' },
+          { id: 'refresh', text: 'Start fresh' }
+        ]);
         scrollToBottom();
       } finally {
         setIsLoading(false);
@@ -668,6 +797,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   };
 
   const toggleOption = (optionId: string) => {
+    Haptics.selectionAsync(); // Light feedback for selection
     setSelectedOptions(prev =>
       prev.includes(optionId)
         ? prev.filter(id => id !== optionId)
@@ -677,6 +807,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
   const sendSelectedOptions = () => {
     if (selectedOptions.length > 0) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       const selectedTexts = selectedOptions.map(id =>
         choiceOptions.find(option => option.id === id)?.text
       ).filter(Boolean);
@@ -723,6 +854,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   };
 
   const handleSliderSelection = async (value: number) => {
+    // Haptic feedback for slider selection
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
     setSliderValue(value);
     setShowSlider(false);
     setShowSelectedValue(true);
@@ -736,6 +870,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       });
 
       if (response && typeof response.content === 'string' && response.content.trim().length > 0) {
+        // Success haptic
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         const botResponse: Message = {
           id: Date.now().toString() + "_bot",
           text: response.content,
@@ -755,6 +891,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       }
     } catch (e) {
       console.error('❌ Error sending slider value:', e);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setIsLoading(false);
     }
@@ -793,6 +930,44 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     return "Very intense";
   };
 
+  // Quick reply button component for inline choices
+  const QuickReplyButton = ({ text, onPress }: { text: string; onPress: () => void }) => (
+    <TouchableOpacity
+      style={styles.quickReplyButton}
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onPress();
+      }}
+      activeOpacity={0.7}
+    >
+      <Text style={styles.quickReplyText}>{text}</Text>
+    </TouchableOpacity>
+  );
+
+  // Render quick reply choices below messages
+  const renderQuickReplies = () => {
+    const currentChoices = serverChoiceOptions || choiceOptions;
+    if (currentChoices.length === 0 || isLoading) return null;
+    
+    return (
+      <View style={styles.quickRepliesContainer}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.quickRepliesScroll}
+        >
+          {currentChoices.slice(0, 4).map((choice) => (
+            <QuickReplyButton
+              key={choice.id}
+              text={choice.text}
+              onPress={() => handleSend(choice.text)}
+            />
+          ))}
+        </ScrollView>
+      </View>
+    );
+  };
+
   const renderIdleMode = () => {
     const contextFromRoute = route?.params?.conversationContext;
     const isCarePlanModal = contextFromRoute?.context === "care_plan_modal";
@@ -819,7 +994,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                   {message.isBot ? (
                     <BotMessage text={message.text} timestamp={message.timestamp} />
                   ) : (
-                    <UserMessage text={message.text} timestamp={message.timestamp} />
+                    <UserMessage text={message.text} timestamp={message.timestamp} status={message.status} />
                   )}
                 </View>
               ))}
@@ -827,9 +1002,33 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               {isLoading && <TypingIndicator />}
             </View>
             </View>
+            
+            {/* Quick reply choices */}
+            {!isLoading && messages.length > 0 && renderQuickReplies()}
           </ScrollView>
 
-          {/* Recording status display */
+          {/* Input area for idle mode */}
+          <View style={styles.idleInputContainer}>
+            <TouchableOpacity 
+              style={styles.idleInputButton}
+              onPress={() => setMode("type")}
+            >
+              <Ionicons name="chatbubble-ellipses-outline" size={20} color={COLORS.greyMedium} />
+              <Text style={styles.idleInputPlaceholder}>Type a message...</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.idleMicButton}
+              onPress={() => setMode("idle")}
+            >
+              <Image
+                source={require("./../../assets/images/yap-icon.png")}
+                style={{ width: scale(20), height: scale(20) }}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Recording status display */}
           {(isRecording || recordingComplete) && (
             <View style={styles.recordingStatusContainer}>
               {isRecording ? (
@@ -936,12 +1135,36 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                     {message.isBot ? (
                       <BotMessage text={message.text} timestamp={message.timestamp} />
                     ) : (
-                      <UserMessage text={message.text} timestamp={message.timestamp} />
+                      <UserMessage text={message.text} timestamp={message.timestamp} status={message.status} />
                     )}
                   </View>
                 ))}
+                
+                {/* Quick reply choices */}
+                {!isLoading && (messages.length > 0 || sliderValue > 0) && renderQuickReplies()}
               </View>
             </ScrollView>
+
+            {/* Input area for idle mode */}
+            <View style={styles.idleInputContainer}>
+              <TouchableOpacity 
+                style={styles.idleInputButton}
+                onPress={() => setMode("type")}
+              >
+                <Ionicons name="chatbubble-ellipses-outline" size={20} color={COLORS.greyMedium} />
+                <Text style={styles.idleInputPlaceholder}>Type a message...</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.idleMicButton}
+                onPress={() => setMode("idle")}
+              >
+                <Image
+                  source={require("./../../assets/images/yap-icon.png")}
+                  style={{ width: scale(20), height: scale(20) }}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            </View>
 
             {/* Recording status display */}
             {(isRecording || recordingComplete) && (
@@ -975,10 +1198,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               {message.isBot ? (
                 <BotMessage text={message.text} timestamp={message.timestamp} />
               ) : (
-                <UserMessage text={message.text} timestamp={message.timestamp} />
+                <UserMessage text={message.text} timestamp={message.timestamp} status={message.status} />
               )}
               {index === 0 && !showSlider && sliderValue > 0 && (
-                <UserMessage text={`${sliderValue} = ${getBloatingLabel(sliderValue)} bloating`} />
+                <UserMessage text={`${sliderValue} = ${getBloatingLabel(sliderValue)} bloating`} status="delivered" />
               )}
             </View>
           ))}
@@ -1045,10 +1268,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               {message.isBot ? (
                 <BotMessage text={message.text} timestamp={message.timestamp} />
               ) : (
-                <UserMessage text={message.text} timestamp={message.timestamp} />
+                <UserMessage text={message.text} timestamp={message.timestamp} status={message.status} />
               )}
               {index === 0 && !showSlider && sliderValue > 0 && (
-                <UserMessage text={`${sliderValue} = ${getBloatingLabel(sliderValue)} bloating`} />
+                <UserMessage text={`${sliderValue} = ${getBloatingLabel(sliderValue)} bloating`} status="delivered" />
               )}
             </View>
           ))}
@@ -1331,21 +1554,15 @@ const styles = StyleSheet.create({
     marginRight: scale(8),
   },
   typingDot: {
-    width: scale(6),
-    height: scale(6),
-    borderRadius: scale(3),
+    width: scale(8),
+    height: scale(8),
+    borderRadius: scale(4),
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    marginHorizontal: scale(3),
+  },
+  typingDotActive: {
     backgroundColor: COLORS.white,
-    marginHorizontal: scale(2),
-    opacity: 0.7,
-  },
-  typingDot1: {
-    opacity: 1,
-  },
-  typingDot2: {
-    opacity: 0.7,
-  },
-  typingDot3: {
-    opacity: 0.4,
+    transform: [{ scale: 1.2 }],
   },
   typingText: {
     fontSize: FONT_SIZES.small,
@@ -1377,6 +1594,15 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginRight: scale(4),
     marginLeft: 0,
+  },
+  messageStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: scale(4),
+  },
+  messageStatusIcon: {
+    marginTop: verticalScale(4),
   },
   botMessageBubble: {
     maxWidth: '80%',
@@ -1850,5 +2076,69 @@ const styles = StyleSheet.create({
     marginTop: moderateScale(5),
     includeFontPadding: isAndroid ? false : undefined,
     textAlignVertical: isAndroid ? 'center' : undefined,
+  },
+  
+  // Quick Reply Styles
+  quickRepliesContainer: {
+    marginTop: verticalScale(12),
+    marginBottom: verticalScale(8),
+    paddingLeft: scale(36), // Align with messages (after avatar)
+  },
+  quickRepliesScroll: {
+    paddingRight: scale(15),
+    gap: scale(8),
+    flexDirection: 'row',
+  },
+  quickReplyButton: {
+    backgroundColor: COLORS.white,
+    borderWidth: 1.5,
+    borderColor: COLORS.gradPurple,
+    borderRadius: scale(20),
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(8),
+    marginRight: scale(8),
+  },
+  quickReplyText: {
+    fontSize: FONT_SIZES.small,
+    fontFamily: FONT_FAMILIES['Inter-Medium'],
+    color: COLORS.onPrimaryContainer,
+  },
+  
+  // Idle Input Styles
+  idleInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: scale(15),
+    paddingVertical: verticalScale(10),
+    backgroundColor: COLORS.surface,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.surfaceDivider,
+  },
+  idleInputButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: scale(25),
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    paddingHorizontal: scale(15),
+    paddingVertical: verticalScale(12),
+    marginRight: scale(10),
+  },
+  idleInputPlaceholder: {
+    fontSize: FONT_SIZES.message,
+    fontFamily: FONT_FAMILIES['Inter-Regular'],
+    color: COLORS.greyLight,
+    marginLeft: scale(10),
+  },
+  idleMicButton: {
+    backgroundColor: COLORS.white,
+    borderRadius: scale(25),
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    padding: scale(12),
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

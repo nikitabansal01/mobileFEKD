@@ -239,6 +239,72 @@ const getHeaders = async (): Promise<Record<string, string>> => {
 // CHAT SERVICE CLASS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// Timeout constants
+const DEFAULT_TIMEOUT_MS = 10000; // 10 seconds for regular requests
+const STREAMING_TIMEOUT_MS = 60000; // 60 seconds for streaming
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1000; // Base delay for exponential backoff
+
+/**
+ * Fetch with timeout support
+ */
+const fetchWithTimeout = async (
+  url: string,
+  options: RequestInit,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS
+): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
+/**
+ * Retry wrapper with exponential backoff
+ */
+const withRetry = async <T>(
+  fn: () => Promise<T>,
+  maxRetries: number = MAX_RETRIES,
+  baseDelay: number = RETRY_DELAY_MS
+): Promise<T> => {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+      
+      // Don't retry on client errors (4xx) or abort
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') throw error;
+        if (error.message.includes('400') || 
+            error.message.includes('401') || 
+            error.message.includes('403') || 
+            error.message.includes('404')) {
+          throw error;
+        }
+      }
+      
+      if (attempt < maxRetries - 1) {
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.log(`⚠️ Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError || new Error('Max retries exceeded');
+};
+
 class ChatService {
   private currentSessionId: string | null = null;
 
@@ -293,19 +359,27 @@ class ChatService {
         metadata,
       };
 
-      const response = await fetch(`${CHAT_API_URL}/message`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(request),
+      // Use retry wrapper with timeout for resilience
+      const result = await withRetry(async () => {
+        const response = await fetchWithTimeout(
+          `${CHAT_API_URL}/message`,
+          {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(request),
+          },
+          DEFAULT_TIMEOUT_MS
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Failed to send message:', response.status, errorText);
+          throw new Error(`Failed to send message: ${response.status} - ${errorText}`);
+        }
+
+        return await response.json() as ChatMessageResponse;
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Failed to send message:', response.status, errorText);
-        throw new Error(`Failed to send message: ${response.status} - ${errorText}`);
-      }
-
-      const result: ChatMessageResponse = await response.json();
       console.log('✅ Received response:', result);
 
       // Update session ID from response
@@ -316,7 +390,167 @@ class ChatService {
       return result;
     } catch (error) {
       console.error('❌ Error sending message:', error);
+      // Provide user-friendly error message
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('Request timed out');
+      }
       return null;
+    }
+  }
+
+  /**
+   * Send a message with STREAMING response.
+   * 
+   * This makes the chatbot feel ALIVE by showing tokens as they arrive!
+   * 
+   * @param message - User's message
+   * @param conversationContext - Conversation context
+   * @param inputMode - Input method
+   * @param metadata - Optional metadata
+   * @param onToken - Callback for each token (accumulates content)
+   * @param onComplete - Callback when streaming finishes (full response)
+   * @param onError - Callback for errors
+   */
+  async sendMessageStreaming(
+    message: string,
+    conversationContext: ConversationContext = 'care_plan_modal',
+    inputMode: InputMode = 'type',
+    metadata: Record<string, any> | undefined,
+    onToken: (content: string) => void,
+    onComplete: (response: ChatMessageResponse) => void,
+    onError: (error: string) => void
+  ): Promise<void> {
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), STREAMING_TIMEOUT_MS);
+    
+    try {
+      const userId = getCurrentUserId();
+      if (!userId) {
+        console.error('❌ User not authenticated');
+        onError('User not authenticated');
+        return;
+      }
+
+      console.log('🔄 Starting STREAMING message:', { message, conversationContext, inputMode });
+
+      const headers = await getHeaders();
+      const request: ChatMessageRequest = {
+        user_id: userId,
+        message,
+        conversation_context: conversationContext,
+        input_mode: inputMode,
+        session_id: this.currentSessionId || undefined,
+        metadata,
+      };
+
+      const response = await fetch(`${CHAT_API_URL}/message/stream`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(request),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to start streaming:', response.status, errorText);
+        
+        // Provide user-friendly error messages
+        if (response.status === 429) {
+          onError('Too many requests. Please wait a moment and try again.');
+        } else if (response.status >= 500) {
+          onError('Server is temporarily unavailable. Please try again.');
+        } else {
+          onError(`Failed to start streaming: ${response.status}`);
+        }
+        return;
+      }
+
+      if (!response.body) {
+        console.error('❌ No response body');
+        onError('No response body');
+        return;
+      }
+
+      // Read SSE stream
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let accumulatedContent = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        // Decode chunk
+        buffer += decoder.decode(value, { stream: true });
+
+        // Process complete SSE messages (separated by \n\n)
+        const messages = buffer.split('\n\n');
+        buffer = messages.pop() || ''; // Keep incomplete message in buffer
+
+        for (const message of messages) {
+          if (!message.trim() || !message.startsWith('data: ')) continue;
+
+          // Parse SSE data
+          const jsonStr = message.substring(6); // Remove "data: " prefix
+          try {
+            const chunk = JSON.parse(jsonStr);
+
+            if (chunk.type === 'token') {
+              // Accumulate and display token
+              accumulatedContent += chunk.content;
+              onToken(accumulatedContent);
+              console.log('📝 Token:', chunk.content);
+            } else if (chunk.type === 'final') {
+              // Final metadata received
+              console.log('✅ Streaming complete:', chunk);
+              
+              // Update session ID
+              if (chunk.session_id) {
+                this.setSessionId(chunk.session_id);
+              }
+
+              // Call complete callback with full response
+              onComplete({
+                session_id: chunk.session_id,
+                message_id: chunk.message_id,
+                response_type: chunk.response_type || 'text',
+                content: chunk.content,
+                choices: chunk.choices,
+                slider_config: chunk.slider_config,
+                metadata: chunk.metadata,
+                actions: chunk.actions,
+                timestamp: chunk.timestamp,
+              });
+              return;
+            } else if (chunk.type === 'error') {
+              console.error('❌ Streaming error:', chunk.error);
+              onError(chunk.content || 'Streaming error');
+              return;
+            }
+          } catch (parseError) {
+            console.error('❌ Failed to parse chunk:', jsonStr, parseError);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error in streaming message:', error);
+      
+      // Provide user-friendly error messages
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          onError('Request timed out. Please try again.');
+        } else if (error.message.includes('network') || error.message.includes('Network')) {
+          onError('Network error. Please check your connection.');
+        } else {
+          onError('Connection error. Please try again.');
+        }
+      } else {
+        onError('Connection error');
+      }
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
@@ -592,6 +826,288 @@ class ChatService {
       return false;
     }
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // INTELLIGENCE FEATURES API
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Get wellness score for the user
+   */
+  async getWellnessScore(): Promise<WellnessScoreResponse | null> {
+    try {
+      const userId = getCurrentUserId();
+      if (!userId) {
+        console.error('❌ User not authenticated');
+        return null;
+      }
+
+      console.log('🌟 Fetching wellness score...');
+
+      const headers = await getHeaders();
+      const response = await fetch(`${CHAT_API_URL}/wellness-score/${userId}`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to get wellness score:', response.status, errorText);
+        throw new Error(`Failed to get wellness score: ${response.status} - ${errorText}`);
+      }
+
+      const result: WellnessScoreResponse = await response.json();
+      console.log('✅ Received wellness score:', result.overall_score);
+      return result;
+    } catch (error) {
+      console.error('❌ Error getting wellness score:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get symptom predictions for the user
+   */
+  async getSymptomPredictions(): Promise<SymptomPredictionsResponse | null> {
+    try {
+      const userId = getCurrentUserId();
+      if (!userId) {
+        console.error('❌ User not authenticated');
+        return null;
+      }
+
+      console.log('🔮 Fetching symptom predictions...');
+
+      const headers = await getHeaders();
+      const response = await fetch(`${CHAT_API_URL}/predict-symptoms/${userId}`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to get predictions:', response.status, errorText);
+        throw new Error(`Failed to get predictions: ${response.status} - ${errorText}`);
+      }
+
+      const result: SymptomPredictionsResponse = await response.json();
+      console.log('✅ Received predictions:', result.predictions?.length || 0);
+      return result;
+    } catch (error) {
+      console.error('❌ Error getting predictions:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get session summary after a conversation
+   */
+  async getSessionSummary(sessionId?: string): Promise<SessionSummaryResponse | null> {
+    try {
+      const userId = getCurrentUserId();
+      const targetSessionId = sessionId || this.currentSessionId;
+      
+      if (!userId || !targetSessionId) {
+        console.error('❌ User not authenticated or no session');
+        return null;
+      }
+
+      console.log('📝 Fetching session summary...');
+
+      const headers = await getHeaders();
+      const response = await fetch(
+        `${CHAT_API_URL}/session-summary/${targetSessionId}?user_id=${userId}`,
+        {
+          method: 'GET',
+          headers,
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to get summary:', response.status, errorText);
+        throw new Error(`Failed to get summary: ${response.status} - ${errorText}`);
+      }
+
+      const result: SessionSummaryResponse = await response.json();
+      console.log('✅ Received session summary');
+      return result;
+    } catch (error) {
+      console.error('❌ Error getting session summary:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Log user mood for tracking
+   */
+  async logMood(
+    moodLevel: number,
+    energy: number,
+    notes?: string
+  ): Promise<boolean> {
+    try {
+      const userId = getCurrentUserId();
+      if (!userId) {
+        console.error('❌ User not authenticated');
+        return false;
+      }
+
+      console.log('😊 Logging mood...', { moodLevel, energy });
+
+      const headers = await getHeaders();
+      const response = await fetch(`${CHAT_API_URL}/mood-log`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          user_id: userId,
+          mood_level: moodLevel,
+          energy_level: energy,
+          notes,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to log mood:', response.status, errorText);
+        return false;
+      }
+
+      console.log('✅ Mood logged successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Error logging mood:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get mood history for the user
+   */
+  async getMoodHistory(days: number = 7): Promise<MoodHistoryResponse | null> {
+    try {
+      const userId = getCurrentUserId();
+      if (!userId) {
+        console.error('❌ User not authenticated');
+        return null;
+      }
+
+      console.log('📊 Fetching mood history...');
+
+      const headers = await getHeaders();
+      const response = await fetch(
+        `${CHAT_API_URL}/mood-history/${userId}?days=${days}`,
+        {
+          method: 'GET',
+          headers,
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to get mood history:', response.status, errorText);
+        throw new Error(`Failed to get mood history: ${response.status} - ${errorText}`);
+      }
+
+      const result: MoodHistoryResponse = await response.json();
+      console.log('✅ Received mood history:', result.entries?.length || 0, 'entries');
+      return result;
+    } catch (error) {
+      console.error('❌ Error getting mood history:', error);
+      return null;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INTELLIGENCE API TYPES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface WellnessScoreResponse {
+  success: boolean;
+  user_id: string;
+  date: string;
+  overall_score: number;
+  dimension_scores: {
+    sleep: number;
+    mood: number;
+    symptoms: number;
+    habits: number;
+    cycle_alignment: number;
+    social: number;
+  };
+  insights: string[];
+  recommendations: string[];
+  emoji: string;
+  message: string;
+}
+
+export interface SymptomPrediction {
+  symptom: string;
+  likelihood: number;
+  expected_severity: number;
+  expected_date: string;
+  confidence: 'high' | 'medium' | 'low';
+  proactive_advice: string[];
+  user_specific: boolean;
+}
+
+export interface PhaseTransition {
+  from_phase: string;
+  to_phase: string;
+  expected_date: string;
+  days_until: number;
+}
+
+export interface SymptomPredictionsResponse {
+  success: boolean;
+  user_id: string;
+  predictions: SymptomPrediction[];
+  phase_transition: PhaseTransition | null;
+  overall_outlook: string;
+  prediction_date: string;
+}
+
+export interface SessionSummaryResponse {
+  success: boolean;
+  session_id: string;
+  summary: string;
+  key_topics: string[];
+  emotional_journey: {
+    start: string;
+    end: string;
+    trend: 'improving' | 'stable' | 'declining';
+  };
+  action_items: string[];
+  insights: string[];
+  next_steps: string[];
+  metrics: {
+    duration_minutes: number;
+    message_count: number;
+  };
+}
+
+export interface MoodEntry {
+  id: string;
+  timestamp: string;
+  mood_level: number;
+  energy_level: number;
+  notes?: string;
+  date?: string;
+}
+
+export interface MoodHistoryResponse {
+  success: boolean;
+  user_id: string;
+  entries: MoodEntry[];
+  statistics: {
+    average_mood: number;
+    average_energy: number;
+    total_entries: number;
+    trend: 'improving' | 'stable' | 'declining' | 'no_data';
+  };
+  streak: number;
 }
 
 // Export singleton instance

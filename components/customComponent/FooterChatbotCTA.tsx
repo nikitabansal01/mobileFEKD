@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Haptics from 'expo-haptics';
 import { Dimensions, Image, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { FONT_FAMILIES } from '../../constants/fonts';
@@ -63,7 +64,10 @@ export default function FooterChatbotCTA({
             {/* Bottom Buttons row: tap / yap / type */}
             <View style={[styles.bottomContainer, disabled ? { opacity: 0.5 } : undefined]}>
                 <View style={styles.btn55Container}>
-                    <TouchableOpacity style={[styles.btn50, disabled && styles.btnDisabled]} disabled={disabled} onPress={() => setMode("tap")}>
+                    <TouchableOpacity style={[styles.btn50, disabled && styles.btnDisabled]} disabled={disabled} onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setMode("tap");
+                    }}>
                         <Ionicons name="checkmark-circle-outline" style={{fontSize: moderateScale(24, 1.5)}} color={COLORS.onPrimaryContainer} />
                     </TouchableOpacity>
                     <Text style={styles.btnLabel}>tap</Text>
@@ -74,8 +78,14 @@ export default function FooterChatbotCTA({
                     {!disabled && isRecording ? (
                         <Pressable
                             style={styles.btn80}
-                            onPressIn={onStartRecording}
-                            onPressOut={onStopRecording}
+                            onPressIn={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                onStartRecording?.();
+                            }}
+                            onPressOut={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                onStopRecording?.();
+                            }}
                         >
                             <LinearGradient
                                 colors={[COLORS.gradPurple, COLORS.gradPink]}
@@ -90,7 +100,10 @@ export default function FooterChatbotCTA({
                             </LinearGradient>
                         </Pressable>
                     ) : !disabled && recordingComplete ? (
-                        <TouchableOpacity style={styles.btn80} onPress={onSendRecording}>
+                        <TouchableOpacity style={styles.btn80} onPress={() => {
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                            onSendRecording?.();
+                        }}>
                             <LinearGradient
                                 colors={[COLORS.gradPurple, COLORS.gradPink]}
                                 style={styles.btn80Gradient}
@@ -101,8 +114,14 @@ export default function FooterChatbotCTA({
                     ) : !disabled ? (
                         <Pressable
                             style={styles.btn80}
-                            onPressIn={onStartRecording}
-                            onPressOut={onStopRecording}
+                            onPressIn={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                onStartRecording?.();
+                            }}
+                            onPressOut={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                onStopRecording?.();
+                            }}
                         >
                             <Image
                                 source={require("../../assets/images/yap-icon.png")} // local image
@@ -111,7 +130,10 @@ export default function FooterChatbotCTA({
                             />
                         </Pressable>
                     ) : (
-                        <TouchableOpacity style={[styles.btn80, disabled && styles.btnDisabled]} disabled={disabled} onPress={() => setMode("idle")}>
+                        <TouchableOpacity style={[styles.btn80, disabled && styles.btnDisabled]} disabled={disabled} onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setMode("idle");
+                        }}>
                             <Image
                                 source={require("../../assets/images/yap-icon.png")} // local image
                                 style={{ width: scale(40), height: verticalScale(40) }}
@@ -127,7 +149,10 @@ export default function FooterChatbotCTA({
 
                 {/* Right 50 */}
                 <View style={styles.btn55Container}>
-                    <TouchableOpacity style={[styles.btn50, disabled && styles.btnDisabled]} disabled={disabled} onPress={()=>{setMode("type")}}> 
+                    <TouchableOpacity style={[styles.btn50, disabled && styles.btnDisabled]} disabled={disabled} onPress={()=>{
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setMode("type");
+                    }}> 
                         <Ionicons name="chatbubble-ellipses-outline" style={{fontSize: moderateScale(24, 1.5)}} color={COLORS.onPrimaryContainer} />
                     </TouchableOpacity>
                     <Text style={styles.btnLabel}>type</Text>
