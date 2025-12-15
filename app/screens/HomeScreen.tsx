@@ -659,8 +659,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Hormone Quests Section */}
-        {progressStats?.hormone_stats && Object.keys(progressStats.hormone_stats).length > 0 && (
+        {/* Hormone Quests Section - only show if there are any non-zero hormone totals */}
+        {progressStats?.hormone_stats && 
+         Object.values(progressStats.hormone_stats).some(stats => stats && stats.total > 0) && (
         <View style={styles.questSection}>
           <Text style={styles.sectionTitle}>🏆 Your Hormone Quests 🏆</Text>
           <View style={styles.questContainer}>
