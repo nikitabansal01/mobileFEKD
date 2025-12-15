@@ -300,6 +300,31 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       } else {
         setProgressStats(null);
       }
+
+      // Auto-retry if we got empty assignments (session link might still be completing)
+      if (assignmentsData?.total_assignments === 0 && !hasRetried) {
+        console.log('📭 Got empty assignments, will auto-retry in 3 seconds...');
+        setHasRetried(true);
+        initialDataLoadedRef.current = false; // Allow retry
+        
+        setTimeout(async () => {
+          console.log('🔄 Auto-retrying to fetch assignments...');
+          try {
+            const retryData = await homeService.getTodayAssignments();
+            if (retryData && retryData.total_assignments > 0) {
+              console.log('✅ Auto-retry successful, got', retryData.total_assignments, 'assignments');
+              setAssignments(retryData);
+              if (retryData.hormone_stats) {
+                setProgressStats({ hormone_stats: convertHormoneStats(retryData.hormone_stats) });
+              }
+            } else {
+              console.log('📭 Auto-retry still got empty assignments');
+            }
+          } catch (retryError) {
+            console.log('❌ Auto-retry failed:', retryError);
+          }
+        }, 3000);
+      }
     } catch (error) {
       // Handle error silently
       initialDataLoadedRef.current = false; // Allow retry on error
