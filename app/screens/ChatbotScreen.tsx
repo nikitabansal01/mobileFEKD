@@ -361,12 +361,18 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false); // Loading state for API calls
   const [userName, setUserName] = useState<string>(""); // User's name for personalization
+  const [trackedSymptom, setTrackedSymptom] = useState<string>("overall health"); // Default to generic
   
   // Session Summary Modal state
   const [showSessionSummary, setShowSessionSummary] = useState(false);
   const [sessionSummary, setSessionSummary] = useState<SessionSummaryResponse | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+  
+  // Clear session when context changes to prevent chat memory bleed
+  useEffect(() => {
+    ChatService.clearSession();
+  }, [route?.params?.conversationContext?.context]);
   
   // Fetch user name on mount
   useEffect(() => {
@@ -522,12 +528,14 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       setShowSlider(false);
       setShowSelectedValue(false);
     } else {
-      // Default: Symptom check-in content with time awareness
+      // Default: Symptom check-in - ask about general wellbeing instead of specific symptom
+      // Backend will use get_user_symptoms tool to personalize follow-up questions
       const greeting = userName
-        ? `${timeGreeting}, ${userName}! How has your bloating been this week?`
-        : `${timeGreeting}! How has your bloating been this week?`;
+        ? `${timeGreeting}, ${userName}! How are you feeling today? 💜`
+        : `${timeGreeting}! How are you feeling today? 💜`;
       setMessages([
         { id: "1", text: greeting, isBot: true, timestamp: new Date() },
+        { id: "2", text: "Rate how you're doing on the scale below", isBot: true, timestamp: new Date() },
       ]);
       setShowSlider(true);
       setShowSelectedValue(false);
@@ -890,11 +898,12 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     setShowSlider(false);
     setShowSelectedValue(true);
 
-    // Send slider value to backend (creates session if needed)
+    // Send slider value to backend - use generic wellness check-in
+    // Backend will use get_user_symptoms tool to ask about user's actual symptoms
     setIsLoading(true);
     try {
       const response = await ChatService.sendSliderValue(value, {
-        symptom_type: 'bloating',
+        symptom_type: 'general_wellness',  // Generic - backend will personalize
         source: 'weekly_checkin',
       });
 
@@ -1355,15 +1364,11 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     }
   };
 
-  // Handle closing chat - show session summary if there were meaningful messages
+  // Handle closing chat - go back without session summary popup
   const navigateToIndex = () => {
-    // Only show session summary if there were at least 3 messages (bot greeting + user response + bot follow-up)
-    if (messages.length >= 3) {
-      setShowSessionSummary(true);
-      fetchSessionSummary();
-    } else {
-      closeChat();
-    }
+    // Clear the chat session when closing
+    ChatService.clearSession();
+    closeChat();
   };
 
   // Actually close the chat and navigate back
