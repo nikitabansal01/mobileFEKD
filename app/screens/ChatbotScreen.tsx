@@ -2,6 +2,7 @@ import Avatar from "@/components/customComponent/AvatarChatbot";
 import Header from "@/components/customComponent/ChatbotHeader";
 import FooterCTA from "@/components/customComponent/FooterChatbotCTA";
 import ChatService, { ConversationContext as ChatContext, InputMode } from "@/services/chatService";
+import HomeService from "@/services/homeService";
 import { Ionicons } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { useNavigation } from '@react-navigation/native';
@@ -80,6 +81,7 @@ type Message = {
   id: string;
   text: string;
   isBot: boolean;
+  timestamp?: Date; // When message was sent
 };
 
 type ChoiceOption = {
@@ -138,22 +140,89 @@ function GradientText({ children, style }: { children: string; style?: any }) {
   );
 }
 
-function BotMessage({ text }: { text: string }) {
+// Animated typing indicator component
+function TypingIndicator() {
   return (
-    <View style={styles.botMessageContainer}>
-      <View style={styles.botMessageBubble}>
-        <GradientText style={styles.botMessageText}>{text}</GradientText>
+    <View style={styles.typingContainer}>
+      <View style={styles.typingBubble}>
+        <LinearGradient
+          colors={[COLORS.gradPurple, COLORS.gradPink]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.typingGradient}
+        >
+          <View style={styles.typingDots}>
+            <View style={[styles.typingDot, styles.typingDot1]} />
+            <View style={[styles.typingDot, styles.typingDot2]} />
+            <View style={[styles.typingDot, styles.typingDot3]} />
+          </View>
+          <Text style={styles.typingText}>Auvra is typing...</Text>
+        </LinearGradient>
       </View>
     </View>
   );
 }
 
-function UserMessage({ text }: { text: string }) {
+// Helper function to format timestamps
+function formatMessageTime(date?: Date): string {
+  if (!date) return '';
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  
+  // Same day - show time
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+  
+  // Different day - show date
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+// AUVRA avatar for bot messages
+function AuvraAvatar() {
+  return (
+    <View style={styles.auvraAvatarContainer}>
+      <LinearGradient
+        colors={[COLORS.gradPurple, COLORS.gradPink]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.auvraAvatarGradient}
+      >
+        <Text style={styles.auvraAvatarText}>A</Text>
+      </LinearGradient>
+    </View>
+  );
+}
+
+function BotMessage({ text, timestamp, showAvatar = true }: { text: string; timestamp?: Date; showAvatar?: boolean }) {
+  return (
+    <View style={styles.botMessageRow}>
+      {showAvatar && <AuvraAvatar />}
+      <View style={[styles.botMessageContainer, !showAvatar && styles.botMessageNoAvatar]}>
+        <View style={styles.botMessageBubble}>
+          <GradientText style={styles.botMessageText}>{text}</GradientText>
+        </View>
+        {timestamp && (
+          <Text style={styles.messageTimestamp}>{formatMessageTime(timestamp)}</Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function UserMessage({ text, timestamp }: { text: string; timestamp?: Date }) {
   return (
     <View style={styles.userMessageContainer}>
       <View style={styles.userMessageBubble}>
         <Text style={styles.userMessageText}>{text}</Text>
       </View>
+      {timestamp && (
+        <Text style={[styles.messageTimestamp, styles.messageTimestampRight]}>{formatMessageTime(timestamp)}</Text>
+      )}
     </View>
   );
 }
@@ -224,6 +293,22 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const [value, setValue] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false); // Loading state for API calls
+  const [userName, setUserName] = useState<string>(""); // User's name for personalization
+  
+  // Fetch user name on mount
+  useEffect(() => {
+    const fetchUserName = async () => {
+      try {
+        const cycleInfo = await HomeService.getCyclePhase();
+        if (cycleInfo?.cycle_info?.user_name) {
+          setUserName(cycleInfo.cycle_info.user_name);
+        }
+      } catch (error) {
+        console.log("Could not fetch user name:", error);
+      }
+    };
+    fetchUserName();
+  }, []);
   
   // Map conversation context from route to ChatContext type
   const getConversationContext = (): ChatContext => {
@@ -241,50 +326,110 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   useEffect(() => {
     const contextFromRoute = route?.params?.conversationContext;
     
+    // Helper to create personalized greeting
+    const getGreeting = (template: string) => {
+      if (userName) {
+        return template.replace("Hey!", `Hey ${userName}!`).replace("Great!", `Great, ${userName}!`).replace("I love", `${userName}, I love`);
+      }
+      return template;
+    };
+    
     if (contextFromRoute?.context === "care_plan_modal") {
-      // Care Plan check-in modal content - show the question and user response if available
-      const messages = [
-        { id: "1", text: "How does your care plan look today?", isBot: true },
-      ];
+      // Care Plan check-in modal content
+      const initialMessages: Message[] = [];
       
-      // Add user response if available (from HomeScreen modal)
-      if (contextFromRoute.userResponse) {
-        messages.push({
+      // Only add user response if it's a meaningful response (not "Continue conversation")
+      const hasUserResponse = contextFromRoute.userResponse && 
+                              contextFromRoute.userResponse !== 'Continue conversation';
+      
+      if (hasUserResponse) {
+        // User already responded from home modal
+        initialMessages.push({
+          id: "1", 
+          text: "How does your care plan look today?", 
+          isBot: true
+        });
+        initialMessages.push({
           id: "2", 
           text: contextFromRoute.userResponse, 
           isBot: false
         });
         
-        // Add follow-up question based on user response
-        let followUpQuestion = "How does your care plan look today?";
-        
-        if (contextFromRoute.userResponse === "👍 It works for me") {
-          followUpQuestion = "That's great! What's working well for you today?";
-        } else if (contextFromRoute.userResponse === "👎 I want to change it") {
-          followUpQuestion = "I understand. What would you like to change about your plan?";
+        // Personalized follow-up based on response
+        let followUpQuestion = userName 
+          ? `That's wonderful, ${userName}! 💜 What's been working well for you?`
+          : "That's wonderful! 💜 What's been working well for you?";
+        if (contextFromRoute.userResponse === "👎 I want to change it") {
+          followUpQuestion = userName
+            ? `I hear you, ${userName}! 💜 What would you like to adjust in your plan?`
+            : "I hear you! 💜 What would you like to adjust in your plan?";
         }
         
-        messages.push({
+        initialMessages.push({
           id: "3",
           text: followUpQuestion,
           isBot: true
         });
+      } else {
+        // Fresh start - engaging personalized greeting
+        const greeting = userName 
+          ? `Hey ${userName}! 💜 How's your day going? Ready to check in on your care plan?`
+          : "Hey! 💜 How's your day going? Ready to check in on your care plan?";
+        initialMessages.push({
+          id: "1",
+          text: greeting,
+          isBot: true
+        });
       }
       
-      setMessages(messages);
-      // Set mode to idle so user can use yap button
+      setMessages(initialMessages);
       setMode("idle");
-      // Disable slider and selected value for care plan modal
+      setShowSlider(false);
+      setShowSelectedValue(false);
+    } else if (contextFromRoute?.context === "symptom_checkin") {
+      // Symptom check-in - engaging opening
+      const greeting = userName
+        ? `Hey ${userName}! Let's check in on how you're feeling! 💜`
+        : "Let's check in on how you're feeling! 💜";
+      setMessages([
+        { id: "1", text: greeting, isBot: true },
+      ]);
+      setShowSlider(true);
+      setShowSelectedValue(false);
+    } else if (contextFromRoute?.context === "personalise") {
+      // Personalisation - warm welcome
+      const greeting = userName
+        ? `Great, ${userName}! Let's make your experience more personal 💜`
+        : "Great! Let's make your experience more personal 💜";
+      setMessages([
+        { id: "1", text: greeting, isBot: true },
+        { id: "2", text: "The more I know about you, the better I can help. What would you like to tell me about?", isBot: true },
+      ]);
+      setShowSlider(false);
+      setShowSelectedValue(false);
+    } else if (contextFromRoute?.context === "know_body") {
+      // Know body - educational opener
+      const greeting = userName
+        ? `${userName}, I love that you want to understand your body better! 💜`
+        : "I love that you want to understand your body better! 💜";
+      setMessages([
+        { id: "1", text: greeting, isBot: true },
+        { id: "2", text: "What are you curious about? Your cycle, hormones, or something specific?", isBot: true },
+      ]);
       setShowSlider(false);
       setShowSelectedValue(false);
     } else {
-      // Default: Weekly check-in content
+      // Default: Symptom check-in content
+      const greeting = userName
+        ? `${userName}, how has your bloating been this week?`
+        : "How has your bloating been this week?";
       setMessages([
-        { id: "1", text: "How was your bloating this week?", isBot: true },
-        { id: "3", text: "Were there any big changes in your week? related to food, lifestyle, stress, etc", isBot: true },
+        { id: "1", text: greeting, isBot: true },
       ]);
+      setShowSlider(true);
+      setShowSelectedValue(false);
     }
-  }, [route?.params?.conversationContext]);
+  }, [route?.params?.conversationContext, userName]);
   
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -298,7 +443,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
   const effectiveSliderLabels = serverSliderLabels && serverSliderLabels.length > 0
     ? serverSliderLabels
-    : ["None", "Mild", "Moderate", "Strong", "Extreme"];
+    : ["None 😊", "Mild", "Moderate", "Strong", "Intense"];
 
   // Get choice options based on context
   const getChoiceOptions = (): ChoiceOption[] => {
@@ -311,45 +456,44 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     switch (contextFromRoute?.context) {
       case "care_plan_modal":
         return [
-          { id: "want-to-change", text: "👎 I want to change it" },
-          { id: "skip-actions", text: "⏩ I want to skip some actions for today" },
-          { id: "alternate-suggestions", text: "🔁 I want alternate suggestions" },
+          { id: "completed", text: "I did something! 🎉" },
+          { id: "skip-actions", text: "Need to skip today" },
+          { id: "want-to-change", text: "Adjust my plan" },
+          { id: "feeling-good", text: "Feeling great! 💜" },
         ];
       case "symptom_checkin":
         return [
-          { id: "ate-out-more", text: "Ate out more" },
-          { id: "ate-more-carbs", text: "Ate more carbs" },
-          { id: "ate-more-dairy", text: "Ate more dairy" },
-          { id: "skipped-meals", text: "Skipped meals" },
-          { id: "untimely-eating", text: "Untimely eating" },
-          { id: "less-sleep", text: "Less sleep" },
-          { id: "more-stress", text: "More stress/workload" },
-          { id: "more-caffeine", text: "More caffeine" },
-          { id: "more-alcohol", text: "More alcohol" },
+          { id: "ate-out-more", text: "🍕 Ate out more" },
+          { id: "more-stress", text: "😓 More stress" },
+          { id: "less-sleep", text: "😴 Less sleep" },
+          { id: "ate-more-carbs", text: "🍞 More carbs" },
+          { id: "ate-more-dairy", text: "🥛 More dairy" },
+          { id: "skipped-meals", text: "⏭️ Skipped meals" },
+          { id: "more-caffeine", text: "☕ More caffeine" },
+          { id: "nothing-special", text: "Nothing unusual ✨" },
         ];
       case "personalise":
         return [
-          { id: "add-factors", text: "Add personalisation factors" },
-          { id: "update-preferences", text: "Update my preferences" },
-          { id: "customise-plan", text: "Customise my action plan" },
+          { id: "diet-prefs", text: "🥗 My diet preferences" },
+          { id: "exercise-habits", text: "💪 Exercise habits" },
+          { id: "sleep-patterns", text: "😴 Sleep patterns" },
+          { id: "stress-triggers", text: "😓 Stress triggers" },
+          { id: "all-good", text: "All set for now! 💜" },
         ];
       case "know_body":
         return [
-          { id: "learn-phases", text: "Learn about menstrual phases" },
-          { id: "hormone-info", text: "Understand hormone changes" },
-          { id: "body-symptoms", text: "Track body symptoms" },
+          { id: "learn-phases", text: "🌸 Menstrual phases" },
+          { id: "hormone-info", text: "⚗️ Hormone changes" },
+          { id: "symptom-reasons", text: "🤔 Why do I feel this?" },
+          { id: "ask-question", text: "Ask something else" },
         ];
       default:
         return [
-          { id: "ate-out-more", text: "Ate out more" },
-          { id: "ate-more-carbs", text: "Ate more carbs" },
-          { id: "ate-more-dairy", text: "Ate more dairy" },
-          { id: "skipped-meals", text: "Skipped meals" },
-          { id: "untimely-eating", text: "Untimely eating" },
-          { id: "less-sleep", text: "Less sleep" },
-          { id: "more-stress", text: "More stress/workload" },
-          { id: "more-caffeine", text: "More caffeine" },
-          { id: "more-alcohol", text: "More alcohol" },
+          { id: "ate-out-more", text: "🍕 Ate out more" },
+          { id: "more-stress", text: "😓 More stress" },
+          { id: "less-sleep", text: "😴 Less sleep" },
+          { id: "ate-more-carbs", text: "🍞 More carbs" },
+          { id: "nothing-special", text: "Nothing unusual ✨" },
         ];
     }
   };
@@ -443,6 +587,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         id: Date.now().toString(),
         text: messageText,
         isBot: false,
+        timestamp: new Date(),
       };
       setMessages(prev => [...prev, newMessage]);
       console.log("Sent:", messageText);
@@ -471,6 +616,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             id: Date.now().toString() + "_bot",
             text: response.content,
             isBot: true,
+            timestamp: new Date(),
           };
           setMessages(prev => [...prev, botResponse]);
           scrollToBottom();
@@ -499,6 +645,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             id: Date.now().toString() + "_bot",
             text: "I understand. How can I help you further?",
             isBot: true,
+            timestamp: new Date(),
           };
           setMessages(prev => [...prev, fallbackResponse]);
           scrollToBottom();
@@ -510,6 +657,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           id: Date.now().toString() + "_bot",
           text: "Sorry, I'm having trouble connecting. Please try again.",
           isBot: true,
+          timestamp: new Date(),
         };
         setMessages(prev => [...prev, errorResponse]);
         scrollToBottom();
@@ -592,6 +740,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           id: Date.now().toString() + "_bot",
           text: response.content,
           isBot: true,
+          timestamp: new Date(),
         };
         setMessages(prev => [...prev, botResponse]);
 
@@ -637,11 +786,11 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   };
 
   const getBloatingLabel = (value: number) => {
-    if (value === 1) return "None";
-    if (value <= 3) return "Mild";
-    if (value <= 5) return "Moderate";
-    if (value <= 7) return "Strong";
-    return "Extreme";
+    if (value === 1) return "None at all 😊";
+    if (value <= 3) return "Just a little";
+    if (value <= 5) return "Noticeable";
+    if (value <= 7) return "Pretty strong";
+    return "Very intense";
   };
 
   const renderIdleMode = () => {
@@ -668,24 +817,19 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               {messages.map((message, index) => (
                 <View key={message.id}>
                   {message.isBot ? (
-                    <BotMessage text={message.text} />
+                    <BotMessage text={message.text} timestamp={message.timestamp} />
                   ) : (
-                    <UserMessage text={message.text} />
+                    <UserMessage text={message.text} timestamp={message.timestamp} />
                   )}
                 </View>
               ))}
               {/* Loading indicator when waiting for API response */}
-              {isLoading && (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color={COLORS.warmPurple} />
-                  <Text style={styles.loadingText}>Auvra is thinking...</Text>
-                </View>
-              )}
+              {isLoading && <TypingIndicator />}
             </View>
             </View>
           </ScrollView>
 
-          {/* Recording status display */}
+          {/* Recording status display */
           {(isRecording || recordingComplete) && (
             <View style={styles.recordingStatusContainer}>
               {isRecording ? (
@@ -790,9 +934,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                 {messages.map((message, index) => (
                   <View key={message.id}>
                     {message.isBot ? (
-                      <BotMessage text={message.text} />
+                      <BotMessage text={message.text} timestamp={message.timestamp} />
                     ) : (
-                      <UserMessage text={message.text} />
+                      <UserMessage text={message.text} timestamp={message.timestamp} />
                     )}
                   </View>
                 ))}
@@ -829,9 +973,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           {messages.map((message, index) => (
             <View key={message.id}>
               {message.isBot ? (
-                <BotMessage text={message.text} />
+                <BotMessage text={message.text} timestamp={message.timestamp} />
               ) : (
-                <UserMessage text={message.text} />
+                <UserMessage text={message.text} timestamp={message.timestamp} />
               )}
               {index === 0 && !showSlider && sliderValue > 0 && (
                 <UserMessage text={`${sliderValue} = ${getBloatingLabel(sliderValue)} bloating`} />
@@ -839,12 +983,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             </View>
           ))}
           {/* Loading indicator when waiting for API response */}
-          {isLoading && (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={COLORS.warmPurple} />
-              <Text style={styles.loadingText}>Auvra is thinking...</Text>
-            </View>
-          )}
+          {isLoading && <TypingIndicator />}
         </View>
         </View>
       </ScrollView>
@@ -904,9 +1043,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           {messages.map((message, index) => (
             <View key={message.id}>
               {message.isBot ? (
-                <BotMessage text={message.text} />
+                <BotMessage text={message.text} timestamp={message.timestamp} />
               ) : (
-                <UserMessage text={message.text} />
+                <UserMessage text={message.text} timestamp={message.timestamp} />
               )}
               {index === 0 && !showSlider && sliderValue > 0 && (
                 <UserMessage text={`${sliderValue} = ${getBloatingLabel(sliderValue)} bloating`} />
@@ -914,12 +1053,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             </View>
           ))}
           {/* Loading indicator when waiting for API response */}
-          {isLoading && (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={COLORS.warmPurple} />
-              <Text style={styles.loadingText}>Auvra is thinking...</Text>
-            </View>
-          )}
+          {isLoading && <TypingIndicator />}
         </View>
         </View>
         <View style={styles.choiceOptionsContainer}>
@@ -1137,13 +1271,87 @@ const styles = StyleSheet.create({
     // paddingTop: verticalScale(20),
   },
 
+  // AUVRA Avatar styles
+  auvraAvatarContainer: {
+    marginRight: scale(8),
+    marginTop: verticalScale(2),
+  },
+  auvraAvatarGradient: {
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(14),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  auvraAvatarText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZES.small,
+    fontFamily: FONT_FAMILIES['NotoSerif-Medium'],
+    fontWeight: '600',
+  },
+  
   // Message bubbles
+  botMessageRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: verticalScale(15),
+    zIndex: 1,
+    width: '100%',
+  },
   botMessageContainer: {
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
+    flex: 1,
+  },
+  botMessageNoAvatar: {
+    marginLeft: scale(36), // Account for missing avatar space
+  },
+  // Typing indicator styles
+  typingContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
     marginBottom: verticalScale(15),
     zIndex: 1,
     width: '100%',
+  },
+  typingBubble: {
+    borderRadius: scale(10),
+    overflow: 'hidden',
+    maxWidth: '70%',
+  },
+  typingGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: scale(15),
+    paddingVertical: verticalScale(12),
+  },
+  typingDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: scale(8),
+  },
+  typingDot: {
+    width: scale(6),
+    height: scale(6),
+    borderRadius: scale(3),
+    backgroundColor: COLORS.white,
+    marginHorizontal: scale(2),
+    opacity: 0.7,
+  },
+  typingDot1: {
+    opacity: 1,
+  },
+  typingDot2: {
+    opacity: 0.7,
+  },
+  typingDot3: {
+    opacity: 0.4,
+  },
+  typingText: {
+    fontSize: FONT_SIZES.small,
+    color: COLORS.white,
+    fontFamily: FONT_FAMILIES['Inter-Regular'],
+    fontStyle: 'italic',
   },
   loadingContainer: {
     flexDirection: 'row',
@@ -1157,6 +1365,18 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.small,
     color: COLORS.greyMedium,
     fontStyle: 'italic',
+  },
+  messageTimestamp: {
+    fontSize: FONT_SIZES.extraSmall,
+    color: COLORS.greyLight,
+    fontFamily: FONT_FAMILIES['Inter-Regular'],
+    marginTop: verticalScale(4),
+    marginLeft: scale(4),
+  },
+  messageTimestampRight: {
+    textAlign: 'right',
+    marginRight: scale(4),
+    marginLeft: 0,
   },
   botMessageBubble: {
     maxWidth: '80%',

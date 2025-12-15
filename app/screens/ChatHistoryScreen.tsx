@@ -44,33 +44,33 @@ interface ChatHistoryScreenProps {
 const ChatHistoryScreen: React.FC<ChatHistoryScreenProps> = ({ onBackToHome, activeTab = 'auvra', onTabPress, chatContext }) => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
-  // Mock chat data - replace with actual data from your API
+  // Chat data with engaging previews
   const chatHistory = [
     {
       id: '1',
       title: 'Care Plan check-in',
-      preview: 'How is the action plan working for you?\nlet me know if you\'d like any changes...',
+      preview: "💜 Let's see how your wellness plan is going!\nReady to check in?",
       timestamp: 'Today',
       avatar: Images.ChatThumbnail,
     },
     {
       id: '2',
       title: 'Symptom checkin',
-      preview: 'See any progress with your symptoms?\nTrack progress, wins, difficulties...',
+      preview: "Track your symptoms and see patterns 📊\nI'll help you understand what's happening",
       timestamp: 'Last week',
       avatar: Images.ChatThumbnail,
     },
     {
       id: '3',
       title: 'Want to Personalise?',
-      preview: 'Add 25+ personalisation factors to improve your action plan',
+      preview: "✨ Make Auvra work better for you!\n25+ personalisation factors available",
       timestamp: 'Last week',
       avatar: Images.ChatThumbnail,
     },
     {
       id: '4',
       title: 'Know my body',
-      preview: 'Know more about menstrual phase, hormones and how it changes',
+      preview: "🌸 Learn about your cycle, hormones & more\nKnowledge is power!",
       timestamp: 'Last week',
       avatar: Images.ChatThumbnail,
     },
