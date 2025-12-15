@@ -545,10 +545,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     switch (contextFromRoute?.context) {
       case "care_plan_modal":
         return [
-          { id: "completed", text: "I did something! 🎉" },
-          { id: "skip-actions", text: "Need to skip today" },
-          { id: "want-to-change", text: "Adjust my plan" },
-          { id: "feeling-good", text: "Feeling great! 💜" },
+          { id: "positive", text: "👍 It works for me" },
+          { id: "negative", text: "👎 I want to change it" },
         ];
       case "symptom_checkin":
         return [
@@ -1014,27 +1012,6 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             {!isLoading && messages.length > 0 && renderQuickReplies()}
           </ScrollView>
 
-          {/* Input area for idle mode */}
-          <View style={styles.idleInputContainer}>
-            <TouchableOpacity 
-              style={styles.idleInputButton}
-              onPress={() => setMode("type")}
-            >
-              <Ionicons name="chatbubble-ellipses-outline" size={20} color={COLORS.greyMedium} />
-              <Text style={styles.idleInputPlaceholder}>Type a message...</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.idleMicButton}
-              onPress={() => setMode("idle")}
-            >
-              <Image
-                source={require("./../../assets/images/yap-icon.png")}
-                style={{ width: scale(20), height: scale(20) }}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-          </View>
-
           {/* Recording status display */}
           {(isRecording || recordingComplete) && (
             <View style={styles.recordingStatusContainer}>
@@ -1151,27 +1128,6 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                 {!isLoading && (messages.length > 0 || sliderValue > 0) && renderQuickReplies()}
               </View>
             </ScrollView>
-
-            {/* Input area for idle mode */}
-            <View style={styles.idleInputContainer}>
-              <TouchableOpacity 
-                style={styles.idleInputButton}
-                onPress={() => setMode("type")}
-              >
-                <Ionicons name="chatbubble-ellipses-outline" size={20} color={COLORS.greyMedium} />
-                <Text style={styles.idleInputPlaceholder}>Type a message...</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.idleMicButton}
-                onPress={() => setMode("idle")}
-              >
-                <Image
-                  source={require("./../../assets/images/yap-icon.png")}
-                  style={{ width: scale(20), height: scale(20) }}
-                  resizeMode="contain"
-                />
-              </TouchableOpacity>
-            </View>
 
             {/* Recording status display */}
             {(isRecording || recordingComplete) && (

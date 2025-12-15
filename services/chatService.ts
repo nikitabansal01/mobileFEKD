@@ -466,53 +466,102 @@ class ChatService {
         return;
       }
 
-      if (!response.body) {
-        console.error('❌ No response body');
-        onError('No response body');
-        return;
-      }
+      // React Native doesn't support ReadableStream from fetch natively
+      // Fall back to reading the response as text for SSE compatibility
+      let streamText: string;
+      
+      if (response.body && typeof response.body.getReader === 'function') {
+        // Modern browsers with ReadableStream support
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let accumulatedContent = '';
 
-      // Read SSE stream
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let accumulatedContent = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+          // Decode chunk
+          buffer += decoder.decode(value, { stream: true });
 
-        // Decode chunk
-        buffer += decoder.decode(value, { stream: true });
+          // Process complete SSE messages (separated by \n\n)
+          const messages = buffer.split('\n\n');
+          buffer = messages.pop() || ''; // Keep incomplete message in buffer
 
-        // Process complete SSE messages (separated by \n\n)
-        const messages = buffer.split('\n\n');
-        buffer = messages.pop() || ''; // Keep incomplete message in buffer
+          for (const message of messages) {
+            if (!message.trim() || !message.startsWith('data: ')) continue;
+
+            // Parse SSE data
+            const jsonStr = message.substring(6); // Remove "data: " prefix
+            try {
+              const chunk = JSON.parse(jsonStr);
+
+              if (chunk.type === 'token') {
+                // Accumulate and display token
+                accumulatedContent += chunk.content;
+                onToken(accumulatedContent);
+                console.log('📝 Token:', chunk.content);
+              } else if (chunk.type === 'final') {
+                // Final metadata received
+                console.log('✅ Streaming complete:', chunk);
+                
+                // Update session ID
+                if (chunk.session_id) {
+                  this.setSessionId(chunk.session_id);
+                }
+
+                // Call complete callback with full response
+                onComplete({
+                  session_id: chunk.session_id,
+                  message_id: chunk.message_id,
+                  response_type: chunk.response_type || 'text',
+                  content: chunk.content,
+                  choices: chunk.choices,
+                  slider_config: chunk.slider_config,
+                  metadata: chunk.metadata,
+                  actions: chunk.actions,
+                  timestamp: chunk.timestamp,
+                });
+                return;
+              } else if (chunk.type === 'error') {
+                console.error('❌ Streaming error:', chunk.error);
+                onError(chunk.content || 'Streaming error');
+                return;
+              }
+            } catch (parseError) {
+              console.error('❌ Failed to parse chunk:', jsonStr, parseError);
+            }
+          }
+        }
+        return; // Stream completed without final message
+      } else {
+        // React Native fallback: Read entire response as text
+        console.log('📱 Using React Native fallback for streaming');
+        streamText = await response.text();
+        
+        // Process all SSE messages at once
+        const messages = streamText.split('\n\n');
+        let accumulatedContent = '';
+        let finalResponse: ChatMessageResponse | null = null;
 
         for (const message of messages) {
           if (!message.trim() || !message.startsWith('data: ')) continue;
 
-          // Parse SSE data
-          const jsonStr = message.substring(6); // Remove "data: " prefix
+          const jsonStr = message.substring(6);
           try {
             const chunk = JSON.parse(jsonStr);
 
             if (chunk.type === 'token') {
-              // Accumulate and display token
               accumulatedContent += chunk.content;
               onToken(accumulatedContent);
-              console.log('📝 Token:', chunk.content);
             } else if (chunk.type === 'final') {
-              // Final metadata received
-              console.log('✅ Streaming complete:', chunk);
+              console.log('✅ Streaming complete (RN fallback):', chunk);
               
-              // Update session ID
               if (chunk.session_id) {
                 this.setSessionId(chunk.session_id);
               }
 
-              // Call complete callback with full response
-              onComplete({
+              finalResponse = {
                 session_id: chunk.session_id,
                 message_id: chunk.message_id,
                 response_type: chunk.response_type || 'text',
@@ -522,8 +571,7 @@ class ChatService {
                 metadata: chunk.metadata,
                 actions: chunk.actions,
                 timestamp: chunk.timestamp,
-              });
-              return;
+              };
             } else if (chunk.type === 'error') {
               console.error('❌ Streaming error:', chunk.error);
               onError(chunk.content || 'Streaming error');
@@ -532,6 +580,21 @@ class ChatService {
           } catch (parseError) {
             console.error('❌ Failed to parse chunk:', jsonStr, parseError);
           }
+        }
+
+        if (finalResponse) {
+          onComplete(finalResponse);
+        } else if (accumulatedContent) {
+          // No final message but we have content - create response
+          onComplete({
+            session_id: this.currentSessionId || '',
+            message_id: '',
+            response_type: 'text',
+            content: accumulatedContent,
+            timestamp: new Date().toISOString(),
+          });
+        } else {
+          onError('No valid response received');
         }
       }
     } catch (error) {

@@ -2,7 +2,6 @@ import Images from '@/assets/images';
 import ActionPlanTimeline from '@/components/ActionPlanTimeline';
 import AuvraChatModal from '@/components/AuvraChatModal';
 import CalendarBottomSheet from '@/components/CalendarBottomSheet';
-import { WellnessDashboard, SymptomPredictionCard } from '@/components/intelligence';
 import apiPromiseManager from '@/services/apiPromiseManager';
 import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse } from '@/services/homeService';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -755,40 +754,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           </Svg>
         </View>
 
-        {/* Wellness Dashboard Widget - AI-powered health insights */}
-        <View style={styles.wellnessSection}>
-          <WellnessDashboard
-            userId={cycleInfo?.user_name || 'user'}
-            compact={true}
-            onRefresh={() => {
-              // Trigger wellness refresh
-              console.log('Refresh wellness data');
-            }}
-          />
-        </View>
-
-        {/* Symptom Prediction Card - Proactive health alerts */}
-        <View style={styles.predictionSection}>
-          <SymptomPredictionCard
-            userId={cycleInfo?.user_name || 'user'}
-            compact={true}
-            onAdvicePress={(advice) => {
-              // Navigate to chat with advice context
-              navigation.navigate('MainScreenTabs', { 
-                activeTab: 'auvra',
-                chatContext: {
-                  chatId: '1',
-                  conversationContext: {
-                    initialMessage: advice,
-                    userResponse: 'Tell me more',
-                    context: 'symptom_advice'
-                  }
-                }
-              });
-            }}
-          />
-        </View>
-
         {/* Today's Action Plan */}
         <View style={styles.actionPlanSection}>
           <View style={styles.actionPlanHeader}>
@@ -1361,17 +1326,6 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(1.7),
     fontFamily: 'Inter400',
     color: '#6F6F6F',
-  },
-  // Intelligence Components Sections
-  wellnessSection: {
-    paddingHorizontal: responsiveWidth(4),
-    marginBottom: responsiveHeight(2),
-    zIndex: 5,
-  },
-  predictionSection: {
-    paddingHorizontal: responsiveWidth(4),
-    marginBottom: responsiveHeight(2),
-    zIndex: 5,
   },
 });
 
