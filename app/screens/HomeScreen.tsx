@@ -91,7 +91,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }, [navigation])
   );
 
-  // Reset inactivity timer
+  // Reset inactivity timer - Shows Auvra modal after period of inactivity
   const resetInactivityTimer = () => {
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
@@ -100,7 +100,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     if (!showAuvraChat) {
       inactivityTimerRef.current = setTimeout(() => {
         setShowAuvraChat(true);
-      }, 15000); // 15 seconds
+      }, 15000); // 15 seconds 
     }
   };
 
@@ -113,14 +113,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }
   };
 
-  // Handle Auvra chat responses
-  const handleAuvraResponse = (response: 'positive' | 'negative') => {
+  // Handle Auvra chat responses - Navigate to chatbot for plan changes
+  const handleAuvraResponse = (response: 'positive' | 'negative' | string) => {
     setShowAuvraChat(false);
+    
+    // Map response to user message
+    let userMessage = '👍 It works for me';
+    if (response === 'negative') {
+      userMessage = '👎 I want to change it';
+    } else if (typeof response === 'string' && response !== 'positive') {
+      userMessage = response;
+    }
     
     // Navigate to MainScreenTabs with auvra tab active and chat context
     const conversationContext = {
       initialMessage: "How does your care plan look today?",
-      userResponse: response === 'positive' ? "👍 It works for me" : "👎 I want to change it",
+      userResponse: userMessage,
       context: "care_plan_modal"
     };
     
@@ -132,6 +140,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       }
     });
     
+    // Navigate to the chatbot via MainScreenTabs
     navigation.navigate('MainScreenTabs', { 
       activeTab: 'auvra',
       chatContext: {

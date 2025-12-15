@@ -446,10 +446,24 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         let followUpQuestion = userName 
           ? `That's wonderful, ${userName}! 💜 What's been working well for you?`
           : "That's wonderful! 💜 What's been working well for you?";
-        if (contextFromRoute.userResponse === "👎 I want to change it") {
+        
+        // Check for "want to change" response
+        const wantsToChange = contextFromRoute.userResponse?.includes("change") || 
+                              contextFromRoute.userResponse?.includes("👎");
+        
+        if (wantsToChange) {
           followUpQuestion = userName
-            ? `I hear you, ${userName}! 💜 What would you like to adjust in your plan?`
-            : "I hear you! 💜 What would you like to adjust in your plan?";
+            ? `I hear you, ${userName}! 💜 No worries, let's make your plan work better for you. What would you like to adjust?`
+            : "I hear you! 💜 No worries, let's make your plan work better for you. What would you like to adjust?";
+          
+          // Set change plan choices
+          setServerChoiceOptions([
+            { id: "change-timing", text: "⏰ Change the timing" },
+            { id: "change-actions", text: "🔄 Different actions" },
+            { id: "too-many", text: "📉 Too many tasks" },
+            { id: "too-few", text: "📈 Add more tasks" },
+            { id: "something-else", text: "💬 Something else" },
+          ]);
         }
         
         initialMessages.push({
@@ -1425,7 +1439,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       <SessionSummaryModal
         visible={showSessionSummary}
         onClose={handleSessionSummaryClose}
-        summary={sessionSummary || undefined}
+        data={sessionSummary || null}
         loading={summaryLoading}
         error={summaryError}
         onRetry={handleRetrySessionSummary}
@@ -1521,7 +1535,7 @@ const styles = StyleSheet.create({
   auvraAvatarText: {
     color: COLORS.white,
     fontSize: FONT_SIZES.small,
-    fontFamily: FONT_FAMILIES['NotoSerif-Medium'],
+    fontFamily: FONT_FAMILIES['NotoSerif-Regular'],
     fontWeight: '600',
   },
   
