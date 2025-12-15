@@ -811,7 +811,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#FFF5F8', // Light pink fallback - visible even if gradients fail
   },
   scrollView: {
     flex: 1,
@@ -820,6 +820,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: responsiveHeight(5),
     minHeight: responsiveHeight(120),
+    zIndex: 1, // Ensure scroll content appears above background gradients
   },
   backgroundGradient: {
     position: 'absolute',
@@ -860,6 +861,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#FFF5F8', // Ensure loading state has visible background
   },
   loadingText: {
     fontSize: responsiveFontSize(2),
@@ -872,6 +874,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: responsiveWidth(5),
     paddingTop: responsiveHeight(6), // Increased top padding
     paddingBottom: verticalScale(30),
+    zIndex: 10, // Ensure header appears above background elements
   },
   headerLeft: {
     flex: 1,
@@ -919,6 +922,7 @@ const styles = StyleSheet.create({
   questSection: {
     paddingHorizontal: responsiveWidth(5),
     marginBottom: responsiveHeight(2),
+    zIndex: 5, // Ensure quest section appears above background
   },
   sectionTitle: {
     fontSize: responsiveFontSize(1.98),
@@ -1010,6 +1014,7 @@ const styles = StyleSheet.create({
   },
   actionPlanSection: {
     paddingHorizontal: responsiveWidth(5),
+    zIndex: 5, // Ensure action plan appears above background
   },
   actionPlanHeader: {
     alignItems: 'center',
