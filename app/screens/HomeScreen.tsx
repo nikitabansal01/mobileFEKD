@@ -100,7 +100,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     if (!showAuvraChat) {
       inactivityTimerRef.current = setTimeout(() => {
         setShowAuvraChat(true);
-      }, 15000); // 15 seconds 
+      }, 5000); // 5 seconds - show modal quickly for engagement
     }
   };
 
@@ -113,7 +113,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }
   };
 
-  // Handle Auvra chat responses - Navigate to chatbot for plan changes
+  // Handle Auvra chat responses - Navigate directly to chatbot for plan changes
   const handleAuvraResponse = (response: 'positive' | 'negative' | string) => {
     setShowAuvraChat(false);
     
@@ -125,28 +125,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       userMessage = response;
     }
     
-    // Navigate to MainScreenTabs with auvra tab active and chat context
+    // Build conversation context
     const conversationContext = {
       initialMessage: "How does your care plan look today?",
       userResponse: userMessage,
       context: "care_plan_modal"
     };
     
-    console.log('HomeScreen - Navigating to Care Plan check-in with:', {
-      activeTab: 'auvra',
-      chatContext: {
-        chatId: '1',
-        conversationContext
-      }
-    });
+    console.log('HomeScreen - Navigating directly to ChatbotScreen with:', conversationContext);
     
-    // Navigate to the chatbot via MainScreenTabs
-    navigation.navigate('MainScreenTabs', { 
-      activeTab: 'auvra',
-      chatContext: {
-        chatId: '1', // Care Plan check-in chat ID
-        conversationContext
-      }
+    // Navigate directly to ChatbotScreen (bypasses ChatHistoryScreen for faster UX)
+    navigation.navigate('ChatbotScreen', { 
+      conversationContext
     });
   };
 
