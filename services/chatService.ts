@@ -723,8 +723,9 @@ class ChatService {
 
   /**
    * Get proactive greeting for the user
+   * @param context - Optional conversation context for context-aware greetings
    */
-  async getGreeting(): Promise<GreetingResponse | null> {
+  async getGreeting(context?: ConversationContext): Promise<GreetingResponse | null> {
     try {
       const userId = getCurrentUserId();
       if (!userId) {
@@ -732,13 +733,18 @@ class ChatService {
         return null;
       }
 
-      console.log('👋 Fetching greeting...');
+      console.log('👋 Fetching greeting...', { context });
 
       const headers = await getHeaders();
-      const response = await fetch(`${CHAT_API_URL}/greeting?user_id=${userId}`, {
+      let url = `${CHAT_API_URL}/greeting?user_id=${userId}`;
+      if (context) {
+        url += `&context=${context}`;
+      }
+      
+      const response = await fetchWithTimeout(url, {
         method: 'GET',
         headers,
-      });
+      }, DEFAULT_TIMEOUT_MS);
 
       if (!response.ok) {
         const errorText = await response.text();

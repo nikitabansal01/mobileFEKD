@@ -1,7 +1,8 @@
 import Avatar from "@/components/customComponent/AvatarChatbot";
 import Header from "@/components/customComponent/ChatbotHeader";
 import FooterCTA from "@/components/customComponent/FooterChatbotCTA";
-import ChatService, { ConversationContext as ChatContext, InputMode } from "@/services/chatService";
+import { SessionSummaryModal } from "@/components/intelligence";
+import ChatService, { ConversationContext as ChatContext, InputMode, SessionSummaryResponse } from "@/services/chatService";
 import HomeService from "@/services/homeService";
 import { Ionicons } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
@@ -360,6 +361,12 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false); // Loading state for API calls
   const [userName, setUserName] = useState<string>(""); // User's name for personalization
+  
+  // Session Summary Modal state
+  const [showSessionSummary, setShowSessionSummary] = useState(false);
+  const [sessionSummary, setSessionSummary] = useState<SessionSummaryResponse | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
   
   // Fetch user name on mount
   useEffect(() => {
@@ -1339,14 +1346,53 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     </>
   );
 
+  // Fetch session summary from backend
+  const fetchSessionSummary = async () => {
+    setSummaryLoading(true);
+    setSummaryError(null);
+    
+    try {
+      const summary = await ChatService.getSessionSummary();
+      setSessionSummary(summary);
+    } catch (error) {
+      console.error('Failed to fetch session summary:', error);
+      setSummaryError('Failed to load session summary');
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
 
+  // Handle closing chat - show session summary if there were meaningful messages
   const navigateToIndex = () => {
+    // Only show session summary if there were at least 3 messages (bot greeting + user response + bot follow-up)
+    if (messages.length >= 3) {
+      setShowSessionSummary(true);
+      fetchSessionSummary();
+    } else {
+      closeChat();
+    }
+  };
+
+  // Actually close the chat and navigate back
+  const closeChat = () => {
+    setShowSessionSummary(false);
+    setSessionSummary(null);
     if (onBackToHome) {
       onBackToHome();
     } else {
       // Fallback to navigation.goBack() if onBackToHome is not provided
       navigation.goBack();
     }
+  };
+
+  // Handle session summary modal close
+  const handleSessionSummaryClose = () => {
+    closeChat();
+  };
+
+  // Handle retrying session summary fetch
+  const handleRetrySessionSummary = () => {
+    fetchSessionSummary();
   };
 
   const renderContent = () => (
@@ -1418,6 +1464,16 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       ) : (
         renderContent()
       )}
+      
+      {/* Session Summary Modal */}
+      <SessionSummaryModal
+        visible={showSessionSummary}
+        onClose={handleSessionSummaryClose}
+        summary={sessionSummary || undefined}
+        loading={summaryLoading}
+        error={summaryError}
+        onRetry={handleRetrySessionSummary}
+      />
     </SafeAreaView>
   );
   // return (

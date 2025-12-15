@@ -14,6 +14,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import {
+  ActivityIndicator,
   Modal,
   ScrollView,
   Share,
@@ -55,6 +56,12 @@ interface SessionSummaryModalProps {
   onClose: () => void;
   data: SessionSummaryData | null;
   onActionItemPress?: (item: string) => void;
+  /** Show loading state while fetching summary */
+  loading?: boolean;
+  /** Error message to display */
+  error?: string | null;
+  /** Retry callback for error state */
+  onRetry?: () => void;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -194,6 +201,9 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
   onClose,
   data,
   onActionItemPress,
+  loading = false,
+  error = null,
+  onRetry,
 }) => {
   const handleShare = async () => {
     if (!data) return;
@@ -223,7 +233,8 @@ ${data.action_items.map(item => `• ${item}`).join('\n')}
     }
   };
 
-  if (!data) return null;
+  // Don't render if not visible
+  if (!visible) return null;
 
   return (
     <Modal
@@ -243,21 +254,50 @@ ${data.action_items.map(item => `• ${item}`).join('\n')}
           >
             <View style={styles.headerContent}>
               <Text style={styles.headerTitle}>✨ Session Complete</Text>
-              <Text style={styles.headerSubtitle}>
-                {data.metrics.duration_minutes} mins • {data.metrics.message_count} messages
-              </Text>
+              {data && (
+                <Text style={styles.headerSubtitle}>
+                  {data.metrics.duration_minutes} mins • {data.metrics.message_count} messages
+                </Text>
+              )}
             </View>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeText}>✕</Text>
             </TouchableOpacity>
           </LinearGradient>
 
-          <ScrollView 
-            style={styles.content}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Summary */}
-            <View style={styles.summaryCard}>
+          {/* Loading State */}
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#A29AEA" />
+              <Text style={styles.loadingText}>Summarizing your session...</Text>
+              <Text style={styles.loadingSubtext}>Analyzing insights and action items</Text>
+            </View>
+          )}
+
+          {/* Error State */}
+          {error && !loading && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorEmoji}>😔</Text>
+              <Text style={styles.errorText}>{error}</Text>
+              {onRetry && (
+                <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
+                  <Text style={styles.retryText}>Try Again</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.closeBottomButton} onPress={onClose}>
+                <Text style={styles.closeBottomText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Content - show when data is available and not loading/error */}
+          {data && !loading && !error && (
+            <ScrollView 
+              style={styles.content}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Summary */}
+              <View style={styles.summaryCard}>
               <Text style={styles.summaryText}>{data.summary}</Text>
             </View>
 
@@ -321,17 +361,20 @@ ${data.action_items.map(item => `• ${item}`).join('\n')}
             {/* Bottom padding */}
             <View style={{ height: verticalScale(20) }} />
           </ScrollView>
+          )}
 
-          {/* Footer Actions */}
-          <View style={styles.footer}>
-            <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-              <Text style={styles.shareIcon}>📤</Text>
-              <Text style={styles.shareText}>Share Summary</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.doneButton} onPress={onClose}>
-              <Text style={styles.doneText}>Done</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Footer Actions - show only when data is available */}
+          {data && !loading && !error && (
+            <View style={styles.footer}>
+              <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+                <Text style={styles.shareIcon}>📤</Text>
+                <Text style={styles.shareText}>Share Summary</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.doneButton} onPress={onClose}>
+                <Text style={styles.doneText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
     </Modal>
@@ -585,6 +628,65 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14),
     fontFamily: 'Poppins600',
     color: '#FFFFFF',
+  },
+  // Loading state styles
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: verticalScale(60),
+  },
+  loadingText: {
+    marginTop: verticalScale(16),
+    fontSize: moderateScale(16),
+    fontFamily: 'Poppins600',
+    color: '#2D2D2D',
+  },
+  loadingSubtext: {
+    marginTop: verticalScale(8),
+    fontSize: moderateScale(13),
+    fontFamily: 'Poppins400',
+    color: '#6F6F6F',
+  },
+  // Error state styles
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: verticalScale(60),
+    paddingHorizontal: scale(20),
+  },
+  errorEmoji: {
+    fontSize: moderateScale(48),
+    marginBottom: verticalScale(16),
+  },
+  errorText: {
+    fontSize: moderateScale(14),
+    fontFamily: 'Poppins400',
+    color: '#6F6F6F',
+    textAlign: 'center',
+    marginBottom: verticalScale(20),
+  },
+  retryButton: {
+    backgroundColor: '#A29AEA',
+    paddingHorizontal: scale(32),
+    paddingVertical: verticalScale(12),
+    borderRadius: 12,
+    marginBottom: verticalScale(12),
+  },
+  retryText: {
+    fontSize: moderateScale(14),
+    fontFamily: 'Poppins600',
+    color: '#FFFFFF',
+  },
+  closeBottomButton: {
+    paddingHorizontal: scale(24),
+    paddingVertical: verticalScale(8),
+  },
+  closeBottomText: {
+    fontSize: moderateScale(14),
+    fontFamily: 'Poppins500',
+    color: '#6F6F6F',
   },
 });
 
