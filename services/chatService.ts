@@ -388,15 +388,21 @@ class ChatService {
         return null;
       }
 
-      console.log('📊 Sending slider value:', { value, context });
+      console.log('📊 Sending slider value:', { value, context, sessionId: this.currentSessionId });
 
       const headers = await getHeaders();
+      
+      // Build request - only include session_id if we have one
       const request: SliderRequest = {
         user_id: userId,
-        session_id: this.currentSessionId || undefined,
         value,
         context,
       };
+      
+      // Add session_id only if it exists and is not "error"
+      if (this.currentSessionId && this.currentSessionId !== 'error') {
+        request.session_id = this.currentSessionId;
+      }
 
       const response = await fetch(`${CHAT_API_URL}/slider`, {
         method: 'POST',
