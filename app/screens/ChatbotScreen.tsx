@@ -742,6 +742,16 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               msg.id === messageId ? { ...msg, status: 'delivered' as MessageStatus } : msg
             ));
 
+            // Ensure the bot bubble is populated even if the backend didn't send token chunks
+            // (common on React Native / some SSE setups where we only see a final event).
+            if (typeof response?.content === 'string' && response.content.trim().length > 0) {
+              setMessages(prev => prev.map(msg =>
+                msg.id === botMessageId
+                  ? { ...msg, text: msg.text?.trim()?.length ? msg.text : response.content }
+                  : msg
+              ));
+            }
+
             // Final content already updated by tokens, just handle metadata
             console.log('✅ Streaming complete:', response);
 
@@ -1008,15 +1018,19 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             <View style={{marginTop: verticalScale(20)}}>
             <View style={styles.messagesWrapper}>
               {/* Show all messages from the messages array */}
-              {messages.map((message, index) => (
-                <View key={message.id}>
-                  {message.isBot ? (
-                    <BotMessage text={message.text} timestamp={message.timestamp} />
-                  ) : (
-                    <UserMessage text={message.text} timestamp={message.timestamp} status={message.status} />
-                  )}
-                </View>
-              ))}
+              {messages.map((message) => {
+                // Avoid rendering an empty bot bubble while streaming; TypingIndicator already covers this state.
+                if (message.isBot && (!message.text || message.text.trim().length === 0)) return null;
+                return (
+                  <View key={message.id}>
+                    {message.isBot ? (
+                      <BotMessage text={message.text} timestamp={message.timestamp} />
+                    ) : (
+                      <UserMessage text={message.text} timestamp={message.timestamp} status={message.status} />
+                    )}
+                  </View>
+                );
+              })}
               {/* Loading indicator when waiting for API response */}
               {isLoading && <TypingIndicator />}
             </View>
@@ -1128,15 +1142,18 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                   <BotMessage text="Were there any big changes in your week? related to food, lifestyle, stress, etc" />
                 )}
                 {/* Show all messages from the messages array */}
-                {messages.map((message, index) => (
-                  <View key={message.id}>
-                    {message.isBot ? (
-                      <BotMessage text={message.text} timestamp={message.timestamp} />
-                    ) : (
-                      <UserMessage text={message.text} timestamp={message.timestamp} status={message.status} />
-                    )}
-                  </View>
-                ))}
+                {messages.map((message) => {
+                  if (message.isBot && (!message.text || message.text.trim().length === 0)) return null;
+                  return (
+                    <View key={message.id}>
+                      {message.isBot ? (
+                        <BotMessage text={message.text} timestamp={message.timestamp} />
+                      ) : (
+                        <UserMessage text={message.text} timestamp={message.timestamp} status={message.status} />
+                      )}
+                    </View>
+                  );
+                })}
                 
                 {/* Quick reply choices */}
                 {!isLoading && (messages.length > 0 || sliderValue > 0) && renderQuickReplies()}
@@ -1170,18 +1187,21 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         <Avatar showMessage={false} />
         <View style={{marginTop: verticalScale(20)}}>
         <View style={styles.messagesWrapper}>
-          {messages.map((message, index) => (
-            <View key={message.id}>
-              {message.isBot ? (
-                <BotMessage text={message.text} timestamp={message.timestamp} />
-              ) : (
-                <UserMessage text={message.text} timestamp={message.timestamp} status={message.status} />
-              )}
-              {index === 0 && !showSlider && sliderValue > 0 && (
-                <UserMessage text={`${sliderValue} = ${getBloatingLabel(sliderValue)} bloating`} status="delivered" />
-              )}
-            </View>
-          ))}
+          {messages.map((message, index) => {
+            if (message.isBot && (!message.text || message.text.trim().length === 0)) return null;
+            return (
+              <View key={message.id}>
+                {message.isBot ? (
+                  <BotMessage text={message.text} timestamp={message.timestamp} />
+                ) : (
+                  <UserMessage text={message.text} timestamp={message.timestamp} status={message.status} />
+                )}
+                {index === 0 && !showSlider && sliderValue > 0 && (
+                  <UserMessage text={`${sliderValue} = ${getBloatingLabel(sliderValue)} bloating`} status="delivered" />
+                )}
+              </View>
+            );
+          })}
           {/* Loading indicator when waiting for API response */}
           {isLoading && <TypingIndicator />}
         </View>
@@ -1240,18 +1260,21 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         <Avatar showMessage={false} />
         <View style={{marginTop: verticalScale(20)}}>
         <View style={styles.messagesWrapper}>
-          {messages.map((message, index) => (
-            <View key={message.id}>
-              {message.isBot ? (
-                <BotMessage text={message.text} timestamp={message.timestamp} />
-              ) : (
-                <UserMessage text={message.text} timestamp={message.timestamp} status={message.status} />
-              )}
-              {index === 0 && !showSlider && sliderValue > 0 && (
-                <UserMessage text={`${sliderValue} = ${getBloatingLabel(sliderValue)} bloating`} status="delivered" />
-              )}
-            </View>
-          ))}
+          {messages.map((message, index) => {
+            if (message.isBot && (!message.text || message.text.trim().length === 0)) return null;
+            return (
+              <View key={message.id}>
+                {message.isBot ? (
+                  <BotMessage text={message.text} timestamp={message.timestamp} />
+                ) : (
+                  <UserMessage text={message.text} timestamp={message.timestamp} status={message.status} />
+                )}
+                {index === 0 && !showSlider && sliderValue > 0 && (
+                  <UserMessage text={`${sliderValue} = ${getBloatingLabel(sliderValue)} bloating`} status="delivered" />
+                )}
+              </View>
+            );
+          })}
           {/* Loading indicator when waiting for API response */}
           {isLoading && <TypingIndicator />}
         </View>
@@ -1505,7 +1528,8 @@ const styles = StyleSheet.create({
   // Chat interface
   messagesContainer: {
     flex: 1,
-    marginTop: verticalScale(-50),
+    // Avoid negative top offset: it was causing the first message to be clipped under the header.
+    marginTop: 0,
     width: '100%',
   },
   scrollContent: {

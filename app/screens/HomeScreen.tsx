@@ -100,7 +100,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     if (!showAuvraChat) {
       inactivityTimerRef.current = setTimeout(() => {
         setShowAuvraChat(true);
-      }, 5000); // 5 seconds - show modal quickly for engagement
+      }, 15000); // 5 seconds - show modal quickly for engagement
     }
   };
 
