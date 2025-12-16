@@ -112,8 +112,12 @@ const ChatHistoryScreen: React.FC<ChatHistoryScreenProps> = ({ onBackToHome, act
     });
   };
 
-  const handleNewChatPress = () => {
-    navigation.navigate('ChatbotScreen');
+  const handleBackPress = () => {
+    if (onBackToHome) {
+      onBackToHome();
+    } else {
+      navigation.goBack();
+    }
   };
 
   // Auto-navigate to specific chat if chatContext is provided
@@ -136,8 +140,8 @@ const ChatHistoryScreen: React.FC<ChatHistoryScreenProps> = ({ onBackToHome, act
       
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleNewChatPress} style={styles.backButton}>
-          <Text style={styles.backButtonText}>＋</Text>
+        <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+          <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chats with Auvra</Text>
         <View style={styles.headerSpacer} />
