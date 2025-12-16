@@ -100,7 +100,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     if (!showAuvraChat) {
       inactivityTimerRef.current = setTimeout(() => {
         setShowAuvraChat(true);
-      }, 15000); // 5 seconds - show modal quickly for engagement
+      }, 15000); 
     }
   };
 
@@ -446,7 +446,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
    */
   const getHormoneIcon = (hormone: string) => {
     switch (hormone.toLowerCase()) {
-      case 'androgens': return Images.TestosteroneBothHand;
+      case 'androgens': return Images.AndrogensBothHand;
       case 'progesterone': return Images.ProgesteroneBothHand;
       case 'estrogen': return Images.EstrogenBothHand;
       case 'thyroid': return Images.ThyroidBothHand;
@@ -479,18 +479,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
    */
   const getProgressColor = (hormone: string) => {
     switch (hormone.toLowerCase()) {
-      case 'androgens': return '#FF6991';
-      case 'progesterone': return '#CBF0FF';
-      case 'estrogen': return '#FF8BA7';
-      case 'thyroid': return '#F6C34C';
-      case 'insulin': return '#90EE90';
-      case 'cortisol': return '#FFA07A';
-      case 'fsh': return '#98FB98';
-      case 'lh': return '#FFD700';
-      case 'prolactin': return '#F6C34C';
-      case 'ghrelin': return '#FF6B6B';
-      case 'testosterone': return '#A29AEA';
-      default: return '#C17EC9';
+      case 'androgens': return '#A29AEA'; // Purple - matches ActionPlanTimeline
+      case 'progesterone': return '#CBF0FF'; // Light blue
+      case 'estrogen': return '#FF8BA7'; // Pink
+      case 'thyroid': return '#F6C34C'; // Yellow
+      case 'insulin': return '#90EE90'; // Light green
+      case 'cortisol': return '#FFA07A'; // Coral/Orange
+      case 'fsh': return '#98FB98'; // Pale green
+      case 'lh': return '#FFD700'; // Gold
+      case 'prolactin': return '#F6C34C'; // Yellow (same as thyroid)
+      case 'ghrelin': return '#FF6B6B'; // Red
+      case 'testosterone': return '#A29AEA'; // Purple (same as androgens)
+      default: return '#C17EC9'; // Default purple
     }
   };
 

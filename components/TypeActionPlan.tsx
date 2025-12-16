@@ -290,7 +290,7 @@ export default function TypeActionPlan({
     });
     
     switch (hormone.toLowerCase()) {
-      case 'androgens': return Images.TestosteroneCharacter;
+      case 'androgens': return Images.AndrogensCharacter;
       case 'progesterone': return Images.ProgesteroneCharacter;
       case 'estrogen': 
         return Images.EstrogenCharacter;

@@ -75,8 +75,17 @@ const ResultScreen = () => {
       return Images.ProgesteroneCharacter;
     }
 
-    // Testosterone / Androgens (engine uses androgens_high; treat both labels similarly)
-    if (h === 'testosterone' || h === 'androgens') {
+    // Testosterone / Androgens
+    if (h === 'androgens') {
+      if (lvl === 'high') {
+        return safe(Images.AndrogensBothHand, Images.AndrogensCharacter);
+      } else if (lvl === 'low') {
+        return safe(Images.AndrogensLeftHand, Images.AndrogensCharacter);
+      }
+      return Images.AndrogensCharacter;
+    }
+
+    if (h === 'testosterone') {
       if (lvl === 'high') {
         // Energetic pose if available
         return safe(Images.TestosteroneBothHand, Images.TestosteroneCharacter);

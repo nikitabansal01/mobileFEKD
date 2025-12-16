@@ -538,7 +538,7 @@ export default function ActionPlanTimeline({
   const getHormoneIcon = (hormone: string, isLeft: boolean) => {
     switch (hormone.toLowerCase()) {
       case 'androgens': 
-        return isLeft ? Images.TestosteroneLeftHand : Images.TestosteroneRightHand;
+        return isLeft ? Images.AndrogensLeftHand : Images.AndrogensRightHand;
       case 'progesterone': 
         return isLeft ? Images.ProgesteroneLeftHand : Images.ProgesteroneRightHand;
       case 'estrogen': 

@@ -91,8 +91,9 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
       case 'cortisol':
         return Images.CortisolBothHand;
       case 'testosterone':
-      case 'androgens':
         return Images.TestosteroneBothHand;
+      case 'androgens':
+        return Images.AndrogensBothHand;
       default:
         return null;
     }
