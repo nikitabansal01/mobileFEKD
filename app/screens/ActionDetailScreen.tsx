@@ -75,6 +75,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
       year: number;
       journal: string;
       finding: string;
+      participants?: string;
       doi?: string;
     }>;
     variants?: Array<{
@@ -249,7 +250,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                         : (action?.variants || []).map(v => ({
                             type: v.variant_type,
                             title: v.title,
-                            image: '🍽️',
+                            image_url: v.image_url,
                             description: v.description,
                           }))
                       }
@@ -258,11 +259,19 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                         <View style={styles.adviceSlideWrapper}>
                           <View style={styles.adviceCard}>
                             {/* Background Image */}
-                            <View style={styles.adviceBackgroundImage}>
-                              <Text style={styles.adviceBackgroundText}>
-                                {item.image || '🍽️'}
-                              </Text>
-                            </View>
+                            {item.image_url ? (
+                              <Image
+                                source={{ uri: item.image_url }}
+                                style={styles.adviceBackgroundFullImage}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <View style={styles.adviceBackgroundImage}>
+                                <Text style={styles.adviceBackgroundText}>
+                                  {item.image || '🍽️'}
+                                </Text>
+                              </View>
+                            )}
                             
                             {/* Type Badge - Top Left */}
                             <View style={styles.adviceTypeBadge}>
@@ -279,7 +288,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                             </View>
                           </View>
                         </View>
-                      )}
+                      )}}
                       showSkipButton={false}
                       showNextButton={false}
                       showDoneButton={false}
@@ -339,10 +348,17 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                   </MaskedView>
                 </View>
                 <View style={styles.imageContainer}>
-                  <View style={styles.actionImage}>
-                    <Text style={styles.imageText}>📋</Text>
-                  </View>
-                  {/* <View style={styles.imageBorder} /> */}
+                  {action?.hero_image_url ? (
+                    <Image
+                      source={{ uri: action.hero_image_url }}
+                      style={styles.actionImageFull}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.actionImage}>
+                      <Text style={styles.imageText}>📋</Text>
+                    </View>
+                  )}
                 </View>
                 
                 {/* Hormone Graphic */}
@@ -362,9 +378,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
               {/* Description Card */}
               <View style={styles.descriptionCard}>
                 <Text style={styles.descriptionText}>
-                  {getHormoneDescription(action?.hormones || [])}
-                  {/* {'\n\n'} */}
-                  {action?.purpose || 'This action helps support your hormone balance.'}
+                  {action?.hormone_persona_intro || action?.purpose || 'This action helps support your hormone balance.'}
                 </Text>
               </View>
 
@@ -374,9 +388,11 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                   style={styles.studyDetailsButton}
                   onPress={() => setShowStudyDetails(!showStudyDetails)}
                 >
-                  <Text style={styles.studyDetailsText}>View study details</Text>
+                  <Text style={styles.studyDetailsText}>
+                    {showStudyDetails ? 'Hide study details' : 'View study details'}
+                  </Text>
                   <Ionicons 
-                    name={showStudyDetails ? "chevron-down" : "chevron-up"} 
+                    name={showStudyDetails ? "chevron-up" : "chevron-down"} 
                     size={responsiveFontSize(1.7)} 
                     color="#C17EC9" 
                   />
@@ -387,23 +403,21 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                   <View style={styles.studyDetailsContent}>
                     {action.research_studies.map((study, index) => (
                       <View key={index} style={styles.studyCard}>
-                        <Text style={styles.studyTitle}>{study.title}</Text>
-                        <Text style={styles.studyMeta}>
-                          {study.authors} ({study.year})
+                        <View style={styles.studyTitleRow}>
+                          <Text style={styles.studyIcon}>🔗</Text>
+                          <Text style={styles.studyTitle}>{study.title}</Text>
+                        </View>
+                        <Text style={styles.studyJournalLine}>
+                          Journal: {study.journal} ({study.year})
                         </Text>
-                        <Text style={styles.studyJournal}>{study.journal}</Text>
-                        <Text style={styles.studyFinding}>
-                          <Text style={styles.studyFindingLabel}>Key Finding: </Text>
-                          {study.finding}
-                        </Text>
-                        {study.doi && (
-                          <TouchableOpacity 
-                            onPress={() => Linking.openURL(`https://doi.org/${study.doi}`)}
-                            style={styles.doiLink}
-                          >
-                            <Text style={styles.doiText}>View Full Study →</Text>
-                          </TouchableOpacity>
+                        {study.participants && (
+                          <Text style={styles.studyMetaLine}>
+                            Participants: {study.participants}
+                          </Text>
                         )}
+                        <Text style={styles.studyResultLine}>
+                          Results: {study.finding}
+                        </Text>
                       </View>
                     ))}
                   </View>
@@ -576,6 +590,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  actionImageFull: {
+    width: '100%',
+    height: '100%',
+    borderRadius: responsiveWidth(35.78) / 2,
+  },
   imageText: {
     fontSize: responsiveFontSize(6),
   },
@@ -662,12 +681,40 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E8D4EB',
   },
+  studyTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: moderateScale(8),
+    marginBottom: verticalScale(8),
+  },
+  studyIcon: {
+    fontSize: moderateScale(14),
+    marginTop: verticalScale(2),
+  },
   studyTitle: {
+    flex: 1,
     fontSize: moderateScale(14, 1.5),
     fontFamily: 'Inter600',
     color: '#333333',
-    marginBottom: verticalScale(6),
     lineHeight: moderateScale(20),
+  },
+  studyJournalLine: {
+    fontSize: moderateScale(12, 1.5),
+    fontFamily: 'Inter500',
+    color: '#666666',
+    marginBottom: verticalScale(4),
+  },
+  studyMetaLine: {
+    fontSize: moderateScale(12, 1.5),
+    fontFamily: 'Inter400',
+    color: '#666666',
+    marginBottom: verticalScale(4),
+  },
+  studyResultLine: {
+    fontSize: moderateScale(12, 1.5),
+    fontFamily: 'Inter400',
+    color: '#444444',
+    lineHeight: moderateScale(18),
   },
   studyMeta: {
     fontSize: moderateScale(12, 1.5),
@@ -771,6 +818,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#F0F0F0',
+  },
+  adviceBackgroundFullImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
   },
   adviceBackgroundText: {
     fontSize: responsiveFontSize(8),
