@@ -288,7 +288,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                             </View>
                           </View>
                         </View>
-                      )}}
+                      )}
                       showSkipButton={false}
                       showNextButton={false}
                       showDoneButton={false}
