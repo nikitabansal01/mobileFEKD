@@ -219,22 +219,24 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                 </View>
               </View>
 
-              {/* Conditions and Symptoms */}
-              <View style={styles.conditionsSection}>
-                <Text style={styles.conditionsSubtitle}>
-                  Eating suggestions based on your preferences and concerns
-                </Text>
-                <View style={styles.conditionsTags}>
-                  {[...(action?.conditions || []), ...(action?.symptoms || [])].map((condition, index) => (
-                    <View key={index} style={styles.conditionTag}>
-                      <Text style={styles.conditionTagText}>{condition}</Text>
-                    </View>
-                  ))}
+              {/* Conditions and Symptoms - only show if available */}
+              {(action?.conditions && action.conditions.length > 0) || (action?.symptoms && action.symptoms.length > 0) ? (
+                <View style={styles.conditionsSection}>
+                  <Text style={styles.conditionsSubtitle}>
+                    Eating suggestions based on your preferences and concerns
+                  </Text>
+                  <View style={styles.conditionsTags}>
+                    {[...(action?.conditions || []), ...(action?.symptoms || [])].map((condition, index) => (
+                      <View key={index} style={styles.conditionTag}>
+                        <Text style={styles.conditionTagText}>{condition}</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
-              </View>
+              ) : null}
 
-              {/* Advice Slider */}
-              {action?.advices && action.advices.length > 0 && (
+              {/* Advice Slider - show advices or fallback to variants */}
+              {((action?.advices && action.advices.length > 0) || (action?.variants && action.variants.length > 0)) && (
                 <View style={styles.adviceSection}>
                   <View 
                     style={styles.sliderContainer}
@@ -242,7 +244,15 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                     onTouchEnd={() => setScrollEnabled(true)}
                   >
                     <AppIntroSlider
-                      data={action.advices}
+                      data={action?.advices && action.advices.length > 0 
+                        ? action.advices 
+                        : (action?.variants || []).map(v => ({
+                            type: v.variant_type,
+                            title: v.title,
+                            image: '🍽️',
+                            description: v.description,
+                          }))
+                      }
                       keyExtractor={(item, index) => `advice-${index}`}
                       renderItem={({ item, index }) => (
                         <View style={styles.adviceSlideWrapper}>
@@ -264,7 +274,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                             {/* Title - Bottom Left */}
                             <View style={styles.adviceTitleContainer}>
                               <Text style={styles.adviceTitle}>
-                                {item.title || 'Roasted pumpkin seeds'}
+                                {item.title || 'Alternative option'}
                               </Text>
                             </View>
                           </View>
@@ -281,19 +291,24 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                       pagingEnabled={true}
                       horizontal={true}
                       nestedScrollEnabled={true}
-                      renderPagination={(activeIndex) => (
-                        <View style={styles.customPagination}>
-                          {action?.advices?.map((_, index) => (
-                            <View
-                              key={index}
-                              style={[
-                                styles.sliderDot,
-                                index === activeIndex && styles.sliderDotActive
-                              ]}
-                            />
-                          ))}
-                        </View>
-                      )}
+                      renderPagination={(activeIndex) => {
+                        const dataLength = (action?.advices && action.advices.length > 0) 
+                          ? action.advices.length 
+                          : (action?.variants?.length || 0);
+                        return (
+                          <View style={styles.customPagination}>
+                            {Array.from({ length: dataLength }).map((_, index) => (
+                              <View
+                                key={index}
+                                style={[
+                                  styles.sliderDot,
+                                  index === activeIndex && styles.sliderDotActive
+                                ]}
+                              />
+                            ))}
+                          </View>
+                        );
+                      }}
                     />
                   </View>
                 </View>
