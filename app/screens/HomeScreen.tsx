@@ -3,7 +3,7 @@ import ActionPlanTimeline from '@/components/ActionPlanTimeline';
 import AuvraChatModal from '@/components/AuvraChatModal';
 import CalendarBottomSheet from '@/components/CalendarBottomSheet';
 import apiPromiseManager from '@/services/apiPromiseManager';
-import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse } from '@/services/homeService';
+import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse, ActionPlanResponse, ActionPlanItem } from '@/services/homeService';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -66,6 +66,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'time' | 'type'>('time');
   
+  // Action plan state (new system)
+  const [actionPlan, setActionPlan] = useState<ActionPlanResponse | null>(null);
+  const [feedbackPromptSeconds, setFeedbackPromptSeconds] = useState<number>(30); // Default 30 seconds
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  
   // Auvra chat modal state
   const [showAuvraChat, setShowAuvraChat] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -91,16 +96,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }, [navigation])
   );
 
-  // Reset inactivity timer - Shows Auvra modal after period of inactivity
+  // Reset inactivity timer - Shows Auvra modal after configured seconds from backend
   const resetInactivityTimer = () => {
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
     
     if (!showAuvraChat) {
+      // Use feedbackPromptSeconds from backend (default 30 seconds)
+      const timeoutMs = feedbackPromptSeconds * 1000;
       inactivityTimerRef.current = setTimeout(() => {
         setShowAuvraChat(true);
-      }, 15000); 
+      }, timeoutMs);
     }
   };
 
@@ -113,31 +120,64 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }
   };
 
-  // Handle Auvra chat responses - Navigate directly to chatbot for plan changes
-  const handleAuvraResponse = (response: 'positive' | 'negative' | string) => {
+  // Handle Auvra chat responses - Call plan satisfaction API
+  const handleAuvraResponse = async (response: 'positive' | 'negative' | string) => {
     setShowAuvraChat(false);
     
-    // Map response to user message
-    let userMessage = '👍 It works for me';
-    if (response === 'negative') {
-      userMessage = '👎 I want to change it';
-    } else if (typeof response === 'string' && response !== 'positive') {
-      userMessage = response;
+    // If we have an action plan, call the satisfaction API
+    if (actionPlan?.plan_id) {
+      setIsSubmittingFeedback(true);
+      
+      try {
+        if (response === 'positive') {
+          // "Works for me" - mark all as liked
+          const result = await homeService.submitPlanSatisfaction(
+            actionPlan.plan_id,
+            'works_for_me'
+          );
+          
+          if (result?.success) {
+            console.log('✅ Plan marked as satisfactory:', result.message);
+            // Optionally show a success toast/notification
+          }
+        } else if (response === 'negative') {
+          // "Want to change" - navigate to chatbot for item selection
+          // The chatbot can help user select which items to replace
+          const conversationContext = {
+            initialMessage: "I see you'd like to change your action plan. Which items would you like me to replace?",
+            userResponse: 'I want to change my action plan',
+            context: 'plan_change_request',
+            planId: actionPlan.plan_id,
+            actions: actionPlan.actions,
+          };
+          
+          console.log('HomeScreen - Navigating to ChatbotScreen for plan changes:', conversationContext);
+          navigation.navigate('ChatbotScreen', { conversationContext });
+          return;
+        }
+      } catch (error) {
+        console.error('❌ Error submitting plan satisfaction:', error);
+      } finally {
+        setIsSubmittingFeedback(false);
+      }
+    } else {
+      // Fallback to original behavior if no action plan
+      let userMessage = '👍 It works for me';
+      if (response === 'negative') {
+        userMessage = '👎 I want to change it';
+      } else if (typeof response === 'string' && response !== 'positive') {
+        userMessage = response;
+      }
+      
+      const conversationContext = {
+        initialMessage: "How does your care plan look today?",
+        userResponse: userMessage,
+        context: "care_plan_modal"
+      };
+      
+      console.log('HomeScreen - Navigating to ChatbotScreen (fallback):', conversationContext);
+      navigation.navigate('ChatbotScreen', { conversationContext });
     }
-    
-    // Build conversation context
-    const conversationContext = {
-      initialMessage: "How does your care plan look today?",
-      userResponse: userMessage,
-      context: "care_plan_modal"
-    };
-    
-    console.log('HomeScreen - Navigating directly to ChatbotScreen with:', conversationContext);
-    
-    // Navigate directly to ChatbotScreen (bypasses ChatHistoryScreen for faster UX)
-    navigation.navigate('ChatbotScreen', { 
-      conversationContext
-    });
   };
 
   // Handle calendar button click
@@ -162,7 +202,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         clearTimeout(inactivityTimerRef.current);
       }
     };
-  }, [loading, assignments, showAuvraChat]);
+  }, [loading, assignments, showAuvraChat, feedbackPromptSeconds]);
 
   /**
    * Convert hormone_stats data to HormoneStats interface
@@ -299,6 +339,42 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       } else {
         setProgressStats(null);
       }
+      
+      // Wire up actionPlan state for feedback system
+      if (assignmentsData?.plan_id) {
+        const allActions = [
+          ...(assignmentsData.assignments?.morning || []),
+          ...(assignmentsData.assignments?.afternoon || []),
+          ...(assignmentsData.assignments?.evening || []),
+        ];
+        setActionPlan({
+          plan_id: assignmentsData.plan_id,
+          user_id: '', // Not needed for feedback
+          date: assignmentsData.date || '',
+          phase: assignmentsData.cycle_phase || '',
+          phase_day: 0,
+          actions: allActions.map((action, index) => ({
+            id: action.id || index,
+            slot: index + 1,
+            time_slot: action.time_slot || 'morning',
+            category: action.category || '',
+            title: action.title || '',
+            specific_action: action.specific_action || '',
+            purpose: action.purpose || '',
+            target_hormone: action.hormones?.[0] || '',
+            hormone_persona_intro: action.hormone_persona_intro || '',
+            hero_image_url: action.hero_image_url || '',
+            research_studies: action.research_studies || [],
+            is_completed: action.is_completed || false,
+            is_replaced: false,
+            variants: action.variants || [],
+          })),
+          total_actions: assignmentsData.total_assignments || 0,
+          completed_actions: assignmentsData.completed_assignments || 0,
+          show_feedback_prompt_after_seconds: assignmentsData.show_feedback_prompt_after_seconds || 30,
+        });
+        console.log('✅ ActionPlan wired up with plan_id:', assignmentsData.plan_id);
+      }
 
       // Auto-retry if we got empty assignments (session link might still be completing)
       if (assignmentsData?.total_assignments === 0 && !hasRetried) {
@@ -316,6 +392,40 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
               if (retryData.hormone_stats) {
                 setProgressStats({ hormone_stats: convertHormoneStats(retryData.hormone_stats) });
               }
+              // Wire up actionPlan state for feedback system on retry
+              if (retryData.plan_id) {
+                const allActions = [
+                  ...(retryData.assignments?.morning || []),
+                  ...(retryData.assignments?.afternoon || []),
+                  ...(retryData.assignments?.evening || []),
+                ];
+                setActionPlan({
+                  plan_id: retryData.plan_id,
+                  user_id: '',
+                  date: retryData.date || '',
+                  phase: retryData.cycle_phase || '',
+                  phase_day: 0,
+                  actions: allActions.map((action, index) => ({
+                    id: action.id || index,
+                    slot: index + 1,
+                    time_slot: action.time_slot || 'morning',
+                    category: action.category || '',
+                    title: action.title || '',
+                    specific_action: action.specific_action || '',
+                    purpose: action.purpose || '',
+                    target_hormone: action.hormones?.[0] || '',
+                    hormone_persona_intro: action.hormone_persona_intro || '',
+                    hero_image_url: action.hero_image_url || '',
+                    research_studies: action.research_studies || [],
+                    is_completed: action.is_completed || false,
+                    is_replaced: false,
+                    variants: action.variants || [],
+                  })),
+                  total_actions: retryData.total_assignments || 0,
+                  completed_actions: retryData.completed_assignments || 0,
+                  show_feedback_prompt_after_seconds: retryData.show_feedback_prompt_after_seconds || 30,
+                });
+              }
             } else {
               console.log('📭 Auto-retry still got empty assignments');
             }
@@ -330,6 +440,46 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  /**
+   * Helper function to wire up actionPlan from assignmentsData
+   */
+  const wireUpActionPlan = (assignmentsData: AssignmentsResponse) => {
+    if (!assignmentsData?.plan_id) return;
+    
+    const allActions = [
+      ...(assignmentsData.assignments?.morning || []),
+      ...(assignmentsData.assignments?.afternoon || []),
+      ...(assignmentsData.assignments?.evening || []),
+    ];
+    setActionPlan({
+      plan_id: assignmentsData.plan_id,
+      user_id: '',
+      date: assignmentsData.date || '',
+      phase: assignmentsData.cycle_phase || '',
+      phase_day: 0,
+      actions: allActions.map((action, index) => ({
+        id: action.id || index,
+        slot: index + 1,
+        time_slot: action.time_slot || 'morning',
+        category: action.category || '',
+        title: action.title || '',
+        specific_action: action.specific_action || '',
+        purpose: action.purpose || '',
+        target_hormone: action.hormones?.[0] || '',
+        hormone_persona_intro: action.hormone_persona_intro || '',
+        hero_image_url: action.hero_image_url || '',
+        research_studies: action.research_studies || [],
+        is_completed: action.is_completed || false,
+        is_replaced: false,
+        variants: action.variants || [],
+      })),
+      total_actions: assignmentsData.total_assignments || 0,
+      completed_actions: assignmentsData.completed_assignments || 0,
+      show_feedback_prompt_after_seconds: assignmentsData.show_feedback_prompt_after_seconds || 30,
+    });
+    console.log('✅ ActionPlan wired up with plan_id:', assignmentsData.plan_id);
   };
 
   /**
@@ -350,6 +500,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
       } else {
         setProgressStats(null);
+      }
+      
+      // Wire up actionPlan for feedback system
+      if (assignmentsData) {
+        wireUpActionPlan(assignmentsData);
       }
     } catch (error) {
       // Handle error silently

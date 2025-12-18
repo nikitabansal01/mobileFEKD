@@ -7,7 +7,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, Linking } from 'react-native';
 import AppIntroSlider from "react-native-app-intro-slider";
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { moderateScale, verticalScale } from 'react-native-size-matters';
@@ -40,6 +40,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
   const [isHowMode, setIsHowMode] = useState(false);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [showStudyDetails, setShowStudyDetails] = useState(false);
 
   // Disable back gesture when using AppIntroSlider
   useFocusEffect(
@@ -66,6 +67,14 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
     conditions?: string[];
     symptoms?: string[];
     specific_action?: string;
+    research_studies?: Array<{
+      title: string;
+      authors: string;
+      year: number;
+      journal: string;
+      finding: string;
+      doi?: string;
+    }>;
     advices?: Array<{
       type: string;
       title: string;
@@ -338,10 +347,53 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
 
               {/* Study Details */}
               <View style={styles.studyDetails}>
-                <TouchableOpacity style={styles.studyDetailsButton}>
+                <TouchableOpacity 
+                  style={styles.studyDetailsButton}
+                  onPress={() => setShowStudyDetails(!showStudyDetails)}
+                >
                   <Text style={styles.studyDetailsText}>View study details</Text>
-                  <Ionicons name="chevron-up" size={responsiveFontSize(1.7)} color="#C17EC9" />
+                  <Ionicons 
+                    name={showStudyDetails ? "chevron-down" : "chevron-up"} 
+                    size={responsiveFontSize(1.7)} 
+                    color="#C17EC9" 
+                  />
                 </TouchableOpacity>
+                
+                {/* Study Details Content */}
+                {showStudyDetails && action?.research_studies && action.research_studies.length > 0 && (
+                  <View style={styles.studyDetailsContent}>
+                    {action.research_studies.map((study, index) => (
+                      <View key={index} style={styles.studyCard}>
+                        <Text style={styles.studyTitle}>{study.title}</Text>
+                        <Text style={styles.studyMeta}>
+                          {study.authors} ({study.year})
+                        </Text>
+                        <Text style={styles.studyJournal}>{study.journal}</Text>
+                        <Text style={styles.studyFinding}>
+                          <Text style={styles.studyFindingLabel}>Key Finding: </Text>
+                          {study.finding}
+                        </Text>
+                        {study.doi && (
+                          <TouchableOpacity 
+                            onPress={() => Linking.openURL(`https://doi.org/${study.doi}`)}
+                            style={styles.doiLink}
+                          >
+                            <Text style={styles.doiText}>View Full Study →</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                )}
+                
+                {/* No studies available message */}
+                {showStudyDetails && (!action?.research_studies || action.research_studies.length === 0) && (
+                  <View style={styles.noStudiesContainer}>
+                    <Text style={styles.noStudiesText}>
+                      No research studies available for this action yet.
+                    </Text>
+                  </View>
+                )}
               </View>
             </>
           )}
@@ -575,6 +627,73 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(12, 1.5),
     color: '#C17EC9',
     transform: [{ rotate: '270deg' }],
+  },
+  studyDetailsContent: {
+    marginTop: verticalScale(12),
+    gap: verticalScale(12),
+  },
+  studyCard: {
+    backgroundColor: '#F9F5FA',
+    borderRadius: moderateScale(12),
+    padding: moderateScale(16),
+    borderWidth: 1,
+    borderColor: '#E8D4EB',
+  },
+  studyTitle: {
+    fontSize: moderateScale(14, 1.5),
+    fontFamily: 'Inter600',
+    color: '#333333',
+    marginBottom: verticalScale(6),
+    lineHeight: moderateScale(20),
+  },
+  studyMeta: {
+    fontSize: moderateScale(12, 1.5),
+    fontFamily: 'Inter500',
+    color: '#666666',
+    marginBottom: verticalScale(4),
+  },
+  studyJournal: {
+    fontSize: moderateScale(11, 1.5),
+    fontFamily: 'Inter400',
+    color: '#888888',
+    fontStyle: 'italic',
+    marginBottom: verticalScale(10),
+  },
+  studyFinding: {
+    fontSize: moderateScale(13, 1.5),
+    fontFamily: 'Inter400',
+    color: '#444444',
+    lineHeight: moderateScale(20),
+  },
+  studyFindingLabel: {
+    fontFamily: 'Inter600',
+    color: '#C17EC9',
+  },
+  doiLink: {
+    marginTop: verticalScale(10),
+    paddingVertical: verticalScale(8),
+    paddingHorizontal: moderateScale(12),
+    backgroundColor: '#C17EC9',
+    borderRadius: moderateScale(8),
+    alignSelf: 'flex-start',
+  },
+  doiText: {
+    fontSize: moderateScale(12, 1.5),
+    fontFamily: 'Inter500',
+    color: '#FFFFFF',
+  },
+  noStudiesContainer: {
+    marginTop: verticalScale(12),
+    padding: moderateScale(16),
+    backgroundColor: '#F5F5F5',
+    borderRadius: moderateScale(12),
+    alignItems: 'center',
+  },
+  noStudiesText: {
+    fontSize: moderateScale(13, 1.5),
+    fontFamily: 'Inter400',
+    color: '#888888',
+    textAlign: 'center',
   },
   // How Mode Styles
   conditionsSection: {

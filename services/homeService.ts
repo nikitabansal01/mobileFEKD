@@ -75,6 +75,23 @@ export interface Assignment {
   hormones: string[];
   is_completed: boolean;
   completed_at: string;
+  time_slot?: string;
+  hero_image_url?: string;
+  hormone_persona_intro?: string;
+  research_studies?: Array<{
+    title: string;
+    authors: string;
+    year: number;
+    journal: string;
+    finding: string;
+    doi?: string;
+  }>;
+  variants?: Array<{
+    variant_type: string;
+    title: string;
+    description: string;
+    image_url: string;
+  }>;
   advices: Array<{
     type: string;
     title: string;
@@ -105,6 +122,77 @@ export interface AssignmentsResponse {
       [key: string]: number;
     };
   };
+  plan_id?: number;
+  primary_hormone?: string;
+  cycle_phase?: string;
+  show_feedback_prompt_after_seconds?: number;
+}
+
+/**
+ * Action Plan item structure (from new action plan system)
+ */
+export interface ActionPlanItem {
+  id: number;
+  slot: number;
+  time_slot: string;
+  category: string;
+  title: string;
+  specific_action: string;
+  purpose: string;
+  target_hormone: string;
+  hormone_persona_intro: string;
+  hero_image_url: string;
+  research_studies: Array<{
+    title: string;
+    authors: string;
+    year: number;
+    journal: string;
+    finding: string;
+    doi?: string;
+  }>;
+  is_completed: boolean;
+  is_replaced: boolean;
+  variants: Array<{
+    variant_type: string;
+    title: string;
+    description: string;
+    image_url: string;
+  }>;
+}
+
+/**
+ * Action Plan response structure
+ */
+export interface ActionPlanResponse {
+  plan_id: number;
+  user_id: string;
+  date: string;
+  phase: string;
+  phase_day: number;
+  actions: ActionPlanItem[];
+  total_actions: number;
+  completed_actions: number;
+  show_feedback_prompt_after_seconds: number;
+}
+
+/**
+ * Plan satisfaction request
+ */
+export interface PlanSatisfactionRequest {
+  plan_id: number;
+  satisfaction: 'works_for_me' | 'want_to_change';
+  items_to_replace?: number[];
+  reasons?: { [key: number]: string };
+}
+
+/**
+ * Plan satisfaction response
+ */
+export interface PlanSatisfactionResponse {
+  success: boolean;
+  message: string;
+  feedback_count?: number;
+  new_actions?: ActionPlanItem[];
 }
 
 /**
@@ -309,6 +397,70 @@ class HomeService {
     } catch (error) {
       console.error('❌ Error completing assignment:', error);
       return false;
+    }
+  }
+
+  /**
+   * Submits plan satisfaction feedback
+   * 
+   * @param planId - ID of the action plan
+   * @param satisfaction - 'works_for_me' or 'want_to_change'
+   * @param itemsToReplace - Optional array of item IDs to replace (for want_to_change)
+   * @param reasons - Optional reasons for each item replacement
+   * @returns Promise resolving to satisfaction response or null on error
+   */
+  async submitPlanSatisfaction(
+    planId: number,
+    satisfaction: 'works_for_me' | 'want_to_change',
+    itemsToReplace?: number[],
+    reasons?: { [key: number]: string }
+  ): Promise<PlanSatisfactionResponse | null> {
+    try {
+      console.log('🔄 Submitting plan satisfaction:', `${API_BASE_URL}/api/v1/new-scheduling/plan-satisfaction`);
+
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('🔑 Firebase token included');
+      } else {
+        console.log('⚠️ No Firebase token available');
+      }
+
+      const requestBody: PlanSatisfactionRequest = {
+        plan_id: planId,
+        satisfaction,
+      };
+
+      if (itemsToReplace && itemsToReplace.length > 0) {
+        requestBody.items_to_replace = itemsToReplace;
+      }
+
+      if (reasons && Object.keys(reasons).length > 0) {
+        requestBody.reasons = reasons;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/plan-satisfaction`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to submit plan satisfaction:', errorText);
+        throw new Error(`Failed to submit plan satisfaction: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Successfully submitted plan satisfaction:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Error submitting plan satisfaction:', error);
+      return null;
     }
   }
 }
