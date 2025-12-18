@@ -67,6 +67,8 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
     conditions?: string[];
     symptoms?: string[];
     specific_action?: string;
+    hero_image_url?: string;
+    hormone_persona_intro?: string;
     research_studies?: Array<{
       title: string;
       authors: string;
@@ -74,6 +76,12 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
       journal: string;
       finding: string;
       doi?: string;
+    }>;
+    variants?: Array<{
+      variant_type: string;
+      title: string;
+      description: string;
+      image_url: string;
     }>;
     advices?: Array<{
       type: string;

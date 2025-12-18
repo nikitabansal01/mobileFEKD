@@ -485,6 +485,10 @@ export default function TypeActionPlan({
         conditions: assignment.conditions,
         symptoms: assignment.symptoms,
         advices: assignment.advices,
+        research_studies: assignment.research_studies || [],
+        variants: assignment.variants || [],
+        hero_image_url: assignment.hero_image_url,
+        hormone_persona_intro: assignment.hormone_persona_intro,
       });
     };
 
@@ -506,6 +510,10 @@ export default function TypeActionPlan({
                   conditions: assignment.conditions,
                   symptoms: assignment.symptoms,
                   advices: assignment.advices,
+                  research_studies: assignment.research_studies || [],
+                  variants: assignment.variants || [],
+                  hero_image_url: assignment.hero_image_url,
+                  hormone_persona_intro: assignment.hormone_persona_intro,
                 })
               });
             } catch (error) {

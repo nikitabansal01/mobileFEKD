@@ -824,6 +824,10 @@ export default function ActionPlanTimeline({
                         conditions: a.conditions,
                         symptoms: a.symptoms,
                         advices: a.advices,
+                        research_studies: a.research_studies || [],
+                        variants: a.variants || [],
+                        hero_image_url: a.hero_image_url,
+                        hormone_persona_intro: a.hormone_persona_intro,
                       }, { x: xImage, y: yImage });
                     } else {
                       // Regular navigation for other items
@@ -836,6 +840,10 @@ export default function ActionPlanTimeline({
                         conditions: a.conditions,
                         symptoms: a.symptoms,
                         advices: a.advices,
+                        research_studies: a.research_studies || [],
+                        variants: a.variants || [],
+                        hero_image_url: a.hero_image_url,
+                        hormone_persona_intro: a.hormone_persona_intro,
                       });
                     }
                   }}
@@ -850,6 +858,10 @@ export default function ActionPlanTimeline({
                       conditions: a.conditions,
                       symptoms: a.symptoms,
                       advices: a.advices,
+                      research_studies: a.research_studies || [],
+                      variants: a.variants || [],
+                      hero_image_url: a.hero_image_url,
+                      hormone_persona_intro: a.hormone_persona_intro,
                     }, { x: xImage, y: yImage });
                   } : undefined}
                   delayLongPress={2000} // 2 seconds long press
@@ -909,6 +921,10 @@ export default function ActionPlanTimeline({
                         conditions: a.conditions,
                         symptoms: a.symptoms,
                         advices: a.advices,
+                        research_studies: a.research_studies || [],
+                        variants: a.variants || [],
+                        hero_image_url: a.hero_image_url,
+                        hormone_persona_intro: a.hormone_persona_intro,
                       });
                     }}
                     style={{ flexDirection: 'row', alignItems: 'center', justifyContent: isLeft ? 'flex-start' : 'flex-end' }}
