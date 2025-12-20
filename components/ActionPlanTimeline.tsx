@@ -527,8 +527,13 @@ export default function ActionPlanTimeline({
 
   const getActionSymptomsConditions = (assignment: Assignment): string => {
     // Collect symptoms and conditions in order and return (for timeline display)
-    const symptoms = assignment.symptoms || [];
-    const conditions = assignment.conditions || [];
+    // Filter out "None of the above" and similar invalid values
+    const symptoms = (assignment.symptoms || []).filter(s =>
+      s && s.toLowerCase() !== 'none of the above' && s.toLowerCase() !== 'none' && s.trim() !== ''
+    );
+    const conditions = (assignment.conditions || []).filter(c =>
+      c && c.toLowerCase() !== 'none of the above' && c.toLowerCase() !== 'none' && c.trim() !== ''
+    );
 
     const allItems = [...symptoms, ...conditions];
     return allItems.join(', ');
