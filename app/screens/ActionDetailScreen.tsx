@@ -181,8 +181,8 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
         )}
       </View>
 
-      <ScrollView 
-        style={styles.content} 
+      <ScrollView
+        style={styles.content}
         showsVerticalScrollIndicator={false}
         scrollEnabled={scrollEnabled}
       >
@@ -213,46 +213,64 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                   </MaskedView>
                 </View>
                 <View style={styles.imageContainer}>
-                  <View style={styles.actionImage}>
-                    <Text style={styles.imageText}>📋</Text>
-                  </View>
-                  {/* <View style={styles.imageBorder} /> */}
+                  {action?.hero_image_url ? (
+                    <Image
+                      source={{ uri: action.hero_image_url }}
+                      style={styles.actionImageFull}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.actionImage}>
+                      <Text style={styles.imageText}>📋</Text>
+                    </View>
+                  )}
                 </View>
               </View>
 
-              {/* Conditions and Symptoms - only show if available */}
-              {(action?.conditions && action.conditions.length > 0) || (action?.symptoms && action.symptoms.length > 0) ? (
-                <View style={styles.conditionsSection}>
-                  <Text style={styles.conditionsSubtitle}>
-                    Eating suggestions based on your preferences and concerns
-                  </Text>
-                  <View style={styles.conditionsTags}>
-                    {[...(action?.conditions || []), ...(action?.symptoms || [])].map((condition, index) => (
-                      <View key={index} style={styles.conditionTag}>
-                        <Text style={styles.conditionTagText}>{condition}</Text>
-                      </View>
-                    ))}
+              {/* Conditions and Symptoms - only show if available and valid */}
+              {(() => {
+                // Filter out 'None of the above', empty strings, and null values
+                const validConditions = [...(action?.conditions || []), ...(action?.symptoms || [])]
+                  .filter(c => c && c.toLowerCase() !== 'none of the above' && c.toLowerCase() !== 'none' && c.trim() !== '');
+
+                return validConditions.length > 0 ? (
+                  <View style={styles.conditionsSection}>
+                    <Text style={styles.conditionsSubtitle}>
+                      Eating suggestions based on your preferences and concerns
+                    </Text>
+                    <View style={styles.conditionsTags}>
+                      {validConditions.map((condition, index) => (
+                        <View key={index} style={styles.conditionTag}>
+                          <Text style={styles.conditionTagText}>{condition}</Text>
+                        </View>
+                      ))}
+                    </View>
                   </View>
-                </View>
-              ) : null}
+                ) : null;
+              })()}
 
               {/* Advice Slider - show advices or fallback to variants */}
               {((action?.advices && action.advices.length > 0) || (action?.variants && action.variants.length > 0)) && (
                 <View style={styles.adviceSection}>
-                  <View 
+                  <View
                     style={styles.sliderContainer}
                     onTouchStart={() => setScrollEnabled(false)}
                     onTouchEnd={() => setScrollEnabled(true)}
                   >
                     <AppIntroSlider
-                      data={action?.advices && action.advices.length > 0 
-                        ? action.advices 
+                      data={action?.advices && action.advices.length > 0
+                        ? action.advices.map(a => ({
+                          type: a.type,
+                          title: a.title,
+                          image_url: a.image, // Map image to image_url for consistency
+                          description: '',
+                        }))
                         : (action?.variants || []).map(v => ({
-                            type: v.variant_type,
-                            title: v.title,
-                            image_url: v.image_url,
-                            description: v.description,
-                          }))
+                          type: v.variant_type,
+                          title: v.title || v.description || 'Option',
+                          image_url: v.image_url,
+                          description: v.description || '',
+                        }))
                       }
                       keyExtractor={(item, index) => `advice-${index}`}
                       renderItem={({ item, index }) => (
@@ -268,22 +286,23 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                             ) : (
                               <View style={styles.adviceBackgroundImage}>
                                 <Text style={styles.adviceBackgroundText}>
-                                  {item.image || '🍽️'}
+                                  🍽️
                                 </Text>
                               </View>
                             )}
-                            
+
                             {/* Type Badge - Top Left */}
                             <View style={styles.adviceTypeBadge}>
                               <Text style={styles.adviceTypeBadgeText}>
-                                {item.type || 'Easy'}
+                                {/* Capitalize first letter for display */}
+                                {item.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : 'Easy'}
                               </Text>
                             </View>
-                            
+
                             {/* Title - Bottom Left */}
                             <View style={styles.adviceTitleContainer}>
                               <Text style={styles.adviceTitle}>
-                                {item.title || 'Alternative option'}
+                                {item.title || 'Try this option'}
                               </Text>
                             </View>
                           </View>
@@ -301,8 +320,8 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                       horizontal={true}
                       nestedScrollEnabled={true}
                       renderPagination={(activeIndex) => {
-                        const dataLength = (action?.advices && action.advices.length > 0) 
-                          ? action.advices.length 
+                        const dataLength = (action?.advices && action.advices.length > 0)
+                          ? action.advices.length
                           : (action?.variants?.length || 0);
                         return (
                           <View style={styles.customPagination}>
@@ -360,7 +379,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                     </View>
                   )}
                 </View>
-                
+
                 {/* Hormone Graphic */}
                 <View style={styles.hormoneGraphic}>
                   {getHormoneCharacter(action?.hormones) ? (
@@ -384,20 +403,20 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
 
               {/* Study Details */}
               <View style={styles.studyDetails}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.studyDetailsButton}
                   onPress={() => setShowStudyDetails(!showStudyDetails)}
                 >
                   <Text style={styles.studyDetailsText}>
                     {showStudyDetails ? 'Hide study details' : 'View study details'}
                   </Text>
-                  <Ionicons 
-                    name={showStudyDetails ? "chevron-up" : "chevron-down"} 
-                    size={responsiveFontSize(1.7)} 
-                    color="#C17EC9" 
+                  <Ionicons
+                    name={showStudyDetails ? "chevron-up" : "chevron-down"}
+                    size={responsiveFontSize(1.7)}
+                    color="#C17EC9"
                   />
                 </TouchableOpacity>
-                
+
                 {/* Study Details Content */}
                 {showStudyDetails && action?.research_studies && action.research_studies.length > 0 && (
                   <View style={styles.studyDetailsContent}>
@@ -422,7 +441,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                     ))}
                   </View>
                 )}
-                
+
                 {/* No studies available message */}
                 {showStudyDetails && (!action?.research_studies || action.research_studies.length === 0) && (
                   <View style={styles.noStudiesContainer}>
@@ -444,8 +463,8 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
             <PrimaryButton
               title="Mark as complete ✅"
               onPress={() => {
-                navigation.navigate('ActionCompletedScreen', { 
-                  action: JSON.stringify(action) 
+                navigation.navigate('ActionCompletedScreen', {
+                  action: JSON.stringify(action)
                 });
               }}
             />
@@ -787,7 +806,7 @@ const styles = StyleSheet.create({
   },
   conditionTag: {
     backgroundColor: 'rgba(218, 214, 219, 0.37)',
-    paddingHorizontal: verticalScale(10), 
+    paddingHorizontal: verticalScale(10),
     paddingVertical: verticalScale(5),
     borderRadius: verticalScale(5),
   },
