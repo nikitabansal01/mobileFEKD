@@ -199,7 +199,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                     maskElement={
                       <View style={{ backgroundColor: 'transparent' }}>
                         <Text style={styles.title}>
-                          {action?.title || action?.specific_action || ''}
+                          {action?.specific_action || action?.title || ''}
                         </Text>
                       </View>
                     }
@@ -411,7 +411,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                     {showStudyDetails ? 'Hide study details' : 'View study details'}
                   </Text>
                   <Ionicons
-                    name={showStudyDetails ? "chevron-up" : "chevron-down"}
+                    name={showStudyDetails ? "chevron-down" : "chevron-up"}
                     size={responsiveFontSize(1.7)}
                     color="#C17EC9"
                   />
@@ -585,8 +585,8 @@ const styles = StyleSheet.create({
   gradientContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: responsiveHeight(8),
-    maxHeight: responsiveHeight(12),
+    // minHeight/maxHeight removed to allow text to expand
+    paddingVertical: responsiveHeight(2),
     width: '100%',
   },
   imageContainer: {
