@@ -183,6 +183,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
 
       <ScrollView
         style={styles.content}
+        contentContainerStyle={{ paddingBottom: responsiveHeight(15) }}
         showsVerticalScrollIndicator={false}
         scrollEnabled={scrollEnabled}
       >

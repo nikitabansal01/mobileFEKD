@@ -534,6 +534,17 @@ export default function ActionPlanTimeline({
     return allItems.join(', ');
   };
 
+  // Filter out "None of the above" and similar invalid values from conditions
+  const filterConditions = (conditions: string[] | undefined): string[] => {
+    if (!conditions) return [];
+    return conditions.filter(c =>
+      c &&
+      c.toLowerCase() !== 'none of the above' &&
+      c.toLowerCase() !== 'none' &&
+      c.trim() !== ''
+    );
+  };
+
   // Hormone-specific icon return function (chooses left/right variant by side)
   const getHormoneIcon = (hormone: string, isLeft: boolean) => {
     switch (hormone.toLowerCase()) {
@@ -821,7 +832,7 @@ export default function ActionPlanTimeline({
                         purpose: getActionPurpose(a),
                         hormones: a.hormones || [],
                         specific_action: a.specific_action,
-                        conditions: a.conditions,
+                        conditions: filterConditions(a.conditions),
                         symptoms: a.symptoms,
                         advices: a.advices,
                         research_studies: a.research_studies || [],
@@ -837,7 +848,7 @@ export default function ActionPlanTimeline({
                         purpose: getActionPurpose(a),
                         hormones: a.hormones || [],
                         specific_action: a.specific_action,
-                        conditions: a.conditions,
+                        conditions: filterConditions(a.conditions),
                         symptoms: a.symptoms,
                         advices: a.advices,
                         research_studies: a.research_studies || [],
@@ -855,7 +866,7 @@ export default function ActionPlanTimeline({
                       purpose: getActionPurpose(a),
                       hormones: a.hormones || [],
                       specific_action: a.specific_action,
-                      conditions: a.conditions,
+                      conditions: filterConditions(a.conditions),
                       symptoms: a.symptoms,
                       advices: a.advices,
                       research_studies: a.research_studies || [],
@@ -926,7 +937,7 @@ export default function ActionPlanTimeline({
                         purpose: getActionPurpose(a),
                         hormones: a.hormones || [],
                         specific_action: a.specific_action,
-                        conditions: a.conditions,
+                        conditions: filterConditions(a.conditions),
                         symptoms: a.symptoms,
                         advices: a.advices,
                         research_studies: a.research_studies || [],
