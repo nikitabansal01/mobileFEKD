@@ -9,7 +9,7 @@ import { Platform } from 'react-native';
 const getApiBaseUrl = () => {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
   if (envUrl) return envUrl;
-  
+
   // Platform-specific default values
   if (Platform.OS === 'android') {
     return 'http://10.0.2.2:8000';
@@ -291,7 +291,7 @@ class HomeService {
         console.log('⚠️ No Firebase token available');
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/assignments/today`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/assignments/today?t=${new Date().getTime()}`, {
         method: 'GET',
         headers,
       });

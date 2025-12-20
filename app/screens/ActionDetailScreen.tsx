@@ -199,7 +199,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                     maskElement={
                       <View style={{ backgroundColor: 'transparent' }}>
                         <Text style={styles.title}>
-                          {action?.specific_action || ''}
+                          {action?.title || action?.specific_action || ''}
                         </Text>
                       </View>
                     }

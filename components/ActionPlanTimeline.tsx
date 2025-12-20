@@ -866,9 +866,17 @@ export default function ActionPlanTimeline({
                   } : undefined}
                   delayLongPress={2000} // 2 seconds long press
                 >
-                  <Text style={styles.imageFallback} allowFontScaling={false}>
-                    📋
-                  </Text>
+                  {a.hero_image_url ? (
+                    <Image
+                      source={{ uri: a.hero_image_url }}
+                      style={styles.circleImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Text style={styles.imageFallback} allowFontScaling={false}>
+                      📋
+                    </Text>
+                  )}
                   {/* (hormone image rendered behind the circle) */}
 
                   {/* Hormone number (relative to image) - hide for Weekly Check-in */}
@@ -1521,6 +1529,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
     zIndex: 1,
+  },
+  circleImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: responsiveWidth(9.72),
+    zIndex: 1,
+    backgroundColor: '#F2F2F7',
   },
   pulsingRing: {
     position: 'absolute',
