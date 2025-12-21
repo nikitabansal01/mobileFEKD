@@ -366,7 +366,20 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                     />
                   </MaskedView>
                 </View>
-                <View style={styles.imageContainer}>
+                {/* Hormone Graphic - Moved before image to be behind it */}
+                <View style={[styles.hormoneGraphic, { zIndex: 5 }]}>
+                  {getHormoneCharacter(action?.hormones) ? (
+                    <Image
+                      source={getHormoneCharacter(action?.hormones) as any}
+                      style={styles.hormoneGraphicImage}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <Text style={styles.hormoneGraphicText}>🧬</Text>
+                  )}
+                </View>
+
+                <View style={[styles.imageContainer, { zIndex: 10 }]}>
                   {action?.hero_image_url ? (
                     <Image
                       source={{ uri: action.hero_image_url }}
@@ -379,23 +392,10 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                     </View>
                   )}
                 </View>
-
-                {/* Hormone Graphic */}
-                <View style={styles.hormoneGraphic}>
-                  {getHormoneCharacter(action?.hormones) ? (
-                    <Image
-                      source={getHormoneCharacter(action?.hormones) as any}
-                      style={styles.hormoneGraphicImage}
-                      resizeMode="contain"
-                    />
-                  ) : (
-                    <Text style={styles.hormoneGraphicText}>🧬</Text>
-                  )}
-                </View>
               </View>
 
               {/* Description Card */}
-              <View style={styles.descriptionCard}>
+              <View style={[styles.descriptionCard, { zIndex: 20 }]}>
                 {action?.hormone_persona_intro ? (
                   <Text style={styles.descriptionText}>
                     {action.hormone_persona_intro}
@@ -610,8 +610,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
-    borderWidth: responsiveWidth(5.56),
+    borderWidth: responsiveWidth(6), // Slightly thicker for premium feel
     borderColor: '#FCDDEC',
+    zIndex: 10,
   },
   actionImage: {
     width: responsiveWidth(18),
@@ -644,11 +645,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
-    marginTop: -responsiveHeight(5), // Move up to "hug" the image
-    marginBottom: responsiveHeight(-1), // Negative margin to extend behind description
-    height: responsiveHeight(15),
-    width: responsiveWidth(45),
-    zIndex: 1, // Behind the description card
+    marginTop: -responsiveHeight(13), // Pull up into the image area
+    marginBottom: -responsiveHeight(7), // Pull description card up over bottom part
+    height: responsiveHeight(20),
+    width: responsiveWidth(50),
+    zIndex: 5, // Behind image (10) and card (20)
   },
   hormoneGraphicText: {
     fontSize: responsiveFontSize(6),
@@ -661,7 +662,6 @@ const styles = StyleSheet.create({
   descriptionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: responsiveWidth(5.56),
-    // paddingTop: 0,
     paddingHorizontal: responsiveWidth(5.56),
     paddingVertical: responsiveWidth(5.56),
     width: '100%',
@@ -670,12 +670,12 @@ const styles = StyleSheet.create({
     marginTop: 0,
     marginBottom: responsiveHeight(2.5),
     alignSelf: 'center',
-    zIndex: 2, // Above the hormone graphic
+    zIndex: 20, // Topmost layer
   },
   descriptionText: {
-    fontSize: moderateScale(12, 1.5),
+    fontSize: moderateScale(13, 1.5),
     fontFamily: 'Inter400',
-    lineHeight: moderateScale(16, 1.5),
+    lineHeight: moderateScale(20, 1.5), // Breathable line height
     color: '#000000',
     verticalAlign: 'top',
     textAlign: 'left',
