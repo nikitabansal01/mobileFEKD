@@ -563,48 +563,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   };
 
   /**
-   * Get action amount based on category
-   * @param assignment - Assignment object
-   * @returns Amount string for the action
-   */
-  const getActionAmount = (assignment: any) => {
-    switch (assignment.category?.toLowerCase()) {
-      case 'food':
-        return assignment.food_amounts?.[0] || '1 serving';
-      case 'exercise':
-        return assignment.exercise_durations?.[0] || '15 min';
-      case 'supplement':
-        return assignment.food_amounts?.[0] || '1 dose';
-      case 'mindfulness':
-        return assignment.mindfulness_durations?.[0] || '10 min';
-      default:
-        return '1 item';
-    }
-  };
-
-  /**
-   * Get action purpose from symptoms and conditions
-   * @param assignment - Assignment object
-   * @returns Purpose string
-   */
-  const getActionPurpose = (assignment: any) => {
-    const allItems = [];
-
-    if (assignment.symptoms && assignment.symptoms.length > 0) {
-      allItems.push(...assignment.symptoms);
-    }
-    if (assignment.conditions && assignment.conditions.length > 0) {
-      allItems.push(...assignment.conditions);
-    }
-
-    if (allItems.length > 0) {
-      return allItems.join(', ');
-    }
-
-    return assignment.purpose || 'Health';
-  };
-
-  /**
    * Get hormone icon emoji or image
    * @param hormone - Hormone name
    * @returns Image source for hormone

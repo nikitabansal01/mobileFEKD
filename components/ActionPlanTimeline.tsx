@@ -515,15 +515,24 @@ export default function ActionPlanTimeline({
 
   // helper
   const getActionAmount = (assignment: Assignment): string => {
+    let amount = '';
     // Debug logging to see why amounts aren't showing
     if (assignment.food_amounts?.length || assignment.exercise_durations?.length || assignment.mindfulness_durations?.length) {
       console.log(`[HomeDebug] Item: ${assignment.title}, food: ${JSON.stringify(assignment.food_amounts)}, move: ${JSON.stringify(assignment.exercise_durations)}`);
     }
 
-    if (assignment.food_amounts?.length) return assignment.food_amounts[0];
-    if (assignment.exercise_durations?.length) return assignment.exercise_durations[0];
-    if (assignment.mindfulness_durations?.length) return assignment.mindfulness_durations[0];
-    return '';
+    if (assignment.food_amounts?.length) amount = assignment.food_amounts[0];
+    else if (assignment.exercise_durations?.length) amount = assignment.exercise_durations[0];
+    else if (assignment.mindfulness_durations?.length) amount = assignment.mindfulness_durations[0];
+
+    // Shorten common units for timeline display
+    return amount
+      .replace(/tablespoon/gi, 'tbsp')
+      .replace(/teaspoon/gi, 'tsp')
+      .replace(/minutes/gi, 'min')
+      .replace(/minute/gi, 'min')
+      .replace(/hours/gi, 'hr')
+      .replace(/hour/gi, 'hr');
   };
   const getActionPurpose = (assignment: Assignment): string => {
     // Use only purpose field from API (for ActionDetail)
