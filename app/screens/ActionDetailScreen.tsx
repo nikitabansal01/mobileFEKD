@@ -196,10 +196,10 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
               <View style={styles.titleSection}>
                 <View style={styles.titleContainer}>
                   <MaskedView
-                    style={styles.gradientContainer}
+                    style={[styles.gradientContainer, { height: responsiveHeight(8) }]}
                     maskElement={
-                      <View style={{ backgroundColor: 'transparent' }}>
-                        <Text style={styles.title}>
+                      <View style={{ backgroundColor: 'transparent', width: '100%', justifyContent: 'center', alignItems: 'center' }}>
+                        <Text style={styles.title} numberOfLines={2}>
                           {action?.specific_action || action?.title || ''}
                         </Text>
                       </View>
@@ -209,11 +209,11 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                       colors={['#A29AEA', '#C17EC9', '#E98BAC']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
-                      style={{ flex: 1, width: '100%', height: '100%' }}
+                      style={{ flex: 1, width: '100%' }}
                     />
                   </MaskedView>
                 </View>
-                <View style={styles.imageContainer}>
+                <View style={[styles.imageContainer, { marginTop: responsiveHeight(1) }]}>
                   {action?.hero_image_url ? (
                     <Image
                       source={{ uri: action.hero_image_url }}
@@ -228,17 +228,16 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                 </View>
               </View>
 
-              {/* Conditions and Symptoms - only show if available and valid */}
-              {(() => {
-                // Filter out 'None of the above', empty strings, and null values
-                const validConditions = [...(action?.conditions || []), ...(action?.symptoms || [])]
-                  .filter(c => c && c.toLowerCase() !== 'none of the above' && c.toLowerCase() !== 'none' && c.trim() !== '');
+              {/* Conditions and Symptoms - always show subtext if isHowMode */}
+              <View style={styles.conditionsSection}>
+                <Text style={styles.conditionsSubtitle}>
+                  Eating suggestions based on your preferences and concerns
+                </Text>
+                {(() => {
+                  const validConditions = [...(action?.conditions || []), ...(action?.symptoms || [])]
+                    .filter(c => c && c.toLowerCase() !== 'none of the above' && c.toLowerCase() !== 'none' && c.trim() !== '');
 
-                return validConditions.length > 0 ? (
-                  <View style={styles.conditionsSection}>
-                    <Text style={styles.conditionsSubtitle}>
-                      Eating suggestions based on your preferences and concerns
-                    </Text>
+                  return validConditions.length > 0 ? (
                     <View style={styles.conditionsTags}>
                       {validConditions.map((condition, index) => (
                         <View key={index} style={styles.conditionTag}>
@@ -246,9 +245,9 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                         </View>
                       ))}
                     </View>
-                  </View>
-                ) : null;
-              })()}
+                  ) : null;
+                })()}
+              </View>
 
               {/* Advice Slider - show advices or fallback to variants */}
               {((action?.advices && action.advices.length > 0) || (action?.variants && action.variants.length > 0)) && (
