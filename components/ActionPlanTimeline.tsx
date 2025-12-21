@@ -515,6 +515,11 @@ export default function ActionPlanTimeline({
 
   // helper
   const getActionAmount = (assignment: Assignment): string => {
+    // Debug logging to see why amounts aren't showing
+    if (assignment.food_amounts?.length || assignment.exercise_durations?.length || assignment.mindfulness_durations?.length) {
+      console.log(`[HomeDebug] Item: ${assignment.title}, food: ${JSON.stringify(assignment.food_amounts)}, move: ${JSON.stringify(assignment.exercise_durations)}`);
+    }
+
     if (assignment.food_amounts?.length) return assignment.food_amounts[0];
     if (assignment.exercise_durations?.length) return assignment.exercise_durations[0];
     if (assignment.mindfulness_durations?.length) return assignment.mindfulness_durations[0];

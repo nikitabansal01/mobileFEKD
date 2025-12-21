@@ -397,9 +397,21 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
 
               {/* Description Card */}
               <View style={styles.descriptionCard}>
-                <Text style={styles.descriptionText}>
-                  {action?.hormone_persona_intro || action?.purpose || 'This action helps support your hormone balance.'}
-                </Text>
+                {action?.hormone_persona_intro ? (
+                  <Text style={styles.descriptionText}>
+                    {action.hormone_persona_intro}
+                  </Text>
+                ) : null}
+                {action?.purpose ? (
+                  <Text style={[styles.descriptionText, action?.hormone_persona_intro ? { marginTop: verticalScale(16) } : {}]}>
+                    {action.purpose}
+                  </Text>
+                ) : null}
+                {!action?.hormone_persona_intro && !action?.purpose && (
+                  <Text style={styles.descriptionText}>
+                    This action helps support your hormone balance.
+                  </Text>
+                )}
               </View>
 
               {/* Study Details */}
@@ -633,18 +645,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
-    marginTop: responsiveHeight(2), // Add space from top
+    marginTop: -responsiveHeight(5), // Move up to "hug" the image
     marginBottom: responsiveHeight(-1), // Negative margin to extend behind description
-    height: responsiveHeight(12),
-    width: responsiveWidth(40),
+    height: responsiveHeight(15),
+    width: responsiveWidth(45),
     zIndex: 1, // Behind the description card
   },
   hormoneGraphicText: {
     fontSize: responsiveFontSize(6),
   },
   hormoneGraphicImage: {
-    width: responsiveWidth(40),
-    height: responsiveHeight(12),
+    width: '100%',
+    height: '100%',
     marginTop: 0,
   },
   descriptionCard: {
@@ -695,7 +707,7 @@ const styles = StyleSheet.create({
     gap: verticalScale(12),
   },
   studyCard: {
-    backgroundColor: '#F9F5FA',
+    backgroundColor: '#F9E8F2', // Updated to match mockup pink background
     borderRadius: moderateScale(12),
     padding: moderateScale(16),
     borderWidth: 1,
@@ -880,10 +892,10 @@ const styles = StyleSheet.create({
   },
   adviceTitle: {
     fontSize: responsiveFontSize(1.7),
-    color: '#000000',
+    color: '#FFFFFF', // Changed to white for visibility on image
     fontFamily: 'Inter500',
     fontWeight: '500',
-    textShadowColor: 'rgba(255, 255, 255, 0.8)',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)', // Dark shadow for white text
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
