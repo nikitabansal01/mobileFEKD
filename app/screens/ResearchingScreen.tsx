@@ -6,6 +6,7 @@ import PrimaryButton from "@/components/PrimaryButton";
 import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Defs, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { auth } from "@/config/firebase";
 import sessionService from "@/services/sessionService";
@@ -230,14 +231,20 @@ const ResearchingScreen = () => {
   /**
    * Handle option selection for multiple choice
    */
-  const handleOptionSelect = (key: string) => {
-    setSelectedOptions(prev => {
-      if (prev.includes(key)) {
-        return prev.filter(option => option !== key);
-      } else {
-        return [...prev, key];
-      }
-    });
+  const handleOptionSelect = async (key: string) => {
+    const newOptions = selectedOptions.includes(key)
+      ? selectedOptions.filter(option => option !== key)
+      : [...selectedOptions, key];
+    
+    setSelectedOptions(newOptions);
+    
+    // Save lifestyle focus to AsyncStorage for session linking
+    try {
+      await AsyncStorage.setItem('lifestyle_focus', JSON.stringify(newOptions));
+      console.log('💾 Lifestyle focus saved:', newOptions);
+    } catch (error) {
+      console.error('❌ Failed to save lifestyle focus:', error);
+    }
   };
 
   /**

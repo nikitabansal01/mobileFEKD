@@ -1,14 +1,15 @@
-import GraphicProgesterone1 from '@/assets/images/SVG/GraphicProgesterone1';
-import GraphicTestosterone1 from '@/assets/images/SVG/GraphicTestosterone1';
+import Images from '@/assets/images';
 import AuvraCharacter from '@/components/AuvraCharacter';
 import BackButton from '@/components/BackButton';
 import FixedBottomContainer from '@/components/FixedBottomContainer';
 import PrimaryButton from '@/components/PrimaryButton';
+import sessionService from '@/services/sessionService';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,6 +34,132 @@ type ResultScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Resul
 const ResultScreen = () => {
   const navigation = useNavigation<ResultScreenNavigationProp>();
 
+  const [isLoading, setIsLoading] = useState(true);
+  const [primaryCard, setPrimaryCard] = useState<any | null>(null);
+  const [secondaryCard, setSecondaryCard] = useState<any | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Get variant character image based on hormone + level + priority.
+   * We intentionally support expressive poses to differentiate states (e.g. high vs low) when assets exist.
+   * Asset naming strategy (current assumptions based on existing files):
+   * - <Hormone>Character.png           → Neutral / baseline ("moderate" display / unknown)
+   * - <Hormone>BothHand.png / BothHandsUp.png → Elevated / "high" energetic state
+   * - <Hormone>LeftHand.png            → "low" / subdued state
+   * - ProgesteroneSadCalmer / VerySadCalmer   → Low progesterone (severity mapped by priority)
+   * - ProgesteroneSuperExcitedCalmer / ExcitedCalmer → (reserved for potential future high state if introduced)
+   * If an expected variant is missing, we gracefully fall back to the neutral Character.
+   */
+  const getHormoneImage = (hormone?: string, level?: string, priority?: string, isPrimary?: boolean, score?: number) => {
+    const h = (hormone || '').toLowerCase();
+    const lvl = (level || '').toLowerCase();
+    const sc = typeof score === 'number' ? score : 0;
+
+    // Helper to prefer existing key safely
+    const safe = (img: any, fallback: any) => img ? img : fallback;
+
+    // Severity tiers (coarse): allow broader score range future-proofing
+    // Tier 3 (strong): sc >= 8, Tier 2 (moderate): sc >= 4, Tier 1 (mild): <4
+    const tier3 = sc >= 8;
+    const tier2 = sc >= 4 && sc < 8;
+
+    // Progesterone (only low state currently returned by backend)
+    if (h === 'progesterone') {
+      if (lvl === 'low') {
+        if (tier3) return safe(Images.ProgesteroneVerySadCalmer, Images.ProgesteroneSadCalmer);
+        if (tier2) return safe(Images.ProgesteroneSadCalmer, Images.ProgesteroneCharacter);
+        // Mild → neutral calmer baseline
+        return safe(Images.ProgesteroneCalmer, Images.ProgesteroneCharacter);
+      }
+      // Future: map high progesterone if ever supported
+      return Images.ProgesteroneCharacter;
+    }
+
+    // Testosterone / Androgens
+    if (h === 'androgens') {
+      if (lvl === 'high') {
+        return safe(Images.AndrogensBothHand, Images.AndrogensCharacter);
+      } else if (lvl === 'low') {
+        return safe(Images.AndrogensLeftHand, Images.AndrogensCharacter);
+      }
+      return Images.AndrogensCharacter;
+    }
+
+    if (h === 'testosterone') {
+      if (lvl === 'high') {
+        // Energetic pose if available
+        return safe(Images.TestosteroneBothHand, Images.TestosteroneCharacter);
+      } else if (lvl === 'low') {
+        // Subdued pose
+        return safe(Images.TestosteroneLeftHand, Images.TestosteroneCharacter);
+      }
+      return Images.TestosteroneCharacter;
+    }
+
+    if (h === 'estrogen') {
+      if (lvl === 'high') return safe(Images.EstrogenBothHand, Images.EstrogenCharacter);
+      if (lvl === 'low') return safe(Images.EstrogenLeftHand, Images.EstrogenCharacter);
+      return Images.EstrogenCharacter;
+    }
+
+    if (h === 'insulin') {
+      if (lvl === 'high') return safe(Images.InsulinBothHand, Images.InsulinCharacter);
+      if (lvl === 'low') return safe(Images.InsulinLeftHand, Images.InsulinCharacter);
+      return Images.InsulinCharacter;
+    }
+
+    if (h === 'cortisol') {
+      if (lvl === 'high') return safe(Images.CortisolBothHand, Images.CortisolCharacter);
+      if (lvl === 'low') return safe(Images.CortisolLeftHand, Images.CortisolCharacter);
+      return Images.CortisolCharacter;
+    }
+
+    if (h === 'thyroid') {
+      if (lvl === 'low') return safe(Images.ThyroidLeftHand, Images.ThyroidCharacter); // Only low state currently modeled
+      if (lvl === 'high') return safe(Images.ThyroidBothHand, Images.ThyroidCharacter); // Future-proof
+      return Images.ThyroidCharacter;
+    }
+
+    // Fallback generic neutral graphic if hormone not recognized
+    return Images.GraphicGnRHDefault;
+  };
+
+  // Fetch hormone analysis on mount
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadHormoneAnalysis = async () => {
+      try {
+        const result = await sessionService.getHormoneAnalysis();
+        if (!isMounted) return;
+
+        if (result && Array.isArray(result.hormone_cards) && result.hormone_cards.length > 0) {
+          // First card = primary (high priority)
+          setPrimaryCard(result.hormone_cards[0]);
+          // Second card = secondary (moderate) if exists
+          setSecondaryCard(result.hormone_cards.length > 1 ? result.hormone_cards[1] : null);
+        } else {
+          setError('No hormone analysis available.');
+        }
+      } catch (e) {
+        console.error('Error loading hormone analysis:', e);
+        if (isMounted) {
+          setError('Failed to load hormone analysis.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadHormoneAnalysis();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   /**
    * Handle continue navigation to result loading screen
    */
@@ -46,6 +173,15 @@ const ResultScreen = () => {
   const handleBack = () => {
     navigation.goBack();
   };
+
+  // While loading backend data, keep layout simple
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }] }>
+        <ActivityIndicator size="large" color="#A29AEA" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -99,75 +235,90 @@ const ResultScreen = () => {
 
           {/* Hormone cards */}
           <View style={styles.cardsContainer}>
-            {/* Progesterone card */}
-            <View style={styles.cardWrapper}>
-              <View style={styles.hormoneCard}>
-                <View style={styles.cardContent}>
-                  {/* Title and Subtitle - not affected by maxWidth */}
-                  <View style={styles.titleSubtitleContainer}>
-                    <Text style={styles.hormoneName}>
-                      Progesterone, <Text style={styles.hormoneSubtitle}>The calmer</Text>
-                    </Text>
-                  </View>
-                  
-                  {/* Description only affected by maxWidth */}
-                  <View style={styles.textSection}>
-                    <Text style={styles.hormoneDescription}>
-                      🔻 Lower levels may be contributing to{' '}
-                      <Text style={styles.underlineText}>painful periods</Text>
-                      , and{' '}
-                      <Text style={styles.underlineText}>mood changes</Text>.
-                    </Text>
-                  </View>
-                  <View style={[styles.graphicSection, styles.progesteroneGraphic]}>
-                    <GraphicProgesterone1 
-                      width={scale(120)} 
-                      height={verticalScale(120)} 
-                    />
-                  </View>
-                </View>
-              </View>
-              <View style={styles.priorityBadge}>
-                <Text style={styles.priorityText}>High Priority</Text>
-              </View>
-            </View>
+            {/* Primary hormone card */}
+            {primaryCard && (
+              <View style={styles.cardWrapper}>
+                <View style={styles.hormoneCard}>
+                  <View style={styles.cardContent}>
+                    {/* Title and Subtitle */}
+                    <View style={styles.titleSubtitleContainer}>
+                      <Text style={styles.hormoneName}>
+                        {primaryCard.name}, <Text style={styles.hormoneSubtitle}>{primaryCard.subtitle}</Text>
+                      </Text>
+                    </View>
 
-            {/* Testosterone card */}
-            <View style={styles.cardWrapper}>
-              <View style={styles.hormoneCard}>
-                <View style={styles.cardContent}>
-                  {/* Title and Subtitle - not affected by maxWidth */}
-                  <View style={styles.titleSubtitleContainer}>
-                    <Text style={styles.hormoneName}>
-                      Testosterone, <Text style={styles.hormoneSubtitle}>The titan</Text>
-                    </Text>
-                  </View>
-                  
-                  {/* Description only affected by maxWidth */}
-                  <View style={styles.textSection}>
-                    <Text style={styles.hormoneDescription}>
-                      🔺 Higher levels may be contributing to{' '}
-                      <Text style={styles.underlineText}>acne</Text>
-                      ,{' '}
-                      <Text style={styles.underlineText}>excess hair</Text>
-                      , and{' '}
-                      <Text style={styles.underlineText}>mood swings</Text>
-                      , common in{' '}
-                      <Text style={styles.underlineText}>PCOS</Text>.
-                    </Text>
-                  </View>
-                  <View style={[styles.graphicSection, styles.testosteroneGraphic]}>
-                    <GraphicTestosterone1 
-                      width={scale(120)} 
-                      height={verticalScale(120)} 
-                    />
+                    {/* Description */}
+                    <View style={styles.textSection}>
+                      <Text style={styles.hormoneDescription}>
+                        {primaryCard.icon}{' '}
+                        {primaryCard.description}
+                      </Text>
+                    </View>
+
+                    {/* Hormone-specific character image */}
+                    <View style={[styles.graphicSection, styles.progesteroneGraphic]}>
+                      <Image
+                        source={getHormoneImage(primaryCard.hormone, primaryCard.level, primaryCard.priority, primaryCard.is_primary, primaryCard.score)}
+                        style={{ width: scale(120), height: verticalScale(120), resizeMode: 'contain' }}
+                      />
+                    </View>
                   </View>
                 </View>
+                {primaryCard.priority ? (
+                  <View style={styles.priorityBadge}>
+                    <Text style={styles.priorityText}>{primaryCard.priority}</Text>
+                  </View>
+                ) : null}
               </View>
-              <View style={styles.priorityBadge}>
-                <Text style={styles.priorityText}>Moderate</Text>
+            )}
+
+            {/* Secondary hormone card */}
+            {secondaryCard && (
+              <View style={styles.cardWrapper}>
+                <View style={styles.hormoneCard}>
+                  <View style={styles.cardContent}>
+                    {/* Title and Subtitle */}
+                    <View style={styles.titleSubtitleContainer}>
+                      <Text style={styles.hormoneName}>
+                        {secondaryCard.name}, <Text style={styles.hormoneSubtitle}>{secondaryCard.subtitle}</Text>
+                      </Text>
+                    </View>
+
+                    {/* Description */}
+                    <View style={styles.textSection}>
+                      <Text style={styles.hormoneDescription}>
+                        {secondaryCard.icon}{' '}
+                        {secondaryCard.description}
+                      </Text>
+                    </View>
+
+                    {/* Hormone-specific character image */}
+                    <View style={[styles.graphicSection, styles.testosteroneGraphic]}>
+                      <Image
+                        source={getHormoneImage(secondaryCard.hormone, secondaryCard.level, secondaryCard.priority, secondaryCard.is_primary, secondaryCard.score)}
+                        style={{ width: scale(120), height: verticalScale(120), resizeMode: 'contain' }}
+                      />
+                    </View>
+                  </View>
+                </View>
+                {secondaryCard.priority ? (
+                  <View style={styles.priorityBadge}>
+                    <Text style={styles.priorityText}>{secondaryCard.priority}</Text>
+                  </View>
+                ) : null}
               </View>
-            </View>
+            )}
+
+            {/* Fallback when no cards */}
+            {!primaryCard && !secondaryCard && (
+              <View style={styles.cardWrapper}>
+                <View style={styles.hormoneCard}>
+                  <Text style={styles.hormoneDescription}>
+                    {error || 'We could not determine a clear hormone imbalance from your answers.'}
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
         </View>
       </KeyboardAwareScrollView>

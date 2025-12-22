@@ -54,7 +54,7 @@ const TIME_EMOJI_MAP: Record<string, string> = {
   night: '🌙',
   // Add common variations to handle different API formats
   'Morning': '🌤️',
-  'Afternoon': '☀️', 
+  'Afternoon': '☀️',
   'Evening': '🌙',
   'Anytime': 'Anytime',
   // Add more common API variations
@@ -85,7 +85,7 @@ export default function TypeActionPlan({
 }: Props) {
   const [completedCategories, setCompletedCategories] = useState<Set<string>>(new Set());
   const navigation = useNavigation();
-  
+
   /**
    * Handles navigation to action detail screen using React Navigation
    * 
@@ -104,7 +104,7 @@ export default function TypeActionPlan({
         });
         return;
       }
-      
+
       (navigation as any).navigate('ActionDetailScreen', {
         action: JSON.stringify(actionData)
       });
@@ -113,14 +113,14 @@ export default function TypeActionPlan({
       console.log('Navigation data:', actionData);
     }
   };
-  
+
   /**
    * Combines all actions into a single array and categorizes them
    * Uses API category field first, then falls back to data field analysis
    */
   const categorizedAssignments = useMemo(() => {
     const allAssignments: (Assignment & { timeSlot: string })[] = [];
-    
+
     // Add static "Weekly Check-in" assignment at the beginning
     const weeklyCheckIn: Assignment & { timeSlot: string } = {
       id: -1, // Special ID for static assignment
@@ -144,13 +144,13 @@ export default function TypeActionPlan({
       timeSlot: 'anytime',
     };
     allAssignments.push(weeklyCheckIn);
-    
+
     // Collect actions from all time slots
     console.log('🔍 TypeActionPlan processing assignments:', {
       assignmentKeys: Object.keys(assignments),
       assignmentsData: assignments
     });
-    
+
     Object.entries(assignments).forEach(([timeSlot, timeAssignments]) => {
       console.log(`🔍 Processing timeSlot: "${timeSlot}" with ${timeAssignments?.length || 0} assignments`);
       if (timeAssignments && timeAssignments.length > 0) {
@@ -180,7 +180,7 @@ export default function TypeActionPlan({
     otherAssignments.forEach(assignment => {
       // Category determination logic - prioritize API category field
       const category = assignment.category?.toLowerCase() || '';
-      
+
       // 1. API category field-based classification
       if (category.includes('food') || category.includes('nutrition') || category.includes('diet')) {
         categorized.food.push(assignment);
@@ -188,7 +188,7 @@ export default function TypeActionPlan({
         categorized.exercise.push(assignment);
       } else if (category.includes('mindfulness') || category.includes('meditation') || category.includes('mental')) {
         categorized.mindfulness.push(assignment);
-      } 
+      }
       // 2. Data field-based classification
       else if (assignment.food_items && assignment.food_items.length > 0) {
         categorized.food.push(assignment);
@@ -196,7 +196,7 @@ export default function TypeActionPlan({
         categorized.exercise.push(assignment);
       } else if (assignment.mindfulness_techniques && assignment.mindfulness_techniques.length > 0) {
         categorized.mindfulness.push(assignment);
-      } 
+      }
       // 3. Title-based classification (fallback)
       else {
         const title = assignment.title.toLowerCase();
@@ -226,8 +226,15 @@ export default function TypeActionPlan({
     } else if (assignment.mindfulness_durations && assignment.mindfulness_durations.length > 0) {
       amount = assignment.mindfulness_durations[0];
     }
-    // Replace "tablespoon" with "tbsp" (case-insensitive)
-    return amount.replace(/tablespoon/gi, 'tbsp');
+
+    // Shorten common units for timeline display
+    return amount
+      .replace(/tablespoon/gi, 'tbsp')
+      .replace(/teaspoon/gi, 'tsp')
+      .replace(/minutes/gi, 'min')
+      .replace(/minute/gi, 'min')
+      .replace(/hours/gi, 'hr')
+      .replace(/hour/gi, 'hr');
   };
 
   const getActionPurpose = (assignment: Assignment): string => {
@@ -236,20 +243,25 @@ export default function TypeActionPlan({
 
   const getActionSymptomsConditions = (assignment: Assignment, maxItems: number = 2): string => {
     // Collect symptoms and conditions in order and return (for timeline display)
-    const symptoms = assignment.symptoms || [];
-    const conditions = assignment.conditions || [];
-    
+    // Filter out "None of the above" and similar invalid values
+    const symptoms = (assignment.symptoms || []).filter(s =>
+      s && s.toLowerCase() !== 'none of the above' && s.toLowerCase() !== 'none' && s.trim() !== ''
+    );
+    const conditions = (assignment.conditions || []).filter(c =>
+      c && c.toLowerCase() !== 'none of the above' && c.toLowerCase() !== 'none' && c.trim() !== ''
+    );
+
     const allItems = [...symptoms, ...conditions];
-    
+
     if (allItems.length === 0) {
       return '';
     }
-    
+
     // Show only first maxItems items, add "..." if there are more
     if (allItems.length > maxItems) {
       return allItems.slice(0, maxItems).join(', ') + '...';
     }
-    
+
     return allItems.join(', ');
   };
 
@@ -288,11 +300,11 @@ export default function TypeActionPlan({
         CortisolCharacter: !!Images.CortisolCharacter,
       }
     });
-    
+
     switch (hormone.toLowerCase()) {
-      case 'androgens': return Images.TestosteroneCharacter;
+      case 'androgens': return Images.AndrogensCharacter;
       case 'progesterone': return Images.ProgesteroneCharacter;
-      case 'estrogen': 
+      case 'estrogen':
         return Images.EstrogenCharacter;
       case 'thyroid': return Images.ThyroidCharacter;
       case 'insulin': return Images.InsulinCharacter;
@@ -326,29 +338,29 @@ export default function TypeActionPlan({
   const getSmartTimeSlot = (assignment: Assignment): string => {
     const title = assignment.title.toLowerCase();
     const category = assignment.category?.toLowerCase() || '';
-    
+
     // Morning indicators (breakfast foods, morning routines)
-    if (title.includes('pumpkin') || title.includes('seed') || 
-        title.includes('pomegranate') || title.includes('juice') ||
-        title.includes('breakfast') || title.includes('morning') ||
-        (category === 'food' && (title.includes('smoothie') || title.includes('cereal')))) {
+    if (title.includes('pumpkin') || title.includes('seed') ||
+      title.includes('pomegranate') || title.includes('juice') ||
+      title.includes('breakfast') || title.includes('morning') ||
+      (category === 'food' && (title.includes('smoothie') || title.includes('cereal')))) {
       return 'morning';
     }
-    
+
     // Afternoon indicators (exercise, lunch, afternoon activities)
     if (title.includes('yoga') || title.includes('practice') ||
-        title.includes('lunch') || title.includes('afternoon') ||
-        (category === 'movement' && (title.includes('cardio') || title.includes('walk')))) {
+      title.includes('lunch') || title.includes('afternoon') ||
+      (category === 'movement' && (title.includes('cardio') || title.includes('walk')))) {
       return 'afternoon';
     }
-    
+
     // Evening indicators (dinner, evening routines, strength training)
     if (title.includes('strength') || title.includes('training') ||
-        title.includes('dinner') || title.includes('evening') ||
-        title.includes('meditation') || title.includes('sleep')) {
+      title.includes('dinner') || title.includes('evening') ||
+      title.includes('meditation') || title.includes('sleep')) {
       return 'evening';
     }
-    
+
     // Default fallback
     return 'anytime';
   };
@@ -356,7 +368,7 @@ export default function TypeActionPlan({
   const getTimeEmoji = (timeSlot: string, assignment?: Assignment): string => {
     // Use smart detection if we have assignment data and timeSlot is 'anytime'
     const smartTimeSlot = (timeSlot === 'anytime' && assignment) ? getSmartTimeSlot(assignment) : timeSlot;
-    
+
     console.log('🔍 TypeActionPlan getTimeEmoji:', {
       originalTimeSlot: timeSlot,
       smartTimeSlot,
@@ -364,7 +376,7 @@ export default function TypeActionPlan({
       found: TIME_EMOJI_MAP[smartTimeSlot],
       fallback: TIME_EMOJI_MAP[smartTimeSlot] || 'Anytime'
     });
-    
+
     return TIME_EMOJI_MAP[smartTimeSlot] || 'Anytime';
   };
 
@@ -373,11 +385,11 @@ export default function TypeActionPlan({
     const lineHeight = responsiveHeight(7); // Match with ActionPlanTimeline TOP_CAP
     const screenWidth = Dimensions.get('window').width;
     const centerX = screenWidth / 2;
-    
+
     return (
       <View style={styles.topLineContainer}>
-        <Svg 
-          width={screenWidth} 
+        <Svg
+          width={screenWidth}
           height={lineHeight}
           viewBox={`0 0 ${screenWidth} ${lineHeight}`}
         >
@@ -390,7 +402,7 @@ export default function TypeActionPlan({
               <Stop offset="100%" stopColor="#A29AEA" stopOpacity="1" />
             </SvgLinearGradient>
           </Defs>
-          
+
           <Line
             x1={centerX}
             y1={0}
@@ -411,11 +423,11 @@ export default function TypeActionPlan({
     const lineHeight = responsiveHeight(8);
     const screenWidth = Dimensions.get('window').width;
     const centerX = screenWidth / 2;
-    
+
     return (
       <View style={styles.middleLineContainer}>
-        <Svg 
-          width={screenWidth} 
+        <Svg
+          width={screenWidth}
           height={lineHeight}
           viewBox={`0 0 ${screenWidth} ${lineHeight}`}
         >
@@ -440,11 +452,11 @@ export default function TypeActionPlan({
     const lineHeight = responsiveHeight(8);
     const screenWidth = Dimensions.get('window').width;
     const centerX = screenWidth / 2;
-    
+
     return (
       <View style={styles.bottomLineContainer}>
-        <Svg 
-          width={screenWidth} 
+        <Svg
+          width={screenWidth}
           height={lineHeight}
           viewBox={`0 0 ${screenWidth} ${lineHeight}`}
         >
@@ -459,10 +471,10 @@ export default function TypeActionPlan({
             strokeLinejoin="round"
             strokeDasharray={`${responsiveWidth(6)} ${responsiveWidth(2)}`}
           />
-          
+
           {/* Lock icon */}
           <View style={styles.svgLockIcon}>
-            <Image 
+            <Image
               source={require('../assets/icons/IconLock.png')}
               style={styles.svgLockIconImage}
               resizeMode="contain"
@@ -485,14 +497,18 @@ export default function TypeActionPlan({
         conditions: assignment.conditions,
         symptoms: assignment.symptoms,
         advices: assignment.advices,
+        research_studies: assignment.research_studies || [],
+        variants: assignment.variants || [],
+        hero_image_url: assignment.hero_image_url,
+        hormone_persona_intro: assignment.hormone_persona_intro,
       });
     };
 
     return (
       <View key={assignment.id.toString()} style={styles.actionItem}>
         {/* Image circle */}
-        <TouchableOpacity 
-          style={styles.imageContainer} 
+        <TouchableOpacity
+          style={styles.imageContainer}
           onLongPress={!assignment.is_completed && assignment.id !== -1 ? () => {
             // Navigate to ActionCompletedScreen (only if not completed and not Weekly Check-in)
             try {
@@ -506,6 +522,10 @@ export default function TypeActionPlan({
                   conditions: assignment.conditions,
                   symptoms: assignment.symptoms,
                   advices: assignment.advices,
+                  research_studies: assignment.research_studies || [],
+                  variants: assignment.variants || [],
+                  hero_image_url: assignment.hero_image_url,
+                  hormone_persona_intro: assignment.hormone_persona_intro,
                 })
               });
             } catch (error) {
@@ -517,83 +537,83 @@ export default function TypeActionPlan({
           {/* Use emoji instead of actual image */}
           <Text style={styles.actionImage}>📋</Text>
         </TouchableOpacity>
-      
-      {/* Action information */}
-      <View style={styles.actionDetails}>
-        <TouchableOpacity 
-          onPress={handleActionPress}
-          style={styles.actionTitleContainer}
-        >
-          <Text style={styles.actionTitle}>{assignment.title}</Text>
-          <Text style={styles.actionArrow}>{'>'}</Text>
-        </TouchableOpacity>
-        <View style={styles.actionMeta}>
-          <View style={styles.actionMetaRow}>
-            {assignment.id !== -1 && (
-              <>
-                <Text style={styles.actionAmount}>{getActionAmount(assignment)}</Text>
-                <View style={styles.separator} />
-                <View style={styles.hormoneInfo}>
-                  <Text style={[styles.hormoneCount, { color: '#949494' }]}>+{getHormoneCount(assignment)}</Text>
-                  <View style={styles.hormoneIcon}>
-                    {typeof getFirstHormoneIcon(assignment) === 'string' ? (
-                      <Text style={styles.hormoneIconText}>{getFirstHormoneIcon(assignment)}</Text>
-                    ) : (
-                      <Image 
-                        source={getFirstHormoneIcon(assignment)} 
-                        style={styles.hormoneIconImage}
-                        resizeMode="contain"
-                      />
-                    )}
+
+        {/* Action information */}
+        <View style={styles.actionDetails}>
+          <TouchableOpacity
+            onPress={handleActionPress}
+            style={styles.actionTitleContainer}
+          >
+            <Text style={styles.actionTitle}>{assignment.title}</Text>
+            <Text style={styles.actionArrow}>{'>'}</Text>
+          </TouchableOpacity>
+          <View style={styles.actionMeta}>
+            <View style={styles.actionMetaRow}>
+              {assignment.id !== -1 && (
+                <>
+                  <Text style={styles.actionAmount}>{getActionAmount(assignment)}</Text>
+                  <View style={styles.separator} />
+                  <View style={styles.hormoneInfo}>
+                    <Text style={[styles.hormoneCount, { color: '#949494' }]}>+{getHormoneCount(assignment)}</Text>
+                    <View style={styles.hormoneIcon}>
+                      {typeof getFirstHormoneIcon(assignment) === 'string' ? (
+                        <Text style={styles.hormoneIconText}>{getFirstHormoneIcon(assignment)}</Text>
+                      ) : (
+                        <Image
+                          source={getFirstHormoneIcon(assignment)}
+                          style={styles.hormoneIconImage}
+                          resizeMode="contain"
+                        />
+                      )}
+                    </View>
                   </View>
-                </View>
-                <View style={styles.separator} />
-              </>
-            )}
-            {(() => {
-              // For Weekly Check-in, use morning emoji, otherwise use getTimeEmoji
-              const timeEmojiText = assignment.id === -1 ? '🌤️' : getTimeEmoji(assignment.timeSlot, assignment);
-              return (
-                <Text style={[
-                  styles.timeEmoji,
-                  timeEmojiText === 'Anytime' && styles.timeEmojiSmall,
-                  timeEmojiText === '🌙' && styles.timeEmojiMoon
-                ]}>{timeEmojiText}</Text>
-              );
-            })()}
-            {assignment.id === -1 ? (
-              <>
-                <View style={styles.separator} />
-                <Text 
-                  style={styles.actionPurpose}
-                >
-                  Vent your concerns & progress
-                </Text>
-              </>
-            ) : (
-              (() => {
-                const causesText = getActionSymptomsConditions(assignment);
-                if (causesText) {
-                  return (
-                    <>
-                      <View style={styles.separator} />
-                      <Text 
-                        style={styles.actionPurpose} 
-                        numberOfLines={1} 
-                        ellipsizeMode="tail"
-                      >
-                        {causesText}
-                      </Text>
-                    </>
-                  );
-                }
-                return null;
-              })()
-            )}
+                  <View style={styles.separator} />
+                </>
+              )}
+              {(() => {
+                // For Weekly Check-in, use morning emoji, otherwise use getTimeEmoji
+                const timeEmojiText = assignment.id === -1 ? '🌤️' : getTimeEmoji(assignment.timeSlot, assignment);
+                return (
+                  <Text style={[
+                    styles.timeEmoji,
+                    timeEmojiText === 'Anytime' && styles.timeEmojiSmall,
+                    timeEmojiText === '🌙' && styles.timeEmojiMoon
+                  ]}>{timeEmojiText}</Text>
+                );
+              })()}
+              {assignment.id === -1 ? (
+                <>
+                  <View style={styles.separator} />
+                  <Text
+                    style={styles.actionPurpose}
+                  >
+                    Vent your concerns & progress
+                  </Text>
+                </>
+              ) : (
+                (() => {
+                  const causesText = getActionSymptomsConditions(assignment);
+                  if (causesText) {
+                    return (
+                      <>
+                        <View style={styles.separator} />
+                        <Text
+                          style={styles.actionPurpose}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {causesText}
+                        </Text>
+                      </>
+                    );
+                  }
+                  return null;
+                })()
+              )}
+            </View>
           </View>
         </View>
       </View>
-    </View>
     );
   };
 
@@ -603,7 +623,7 @@ export default function TypeActionPlan({
   // Category section rendering
   const renderCategorySection = (category: typeof CATEGORIES[0]) => {
     const categoryAssignments = categorizedAssignmentsObj[category.key];
-    
+
     if (categoryAssignments.length === 0) {
       return null;
     }
@@ -618,7 +638,7 @@ export default function TypeActionPlan({
           </Text>
           <View style={styles.dividerRight} />
         </View>
-        
+
         {/* Category actions */}
         <View style={styles.categoryActions}>
           {categoryAssignments.map(renderActionItem)}
@@ -627,93 +647,93 @@ export default function TypeActionPlan({
     );
   };
 
-     const screenWidth = Dimensions.get('window').width;
-     
-     return (
-     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-       <View style={styles.content}>
-         {/* First line: top gradient line */}
-         {renderTopLine()}
-         
-         {/* Weekly Check-in - rendered above all categories */}
-         {weeklyCheckInItem && renderActionItem(weeklyCheckInItem)}
-         
-         {/* Actions by category */}
-         {CATEGORIES.map(renderCategorySection)}
-         
-         {/* Second line: from action plan end to Tomorrow start */}
-         {renderMiddleLine()}
-         
-         {/* Tomorrow section */}
-         <View style={styles.tomorrowSection}>
-           <View style={styles.tomorrowHeader}>
-             <Text style={styles.tomorrowSectionTitle}>Tomorrow</Text>
-             <Text style={styles.tomorrowDateText}>16th July, 2025</Text>
-           </View>
-         </View>
+  const screenWidth = Dimensions.get('window').width;
 
-         {/* Third line: from Tomorrow label bottom to next list + lock */}
-         {renderBottomLine()}
+  return (
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <View style={styles.content}>
+        {/* First line: top gradient line */}
+        {renderTopLine()}
 
-         {/* Tomorrow action plan preview */}
-         <View style={styles.tomorrowPreview}>
-           {/* Tomorrow blur overlay - matching time view */}
-           <BlurView
-             intensity={Platform.OS === 'android' ? 6 : 15}
-             tint="light"
-             {...(Platform.OS === 'android' ? { experimentalBlurMethod: 'dimezisBlurView' as any } : {})}
-             style={[
-               styles.tomorrowSectionBlur,
-               {
-                 left: -responsiveWidth(15),
-                 right: -responsiveWidth(15),
-                 zIndex: 100,
-               }
-             ]}
-           />
-           <View style={styles.tomorrowBlurredContent}>
-             {/* Category header */}
-             <View style={styles.tomorrowCategoryHeader}>
-               <View style={styles.dividerLeft} />
-               <Text style={styles.tomorrowCategoryTitle}>
-                 🥗 Eat
-               </Text>
-               <View style={styles.dividerRight} />
-             </View>
+        {/* Weekly Check-in - rendered above all categories */}
+        {weeklyCheckInItem && renderActionItem(weeklyCheckInItem)}
 
-             {/* First action item preview */}
-             <View style={styles.tomorrowActionPreview}>
-               <View style={styles.tomorrowImageContainer}>
-                 <Text style={styles.tomorrowActionImage}>📋
-                  
-                 </Text>
-               </View>
-               
-               <View style={styles.tomorrowActionDetails}>
-                 <Text style={styles.actionTitle}>Pumpkin Seeds</Text>
-                 <View style={styles.tomorrowActionMeta}>
-                   <Text style={styles.actionAmount}>1 spoon</Text>
-                   <View style={styles.actionSeparator} />
-                   <Text style={styles.actionPurpose}>Acne, PCOS</Text>
-                   <View style={styles.actionSeparator} />
-                   <View style={styles.hormoneInfo}>
-                     <Text style={[styles.hormoneCount, { color: '#949494' }]}>+1</Text>
-                     <View style={[styles.hormoneIcon, { backgroundColor: '#FF6991' }]}>
-                       <Text style={styles.hormoneIconText}>H</Text>
-                     </View>
-                   </View>
-                   <View style={styles.actionSeparator} />
-                   <Text style={styles.timeEmoji}>🌤️</Text>
-                 </View>
-               </View>
-             </View>
+        {/* Actions by category */}
+        {CATEGORIES.map(renderCategorySection)}
 
-             
-           </View>
-         </View>
-       </View>
-     </ScrollView>
-   );
+        {/* Second line: from action plan end to Tomorrow start */}
+        {renderMiddleLine()}
+
+        {/* Tomorrow section */}
+        <View style={styles.tomorrowSection}>
+          <View style={styles.tomorrowHeader}>
+            <Text style={styles.tomorrowSectionTitle}>Tomorrow</Text>
+            <Text style={styles.tomorrowDateText}>16th July, 2025</Text>
+          </View>
+        </View>
+
+        {/* Third line: from Tomorrow label bottom to next list + lock */}
+        {renderBottomLine()}
+
+        {/* Tomorrow action plan preview */}
+        <View style={styles.tomorrowPreview}>
+          {/* Tomorrow blur overlay - matching time view */}
+          <BlurView
+            intensity={Platform.OS === 'android' ? 6 : 15}
+            tint="light"
+            {...(Platform.OS === 'android' ? { experimentalBlurMethod: 'dimezisBlurView' as any } : {})}
+            style={[
+              styles.tomorrowSectionBlur,
+              {
+                left: -responsiveWidth(15),
+                right: -responsiveWidth(15),
+                zIndex: 100,
+              }
+            ]}
+          />
+          <View style={styles.tomorrowBlurredContent}>
+            {/* Category header */}
+            <View style={styles.tomorrowCategoryHeader}>
+              <View style={styles.dividerLeft} />
+              <Text style={styles.tomorrowCategoryTitle}>
+                🥗 Eat
+              </Text>
+              <View style={styles.dividerRight} />
+            </View>
+
+            {/* First action item preview */}
+            <View style={styles.tomorrowActionPreview}>
+              <View style={styles.tomorrowImageContainer}>
+                <Text style={styles.tomorrowActionImage}>📋
+
+                </Text>
+              </View>
+
+              <View style={styles.tomorrowActionDetails}>
+                <Text style={styles.actionTitle}>Pumpkin Seeds</Text>
+                <View style={styles.tomorrowActionMeta}>
+                  <Text style={styles.actionAmount}>1 spoon</Text>
+                  <View style={styles.actionSeparator} />
+                  <Text style={styles.actionPurpose}>Acne, PCOS</Text>
+                  <View style={styles.actionSeparator} />
+                  <View style={styles.hormoneInfo}>
+                    <Text style={[styles.hormoneCount, { color: '#949494' }]}>+1</Text>
+                    <View style={[styles.hormoneIcon, { backgroundColor: '#FF6991' }]}>
+                      <Text style={styles.hormoneIconText}>H</Text>
+                    </View>
+                  </View>
+                  <View style={styles.actionSeparator} />
+                  <Text style={styles.timeEmoji}>🌤️</Text>
+                </View>
+              </View>
+            </View>
+
+
+          </View>
+        </View>
+      </View>
+    </ScrollView>
+  );
 }
 
 // ====== Utility: Date formatting ======
@@ -737,27 +757,27 @@ const styles = StyleSheet.create({
     overflow: 'visible', // Allow blur to extend beyond padding
     // Remove paddingVertical to start flush with ActionPlanTimeline
   },
-  
+
   // Vertical line containers
   topLineContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: responsiveHeight(2),
   },
-  
+
   middleLineContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: responsiveHeight(0.1), // Reduced spacing before Tomorrow title
   },
-  
+
   bottomLineContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: responsiveHeight(0.5), // Reduced spacing before tomorrow preview
     marginBottom: responsiveHeight(0.5), // Reduced spacing after path
   },
-  
+
   categorySection: {
     marginBottom: responsiveHeight(1.5), // Reduced spacing before path
   },
@@ -907,7 +927,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(1.9), // Smaller size for moon emoji
     lineHeight: responsiveFontSize(2.5),
   },
-  
+
   // Tomorrow section styles
   tomorrowSection: {
     // marginTop: responsiveHeight(0.1), // Reduced spacing after path
@@ -1044,7 +1064,7 @@ const styles = StyleSheet.create({
     height: 20,
     tintColor: '#949494',
   },
-  
+
   // Tomorrow section blur overlay - matching time view
   tomorrowSectionBlur: {
     position: 'absolute',

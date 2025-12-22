@@ -7,7 +7,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, Linking } from 'react-native';
 import AppIntroSlider from "react-native-app-intro-slider";
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { moderateScale, verticalScale } from 'react-native-size-matters';
@@ -36,10 +36,66 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
   const navigation = useNavigation<ActionDetailScreenNavigationProp>();
   const actionParam = route?.params?.action;
 
+  // Parse action object from route params
+  const action = actionParam ? (typeof actionParam === 'string' ? JSON.parse(actionParam) : actionParam) as {
+    id: number;
+    title: string;
+    purpose: string;
+    hormones: string[];
+    image?: string;
+    conditions?: string[];
+    symptoms?: string[];
+    specific_action?: string;
+    hero_image_url?: string;
+    hormone_persona_intro?: string;
+    research_studies?: Array<{
+      title: string;
+      authors: string;
+      year: number;
+      journal: string;
+      finding: string;
+      participants?: string;
+      doi?: string;
+    }>;
+    variants?: Array<{
+      variant_type: string;
+      title: string;
+      description: string;
+      image_url: string;
+    }>;
+    advices?: Array<{
+      type: string;
+      title: string;
+      image?: string;
+    }>;
+  } : null;
+
   // State management
   const [isHowMode, setIsHowMode] = useState(false);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [showStudyDetails, setShowStudyDetails] = useState(false);
+  const sliderRef = React.useRef<AppIntroSlider>(null);
+
+  // Auto-slide logic for Advice Slider
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    if (isHowMode && action?.variants && action.variants.length > 1) {
+      const variantsLength = action.variants.length;
+      interval = setInterval(() => {
+        const nextIndex = (currentSlideIndex + 1) % variantsLength;
+        // Direct jump when looping back to index 0 to avoid "sliding back through" all items
+        const shouldAnimate = nextIndex !== 0;
+        sliderRef.current?.goToSlide(nextIndex, shouldAnimate);
+        setCurrentSlideIndex(nextIndex);
+      }, 3000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isHowMode, currentSlideIndex, action?.variants]);
 
   // Disable back gesture when using AppIntroSlider
   useFocusEffect(
@@ -56,22 +112,6 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
     }, [navigation])
   );
 
-  // Parse action object from route params
-  const action = actionParam ? (typeof actionParam === 'string' ? JSON.parse(actionParam) : actionParam) as {
-    id: number;
-    title: string;
-    purpose: string;
-    hormones: string[];
-    image?: string;
-    conditions?: string[];
-    symptoms?: string[];
-    specific_action?: string;
-    advices?: Array<{
-      type: string;
-      title: string;
-      image?: string;
-    }>;
-  } : null;
 
   /**
    * Pick the appropriate hormone character image for the first hormone
@@ -91,8 +131,9 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
       case 'cortisol':
         return Images.CortisolBothHand;
       case 'testosterone':
-      case 'androgens':
         return Images.TestosteroneBothHand;
+      case 'androgens':
+        return Images.AndrogensBothHand;
       default:
         return null;
     }
@@ -133,37 +174,57 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
       <View style={styles.header}>
         {isHowMode ? (
           <>
-            <TouchableOpacity style={styles.backButton} onPress={() => setIsHowMode(false)}>
-              <Ionicons name="chevron-back" size={responsiveFontSize(3.5)} color="#6F6F6F" />
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => setIsHowMode(false)}
+            >
+              <Ionicons name="chevron-back" size={responsiveFontSize(3.5)} color="#9E9E9E" />
             </TouchableOpacity>
+
             <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>How?</Text>
+              <Text
+                style={styles.headerTitle}
+                allowFontScaling={false}
+              >
+                How?
+              </Text>
             </View>
-            <View style={styles.closeButtonContainer}>
-              <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-                <Text style={styles.closeButtonText}>✕</Text>
-              </TouchableOpacity>
-            </View>
+
+            <TouchableOpacity
+              style={styles.closeButtonContainer}
+              onPress={() => navigation.goBack()}
+            >
+              <View style={styles.closeButton}>
+                <Ionicons name="close" size={responsiveFontSize(3.5)} color="#9E9E9E" />
+              </View>
+            </TouchableOpacity>
           </>
         ) : (
           <>
-            <View style={styles.backButton}>
-              {/* Empty space to maintain layout */}
-            </View>
+            <View style={styles.backButton} />
             <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>Why?</Text>
+              <Text
+                style={styles.headerTitle}
+                allowFontScaling={false}
+              >
+                Why?
+              </Text>
             </View>
-            <View style={styles.closeButtonContainer}>
-              <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-                <Text style={styles.closeButtonText}>✕</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.closeButtonContainer}
+              onPress={() => navigation.goBack()}
+            >
+              <View style={styles.closeButton}>
+                <Ionicons name="close" size={24} color="#9E9E9E" />
+              </View>
+            </TouchableOpacity>
           </>
         )}
       </View>
 
-      <ScrollView 
-        style={styles.content} 
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{ paddingBottom: responsiveHeight(20) }} // Increased to ensure content scrolls above button
         showsVerticalScrollIndicator={false}
         scrollEnabled={scrollEnabled}
       >
@@ -179,14 +240,17 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                     style={styles.gradientContainer}
                     maskElement={
                       <View style={{ backgroundColor: 'transparent' }}>
-                        <Text style={styles.title}>
+                        <Text
+                          style={styles.title}
+                          allowFontScaling={false}
+                        >
                           {action?.specific_action || ''}
                         </Text>
                       </View>
                     }
                   >
                     <LinearGradient
-                      colors={['#A29AEA', '#C17EC9', '#E98BAC']}
+                      colors={['#D8A7CA', '#C17EC9']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={{ flex: 1, width: '100%', height: '100%' }}
@@ -194,59 +258,87 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                   </MaskedView>
                 </View>
                 <View style={styles.imageContainer}>
-                  <View style={styles.actionImage}>
-                    <Text style={styles.imageText}>📋</Text>
-                  </View>
-                  {/* <View style={styles.imageBorder} /> */}
+                  {action?.hero_image_url ? (
+                    <Image
+                      source={{ uri: action.hero_image_url }}
+                      style={styles.actionImageFull}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.actionImage}>
+                      <Text style={styles.imageText}>📋</Text>
+                    </View>
+                  )}
                 </View>
               </View>
 
               {/* Conditions and Symptoms */}
-              <View style={styles.conditionsSection}>
-                <Text style={styles.conditionsSubtitle}>
+              <View style={[styles.conditionsSection, { marginTop: responsiveHeight(4.5) }]}>
+                <Text
+                  style={styles.conditionsSubtitle}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit={true}
+                  minimumFontScale={0.75}
+                  allowFontScaling={false}
+                >
                   Eating suggestions based on your preferences and concerns
                 </Text>
                 <View style={styles.conditionsTags}>
                   {[...(action?.conditions || []), ...(action?.symptoms || [])].map((condition, index) => (
                     <View key={index} style={styles.conditionTag}>
-                      <Text style={styles.conditionTagText}>{condition}</Text>
+                      <Text style={styles.conditionTagText}>
+                        {condition.charAt(0).toUpperCase() + condition.slice(1)}
+                      </Text>
                     </View>
                   ))}
                 </View>
               </View>
 
               {/* Advice Slider */}
-              {action?.advices && action.advices.length > 0 && (
+              {action?.variants && action.variants.length > 0 && (
                 <View style={styles.adviceSection}>
-                  <View 
+                  <View
                     style={styles.sliderContainer}
                     onTouchStart={() => setScrollEnabled(false)}
                     onTouchEnd={() => setScrollEnabled(true)}
                   >
                     <AppIntroSlider
-                      data={action.advices}
+                      ref={sliderRef}
+                      data={action.variants}
                       keyExtractor={(item, index) => `advice-${index}`}
                       renderItem={({ item, index }) => (
                         <View style={styles.adviceSlideWrapper}>
                           <View style={styles.adviceCard}>
                             {/* Background Image */}
                             <View style={styles.adviceBackgroundImage}>
-                              <Text style={styles.adviceBackgroundText}>
-                                {item.image || '🍽️'}
-                              </Text>
+                              {item.image_url ? (
+                                <Image
+                                  source={{ uri: item.image_url }}
+                                  style={styles.adviceBackgroundFullImage}
+                                  resizeMode="cover"
+                                />
+                              ) : (
+                                <Text style={styles.adviceBackgroundText}>🍽️</Text>
+                              )}
                             </View>
-                            
-                            {/* Type Badge - Top Left */}
+
+                            {/* Dark Gradient Overlay for title readability */}
+                            <LinearGradient
+                              colors={['transparent', 'rgba(0,0,0,0.8)']}
+                              style={styles.adviceGradientOverlay}
+                            />
+
+                            {/* Category Tag - Top Left */}
                             <View style={styles.adviceTypeBadge}>
                               <Text style={styles.adviceTypeBadgeText}>
-                                {item.type || 'Easy'}
+                                {(item.variant_type || 'Healthy').charAt(0).toUpperCase() + (item.variant_type || 'Healthy').slice(1)}
                               </Text>
                             </View>
-                            
+
                             {/* Title - Bottom Left */}
                             <View style={styles.adviceTitleContainer}>
                               <Text style={styles.adviceTitle}>
-                                {item.title || 'Roasted pumpkin seeds'}
+                                {item.title || ''}
                               </Text>
                             </View>
                           </View>
@@ -265,15 +357,21 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                       nestedScrollEnabled={true}
                       renderPagination={(activeIndex) => (
                         <View style={styles.customPagination}>
-                          {action?.advices?.map((_, index) => (
-                            <View
-                              key={index}
-                              style={[
-                                styles.sliderDot,
-                                index === activeIndex && styles.sliderDotActive
-                              ]}
-                            />
-                          ))}
+                          {action?.variants?.map((_, index) => {
+                            const isActive = index === activeIndex;
+                            const isAdjacent = Math.abs(index - activeIndex) === 1;
+
+                            return (
+                              <View
+                                key={index}
+                                style={[
+                                  styles.sliderDot,
+                                  isActive && styles.sliderDotActive,
+                                  isAdjacent && { opacity: 0.4 }
+                                ]}
+                              />
+                            );
+                          })}
                         </View>
                       )}
                     />
@@ -298,7 +396,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                     }
                   >
                     <LinearGradient
-                      colors={['#A29AEA', '#C17EC9', '#E98BAC']}
+                      colors={['#D8A7CA', '#C17EC9']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={{ flex: 1, width: '100%', height: '100%' }}
@@ -306,13 +404,20 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                   </MaskedView>
                 </View>
                 <View style={styles.imageContainer}>
-                  <View style={styles.actionImage}>
-                    <Text style={styles.imageText}>📋</Text>
-                  </View>
-                  {/* <View style={styles.imageBorder} /> */}
+                  {action?.hero_image_url ? (
+                    <Image
+                      source={{ uri: action.hero_image_url }}
+                      style={styles.actionImageFull}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.actionImage}>
+                      <Text style={styles.imageText}>📋</Text>
+                    </View>
+                  )}
                 </View>
-                
-                {/* Hormone Graphic */}
+
+                {/* Hormone Graphic - Straddling image and card */}
                 <View style={styles.hormoneGraphic}>
                   {getHormoneCharacter(action?.hormones) ? (
                     <Image
@@ -329,18 +434,72 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
               {/* Description Card */}
               <View style={styles.descriptionCard}>
                 <Text style={styles.descriptionText}>
-                  {getHormoneDescription(action?.hormones || [])}
-                  {/* {'\n\n'} */}
+                  {action?.hormone_persona_intro ? `${action.hormone_persona_intro}\n\n` : ''}
                   {action?.purpose || 'This action helps support your hormone balance.'}
                 </Text>
               </View>
 
               {/* Study Details */}
               <View style={styles.studyDetails}>
-                <TouchableOpacity style={styles.studyDetailsButton}>
-                  <Text style={styles.studyDetailsText}>View study details</Text>
-                  <Ionicons name="chevron-up" size={responsiveFontSize(1.7)} color="#C17EC9" />
+                <TouchableOpacity
+                  style={styles.studyDetailsButton}
+                  onPress={() => setShowStudyDetails(!showStudyDetails)}
+                >
+                  <Text style={styles.studyDetailsText}>
+                    {showStudyDetails ? 'Hide study details' : 'View study details'}
+                  </Text>
+                  <Ionicons
+                    name={showStudyDetails ? "chevron-up" : "chevron-down"} // Corrected to match mockup chevron style
+                    size={responsiveFontSize(1.7)}
+                    color="#C17EC9"
+                  />
                 </TouchableOpacity>
+
+                {/* Study Details Content */}
+                {showStudyDetails && action?.research_studies && action.research_studies.length > 0 && (
+                  <View style={styles.studyDetailsContent}>
+                    {action.research_studies.map((study, index) => (
+                      <View key={index} style={styles.studyCard}>
+                        <View style={styles.studyTitleRow}>
+                          <Text style={styles.studyIcon}>🔗</Text>
+                          <Text style={styles.studyTitle}>{study.title}</Text>
+                        </View>
+
+                        <View style={styles.studyInfoSection}>
+                          <Text style={styles.studyInfoLabel}>Journal: </Text>
+                          <Text style={styles.studyInfoValue}>
+                            {study.journal} ({study.year})
+                          </Text>
+                        </View>
+
+                        {study.participants && (
+                          <View style={styles.studyInfoSection}>
+                            <Text style={styles.studyInfoLabel}>Participants: </Text>
+                            <Text style={styles.studyInfoValue}>
+                              {study.participants} women
+                            </Text>
+                          </View>
+                        )}
+
+                        <View style={styles.studyInfoSection}>
+                          <Text style={styles.studyInfoLabel}>Results: </Text>
+                          <Text style={styles.studyInfoValue}>
+                            {study.finding}
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* No studies available message */}
+                {showStudyDetails && (!action?.research_studies || action.research_studies.length === 0) && (
+                  <View style={styles.noStudiesContainer}>
+                    <Text style={styles.noStudiesText}>
+                      No research studies available for this action yet.
+                    </Text>
+                  </View>
+                )}
               </View>
             </>
           )}
@@ -354,8 +513,8 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
             <PrimaryButton
               title="Mark as complete ✅"
               onPress={() => {
-                navigation.navigate('ActionCompletedScreen', { 
-                  action: JSON.stringify(action) 
+                navigation.navigate('ActionCompletedScreen', {
+                  action: JSON.stringify(action)
                 });
               }}
             />
@@ -396,6 +555,7 @@ const styles = StyleSheet.create({
     paddingTop: verticalScale(50),
     paddingBottom: verticalScale(10),
     height: responsiveHeight(10),
+    backgroundColor: '#FFFFFF',
   },
   headerTitleContainer: {
     flex: 1,
@@ -409,12 +569,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     width: responsiveWidth(25),
     height: responsiveHeight(20),
-    paddingLeft: responsiveWidth(1),
+    paddingLeft: responsiveWidth(2),
   },
   backButtonText: {
     fontSize: responsiveFontSize(4),
-    color: '#000000',
-    fontWeight: 'bold',
+    color: '#4A4A4A',
+    fontWeight: '400',
   },
   closeButtonContainer: {
     justifyContent: 'center',
@@ -424,13 +584,14 @@ const styles = StyleSheet.create({
     paddingRight: responsiveWidth(2),
   },
   headerTitle: {
-    fontSize: responsiveFontSize(1.7),
-    color: '#6F6F6F',
-    fontFamily: 'Inter400',
+    fontSize: moderateScale(12, 1.5),
+    color: '#9E9E9E',
+    fontFamily: 'Poppins500',
     textAlign: 'center',
     textAlignVertical: 'center',
     includeFontPadding: false,
     lineHeight: responsiveFontSize(2),
+    letterSpacing: 0.5,
   },
   closeButton: {
     width: responsiveWidth(10),
@@ -440,7 +601,7 @@ const styles = StyleSheet.create({
   },
   closeButtonText: {
     fontSize: responsiveFontSize(3.5),
-    color: '#6F6F6F',
+    color: '#4A4A4A', // Dark grey, not black
     includeFontPadding: false,
     textAlignVertical: 'center',
     lineHeight: responsiveFontSize(3.5),
@@ -455,15 +616,16 @@ const styles = StyleSheet.create({
   },
   titleSection: {
     alignItems: 'center',
-    marginTop: responsiveHeight(7),
+    marginTop: responsiveHeight(4), // Calibrated for airy look
     width: '100%',
   },
   title: {
-    fontSize: responsiveFontSize(2.27),
+    fontSize: moderateScale(22, 1), // Precise scale for Serif
     fontFamily: 'NotoSerif600',
+    color: '#D8A7CA',
     textAlign: 'center',
-    lineHeight: responsiveHeight(3.2),
-    maxWidth: '90%',
+    lineHeight: 34,
+    maxWidth: '92%',
     alignSelf: 'center',
   },
   titleContainer: {
@@ -477,7 +639,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: responsiveHeight(8),
-    maxHeight: responsiveHeight(12),
     width: '100%',
   },
   imageContainer: {
@@ -485,12 +646,13 @@ const styles = StyleSheet.create({
     width: responsiveWidth(35.78),
     height: responsiveWidth(35.78),
     borderRadius: responsiveWidth(35.78) / 2,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: '#FCDDEC',
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
     borderWidth: responsiveWidth(5.56),
     borderColor: '#FCDDEC',
+    overflow: 'hidden',
   },
   actionImage: {
     width: responsiveWidth(18),
@@ -499,6 +661,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  actionImageFull: {
+    width: '100%',
+    height: '100%',
   },
   imageText: {
     fontSize: responsiveFontSize(6),
@@ -519,7 +685,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'center',
     marginTop: responsiveHeight(2), // Add space from top
-    marginBottom: responsiveHeight(-1), // Negative margin to extend behind description
+    marginBottom: responsiveHeight(-1.5), // Increased negative margin for deeper hug
     height: responsiveHeight(12),
     width: responsiveWidth(40),
     zIndex: 1, // Behind the description card
@@ -535,7 +701,6 @@ const styles = StyleSheet.create({
   descriptionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: responsiveWidth(5.56),
-    // paddingTop: 0,
     paddingHorizontal: responsiveWidth(5.56),
     paddingVertical: responsiveWidth(5.56),
     width: '100%',
@@ -575,36 +740,131 @@ const styles = StyleSheet.create({
     color: '#C17EC9',
     transform: [{ rotate: '270deg' }],
   },
+  studyDetailsContent: {
+    marginTop: verticalScale(12),
+    width: '100%',
+  },
+  studyCard: {
+    backgroundColor: '#F9F1FB', // Light lavender from mockup
+    borderRadius: moderateScale(16),
+    padding: moderateScale(16),
+    marginBottom: verticalScale(10),
+  },
+  studyTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: moderateScale(6),
+    marginBottom: verticalScale(12),
+  },
+  studyIcon: {
+    fontSize: moderateScale(14),
+    marginTop: verticalScale(2),
+    color: '#6F6F6F',
+    opacity: 0.7,
+  },
+  studyTitle: {
+    flex: 1,
+    fontSize: moderateScale(13.5, 1.5),
+    fontFamily: 'Inter500',
+    color: '#6F6F6F',
+    lineHeight: moderateScale(18),
+  },
+  studyInfoSection: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: verticalScale(4),
+  },
+  studyInfoLabel: {
+    fontSize: moderateScale(12.5, 1.5),
+    fontFamily: 'Inter400',
+    color: '#6F6F6F',
+  },
+  studyInfoValue: {
+    fontSize: moderateScale(12.5, 1.5),
+    fontFamily: 'Inter400',
+    color: '#6F6F6F',
+    flexShrink: 1,
+  },
+  studyMeta: {
+    fontSize: moderateScale(12, 1.5),
+    fontFamily: 'Inter500',
+    color: '#666666',
+    marginBottom: verticalScale(4),
+  },
+  studyJournal: {
+    fontSize: moderateScale(11, 1.5),
+    fontFamily: 'Inter400',
+    color: '#888888',
+    fontStyle: 'italic',
+    marginBottom: verticalScale(10),
+  },
+  studyFinding: {
+    fontSize: moderateScale(13, 1.5),
+    fontFamily: 'Inter400',
+    color: '#444444',
+    lineHeight: moderateScale(20),
+  },
+  studyFindingLabel: {
+    fontFamily: 'Inter600',
+    color: '#C17EC9',
+  },
+  doiLink: {
+    marginTop: verticalScale(10),
+    paddingVertical: verticalScale(8),
+    paddingHorizontal: moderateScale(12),
+    backgroundColor: '#C17EC9',
+    borderRadius: moderateScale(8),
+    alignSelf: 'flex-start',
+  },
+  doiText: {
+    fontSize: moderateScale(12, 1.5),
+    fontFamily: 'Inter500',
+    color: '#FFFFFF',
+  },
+  noStudiesContainer: {
+    marginTop: verticalScale(12),
+    padding: moderateScale(16),
+    backgroundColor: '#F5F5F5',
+    borderRadius: moderateScale(12),
+    alignItems: 'center',
+  },
+  noStudiesText: {
+    fontSize: moderateScale(13, 1.5),
+    fontFamily: 'Inter400',
+    color: '#888888',
+    textAlign: 'center',
+  },
   // How Mode Styles
   conditionsSection: {
     alignItems: 'center',
-    marginTop: verticalScale(25),
+    marginTop: responsiveHeight(4), // Balanced airiness
     width: '100%',
   },
   conditionsSubtitle: {
-    fontSize: moderateScale(12, 1.5),
-    color: '#949494',
-    fontFamily: 'Inter500',
-    marginBottom: responsiveHeight(1),
+    fontSize: moderateScale(12, 1),
+    color: '#9E9E9E',
+    fontFamily: 'Poppins400',
+    marginBottom: responsiveHeight(1.5),
     textAlign: 'center',
+    width: '100%',
     opacity: 0.7,
   },
   conditionsTags: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: verticalScale(20),
+    gap: responsiveWidth(1.5), // Tighter tags
   },
   conditionTag: {
-    backgroundColor: 'rgba(218, 214, 219, 0.37)',
-    paddingHorizontal: verticalScale(10), 
-    paddingVertical: verticalScale(5),
-    borderRadius: verticalScale(5),
+    backgroundColor: '#F5F5F5', // Request: faint grey/white
+    paddingHorizontal: responsiveWidth(4),
+    paddingVertical: verticalScale(6),
+    borderRadius: 50, // Request: 50px
   },
   conditionTagText: {
-    fontSize: responsiveFontSize(1.7),
-    color: '#6F6F6F',
-    fontFamily: 'Inter400',
+    fontSize: moderateScale(11),
+    color: '#4A4A4A',
+    fontFamily: 'Poppins400',
   },
   adviceSection: {
     alignItems: 'center',
@@ -612,12 +872,18 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   adviceCard: {
-    width: '100%',
-    height: responsiveHeight(18),
+    width: responsiveWidth(88), // Wider card for move
+    height: responsiveHeight(22), // Taller card for detail
     backgroundColor: '#F0F0F0',
-    borderRadius: responsiveWidth(2.78),
+    borderRadius: 16, // Smoother corners for premium feel
     position: 'relative',
     overflow: 'hidden',
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 4,
   },
   adviceBackgroundImage: {
     position: 'absolute',
@@ -629,29 +895,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F0F0F0',
   },
+  adviceGradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '40%', // Targeted fade
+  },
+  adviceBackgroundFullImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },
   adviceBackgroundText: {
     fontSize: responsiveFontSize(8),
     color: '#CCCCCC',
   },
   adviceTypeBadge: {
     position: 'absolute',
-    top: responsiveHeight(0.75),
-    left: responsiveWidth(1.75),
+    top: responsiveHeight(1),
+    left: responsiveWidth(2),
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: responsiveWidth(1.5),
-    paddingVertical: responsiveHeight(0.75),
-    borderRadius: responsiveWidth(2.78),
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    paddingHorizontal: responsiveWidth(3),
+    paddingVertical: responsiveHeight(0.5),
+    borderRadius: 50, // Pill shape
   },
   adviceTypeBadgeText: {
-    fontSize: responsiveFontSize(1.4),
+    fontSize: moderateScale(11),
     color: '#000000',
-    fontFamily: 'Inter500',
-    fontWeight: '500',
+    fontFamily: 'Poppins500',
   },
   adviceTitleContainer: {
     position: 'absolute',
@@ -660,17 +936,16 @@ const styles = StyleSheet.create({
     right: responsiveWidth(1.75),
   },
   adviceTitle: {
-    fontSize: responsiveFontSize(1.7),
-    color: '#000000',
-    fontFamily: 'Inter500',
-    fontWeight: '500',
-    textShadowColor: 'rgba(255, 255, 255, 0.8)',
+    fontSize: moderateScale(14),
+    color: '#FFFFFF',
+    fontFamily: 'Poppins500',
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 3,
   },
   sliderContainer: {
-    width: '100%',
-    height: responsiveHeight(25),
+    width: responsiveWidth(100), // Allow slide to bleed into margins
+    height: responsiveHeight(28),
     position: 'relative',
   },
   adviceSlideWrapper: {
@@ -697,12 +972,14 @@ const styles = StyleSheet.create({
     height: responsiveWidth(2),
     borderRadius: responsiveWidth(1),
     backgroundColor: '#C17EC9',
-    opacity: 0.3,
+    opacity: 0.2,
     marginHorizontal: responsiveWidth(1),
   },
   sliderDotActive: {
     opacity: 1,
     backgroundColor: '#C17EC9',
+    width: responsiveWidth(2.5),
+    height: responsiveWidth(2.5),
   },
   bottomButtonsContainer: {
     gap: responsiveHeight(2),

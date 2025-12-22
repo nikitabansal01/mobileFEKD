@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import MaskedView from '@react-native-masked-view/masked-view';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import {
+  Alert,
   Dimensions,
   Image,
   Platform,
@@ -13,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import authService from '../../services/authService';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import Svg, { Circle, ClipPath, Defs, Path, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import { FONT_FAMILIES } from '../../constants/fonts';
@@ -74,6 +76,38 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
     if (action === 'Get Auvra Pro') {
       navigation.navigate('PaywallScreen');
     }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await authService.logout();
+              // Reset navigation stack and go to onboarding
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'OnboardingScreen' }],
+                })
+              );
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Error', 'Failed to log out. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -348,6 +382,17 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
                 <Text style={styles.menuIconText}><Ionicons name="lock-closed-outline" size={24} color={COLORS.black} /></Text>
               </View>
               <Text style={styles.menuText}>Privacy policy</Text>
+            </TouchableOpacity>
+
+            {/* Logout Button */}
+            <TouchableOpacity 
+              style={[styles.menuItem, styles.logoutMenuItem]} 
+              onPress={handleLogout}
+            >
+              <View style={styles.menuIcon}>
+                <Text style={styles.menuIconText}><Ionicons name="log-out-outline" size={24} color="#FF3B30" /></Text>
+              </View>
+              <Text style={[styles.menuText, styles.logoutText]}>Log Out</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -624,5 +669,15 @@ const styles = StyleSheet.create({
     borderRadius: scale(8),
     backgroundColor: COLORS.white,
     alignSelf: 'flex-end',
+  },
+  logoutMenuItem: {
+    marginTop: verticalScale(16),
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5E5',
+    paddingTop: verticalScale(16),
+  },
+  logoutText: {
+    color: '#FF3B30',
+    fontFamily: FONT_FAMILIES['Inter-Medium'],
   },
 });

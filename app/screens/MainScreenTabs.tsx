@@ -13,6 +13,7 @@ interface MainScreenTabsProps {
   route?: {
     params?: {
       activeTab?: string;
+      freshSignup?: boolean;
       chatContext?: {
         chatId: string;
         conversationContext?: {
@@ -30,6 +31,7 @@ const Tab = createBottomTabNavigator();
 export default function MainScreenTabs({ route }: MainScreenTabsProps) {
   const initialTab = route?.params?.activeTab || 'home';
   const chatContext = route?.params?.chatContext;
+  const freshSignup = route?.params?.freshSignup || false;
 
   return (
     <Tab.Navigator
@@ -50,6 +52,7 @@ export default function MainScreenTabs({ route }: MainScreenTabsProps) {
       <Tab.Screen 
         name="home" 
         component={HomeScreen}
+        initialParams={{ freshSignup }}
       />
       <Tab.Screen 
         name="personalize" 

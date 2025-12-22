@@ -30,7 +30,7 @@ const TIME_ICONS: Record<string, string> = {
   anytime: 'Anytime',
   // Add common variations
   'Morning': '🌤️',
-  'Afternoon': '☀️', 
+  'Afternoon': '☀️',
   'Evening': '🌙',
   'Anytime': 'Anytime',
   // Add more common API variations
@@ -105,14 +105,14 @@ export default function ActionPlanTimeline({
   assignments = {},
 }: Props) {
   const navigation = useNavigation<any>();
-  
+
   // Pulsing animation for completed actions
   const pulsingAnimation = useRef(new Animated.Value(1)).current;
-  
+
   // Full screen expansion animation
-  const [expandingCircle, setExpandingCircle] = useState<{x: number, y: number, id: string} | null>(null);
+  const [expandingCircle, setExpandingCircle] = useState<{ x: number, y: number, id: string } | null>(null);
   const expandAnimation = useRef(new Animated.Value(0)).current;
-  
+
   /**
    * Handles navigation to action detail screen using React Navigation
    * 
@@ -132,12 +132,12 @@ export default function ActionPlanTimeline({
   /**
    * Handles the expanding circle animation and navigation
    */
-  const handleExpandingNavigation = (actionData: any, circlePosition: {x: number, y: number}) => {
+  const handleExpandingNavigation = (actionData: any, circlePosition: { x: number, y: number }) => {
     // Set the expanding circle position
     setExpandingCircle({ x: circlePosition.x, y: circlePosition.y, id: actionData.id.toString() });
-    
+
     let hasNavigated = false; // Flag to prevent multiple navigations
-    
+
     // Add listener to detect when animation reaches full screen
     const listenerId = expandAnimation.addListener(({ value }) => {
       // Navigate when animation reaches ~80% (full screen coverage)
@@ -150,7 +150,7 @@ export default function ActionPlanTimeline({
         });
       }
     });
-    
+
     // Start the expansion animation
     Animated.timing(expandAnimation, {
       toValue: 1,
@@ -163,13 +163,13 @@ export default function ActionPlanTimeline({
       setExpandingCircle(null);
     });
   };
-  
+
   /**
    * Separates and manages Today and Tomorrow actions
    */
   const todayAssignments: Assignment[] = useMemo(() => {
     const arr: Assignment[] = [];
-    
+
     // Add static "Weekly Check-in" assignment at the beginning
     const weeklyCheckIn: Assignment = {
       id: -1, // Special ID for static assignment
@@ -192,18 +192,18 @@ export default function ActionPlanTimeline({
       mindfulness_techniques: [],
     };
     arr.push(weeklyCheckIn);
-    
+
     Object.values(assignments).forEach((group) => {
       group?.forEach((a) => arr.push(a));
     });
-    
+
     console.log('🔍 Today Assignments processing:', {
       originalAssignments: assignments,
       processedTodayAssignments: arr,
       assignmentsKeys: Object.keys(assignments),
       totalItems: arr.length
     });
-    
+
     return arr;
   }, [assignments]);
 
@@ -234,25 +234,25 @@ export default function ActionPlanTimeline({
 
   // All layout calculation values (container-based)
   const { width: SCREEN_W } = Dimensions.get('window');
-  
+
   // Timeline background/progress (SVG) - declare canvasW first
   const [canvasW, setCanvasW] = useState(SCREEN_W - responsiveWidth(0)); // Set initial value
 
   const geom = useMemo(() => {
     if (!canvasW || canvasW <= 0) return null;
 
-    const CENTER_X      = Math.round(canvasW / 2);
+    const CENTER_X = Math.round(canvasW / 2);
     const CIRCLE_RADIUS = Math.round(responsiveWidth(9.72));     // Unified to responsiveWidth
-    const OFFSET_X      = Math.round(responsiveWidth(26));    // Unified to responsiveWidth
-    const LEFT_X        = CENTER_X - OFFSET_X;                   // Item center X
-    const RIGHT_X       = CENTER_X + OFFSET_X;
+    const OFFSET_X = Math.round(responsiveWidth(26));    // Unified to responsiveWidth
+    const LEFT_X = CENTER_X - OFFSET_X;                   // Item center X
+    const RIGHT_X = CENTER_X + OFFSET_X;
 
     // Use responsiveHeight as before, but round at the end
-    const BASE_TOP      = Math.round(responsiveHeight(0));      // Container top reference point
-    const ITEM_BLOCK_H  = Math.round(responsiveHeight(14));      // Vertical spacing between items (reduced from 18)
-    const CAP_TOP       = Math.round(responsiveHeight(7));
-    const CAP_BOTTOM    = Math.round(responsiveHeight(7));
-    const BRIDGE_DROP   = Math.round(Math.min(responsiveHeight(2.25), 0.5 * CAP_TOP));
+    const BASE_TOP = Math.round(responsiveHeight(0));      // Container top reference point
+    const ITEM_BLOCK_H = Math.round(responsiveHeight(14));      // Vertical spacing between items (reduced from 18)
+    const CAP_TOP = Math.round(responsiveHeight(7));
+    const CAP_BOTTOM = Math.round(responsiveHeight(7));
+    const BRIDGE_DROP = Math.round(Math.min(responsiveHeight(2.25), 0.5 * CAP_TOP));
 
     return { CENTER_X, CIRCLE_RADIUS, LEFT_X, RIGHT_X, BASE_TOP, ITEM_BLOCK_H, CAP_TOP, CAP_BOTTOM, BRIDGE_DROP };
   }, [canvasW]);
@@ -287,10 +287,10 @@ export default function ActionPlanTimeline({
   // Today and Tomorrow anchor generation - separate timelines
   const [todayAnchors, setTodayAnchors] = useState<{ id: string; x: number; y: number }[]>([]);
   const [tomorrowAnchors, setTomorrowAnchors] = useState<{ id: string; x: number; y: number }[]>([]);
-  
+
   // Time slot icon position calculation
   const [timeSlotPositions, setTimeSlotPositions] = useState<TimeSlotPosition[]>([]);
-  
+
   useEffect(() => {
     if (!geom) return;
     const { LEFT_X, RIGHT_X, BASE_TOP, ITEM_BLOCK_H, CAP_TOP, CAP_BOTTOM } = geom;
@@ -318,38 +318,38 @@ export default function ActionPlanTimeline({
 
     // Simple height calculation: to Tomorrow last anchor
     const lastTomorrowY = tomorrowNext[tomorrowNext.length - 1]?.y ?? tomorrowStartY;
-    const circleRadius = Math.round(responsiveWidth(9.72)); 
+    const circleRadius = Math.round(responsiveWidth(9.72));
     const naturalHeight = lastTomorrowY + circleRadius; // To below last anchor
-    
+
     setContentHeight(naturalHeight);
-    
+
     // Set existing anchors to Today (for existing logic compatibility)
     setAnchors(todayNext);
 
     // Calculate time slot icon positions - use smart detection for 'anytime' slots
     const timeSlots = Object.keys(assignments).filter(slot => assignments[slot]?.length > 0); // Exclude empty arrays
-    
+
     // If we only have 'anytime' slot, create smart time slots based on assignment content
     let smartTimeSlots = timeSlots;
     let smartAssignments = assignments;
-    
+
     if (timeSlots.length === 1 && timeSlots[0] === 'anytime') {
       const smartSlots = new Set<string>();
       const smartAssignmentsMap: Record<string, Assignment[]> = {};
-      
+
       assignments.anytime?.forEach(assignment => {
         const smartSlot = getSmartTimeSlot(assignment);
         smartSlots.add(smartSlot);
-        
+
         if (!smartAssignmentsMap[smartSlot]) {
           smartAssignmentsMap[smartSlot] = [];
         }
         smartAssignmentsMap[smartSlot].push(assignment);
       });
-      
+
       smartTimeSlots = Array.from(smartSlots);
       smartAssignments = smartAssignmentsMap;
-      
+
       console.log('🔍 Smart time slot detection:', {
         originalSlots: timeSlots,
         smartSlots: smartTimeSlots,
@@ -357,22 +357,22 @@ export default function ActionPlanTimeline({
         assignments: assignments.anytime?.map(a => ({ title: a.title, smartSlot: getSmartTimeSlot(a) }))
       });
     }
-    
-    console.log('🔍 Time slot icon calculation:', { 
-      allKeys: Object.keys(assignments), 
+
+    console.log('🔍 Time slot icon calculation:', {
+      allKeys: Object.keys(assignments),
       filteredSlots: timeSlots,
       smartTimeSlots,
-      assignmentsData: assignments 
+      assignmentsData: assignments
     });
-    
+
     const positions: TimeSlotPosition[] = [];
-    
+
     if (smartTimeSlots.length > 0) {
       let previousY = BASE_TOP; // End Y coordinate of previous section
 
       smartTimeSlots.forEach((timeSlot, index) => {
         const slotAssignments = smartAssignments[timeSlot] || [];
-        
+
         if (index === 0) {
           // First time slot: place at Cap center
           const iconY = BASE_TOP + CAP_TOP / 2;
@@ -381,10 +381,10 @@ export default function ActionPlanTimeline({
             iconY,
             isCapCenter: true,
           });
-          
+
           // Calculate this time slot's last anchor Y coordinate
           if (slotAssignments.length > 0) {
-            const slotStartIdx = todayNext.findIndex(anchor => 
+            const slotStartIdx = todayNext.findIndex(anchor =>
               slotAssignments.some(a => a.id.toString() === anchor.id)
             );
             const slotEndIdx = slotStartIdx + slotAssignments.length - 1;
@@ -392,21 +392,21 @@ export default function ActionPlanTimeline({
           }
         } else {
           // Next time slots: center of horizontal line between previous and next anchor
-          const slotStartIdx = todayNext.findIndex(anchor => 
+          const slotStartIdx = todayNext.findIndex(anchor =>
             slotAssignments.some(a => a.id.toString() === anchor.id)
           );
-          
+
           if (slotStartIdx > 0) {
             const prevAnchorY = todayNext[slotStartIdx - 1]?.y ?? previousY;
             const currentAnchorY = todayNext[slotStartIdx]?.y ?? (prevAnchorY + ITEM_BLOCK_H);
             const iconY = (prevAnchorY + currentAnchorY) / 2;
-            
+
             positions.push({
               timeSlot,
               iconY,
               isCapCenter: false,
             });
-            
+
             // Update this time slot's last anchor Y coordinate
             if (slotAssignments.length > 0) {
               const slotEndIdx = slotStartIdx + slotAssignments.length - 1;
@@ -416,7 +416,7 @@ export default function ActionPlanTimeline({
         }
       });
     }
-    
+
     setTimeSlotPositions(positions);
   }, [todayAssignments, tomorrowAssignments, assignments, geom]);
 
@@ -424,11 +424,11 @@ export default function ActionPlanTimeline({
   const [todayPathD, setTodayPathD] = useState('');
   const [tomorrowPathD, setTomorrowPathD] = useState('');
   const [completedPathD, setCompletedPathD] = useState('');
-  
+
   useEffect(() => {
     if (!geom) return;
     const { CIRCLE_RADIUS, CENTER_X, CAP_TOP, CAP_BOTTOM, BRIDGE_DROP, ITEM_BLOCK_H, BASE_TOP } = geom;
-    
+
     // Today path generation
     if (todayAnchors.length > 0) {
       const todayPath = generatePathRectilinear(
@@ -481,7 +481,7 @@ export default function ActionPlanTimeline({
       const todayLastY = todayAnchors.at(-1)?.y ?? (BASE_TOP + CAP_TOP + ITEM_BLOCK_H / 2);
       const tomorrowTextHeight = responsiveHeight(6); // Tomorrow text area height
       const tomorrowBaseY = todayLastY + ITEM_BLOCK_H / 2 + CAP_BOTTOM + responsiveHeight(8) + tomorrowTextHeight;
-      
+
       // Generate path to first anchor only
       const firstAnchorOnly = [tomorrowAnchors[0]];
       const tomorrowPath = generateTomorrowPathToFirstAnchor(
@@ -515,10 +515,24 @@ export default function ActionPlanTimeline({
 
   // helper
   const getActionAmount = (assignment: Assignment): string => {
-    if (assignment.food_amounts?.length) return assignment.food_amounts[0];
-    if (assignment.exercise_durations?.length) return assignment.exercise_durations[0];
-    if (assignment.mindfulness_durations?.length) return assignment.mindfulness_durations[0];
-    return '';
+    let amount = '';
+    // Debug logging to see why amounts aren't showing
+    if (assignment.food_amounts?.length || assignment.exercise_durations?.length || assignment.mindfulness_durations?.length) {
+      console.log(`[HomeDebug] Item: ${assignment.title}, food: ${JSON.stringify(assignment.food_amounts)}, move: ${JSON.stringify(assignment.exercise_durations)}`);
+    }
+
+    if (assignment.food_amounts?.length) amount = assignment.food_amounts[0];
+    else if (assignment.exercise_durations?.length) amount = assignment.exercise_durations[0];
+    else if (assignment.mindfulness_durations?.length) amount = assignment.mindfulness_durations[0];
+
+    // Shorten common units for timeline display
+    return amount
+      .replace(/tablespoon/gi, 'tbsp')
+      .replace(/teaspoon/gi, 'tsp')
+      .replace(/minutes/gi, 'min')
+      .replace(/minute/gi, 'min')
+      .replace(/hours/gi, 'hr')
+      .replace(/hour/gi, 'hr');
   };
   const getActionPurpose = (assignment: Assignment): string => {
     // Use only purpose field from API (for ActionDetail)
@@ -527,27 +541,43 @@ export default function ActionPlanTimeline({
 
   const getActionSymptomsConditions = (assignment: Assignment): string => {
     // Collect symptoms and conditions in order and return (for timeline display)
-    const symptoms = assignment.symptoms || [];
-    const conditions = assignment.conditions || [];
-    
+    // Filter out "None of the above" and similar invalid values
+    const symptoms = (assignment.symptoms || []).filter(s =>
+      s && s.toLowerCase() !== 'none of the above' && s.toLowerCase() !== 'none' && s.trim() !== ''
+    );
+    const conditions = (assignment.conditions || []).filter(c =>
+      c && c.toLowerCase() !== 'none of the above' && c.toLowerCase() !== 'none' && c.trim() !== ''
+    );
+
     const allItems = [...symptoms, ...conditions];
     return allItems.join(', ');
+  };
+
+  // Filter out "None of the above" and similar invalid values from conditions
+  const filterConditions = (conditions: string[] | undefined): string[] => {
+    if (!conditions) return [];
+    return conditions.filter(c =>
+      c &&
+      c.toLowerCase() !== 'none of the above' &&
+      c.toLowerCase() !== 'none' &&
+      c.trim() !== ''
+    );
   };
 
   // Hormone-specific icon return function (chooses left/right variant by side)
   const getHormoneIcon = (hormone: string, isLeft: boolean) => {
     switch (hormone.toLowerCase()) {
-      case 'androgens': 
-        return isLeft ? Images.TestosteroneLeftHand : Images.TestosteroneRightHand;
-      case 'progesterone': 
+      case 'androgens':
+        return isLeft ? Images.AndrogensLeftHand : Images.AndrogensRightHand;
+      case 'progesterone':
         return isLeft ? Images.ProgesteroneLeftHand : Images.ProgesteroneRightHand;
-      case 'estrogen': 
-      return isLeft ? Images.EstrogenLeftHand : Images.EstrogenRightHand;
-      case 'thyroid': 
-      return isLeft ? Images.ThyroidLeftHand : Images.ThyroidRightHand;
+      case 'estrogen':
+        return isLeft ? Images.EstrogenLeftHand : Images.EstrogenRightHand;
+      case 'thyroid':
+        return isLeft ? Images.ThyroidLeftHand : Images.ThyroidRightHand;
       case 'insulin': return isLeft ? Images.InsulinLeftHand : Images.InsulinRightHand;
-      case 'cortisol': 
-      return isLeft ? Images.CortisolLeftHand : Images.CortisolRightHand;
+      case 'cortisol':
+        return isLeft ? Images.CortisolLeftHand : Images.CortisolRightHand;
       case 'fsh': return '🌱';
       case 'lh': return '🌿';
       case 'prolactin': return '🤱';
@@ -588,29 +618,29 @@ export default function ActionPlanTimeline({
   const getSmartTimeSlot = (assignment: Assignment): string => {
     const title = assignment.title.toLowerCase();
     const category = assignment.category?.toLowerCase() || '';
-    
+
     // Morning indicators (breakfast foods, morning routines)
-    if (title.includes('pumpkin') || title.includes('seed') || 
-        title.includes('pomegranate') || title.includes('juice') ||
-        title.includes('breakfast') || title.includes('morning') ||
-        (category === 'food' && (title.includes('smoothie') || title.includes('cereal')))) {
+    if (title.includes('pumpkin') || title.includes('seed') ||
+      title.includes('pomegranate') || title.includes('juice') ||
+      title.includes('breakfast') || title.includes('morning') ||
+      (category === 'food' && (title.includes('smoothie') || title.includes('cereal')))) {
       return 'morning';
     }
-    
+
     // Afternoon indicators (exercise, lunch, afternoon activities)
     if (title.includes('yoga') || title.includes('practice') ||
-        title.includes('lunch') || title.includes('afternoon') ||
-        (category === 'movement' && (title.includes('cardio') || title.includes('walk')))) {
+      title.includes('lunch') || title.includes('afternoon') ||
+      (category === 'movement' && (title.includes('cardio') || title.includes('walk')))) {
       return 'afternoon';
     }
-    
+
     // Evening indicators (dinner, evening routines, strength training)
     if (title.includes('strength') || title.includes('training') ||
-        title.includes('dinner') || title.includes('evening') ||
-        title.includes('meditation') || title.includes('sleep')) {
+      title.includes('dinner') || title.includes('evening') ||
+      title.includes('meditation') || title.includes('sleep')) {
       return 'evening';
     }
-    
+
     // Default fallback
     return 'anytime';
   };
@@ -636,7 +666,7 @@ export default function ActionPlanTimeline({
   return (
     <View style={styles.container}>
       <View style={{ flex: 1 }}>
-        <View 
+        <View
           style={{ height: contentHeight, overflow: 'visible' }}
           onLayout={(e) => {
             const newWidth = Math.max(0, e.nativeEvent.layout.width);
@@ -649,7 +679,7 @@ export default function ActionPlanTimeline({
           <Svg
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
-            width={canvasW}            
+            width={canvasW}
             height={contentHeight}
           >
             <Defs>
@@ -657,7 +687,7 @@ export default function ActionPlanTimeline({
                 <Stop offset="0" stopColor="#C17EC9" />
                 <Stop offset="1" stopColor="#A36CFF" />
               </SvgLinearGradient>
-              
+
               {/* Gradient for completed section - same color as GradientText */}
               <SvgLinearGradient id="completedSectionGrad" x1="0" y1="0" x2="1" y2="0">
                 <Stop offset="0" stopColor="#A29AEA" />
@@ -689,7 +719,7 @@ export default function ActionPlanTimeline({
               />
             )}
 
-            {/* Today progress line (gradient) - keep existing animation */} 
+            {/* Today progress line (gradient) - keep existing animation */}
             {!!todayPathD && pathLen > 0 && (
               <AnimatedPath
                 ref={svgPathRef}
@@ -728,8 +758,8 @@ export default function ActionPlanTimeline({
 
             const xImage = xCenter - CIRCLE_RADIUS;
             const yImage = yCenter - CIRCLE_RADIUS;
-            const textLeft = isLeft 
-              ? xCenter + CIRCLE_RADIUS + responsiveWidth(3) 
+            const textLeft = isLeft
+              ? xCenter + CIRCLE_RADIUS + responsiveWidth(3)
               : xCenter - CIRCLE_RADIUS - responsiveWidth(35) - responsiveWidth(3);
 
             // Detailed debug: Today item rendering info
@@ -764,8 +794,8 @@ export default function ActionPlanTimeline({
                         {getFirstHormoneIcon(a, isLeft)}
                       </Text>
                     ) : (
-                      <Image 
-                        source={getFirstHormoneIcon(a, isLeft)} 
+                      <Image
+                        source={getFirstHormoneIcon(a, isLeft)}
                         style={[
                           styles.hormoneImageIcon,
                           { transform: isLeft ? [{ rotate: '333deg' }] : [{ rotate: '15deg' }] }
@@ -794,8 +824,8 @@ export default function ActionPlanTimeline({
                 <TouchableOpacity
                   style={[
                     styles.imageCircle,
-                    { 
-                      left: xImage, 
+                    {
+                      left: xImage,
                       top: yImage,
                       borderColor: a.is_completed ? '#DDC2E9' : (a.id === nextIncompleteTask?.id ? '#DDC2E9' : '#EFEFEF'), // Lavender for completed or next task
                     },
@@ -812,7 +842,7 @@ export default function ActionPlanTimeline({
                       });
                       return;
                     }
-                    
+
                     // Trigger expanding animation for pulsing ring
                     if (a.id === nextIncompleteTask?.id) {
                       handleExpandingNavigation({
@@ -821,9 +851,13 @@ export default function ActionPlanTimeline({
                         purpose: getActionPurpose(a),
                         hormones: a.hormones || [],
                         specific_action: a.specific_action,
-                        conditions: a.conditions,
+                        conditions: filterConditions(a.conditions),
                         symptoms: a.symptoms,
                         advices: a.advices,
+                        research_studies: a.research_studies || [],
+                        variants: a.variants || [],
+                        hero_image_url: a.hero_image_url,
+                        hormone_persona_intro: a.hormone_persona_intro,
                       }, { x: xImage, y: yImage });
                     } else {
                       // Regular navigation for other items
@@ -833,9 +867,13 @@ export default function ActionPlanTimeline({
                         purpose: getActionPurpose(a),
                         hormones: a.hormones || [],
                         specific_action: a.specific_action,
-                        conditions: a.conditions,
+                        conditions: filterConditions(a.conditions),
                         symptoms: a.symptoms,
                         advices: a.advices,
+                        research_studies: a.research_studies || [],
+                        variants: a.variants || [],
+                        hero_image_url: a.hero_image_url,
+                        hormone_persona_intro: a.hormone_persona_intro,
                       });
                     }
                   }}
@@ -847,18 +885,30 @@ export default function ActionPlanTimeline({
                       purpose: getActionPurpose(a),
                       hormones: a.hormones || [],
                       specific_action: a.specific_action,
-                      conditions: a.conditions,
+                      conditions: filterConditions(a.conditions),
                       symptoms: a.symptoms,
                       advices: a.advices,
+                      research_studies: a.research_studies || [],
+                      variants: a.variants || [],
+                      hero_image_url: a.hero_image_url,
+                      hormone_persona_intro: a.hormone_persona_intro,
                     }, { x: xImage, y: yImage });
                   } : undefined}
                   delayLongPress={2000} // 2 seconds long press
                 >
-                  <Text style={styles.imageFallback} allowFontScaling={false}>
-                    📋
-                  </Text>
+                  {a.hero_image_url ? (
+                    <Image
+                      source={{ uri: a.hero_image_url }}
+                      style={styles.circleImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Text style={styles.imageFallback} allowFontScaling={false}>
+                      📋
+                    </Text>
+                  )}
                   {/* (hormone image rendered behind the circle) */}
-                  
+
                   {/* Hormone number (relative to image) - hide for Weekly Check-in */}
                   {a.id !== -1 && (
                     <View style={[
@@ -899,21 +949,25 @@ export default function ActionPlanTimeline({
                         });
                         return;
                       }
-                      
+
                       handleNavigation({
                         id: a.id,
                         title: a.title,
                         purpose: getActionPurpose(a),
                         hormones: a.hormones || [],
                         specific_action: a.specific_action,
-                        conditions: a.conditions,
+                        conditions: filterConditions(a.conditions),
                         symptoms: a.symptoms,
                         advices: a.advices,
+                        research_studies: a.research_studies || [],
+                        variants: a.variants || [],
+                        hero_image_url: a.hero_image_url,
+                        hormone_persona_intro: a.hormone_persona_intro,
                       });
                     }}
                     style={{ flexDirection: 'row', alignItems: 'center', justifyContent: isLeft ? 'flex-start' : 'flex-end' }}
                   >
-                    <Text 
+                    <Text
                       style={[styles.itemTitle, { textAlign: isLeft ? 'left' : 'right' }]}
                       numberOfLines={1}
                       ellipsizeMode="tail"
@@ -925,7 +979,7 @@ export default function ActionPlanTimeline({
                     </Text>
                   </TouchableOpacity>
                   <Text style={[styles.itemSub, { textAlign: isLeft ? 'left' : 'right' }]} numberOfLines={1} allowFontScaling={false}>
-                    {a.id === -1 
+                    {a.id === -1
                       ? (a.purpose || 'Vent your concerns & progress | Acne | 🌤️')
                       : `${getActionAmount(a)}${getActionSymptomsConditions(a) ? ' | ' : ''}${getActionSymptomsConditions(a)}`}
                   </Text>
@@ -943,10 +997,10 @@ export default function ActionPlanTimeline({
             const containerHeight = isAnytime ? responsiveHeight(3) : iconSize;
             const iconLeft = CENTER_X - containerWidth / 2;
             const iconTop = position.iconY - containerHeight / 2;
-            
+
             // Use the smart time slot from position calculation
             const smartTimeSlot = position.timeSlot;
-            
+
             console.log(`🎯 ActionPlanTimeline Icon rendering ${index}:`, {
               originalTimeSlot: position.timeSlot,
               smartTimeSlot,
@@ -957,7 +1011,7 @@ export default function ActionPlanTimeline({
               fallbackUsed: !TIME_ICONS[smartTimeSlot],
               allAvailableKeys: Object.keys(TIME_ICONS)
             });
-            
+
             return (
               <View
                 key={`time-icon-${position.timeSlot}`}
@@ -971,12 +1025,12 @@ export default function ActionPlanTimeline({
                   }
                 ]}
               >
-                <Text 
+                <Text
                   style={[
                     styles.timeIconText,
                     (TIME_ICONS[smartTimeSlot] || TIME_ICONS.anytime) === 'Anytime' && styles.timeIconTextSmall,
                     (TIME_ICONS[smartTimeSlot] || TIME_ICONS.anytime) === '🌙' && styles.timeIconTextMoon
-                  ]} 
+                  ]}
                   allowFontScaling={false}
                 >
                   {TIME_ICONS[smartTimeSlot] || TIME_ICONS.anytime}
@@ -990,36 +1044,36 @@ export default function ActionPlanTimeline({
             // Calculate end point of Today timeline
             const todayLastY = todayAnchors.at(-1)?.y ?? 0;
             const todayEndY = todayLastY + geom.ITEM_BLOCK_H / 2 + geom.CAP_BOTTOM;
-            
+
             // Calculate start point of Tomorrow timeline (for label position - based on default spacing)
             const tomorrowStartYForLabel = todayLastY + geom.ITEM_BLOCK_H / 2 + geom.CAP_BOTTOM + responsiveHeight(8);
-            
+
             // Exact center between the two timelines (for label display)
             const gapCenterY = todayEndY + (tomorrowStartYForLabel - todayEndY) / 2;
-            
+
             // Calculate date (tomorrow)
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             const tomorrowDate = tomorrow.getDate();
             const tomorrowMonth = tomorrow.toLocaleString('en-US', { month: 'long' });
-            
-                          return (
-                <View style={[styles.tomorrowHeaderContainer, { 
-                  top: gapCenterY - responsiveHeight(1.5), // Adjust to avoid overlap with line
-                }]}>
-                  <Text style={styles.tomorrowSectionTitle}>Tomorrow</Text>
-                  <Text style={styles.tomorrowDateText}>{`${tomorrowMonth} ${tomorrowDate}, ${tomorrow.getFullYear()}`}</Text>
-                  
-                  {/* Lock icon - render below the line */}
-                  <View style={styles.tomorrowLockContainer}>
-                    <Image 
-                      source={require('../assets/icons/IconLock.png')}
-                      style={styles.tomorrowLockIcon}
-                      resizeMode="contain"
-                    />
-                  </View>
+
+            return (
+              <View style={[styles.tomorrowHeaderContainer, {
+                top: gapCenterY - responsiveHeight(1.5), // Adjust to avoid overlap with line
+              }]}>
+                <Text style={styles.tomorrowSectionTitle}>Tomorrow</Text>
+                <Text style={styles.tomorrowDateText}>{`${tomorrowMonth} ${tomorrowDate}, ${tomorrow.getFullYear()}`}</Text>
+
+                {/* Lock icon - render below the line */}
+                <View style={styles.tomorrowLockContainer}>
+                  <Image
+                    source={require('../assets/icons/IconLock.png')}
+                    style={styles.tomorrowLockIcon}
+                    resizeMode="contain"
+                  />
                 </View>
-              );
+              </View>
+            );
           })()}
 
 
@@ -1050,7 +1104,7 @@ export default function ActionPlanTimeline({
                   ]}
                 >
                   <Text style={styles.imageFallback}>🥜</Text>
-                  
+
                   {/* Tomorrow hormone image */}
                   <View style={[
                     styles.hormoneImage,
@@ -1059,10 +1113,10 @@ export default function ActionPlanTimeline({
                       top: isLeft ? -responsiveHeight(5) : -responsiveHeight(3),
                       left: isLeft ? -responsiveWidth(8) : undefined,
                       right: isLeft ? undefined : -responsiveWidth(8),
-                      
+
                     }
                   ]}
-                  pointerEvents="none">
+                    pointerEvents="none">
                     {(() => {
                       const hormoneIcon = getFirstHormoneIcon(a, isLeft);
                       console.log('🔍 Tomorrow hormone icon debug:', {
@@ -1072,14 +1126,14 @@ export default function ActionPlanTimeline({
                         isString: typeof hormoneIcon === 'string',
                         isLeft
                       });
-                      
+
                       return typeof hormoneIcon === 'string' ? (
                         <Text style={styles.hormoneImageText} allowFontScaling={false}>
                           {hormoneIcon}
                         </Text>
                       ) : (
-                        <Image 
-                          source={hormoneIcon} 
+                        <Image
+                          source={hormoneIcon}
                           style={[
                             styles.hormoneImageIcon,
                             { transform: isLeft ? [{ rotate: '333deg' }] : [{ rotate: '30deg' }] }
@@ -1089,7 +1143,7 @@ export default function ActionPlanTimeline({
                       );
                     })()}
                   </View>
-                  
+
                   {/* Tomorrow hormone number (relative to image) */}
                   <View style={[
                     styles.hormoneBadge,
@@ -1114,9 +1168,9 @@ export default function ActionPlanTimeline({
                     { left: textLeft, top: yCenter - responsiveHeight(3.5), alignItems: isLeft ? 'flex-start' : 'flex-end', justifyContent: 'center' },
                   ]}
                 >
-                    <Text style={[styles.itemTitle, { textAlign: isLeft ? 'left' : 'right' }]}>
-                      {a.title}
-                    </Text>
+                  <Text style={[styles.itemTitle, { textAlign: isLeft ? 'left' : 'right' }]}>
+                    {a.title}
+                  </Text>
                   <Text style={[styles.itemSub, { textAlign: isLeft ? 'left' : 'right' }]} numberOfLines={1} allowFontScaling={false}>
                     {getActionAmount(a)}{getActionSymptomsConditions(a) ? ' | ' : ''}{getActionSymptomsConditions(a)}
                   </Text>
@@ -1130,7 +1184,7 @@ export default function ActionPlanTimeline({
             const todayLastY = todayAnchors.at(-1)?.y ?? 0;
             const tomorrowTextHeight = responsiveHeight(6);
             const tomorrowStartY = todayLastY + geom.ITEM_BLOCK_H / 2 + geom.CAP_BOTTOM + responsiveHeight(8) + tomorrowTextHeight;
-            
+
             return (
               <BlurView
                 intensity={Platform.OS === 'android' ? 8 : 18}
@@ -1211,7 +1265,7 @@ export function generatePathRectilinear(
 
   const s = (n: number) => Math.round(n);
   const cornerR = 15;
-  
+
   const first = pts[0];
   const last = pts[pts.length - 1];
 
@@ -1219,28 +1273,28 @@ export function generatePathRectilinear(
   const addRoundedCorner = (x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): string => {
     const dx1 = x2 - x1, dy1 = y2 - y1;
     const dx2 = x3 - x2, dy2 = y3 - y2;
-    
+
     const len1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
     const len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
-    
+
     if (len1 < 1 || len2 < 1) return ` L ${s(x2)},${s(y2)}`;
-    
+
     const ux1 = dx1 / len1, uy1 = dy1 / len1;
     const ux2 = dx2 / len2, uy2 = dy2 / len2;
-    
+
     const maxR = Math.min(len1 * 0.4, len2 * 0.4);
     const actualR = Math.min(cornerR, maxR);
-    
+
     if (actualR < 2) return ` L ${s(x2)},${s(y2)}`;
-    
+
     const inX = x2 - ux1 * actualR;
     const inY = y2 - uy1 * actualR;
     const outX = x2 + ux2 * actualR;
     const outY = y2 + uy2 * actualR;
-    
+
     const cross = dx1 * dy2 - dy1 * dx2;
     const sweep = cross > 0 ? 1 : 0;
-    
+
     return ` L ${s(inX)},${s(inY)} A ${actualR} ${actualR} 0 0 ${sweep} ${s(outX)},${s(outY)}`;
   };
 
@@ -1270,7 +1324,7 @@ export function generatePathRectilinear(
   for (let i = 0; i < pts.length - 1; i++) {
     const a = pts[i], b = pts[i + 1];
     const yMid = a.y + circleR + (b.y - circleR - (a.y + circleR)) / 2;
-    
+
     const segmentPoints: [number, number][] = [
       [a.x, a.y + circleR], // current anchor bottom edge
       [a.x, yMid],
@@ -1290,15 +1344,15 @@ export function generatePathRectilinear(
     segments.push(midSegmentPath);
   }
 
- // Last segment: from last anchor bottom to end point (symmetric to first)
- const lastBottomY = last.y + circleR;
- const lastMidY = lastBottomY + itemBlockH / 2 - circleR; // subtract circleR symmetrically to first
- const lastSegmentPoints: [number, number][] = [
-   [last.x, lastBottomY], // last anchor bottom edge
-   [last.x, lastMidY],
-   [centerX, lastMidY],
-   [centerX, lastMidY + BOTTOM_CAP]
- ];
+  // Last segment: from last anchor bottom to end point (symmetric to first)
+  const lastBottomY = last.y + circleR;
+  const lastMidY = lastBottomY + itemBlockH / 2 - circleR; // subtract circleR symmetrically to first
+  const lastSegmentPoints: [number, number][] = [
+    [last.x, lastBottomY], // last anchor bottom edge
+    [last.x, lastMidY],
+    [centerX, lastMidY],
+    [centerX, lastMidY + BOTTOM_CAP]
+  ];
 
   let lastSegmentPath = `M ${s(lastSegmentPoints[0][0])},${s(lastSegmentPoints[0][1])}`;
   for (let i = 1; i < lastSegmentPoints.length - 1; i++) {
@@ -1327,7 +1381,7 @@ function generateTomorrowPathToFirstAnchor(
   circleR: number,
 ) {
   if (!anchors.length) return '';
-  
+
   const s = (n: number) => Math.round(n);
   const cornerR = 15;
   const first = anchors[0];
@@ -1336,26 +1390,26 @@ function generateTomorrowPathToFirstAnchor(
   const addRoundedCorner = (x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): string => {
     const dx1 = x2 - x1, dy1 = y2 - y1;
     const dx2 = x3 - x2, dy2 = y3 - y2;
-    
+
     const len1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
     const len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
-    
+
     if (len1 < 1 || len2 < 1) return ` L ${s(x2)},${s(y2)}`;
-    
+
     const ux1 = dx1 / len1, uy1 = dy1 / len1;
     const ux2 = dx2 / len2, uy2 = dy2 / len2;
-    
+
     const maxR = Math.min(len1 * 0.4, len2 * 0.4);
     const actualR = Math.min(cornerR, maxR);
-    
+
     if (actualR < 2) return ` L ${s(x2)},${s(y2)}`;
-    
+
     const inX = x2 - ux1 * actualR, inY = y2 - uy1 * actualR;
     const outX = x2 + ux2 * actualR, outY = y2 + uy2 * actualR;
-    
+
     const cross = dx1 * dy2 - dy1 * dx2;
     const sweep = cross > 0 ? 1 : 0;
-    
+
     return ` L ${s(inX)},${s(inY)} A ${actualR} ${actualR} 0 0 ${sweep} ${s(outX)},${s(outY)}`;
   };
 
@@ -1375,7 +1429,7 @@ function generateTomorrowPathToFirstAnchor(
     const [x1, y1] = pathPoints[i - 1];
     const [x2, y2] = pathPoints[i];
     const [x3, y3] = pathPoints[i + 1];
-    
+
     d += addRoundedCorner(x1, y1, x2, y2, x3, y3);
   }
 
@@ -1400,7 +1454,7 @@ function generateCompletedPath(
   BASE_TOP: number,
 ) {
   if (!completedAnchors.length) return '';
-  
+
   const s = (n: number) => Math.round(n);
   const cornerR = 15;
   const pts = [...completedAnchors].sort((a, b) => a.y - b.y);
@@ -1411,28 +1465,28 @@ function generateCompletedPath(
   const addRoundedCorner = (x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): string => {
     const dx1 = x2 - x1, dy1 = y2 - y1;
     const dx2 = x3 - x2, dy2 = y3 - y2;
-    
+
     const len1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
     const len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
-    
+
     if (len1 < 1 || len2 < 1) return ` L ${s(x2)},${s(y2)}`;
-    
+
     const ux1 = dx1 / len1, uy1 = dy1 / len1;
     const ux2 = dx2 / len2, uy2 = dy2 / len2;
-    
+
     const maxR = Math.min(len1 * 0.4, len2 * 0.4);
     const actualR = Math.min(cornerR, maxR);
-    
+
     if (actualR < 2) return ` L ${s(x2)},${s(y2)}`;
-    
+
     const inX = x2 - ux1 * actualR;
     const inY = y2 - uy1 * actualR;
     const outX = x2 + ux2 * actualR;
     const outY = y2 + uy2 * actualR;
-    
+
     const cross = dx1 * dy2 - dy1 * dx2;
     const sweep = cross > 0 ? 1 : 0;
-    
+
     return ` L ${s(inX)},${s(inY)} A ${actualR} ${actualR} 0 0 ${sweep} ${s(outX)},${s(outY)}`;
   };
 
@@ -1461,7 +1515,7 @@ function generateCompletedPath(
   for (let i = 0; i < pts.length - 1; i++) {
     const a = pts[i], b = pts[i + 1];
     const yMid = a.y + circleR + (b.y - circleR - (a.y + circleR)) / 2;
-    
+
     const segmentPoints: [number, number][] = [
       [a.x, a.y + circleR],
       [a.x, yMid],
@@ -1505,6 +1559,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
     zIndex: 1,
+  },
+  circleImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: responsiveWidth(9.72),
+    zIndex: 1,
+    backgroundColor: '#F2F2F7',
   },
   pulsingRing: {
     position: 'absolute',
@@ -1581,7 +1642,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter400',
     color: '#949494',
   },
-  
+
   // Tomorrow label style (same as Home screen)
   tomorrowHeaderContainer: {
     position: 'absolute',
@@ -1615,12 +1676,12 @@ const styles = StyleSheet.create({
     height: responsiveWidth(6),
     tintColor: '#949494',
   },
-  
+
   // Tomorrow item blur effect
   tomorrowItem: {
     opacity: 0.9,
   },
-  
+
   // Tomorrow section blur overlay
   tomorrowSectionBlur: {
     position: 'absolute',
@@ -1628,7 +1689,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent', // Slight white overlay for better blur effect
     borderRadius: responsiveWidth(2),
   },
-  
+
   // Android fallback for blur effect
   tomorrowSectionBlurAndroid: {
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
@@ -1644,7 +1705,7 @@ const styles = StyleSheet.create({
     marginTop: -1,
     marginBottom: -1,
   },
-  
+
   // Time-based icon style (matching Figma design)
   timeIcon: {
     position: 'absolute',
@@ -1685,7 +1746,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(1.9), // Smaller size for moon emoji
     lineHeight: responsiveFontSize(2.5),
   },
-  
+
   // Expanding circle animation styles
   expandingCircle: {
     position: 'absolute',

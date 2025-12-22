@@ -3,10 +3,11 @@ import ActionPlanTimeline from '@/components/ActionPlanTimeline';
 import AuvraChatModal from '@/components/AuvraChatModal';
 import CalendarBottomSheet from '@/components/CalendarBottomSheet';
 import apiPromiseManager from '@/services/apiPromiseManager';
-import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse } from '@/services/homeService';
+import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse, ActionPlanResponse, ActionPlanItem } from '@/services/homeService';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { useEffect, useRef, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Dimensions,
   Image,
@@ -43,28 +44,42 @@ type RootStackParamList = {
 };
 
 interface HomeScreenProps {
-  route?: { 
-    params?: { 
+  route?: {
+    params?: {
       refreshedData?: AssignmentsResponse;
       cyclePhaseData?: any;
       skipLoading?: boolean;
       skipTodayLoading?: boolean;
-    }; 
+      freshSignup?: boolean;
+    };
   };
 }
+
+const FRESH_SIGNUP_FLAG = 'fresh_signup_pending_refresh';
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [cycleInfo, setCycleInfo] = useState<CycleInfo | null>(null);
   const [assignments, setAssignments] = useState<AssignmentsResponse | null>(null);
   const [progressStats, setProgressStats] = useState<ProgressStatsResponse | null>(null);
+  const [hasRetried, setHasRetried] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'time' | 'type'>('time');
-  
+
+  // Action plan state (new system)
+  const [actionPlan, setActionPlan] = useState<ActionPlanResponse | null>(null);
+  const [feedbackPromptSeconds, setFeedbackPromptSeconds] = useState<number>(30); // Default 30 seconds
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+
   // Auvra chat modal state
   const [showAuvraChat, setShowAuvraChat] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const freshSignupCheckRef = useRef<boolean>(false);
+  const initialDataLoadedRef = useRef<boolean>(false); // Prevent duplicate initial fetches
+
+  // Note: Fresh signup data loading is now handled by SignupLoadingScreen
+  // which waits until data is ready before navigating to HomeScreen
 
   // Disable swipe back gesture to prevent interference with scrolling
   useFocusEffect(
@@ -81,16 +96,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }, [navigation])
   );
 
-  // Reset inactivity timer
+  // Reset inactivity timer - Shows Auvra modal after configured seconds from backend
   const resetInactivityTimer = () => {
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
-    
+
     if (!showAuvraChat) {
+      // Use feedbackPromptSeconds from backend (default 30 seconds)
+      const timeoutMs = feedbackPromptSeconds * 1000;
       inactivityTimerRef.current = setTimeout(() => {
         setShowAuvraChat(true);
-      }, 15000); // 15 seconds
+      }, timeoutMs);
     }
   };
 
@@ -103,32 +120,74 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }
   };
 
-  // Handle Auvra chat responses
-  const handleAuvraResponse = (response: 'positive' | 'negative') => {
+  // Handle Auvra chat responses - Call plan satisfaction API
+  const handleAuvraResponse = async (response: 'positive' | 'negative' | string) => {
+    // Only handle positive responses here
+    // Negative responses are now handled via handleReplaceItems (in-modal selection)
+    if (response !== 'positive') return;
+
     setShowAuvraChat(false);
-    
-    // Navigate to MainScreenTabs with auvra tab active and chat context
-    const conversationContext = {
-      initialMessage: "How does your care plan look today?",
-      userResponse: response === 'positive' ? "👍 It works for me" : "👎 I want to change it",
-      context: "care_plan_modal"
-    };
-    
-    console.log('HomeScreen - Navigating to Care Plan check-in with:', {
-      activeTab: 'auvra',
-      chatContext: {
-        chatId: '1',
-        conversationContext
+
+    // If we have an action plan, call the satisfaction API
+    if (actionPlan?.plan_id) {
+      setIsSubmittingFeedback(true);
+
+      try {
+        // "Works for me" - mark all as liked
+        const result = await homeService.submitPlanSatisfaction(
+          actionPlan.plan_id,
+          'works_for_me'
+        );
+
+        if (result?.success) {
+          console.log('✅ Plan marked as satisfactory:', result.message);
+        }
+      } catch (error) {
+        console.error('❌ Error submitting plan satisfaction:', error);
+      } finally {
+        setIsSubmittingFeedback(false);
       }
-    });
-    
-    navigation.navigate('MainScreenTabs', { 
-      activeTab: 'auvra',
-      chatContext: {
-        chatId: '1', // Care Plan check-in chat ID
-        conversationContext
+    }
+  };
+
+  // Handle in-modal replacement of selected items
+  const handleReplaceItems = async (itemIds: number[]) => {
+    if (!actionPlan?.plan_id || itemIds.length === 0) return;
+
+    setIsSubmittingFeedback(true);
+
+    try {
+      console.log('🔄 Replacing items:', itemIds);
+
+      // Call plan-satisfaction API with items to replace
+      const result = await homeService.submitPlanSatisfaction(
+        actionPlan.plan_id,
+        'want_to_change',
+        itemIds
+      );
+
+      if (result?.success) {
+        console.log('✅ Items replaced successfully:', result.message);
+
+        // Refresh assignments to get updated data
+        const updatedAssignments = await homeService.getTodayAssignments();
+        if (updatedAssignments) {
+          setAssignments(updatedAssignments);
+          wireUpActionPlan(updatedAssignments);
+
+          if (updatedAssignments.hormone_stats) {
+            setProgressStats({ hormone_stats: convertHormoneStats(updatedAssignments.hormone_stats) });
+          }
+        }
       }
-    });
+
+      // Close the modal after successful replacement
+      setShowAuvraChat(false);
+    } catch (error) {
+      console.error('❌ Error replacing items:', error);
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
   };
 
   // Handle calendar button click
@@ -147,13 +206,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     if (!loading && assignments) {
       resetInactivityTimer();
     }
-    
+
     return () => {
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
       }
     };
-  }, [loading, assignments, showAuvraChat]);
+  }, [loading, assignments, showAuvraChat, feedbackPromptSeconds]);
 
   /**
    * Convert hormone_stats data to HormoneStats interface
@@ -163,7 +222,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const convertHormoneStats = (hormoneStatsData: any) => {
     const hormoneStats: HormoneStats = {};
     const supportedHormones = ['androgens', 'progesterone', 'estrogen', 'thyroid', 'insulin', 'cortisol', 'FSH', 'LH', 'prolactin', 'ghrelin', 'testosterone'];
-    
+
     supportedHormones.forEach(hormone => {
       if (hormoneStatsData[hormone]) {
         hormoneStats[hormone as keyof HormoneStats] = {
@@ -172,7 +231,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         };
       }
     });
-    
+
     return hormoneStats;
   };
 
@@ -186,43 +245,50 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     if (refreshedData && skipLoading) {
       // All data completed - use refreshed data
       setAssignments(refreshedData);
-      
+
       if (refreshedData?.hormone_stats) {
         setProgressStats({ hormone_stats: convertHormoneStats(refreshedData.hormone_stats) });
       }
-      
+
       if (cyclePhaseData?.cycle_info) {
         setCycleInfo(cyclePhaseData.cycle_info);
       }
-      
+
       setLoading(false);
+      initialDataLoadedRef.current = true;
     } else if (refreshedData && skipTodayLoading) {
       // Only Today API completed - use partial data
       setAssignments(refreshedData);
-      
+
       if (refreshedData?.hormone_stats) {
         setProgressStats({ hormone_stats: convertHormoneStats(refreshedData.hormone_stats) });
       }
-      
+
       // Load cycle data separately without loading state
       homeService.getCyclePhase().then(cycleData => {
         setCycleInfo(cycleData?.cycle_info || null);
         setLoading(false);
+        initialDataLoadedRef.current = true;
       });
     } else {
+      // Prevent duplicate initial fetches
+      if (initialDataLoadedRef.current && !hasRetried) {
+        return;
+      }
+
       // Check for active API promise from ActionCompletedScreen
       const activePromise = apiPromiseManager.getActivePromise();
-      
+
       if (activePromise) {
         setLoading(true);
-        
+
         // Wait for API promise result
         activePromise
           .then(result => {
             if (result.success) {
               if (result.todayAssignments) {
                 setAssignments(result.todayAssignments);
-                
+
                 if (result.todayAssignments.hormone_stats) {
                   setProgressStats({ hormone_stats: convertHormoneStats(result.todayAssignments.hormone_stats) });
                 }
@@ -247,21 +313,28 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           })
           .finally(() => {
             setLoading(false);
+            initialDataLoadedRef.current = true;
           });
       } else {
         // Normal data load
         loadHomeData();
       }
     }
-  }, [route?.params]);
+  }, [route?.params, hasRetried]);
 
   /**
    * Load home data with loading state
    */
   const loadHomeData = async () => {
+    // Prevent duplicate fetches
+    if (initialDataLoadedRef.current) {
+      return;
+    }
+    initialDataLoadedRef.current = true;
+
     try {
       setLoading(true);
-      
+
       // Call APIs in parallel
       const [cycleData, assignmentsData] = await Promise.all([
         homeService.getCyclePhase(),
@@ -270,17 +343,153 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
       setCycleInfo(cycleData?.cycle_info || null);
       setAssignments(assignmentsData);
-      
+
       if (assignmentsData?.hormone_stats) {
         setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
       } else {
         setProgressStats(null);
       }
+
+      // Wire up actionPlan state for feedback system
+      if (assignmentsData?.plan_id) {
+        const allActions = [
+          ...(assignmentsData.assignments?.morning || []),
+          ...(assignmentsData.assignments?.afternoon || []),
+          ...(assignmentsData.assignments?.evening || []),
+        ];
+        setActionPlan({
+          plan_id: assignmentsData.plan_id,
+          user_id: '', // Not needed for feedback
+          date: assignmentsData.date || '',
+          phase: assignmentsData.cycle_phase || '',
+          phase_day: 0,
+          actions: allActions.map((action, index) => ({
+            id: action.id || index,
+            slot: index + 1,
+            time_slot: action.time_slot || 'morning',
+            category: action.category || '',
+            title: action.title || '',
+            specific_action: action.specific_action || '',
+            purpose: action.purpose || '',
+            target_hormone: action.hormones?.[0] || '',
+            hormone_persona_intro: action.hormone_persona_intro || '',
+            hero_image_url: action.hero_image_url || '',
+            research_studies: action.research_studies || [],
+            is_completed: action.is_completed || false,
+            is_replaced: false,
+            variants: action.variants || [],
+          })),
+          total_actions: assignmentsData.total_assignments || 0,
+          completed_actions: assignmentsData.completed_assignments || 0,
+          show_feedback_prompt_after_seconds: assignmentsData.show_feedback_prompt_after_seconds || 30,
+        });
+        console.log('✅ ActionPlan wired up with plan_id:', assignmentsData.plan_id);
+      }
+
+      // Auto-retry if we got empty assignments (session link might still be completing)
+      if (assignmentsData?.total_assignments === 0 && !hasRetried) {
+        console.log('📭 Got empty assignments, will auto-retry in 3 seconds...');
+        setHasRetried(true);
+        initialDataLoadedRef.current = false; // Allow retry
+
+        setTimeout(async () => {
+          console.log('🔄 Auto-retrying to fetch assignments...');
+          try {
+            const retryData = await homeService.getTodayAssignments();
+            if (retryData && retryData.total_assignments > 0) {
+              console.log('✅ Auto-retry successful, got', retryData.total_assignments, 'assignments');
+              setAssignments(retryData);
+              if (retryData.hormone_stats) {
+                setProgressStats({ hormone_stats: convertHormoneStats(retryData.hormone_stats) });
+              }
+              // Wire up actionPlan state for feedback system on retry
+              if (retryData.plan_id) {
+                const allActions = [
+                  ...(retryData.assignments?.morning || []),
+                  ...(retryData.assignments?.afternoon || []),
+                  ...(retryData.assignments?.evening || []),
+                ];
+                setActionPlan({
+                  plan_id: retryData.plan_id,
+                  user_id: '',
+                  date: retryData.date || '',
+                  phase: retryData.cycle_phase || '',
+                  phase_day: 0,
+                  actions: allActions.map((action, index) => ({
+                    id: action.id || index,
+                    slot: index + 1,
+                    time_slot: action.time_slot || 'morning',
+                    category: action.category || '',
+                    title: action.title || '',
+                    specific_action: action.specific_action || '',
+                    purpose: action.purpose || '',
+                    target_hormone: action.hormones?.[0] || '',
+                    hormone_persona_intro: action.hormone_persona_intro || '',
+                    hero_image_url: action.hero_image_url || '',
+                    research_studies: action.research_studies || [],
+                    is_completed: action.is_completed || false,
+                    is_replaced: false,
+                    variants: action.variants || [],
+                  })),
+                  total_actions: retryData.total_assignments || 0,
+                  completed_actions: retryData.completed_assignments || 0,
+                  show_feedback_prompt_after_seconds: retryData.show_feedback_prompt_after_seconds || 30,
+                });
+              }
+            } else {
+              console.log('📭 Auto-retry still got empty assignments');
+            }
+          } catch (retryError) {
+            console.log('❌ Auto-retry failed:', retryError);
+          }
+        }, 3000);
+      }
     } catch (error) {
       // Handle error silently
+      initialDataLoadedRef.current = false; // Allow retry on error
     } finally {
       setLoading(false);
     }
+  };
+
+  /**
+   * Helper function to wire up actionPlan from assignmentsData
+   */
+  const wireUpActionPlan = (assignmentsData: AssignmentsResponse) => {
+    if (!assignmentsData?.plan_id) return;
+
+    const allActions = [
+      ...(assignmentsData.assignments?.morning || []),
+      ...(assignmentsData.assignments?.afternoon || []),
+      ...(assignmentsData.assignments?.evening || []),
+    ];
+    setActionPlan({
+      plan_id: assignmentsData.plan_id,
+      user_id: '',
+      date: assignmentsData.date || '',
+      phase: assignmentsData.cycle_phase || '',
+      phase_day: 0,
+      actions: allActions.map((action, index) => ({
+        id: action.id || index,
+        slot: index + 1,
+        time_slot: action.time_slot || 'morning',
+        category: action.category || '',
+        title: action.title || '',
+        specific_action: action.specific_action || '',
+        purpose: action.purpose || '',
+        target_hormone: action.hormones?.[0] || '',
+        hormone_persona_intro: action.hormone_persona_intro || '',
+        hero_image_url: action.hero_image_url || '',
+        research_studies: action.research_studies || [],
+        is_completed: action.is_completed || false,
+        is_replaced: false,
+        variants: action.variants || [],
+      })),
+      total_actions: assignmentsData.total_assignments || 0,
+      completed_actions: assignmentsData.completed_assignments || 0,
+      show_feedback_prompt_after_seconds: assignmentsData.show_feedback_prompt_after_seconds || 30,
+    });
+    console.log('✅ ActionPlan wired up with plan_id:', assignmentsData.plan_id);
   };
 
   /**
@@ -296,11 +505,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
       setCycleInfo(cycleData?.cycle_info || null);
       setAssignments(assignmentsData);
-      
+
       if (assignmentsData?.hormone_stats) {
         setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
       } else {
         setProgressStats(null);
+      }
+
+      // Wire up actionPlan for feedback system
+      if (assignmentsData) {
+        wireUpActionPlan(assignmentsData);
       }
     } catch (error) {
       // Handle error silently
@@ -341,77 +555,32 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     switch (timeSlot) {
       case 'morning': return '🌤️';
       case 'afternoon': return '☀️';
-      case 'night': return '🌙';
+      case 'evening': return '🌙';  // Backend now uses 'evening'
+      case 'night': return '🌙';     // Keep for backwards compatibility
       case 'anytime': return 'Anytime';
       default: return 'Anytime';
     }
   };
 
   /**
-   * Get action amount based on category
-   * @param assignment - Assignment object
-   * @returns Amount string for the action
-   */
-  const getActionAmount = (assignment: any) => {
-    switch (assignment.category?.toLowerCase()) {
-      case 'food':
-        return assignment.food_amounts?.[0] || '1 serving';
-      case 'exercise':
-        return assignment.exercise_durations?.[0] || '15 min';
-      case 'supplement':
-        return assignment.food_amounts?.[0] || '1 dose';
-      case 'mindfulness':
-        return assignment.mindfulness_durations?.[0] || '10 min';
-      default:
-        return '1 item';
-    }
-  };
-
-  /**
-   * Get action purpose from symptoms and conditions
-   * @param assignment - Assignment object
-   * @returns Purpose string
-   */
-  const getActionPurpose = (assignment: any) => {
-    const allItems = [];
-    
-    if (assignment.symptoms && assignment.symptoms.length > 0) {
-      allItems.push(...assignment.symptoms);
-    }
-    if (assignment.conditions && assignment.conditions.length > 0) {
-      allItems.push(...assignment.conditions);
-    }
-    
-    if (allItems.length > 0) {
-      return allItems.join(', ');
-    }
-    
-    return assignment.purpose || 'Health';
-  };
-
-  /**
    * Get hormone icon emoji or image
    * @param hormone - Hormone name
-   * @returns Emoji icon for hormone or image source
+   * @returns Image source for hormone
    */
   const getHormoneIcon = (hormone: string) => {
     switch (hormone.toLowerCase()) {
-      case 'androgens': return '💪';
-      case 'progesterone': 
-        return Images.ProgesteroneBothHand;
-      case 'estrogen': 
-      return Images.EstrogenBothHand;
-      case 'thyroid': 
-      return Images.ThyroidBothHand;
+      case 'androgens': return Images.AndrogensBothHand;
+      case 'progesterone': return Images.ProgesteroneBothHand;
+      case 'estrogen': return Images.EstrogenBothHand;
+      case 'thyroid': return Images.ThyroidBothHand;
       case 'insulin': return Images.InsulinBothHand;
-      case 'cortisol': 
-      return Images.CortisolBothHand;
-      case 'fsh': return '🌱';
-      case 'lh': return '🌿';
-      case 'prolactin': return '🤱';
-      case 'ghrelin': return '🍽️';
+      case 'cortisol': return Images.CortisolBothHand;
+      case 'fsh': return Images.EstrogenBothHand;
+      case 'lh': return Images.LHCharacterBothHand;
+      case 'prolactin': return Images.ProgesteroneBothHand;
+      case 'ghrelin': return Images.InsulinBothHand;
       case 'testosterone': return Images.TestosteroneBothHand;
-      default: return '💊';
+      default: return Images.ProgesteroneBothHand;
     }
   };
 
@@ -433,18 +602,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
    */
   const getProgressColor = (hormone: string) => {
     switch (hormone.toLowerCase()) {
-      case 'androgens': return '#FF6991';
-      case 'progesterone': return '#CBF0FF';
-      case 'estrogen': return '#FF8BA7';
-      case 'thyroid': return '#F6C34C';
-      case 'insulin': return '#90EE90';
-      case 'cortisol': return '#FFA07A';
-      case 'fsh': return '#98FB98';
-      case 'lh': return '#FFD700';
-      case 'prolactin': return '#F6C34C';
-      case 'ghrelin': return '#FF6B6B';
-      case 'testosterone': return '#A29AEA';
-      default: return '#C17EC9';
+      case 'androgens': return '#A29AEA'; // Purple - matches ActionPlanTimeline
+      case 'progesterone': return '#CBF0FF'; // Light blue
+      case 'estrogen': return '#FF8BA7'; // Pink
+      case 'thyroid': return '#F6C34C'; // Yellow
+      case 'insulin': return '#90EE90'; // Light green
+      case 'cortisol': return '#FFA07A'; // Coral/Orange
+      case 'fsh': return '#98FB98'; // Pale green
+      case 'lh': return '#FFD700'; // Gold
+      case 'prolactin': return '#F6C34C'; // Yellow (same as thyroid)
+      case 'ghrelin': return '#FF6B6B'; // Red
+      case 'testosterone': return '#A29AEA'; // Purple (same as androgens)
+      default: return '#C17EC9'; // Default purple
     }
   };
 
@@ -469,19 +638,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
    */
   const getHormoneQuestColors = () => {
     const allHormones: string[] = [];
-    
+
     // Get hormones directly from hormone_stats
     if (assignments?.hormone_stats) {
       Object.keys(assignments.hormone_stats).forEach(hormone => {
         allHormones.push(hormone);
       });
     }
-    
+
     // Remove duplicates and get first and second hormone colors
     const uniqueHormones = [...new Set(allHormones)];
     const firstHormoneColor = uniqueHormones.length > 0 ? getProgressColor(uniqueHormones[0]) : '#C17EC9';
     const secondHormoneColor = uniqueHormones.length > 1 ? getProgressColor(uniqueHormones[1]) : '#87CEEB';
-    
+
     return { firstHormoneColor, secondHormoneColor };
   };
 
@@ -493,42 +662,42 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     const { firstHormoneColor, secondHormoneColor } = getHormoneQuestColors();
     const screenWidth = Dimensions.get('window').width;
     const screenHeight = Dimensions.get('window').height;
-    
+
     return (
       <View style={styles.backgroundGradientsContainer}>
-        <Svg 
-          width={screenWidth} 
+        <Svg
+          width={screenWidth}
           height={screenHeight}
           viewBox={`0 0 ${screenWidth} ${screenHeight}`}
         >
           <Defs>
-            {/* First large radial gradient */}
-            <SvgRadialGradient id="bgGrad1" cx="0.3" cy="0.4" r="0.5">
-              <Stop offset="0%" stopColor={firstHormoneColor} stopOpacity="0.6" />
-              <Stop offset="50%" stopColor={firstHormoneColor} stopOpacity="0.2" />
-              <Stop offset="100%" stopColor={firstHormoneColor} stopOpacity="0" />
-            </SvgRadialGradient>
-            
-            {/* Second large radial gradient */}
-            <SvgRadialGradient id="bgGrad2" cx="0.7" cy="0.4" r="0.5">
+            {/* First large radial gradient - left side (first hormone) */}
+            <SvgRadialGradient id="bgGrad1" cx="0.25" cy="0.35" r="0.5">
               <Stop offset="0%" stopColor={secondHormoneColor} stopOpacity="0.6" />
               <Stop offset="50%" stopColor={secondHormoneColor} stopOpacity="0.2" />
               <Stop offset="100%" stopColor={secondHormoneColor} stopOpacity="0" />
             </SvgRadialGradient>
+
+            {/* Second large radial gradient - right side (second hormone) */}
+            <SvgRadialGradient id="bgGrad2" cx="0.75" cy="0.35" r="0.5">
+              <Stop offset="0%" stopColor={firstHormoneColor} stopOpacity="0.6" />
+              <Stop offset="50%" stopColor={firstHormoneColor} stopOpacity="0.2" />
+              <Stop offset="100%" stopColor={firstHormoneColor} stopOpacity="0" />
+            </SvgRadialGradient>
           </Defs>
-          
-          {/* First large circular gradient */}
+
+          {/* First large circular gradient - left side */}
           <Circle
-            cx={screenWidth * 0.3}
-            cy={screenHeight * 0.4}
+            cx={screenWidth * 0.25}
+            cy={screenHeight * 0.35}
             r={Math.max(screenWidth, screenHeight) * 0.5}
             fill="url(#bgGrad1)"
           />
-          
-          {/* Second large circular gradient */}
+
+          {/* Second large circular gradient - right side */}
           <Circle
-            cx={screenWidth * 0.7}
-            cy={screenHeight * 0.4}
+            cx={screenWidth * 0.75}
+            cy={screenHeight * 0.35}
             r={Math.max(screenWidth, screenHeight) * 0.5}
             fill="url(#bgGrad2)"
           />
@@ -545,8 +714,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     const screenHeight = Dimensions.get('window').height;
     return (
       <View style={styles.spotlightOverlayContainer} pointerEvents="none">
-        <Svg 
-          width={screenWidth} 
+        <Svg
+          width={screenWidth}
           height={screenHeight}
           viewBox={`0 0 ${screenWidth} ${screenHeight}`}
         >
@@ -591,7 +760,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
   return (
     <View style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -601,7 +770,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       >
         {/* Large radial gradient background */}
         {renderBackgroundGradients()}
-        
+
         {/* White circle overlay effect - show in both views */}
         <View style={styles.whiteCircleOverlay} />
 
@@ -629,7 +798,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             )}
           </View>
           <TouchableOpacity style={styles.calendarButton} onPress={handleCalendarPress}>
-            <Image 
+            <Image
               source={require('../../assets/icons/IconCalendar.png')}
               style={styles.calendarIcon}
               resizeMode="contain"
@@ -637,70 +806,71 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Hormone Quests Section */}
-        {progressStats?.hormone_stats && Object.keys(progressStats.hormone_stats).length > 0 && (
-        <View style={styles.questSection}>
-          <Text style={styles.sectionTitle}>🏆 Your Hormone Quests 🏆</Text>
-          <View style={styles.questContainer}>
-              {Object.entries(progressStats.hormone_stats).map(([hormone, stats], index) => {
-                const hormoneKey = hormone as keyof HormoneStats;
-                const hormoneStats = progressStats.hormone_stats[hormoneKey];
-                
-                if (!hormoneStats || hormoneStats.total === 0) return null;
-                
-                // Determine rotation based on position (left = -15deg, right = +15deg)
-                const isLeft = index % 2 === 0;
-                const rotation = isLeft ? '-5deg' : '10deg';
-                
-                return (
-                  <View key={hormone} style={styles.questItem}>
-              <View style={styles.questImageContainer}>
-                      {typeof getHormoneIcon(hormone) === 'string' ? (
-                        <Text style={styles.questIcon}>{getHormoneIcon(hormone)}</Text>
-                      ) : (
-                        <View style={styles.questIconImageContainer}>
-                          <Image 
-                            source={getHormoneIcon(hormone)} 
-                            style={[styles.questIconImage, { transform: [{ rotate: rotation }] }]}
-                            resizeMode="contain"
+        {/* Hormone Quests Section - only show if there are any non-zero hormone totals */}
+        {progressStats?.hormone_stats &&
+          Object.values(progressStats.hormone_stats).some(stats => stats && stats.total > 0) && (
+            <View style={styles.questSection}>
+              <Text style={styles.sectionTitle}>🏆 Your Hormone Quests 🏆</Text>
+              <View style={styles.questContainer}>
+                {Object.entries(progressStats.hormone_stats).map(([hormone, stats], index) => {
+                  const hormoneKey = hormone as keyof HormoneStats;
+                  const hormoneStats = progressStats.hormone_stats[hormoneKey];
+
+                  if (!hormoneStats || hormoneStats.total === 0) return null;
+
+                  // Determine rotation based on position (left = -15deg, right = +15deg)
+                  const isLeft = index % 2 === 0;
+                  const rotation = isLeft ? '-5deg' : '10deg';
+
+                  return (
+                    <View key={hormone} style={styles.questItem}>
+                      <View style={styles.questImageContainer}>
+                        {typeof getHormoneIcon(hormone) === 'string' ? (
+                          <Text style={styles.questIcon}>{getHormoneIcon(hormone)}</Text>
+                        ) : (
+                          <View style={styles.questIconImageContainer}>
+                            <Image
+                              source={getHormoneIcon(hormone)}
+                              style={[styles.questIconImage, { transform: [{ rotate: rotation }] }]}
+                              resizeMode="contain"
+                            />
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.questName}>{hormone.charAt(0).toUpperCase() + hormone.slice(1)}</Text>
+                      <View style={styles.progressContainer}>
+                        <View style={[styles.progressBar, { backgroundColor: getProgressBgColor(hormone) }]}>
+                          <View
+                            style={[
+                              styles.progressFill,
+                              {
+                                backgroundColor: getProgressColor(hormone),
+                                width: `${getProgressPercentage(hormoneStats.completed, hormoneStats.total)}%`
+                              }
+                            ]}
                           />
                         </View>
-                      )}
-              </View>
-                    <Text style={styles.questName}>{hormone.charAt(0).toUpperCase() + hormone.slice(1)}</Text>
-              <View style={styles.progressContainer}>
-                      <View style={[styles.progressBar, { backgroundColor: getProgressBgColor(hormone) }]}>
-                  <View 
-                    style={[
-                      styles.progressFill, 
-                      { 
-                              backgroundColor: getProgressColor(hormone),
-                              width: `${getProgressPercentage(hormoneStats.completed, hormoneStats.total)}%`
-                      }
-                    ]} 
-                  />
-                </View>
-                <Text style={styles.progressText}>
-                        {hormoneStats.completed}/{hormoneStats.total}
-                </Text>
+                        <Text style={styles.progressText}>
+                          {hormoneStats.completed}/{hormoneStats.total}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
               </View>
             </View>
-                );
-              })}
-          </View>
-        </View>
-        )}
+          )}
 
         {/* Divider */}
         <View style={styles.dividerContainer}>
           <Svg width={responsiveWidth(30)} height={1} style={styles.centerDivider}>
-            <Line 
-              x1="0" 
-              y1="0" 
-              x2="100%" 
-              y2="0" 
-              stroke="#CFCFCF" 
-              strokeWidth="1" 
+            <Line
+              x1="0"
+              y1="0"
+              x2="100%"
+              y2="0"
+              stroke="#CFCFCF"
+              strokeWidth="1"
               strokeDasharray="2,2"
             />
           </Svg>
@@ -738,9 +908,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
             {/* Sort buttons - positioned absolutely */}
             <View style={styles.sortContainer}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[
-                  styles.sortButton, 
+                  styles.sortButton,
                   styles.sortButtonLeft,
                   sortBy === 'type' && styles.sortButtonActive
                 ]}
@@ -751,9 +921,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                   sortBy === 'type' && styles.sortButtonTextActive
                 ]}>Type</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[
-                  styles.sortButton, 
+                  styles.sortButton,
                   styles.sortButtonRight,
                   sortBy === 'time' && styles.sortButtonActive
                 ]}
@@ -768,12 +938,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           </View>
         </View>
       </ScrollView>
-      
+
       {/* Auvra Chat Modal */}
       {showAuvraChat && (
         <AuvraChatModal
           onClose={handleAuvraClose}
           onResponse={handleAuvraResponse}
+          actions={actionPlan?.actions || []}
+          planId={actionPlan?.plan_id}
+          onReplaceItems={handleReplaceItems}
+          isLoading={isSubmittingFeedback}
         />
       )}
 
@@ -789,7 +963,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#FFF5F8', // Light pink fallback - visible even if gradients fail
   },
   scrollView: {
     flex: 1,
@@ -798,6 +972,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: responsiveHeight(5),
     minHeight: responsiveHeight(120),
+    zIndex: 1, // Ensure scroll content appears above background gradients
   },
   backgroundGradient: {
     position: 'absolute',
@@ -838,6 +1013,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#FFF5F8', // Ensure loading state has visible background
   },
   loadingText: {
     fontSize: responsiveFontSize(2),
@@ -850,6 +1026,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: responsiveWidth(5),
     paddingTop: responsiveHeight(6), // Increased top padding
     paddingBottom: verticalScale(30),
+    zIndex: 10, // Ensure header appears above background elements
   },
   headerLeft: {
     flex: 1,
@@ -897,6 +1074,7 @@ const styles = StyleSheet.create({
   questSection: {
     paddingHorizontal: responsiveWidth(5),
     marginBottom: responsiveHeight(2),
+    zIndex: 5, // Ensure quest section appears above background
   },
   sectionTitle: {
     fontSize: responsiveFontSize(1.98),
@@ -988,6 +1166,7 @@ const styles = StyleSheet.create({
   },
   actionPlanSection: {
     paddingHorizontal: responsiveWidth(5),
+    zIndex: 5, // Ensure action plan appears above background
   },
   actionPlanHeader: {
     alignItems: 'center',

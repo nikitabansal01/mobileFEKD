@@ -94,7 +94,7 @@ const ActionCompletedScreen: React.FC<ActionCompletedScreenProps> = ({ route }) 
 
   const getHormoneIcon = (hormone: string) => {
     switch (hormone.toLowerCase()) {
-      case 'androgens': return '💪';
+      case 'androgens': return Images.AndrogensBothHand;
       case 'progesterone': return Images.ProgesteroneBothHand;
       case 'estrogen': return Images.EstrogenBothHand;
       case 'thyroid': return Images.ThyroidBothHand;

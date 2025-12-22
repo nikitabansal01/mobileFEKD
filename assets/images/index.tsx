@@ -40,6 +40,7 @@ const Images = {
     InsulinCharacter: require('./hormoneBuddy/InsulinCharacter.png'),
     CortisolCharacter: require('./hormoneBuddy/CortisolCharacter.png'),
     TestosteroneCharacter: require('./hormoneBuddy/TestosteroneCharacter.png'),
+    AndrogensCharacter: require('./hormoneBuddy/TestosteroneCharacter.png'),
     
     // Hand Characters
     ProgesteroneLeftHand: require('./hormoneBuddy/ProgesteroneLeftHand.png'),
@@ -66,6 +67,11 @@ const Images = {
     TestosteroneBothHand: require('./hormoneBuddy/TestosteroneBothHand.png'),
     TestosteroneLeftHand: require('./hormoneBuddy/TestosteroneLeftHand.png'),
     TestosteroneRightHand: require('./hormoneBuddy/TestosteroneRightHand.png'),
+
+    // Androgens uses Testosterone images as they represent the same hormone family
+    AndrogensBothHand: require('./hormoneBuddy/TestosteroneBothHand.png'),
+    AndrogensLeftHand: require('./hormoneBuddy/TestosteroneLeftHand.png'),
+    AndrogensRightHand: require('./hormoneBuddy/TestosteroneRightHand.png'),
 
     LHCharacterBothHand: require('./hormoneBuddy/LHCharacterBothHand.png'),
     
