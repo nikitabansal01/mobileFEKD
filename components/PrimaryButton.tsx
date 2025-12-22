@@ -15,6 +15,8 @@ type PrimaryButtonProps = {
   style?: StyleProp<ViewStyle>;
   /** Whether the button is disabled */
   disabled?: boolean;
+  /** Optional children for custom content */
+  children?: React.ReactNode;
 };
 
 /**
@@ -30,23 +32,25 @@ type PrimaryButtonProps = {
  * @param props.disabled - Disabled state
  * @returns JSX.Element
  */
-const PrimaryButton = ({ title, onPress, style, disabled = false }: PrimaryButtonProps) => {
+const PrimaryButton = ({ title, onPress, style, disabled = false, children }: PrimaryButtonProps) => {
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[
-        styles.button, 
-        style, 
+        styles.button,
+        style,
         disabled && styles.buttonDisabled
-      ]} 
+      ]}
       onPress={onPress}
       disabled={disabled}
     >
-      <Text style={[
-        styles.buttonText,
-        disabled && styles.buttonTextDisabled
-      ]}>
-        {title}
-      </Text>
+      {children ? children : (
+        <Text style={[
+          styles.buttonText,
+          disabled && styles.buttonTextDisabled
+        ]}>
+          {title}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 };
