@@ -671,33 +671,33 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           viewBox={`0 0 ${screenWidth} ${screenHeight}`}
         >
           <Defs>
-            {/* First large radial gradient */}
-            <SvgRadialGradient id="bgGrad1" cx="0.3" cy="0.4" r="0.5">
-              <Stop offset="0%" stopColor={firstHormoneColor} stopOpacity="0.6" />
-              <Stop offset="50%" stopColor={firstHormoneColor} stopOpacity="0.2" />
-              <Stop offset="100%" stopColor={firstHormoneColor} stopOpacity="0" />
-            </SvgRadialGradient>
-
-            {/* Second large radial gradient */}
-            <SvgRadialGradient id="bgGrad2" cx="0.7" cy="0.4" r="0.5">
+            {/* First large radial gradient - left side (first hormone) */}
+            <SvgRadialGradient id="bgGrad1" cx="0.25" cy="0.35" r="0.5">
               <Stop offset="0%" stopColor={secondHormoneColor} stopOpacity="0.6" />
               <Stop offset="50%" stopColor={secondHormoneColor} stopOpacity="0.2" />
               <Stop offset="100%" stopColor={secondHormoneColor} stopOpacity="0" />
             </SvgRadialGradient>
+
+            {/* Second large radial gradient - right side (second hormone) */}
+            <SvgRadialGradient id="bgGrad2" cx="0.75" cy="0.35" r="0.5">
+              <Stop offset="0%" stopColor={firstHormoneColor} stopOpacity="0.6" />
+              <Stop offset="50%" stopColor={firstHormoneColor} stopOpacity="0.2" />
+              <Stop offset="100%" stopColor={firstHormoneColor} stopOpacity="0" />
+            </SvgRadialGradient>
           </Defs>
 
-          {/* First large circular gradient */}
+          {/* First large circular gradient - left side */}
           <Circle
-            cx={screenWidth * 0.3}
-            cy={screenHeight * 0.4}
+            cx={screenWidth * 0.25}
+            cy={screenHeight * 0.35}
             r={Math.max(screenWidth, screenHeight) * 0.5}
             fill="url(#bgGrad1)"
           />
 
-          {/* Second large circular gradient */}
+          {/* Second large circular gradient - right side */}
           <Circle
-            cx={screenWidth * 0.7}
-            cy={screenHeight * 0.4}
+            cx={screenWidth * 0.75}
+            cy={screenHeight * 0.35}
             r={Math.max(screenWidth, screenHeight) * 0.5}
             fill="url(#bgGrad2)"
           />
