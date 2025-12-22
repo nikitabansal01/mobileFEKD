@@ -47,12 +47,13 @@ const AuvraChatModal: React.FC<AuvraChatModalProps> = ({
   const [showSelectionMode, setShowSelectionMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
 
-  // Filter to only non-completed actions
-  const availableActions = actions.filter(a => !a.is_completed);
+  // Don't filter completed actions - show them grayed out instead
+  const availableActions = actions; // Show ALL actions
 
   // Handle "I want to change it" click
   const handleWantToChange = () => {
-    if (availableActions.length === 0) {
+    const nonCompletedActions = actions.filter(a => !a.is_completed);
+    if (nonCompletedActions.length === 0) {
       // All actions completed - just inform user
       onResponse('positive');
       return;
@@ -62,6 +63,10 @@ const AuvraChatModal: React.FC<AuvraChatModalProps> = ({
 
   // Handle checkbox toggle
   const toggleItem = (itemId: number) => {
+    // Don't allow selecting completed items
+    const action = actions.find(a => a.id === itemId);
+    if (action?.is_completed) return;
+
     const newSelected = new Set(selectedItems);
     if (newSelected.has(itemId)) {
       newSelected.delete(itemId);
@@ -141,24 +146,32 @@ const AuvraChatModal: React.FC<AuvraChatModalProps> = ({
             key={action.id}
             style={[
               styles.actionItem,
-              selectedItems.has(action.id) && styles.actionItemSelected
+              selectedItems.has(action.id) && styles.actionItemSelected,
+              action.is_completed && styles.actionItemCompleted  // Gray out completed
             ]}
             onPress={() => toggleItem(action.id)}
-            disabled={isLoading}
+            disabled={isLoading || action.is_completed}  // Disable completed items
           >
             <View style={styles.checkbox}>
               {selectedItems.has(action.id) && (
                 <Text style={styles.checkmark}>✓</Text>
               )}
             </View>
-            <Text style={styles.categoryIcon}>
+            <Text style={[
+              styles.categoryIcon,
+              action.is_completed && styles.completedText
+            ]}>
               {getCategoryIcon(action.category)}
             </Text>
             <Text
-              style={styles.actionTitle}
+              style={[
+                styles.actionTitle,
+                action.is_completed && styles.completedText
+              ]}
               numberOfLines={2}
             >
               {action.title}
+              {action.is_completed && ' ✓'}  {/* Show checkmark for completed */}
             </Text>
           </TouchableOpacity>
         ))}
@@ -327,6 +340,14 @@ const styles = StyleSheet.create({
   actionItemSelected: {
     borderColor: '#683AF4',
     backgroundColor: 'rgba(104, 58, 244, 0.05)',
+  },
+  actionItemCompleted: {
+    opacity: 0.5,
+    backgroundColor: '#F5F5F5',
+  },
+  completedText: {
+    color: '#999999',
+    textDecorationLine: 'line-through',
   },
   checkbox: {
     width: responsiveWidth(5),
