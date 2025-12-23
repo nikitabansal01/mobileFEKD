@@ -50,12 +50,15 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
     hormone_persona_intro?: string;
     research_studies?: Array<{
       title: string;
-      authors: string;
+      authors?: string;
       year: number;
       journal: string;
       finding: string;
-      participants?: string;
+      participants?: string | number;
       doi?: string;
+      pmid?: string;
+      verification_link?: string;
+      source?: string;
     }>;
     variants?: Array<{
       variant_type: string;
@@ -487,6 +490,22 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                             {study.finding}
                           </Text>
                         </View>
+
+                        {/* Verification Link - NEW for real citations */}
+                        {(study.pmid || study.verification_link) && (
+                          <TouchableOpacity
+                            style={styles.verifyButton}
+                            onPress={() => {
+                              const url = study.verification_link ||
+                                (study.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${study.pmid}/` : null);
+                              if (url) Linking.openURL(url);
+                            }}
+                          >
+                            <Text style={styles.verifyButtonText}>
+                              {study.pmid ? `Verify on PubMed (PMID: ${study.pmid})` : 'Verify Study →'}
+                            </Text>
+                          </TouchableOpacity>
+                        )}
                       </View>
                     ))}
                   </View>
@@ -818,6 +837,19 @@ const styles = StyleSheet.create({
   },
   doiText: {
     fontSize: moderateScale(12, 1.5),
+    fontFamily: 'Inter500',
+    color: '#FFFFFF',
+  },
+  verifyButton: {
+    marginTop: verticalScale(10),
+    paddingVertical: verticalScale(8),
+    paddingHorizontal: moderateScale(12),
+    backgroundColor: '#C17EC9',
+    borderRadius: moderateScale(8),
+    alignSelf: 'flex-start',
+  },
+  verifyButtonText: {
+    fontSize: moderateScale(11, 1.5),
     fontFamily: 'Inter500',
     color: '#FFFFFF',
   },
