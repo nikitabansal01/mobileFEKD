@@ -633,25 +633,54 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   };
 
   /**
+   * Hormone priority order for consistent sorting
+   * This ensures colors always match the same hormones
+   */
+  const HORMONE_PRIORITY_ORDER = [
+    'cortisol',
+    'progesterone',
+    'estrogen',
+    'insulin',
+    'thyroid',
+    'androgens',
+    'testosterone',
+    'fsh',
+    'lh',
+    'prolactin',
+    'ghrelin'
+  ];
+
+  /**
+   * Get sorted hormone keys based on priority order
+   * @param hormoneStats - The hormone stats object
+   * @returns Sorted array of hormone names
+   */
+  const getSortedHormoneKeys = (hormoneStats: Record<string, any>): string[] => {
+    const hormoneKeys = Object.keys(hormoneStats);
+    return hormoneKeys.sort((a, b) => {
+      const aIndex = HORMONE_PRIORITY_ORDER.indexOf(a.toLowerCase());
+      const bIndex = HORMONE_PRIORITY_ORDER.indexOf(b.toLowerCase());
+      // If not in priority list, put at end
+      const aOrder = aIndex === -1 ? 999 : aIndex;
+      const bOrder = bIndex === -1 ? 999 : bIndex;
+      return aOrder - bOrder;
+    });
+  };
+
+  /**
    * Get hormone quest colors for background gradients
    * @returns Object with first and second hormone colors
    */
   const getHormoneQuestColors = () => {
-    const allHormones: string[] = [];
-
-    // Get hormones directly from hormone_stats
+    // Get hormones from hormone_stats and sort by priority
     if (assignments?.hormone_stats) {
-      Object.keys(assignments.hormone_stats).forEach(hormone => {
-        allHormones.push(hormone);
-      });
+      const sortedHormones = getSortedHormoneKeys(assignments.hormone_stats);
+      const firstHormoneColor = sortedHormones.length > 0 ? getProgressColor(sortedHormones[0]) : '#C17EC9';
+      const secondHormoneColor = sortedHormones.length > 1 ? getProgressColor(sortedHormones[1]) : '#87CEEB';
+      return { firstHormoneColor, secondHormoneColor };
     }
 
-    // Remove duplicates and get first and second hormone colors
-    const uniqueHormones = [...new Set(allHormones)];
-    const firstHormoneColor = uniqueHormones.length > 0 ? getProgressColor(uniqueHormones[0]) : '#C17EC9';
-    const secondHormoneColor = uniqueHormones.length > 1 ? getProgressColor(uniqueHormones[1]) : '#87CEEB';
-
-    return { firstHormoneColor, secondHormoneColor };
+    return { firstHormoneColor: '#C17EC9', secondHormoneColor: '#87CEEB' };
   };
 
   /**
@@ -812,7 +841,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             <View style={styles.questSection}>
               <Text style={styles.sectionTitle}>🏆 Your Hormone Quests 🏆</Text>
               <View style={styles.questContainer}>
-                {Object.entries(progressStats.hormone_stats).map(([hormone, stats], index) => {
+                {getSortedHormoneKeys(progressStats.hormone_stats).map((hormone, index) => {
                   const hormoneKey = hormone as keyof HormoneStats;
                   const hormoneStats = progressStats.hormone_stats[hormoneKey];
 
