@@ -475,9 +475,9 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                           </Text>
                         </View>
 
-                        {study.participants && (
+                        {study.participants && typeof study.participants === 'number' && study.participants > 0 && (
                           <View style={styles.studyInfoSection}>
-                            <Text style={styles.studyInfoLabel}>Participants: </Text>
+                            <Text style={styles.studyInfoLabel}>Study conducted with: </Text>
                             <Text style={styles.studyInfoValue}>
                               {study.participants} women
                             </Text>
@@ -502,7 +502,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                             }}
                           >
                             <Text style={styles.verifyButtonText}>
-                              {study.pmid ? `Verify on PubMed (PMID: ${study.pmid})` : 'Verify Study →'}
+                              {study.pmid ? `See details in PubMed` : 'View Study →'}
                             </Text>
                           </TouchableOpacity>
                         )}
