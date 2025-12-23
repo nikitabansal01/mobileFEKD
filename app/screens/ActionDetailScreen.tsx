@@ -459,59 +459,68 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                 </TouchableOpacity>
 
                 {/* Study Details Content */}
-                {showStudyDetails && action?.research_studies && action.research_studies.length > 0 && (
+                {showStudyDetails && action?.research_studies && Array.isArray(action.research_studies) && action.research_studies.length > 0 && (
                   <View style={styles.studyDetailsContent}>
                     {action.research_studies
-                      .filter((study: any) => study && typeof study === 'object' && study.title)
-                      .map((study: any, index: number) => (
-                        <View key={index} style={styles.studyCard}>
-                          <View style={styles.studyTitleRow}>
-                            <Text style={styles.studyIcon}>🔗</Text>
-                            <Text style={styles.studyTitle}>{String(study.title || 'Research Study')}</Text>
-                          </View>
+                      .filter((study: any) => study && typeof study === 'object' && study.title && typeof study.title === 'string')
+                      .map((study: any, index: number) => {
+                        // Safely extract all values as strings
+                        const title = String(study.title || 'Research Study');
+                        const journal = String(study.journal || 'Journal');
+                        const year = String(study.year || 'N/A');
+                        const finding = study.finding ? String(study.finding) : null;
+                        const participants = typeof study.participants === 'number' && study.participants > 0 ? study.participants : null;
+                        const pmid = study.pmid ? String(study.pmid) : null;
+                        const verificationLink = study.verification_link ? String(study.verification_link) : null;
 
-                          <View style={styles.studyInfoSection}>
-                            <Text style={styles.studyInfoLabel}>Journal: </Text>
-                            <Text style={styles.studyInfoValue}>
-                              {String(study.journal || 'Journal')} ({String(study.year || 'N/A')})
-                            </Text>
-                          </View>
+                        return (
+                          <View key={index} style={styles.studyCard}>
+                            <View style={styles.studyTitleRow}>
+                              <Text style={styles.studyIcon}>🔗</Text>
+                              <Text style={styles.studyTitle}>{title}</Text>
+                            </View>
 
-                          {study.participants && typeof study.participants === 'number' && study.participants > 0 && (
                             <View style={styles.studyInfoSection}>
-                              <Text style={styles.studyInfoLabel}>Study conducted with: </Text>
+                              <Text style={styles.studyInfoLabel}>Journal: </Text>
                               <Text style={styles.studyInfoValue}>
-                                {`${study.participants} women`}
+                                {`${journal} (${year})`}
                               </Text>
                             </View>
-                          )}
 
-                          {study.finding && (
-                            <View style={styles.studyInfoSection}>
-                              <Text style={styles.studyInfoLabel}>Results: </Text>
-                              <Text style={styles.studyInfoValue}>
-                                {String(study.finding)}
-                              </Text>
-                            </View>
-                          )}
+                            {participants !== null && (
+                              <View style={styles.studyInfoSection}>
+                                <Text style={styles.studyInfoLabel}>Study conducted with: </Text>
+                                <Text style={styles.studyInfoValue}>
+                                  {`${participants} women`}
+                                </Text>
+                              </View>
+                            )}
 
-                          {/* Verification Link - NEW for real citations */}
-                          {(study.pmid || study.verification_link) && (
-                            <TouchableOpacity
-                              style={styles.verifyButton}
-                              onPress={() => {
-                                const url = study.verification_link ||
-                                  (study.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${study.pmid}/` : null);
-                                if (url) Linking.openURL(url);
-                              }}
-                            >
-                              <Text style={styles.verifyButtonText}>
-                                {study.pmid ? 'See details in PubMed' : 'View Study →'}
-                              </Text>
-                            </TouchableOpacity>
-                          )}
-                        </View>
-                      ))}
+                            {finding !== null && (
+                              <View style={styles.studyInfoSection}>
+                                <Text style={styles.studyInfoLabel}>Results: </Text>
+                                <Text style={styles.studyInfoValue}>
+                                  {finding}
+                                </Text>
+                              </View>
+                            )}
+
+                            {(pmid || verificationLink) && (
+                              <TouchableOpacity
+                                style={styles.verifyButton}
+                                onPress={() => {
+                                  const url = verificationLink || (pmid ? `https://pubmed.ncbi.nlm.nih.gov/${pmid}/` : null);
+                                  if (url) Linking.openURL(url);
+                                }}
+                              >
+                                <Text style={styles.verifyButtonText}>
+                                  {pmid ? 'See details in PubMed' : 'View Study →'}
+                                </Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        );
+                      })}
                   </View>
                 )}
 
