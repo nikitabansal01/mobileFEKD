@@ -52,12 +52,15 @@ const AuvraChatModal: React.FC<AuvraChatModalProps> = ({
 
   // Handle "I want to change it" click
   const handleWantToChange = () => {
-    const nonCompletedActions = actions.filter(a => !a.is_completed);
-    if (nonCompletedActions.length === 0) {
-      // All actions completed - just inform user
+    // Always show selection mode if there are any actions
+    // User can see completed (grayed) and select non-completed ones
+    if (actions.length === 0) {
+      // No actions at all - just close
       onResponse('positive');
       return;
     }
+
+    // Show selection mode - completed items will be grayed out
     setShowSelectionMode(true);
   };
 
