@@ -673,16 +673,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           <Defs>
             {/* First large radial gradient - left side (first hormone) */}
             <SvgRadialGradient id="bgGrad1" cx="0.25" cy="0.35" r="0.5">
-              <Stop offset="0%" stopColor={secondHormoneColor} stopOpacity="0.6" />
-              <Stop offset="50%" stopColor={secondHormoneColor} stopOpacity="0.2" />
-              <Stop offset="100%" stopColor={secondHormoneColor} stopOpacity="0" />
+              <Stop offset="0%" stopColor={firstHormoneColor} stopOpacity="0.6" />
+              <Stop offset="50%" stopColor={firstHormoneColor} stopOpacity="0.2" />
+              <Stop offset="100%" stopColor={firstHormoneColor} stopOpacity="0" />
             </SvgRadialGradient>
 
             {/* Second large radial gradient - right side (second hormone) */}
             <SvgRadialGradient id="bgGrad2" cx="0.75" cy="0.35" r="0.5">
-              <Stop offset="0%" stopColor={firstHormoneColor} stopOpacity="0.6" />
-              <Stop offset="50%" stopColor={firstHormoneColor} stopOpacity="0.2" />
-              <Stop offset="100%" stopColor={firstHormoneColor} stopOpacity="0" />
+              <Stop offset="0%" stopColor={secondHormoneColor} stopOpacity="0.6" />
+              <Stop offset="50%" stopColor={secondHormoneColor} stopOpacity="0.2" />
+              <Stop offset="100%" stopColor={secondHormoneColor} stopOpacity="0" />
             </SvgRadialGradient>
           </Defs>
 

@@ -481,7 +481,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                             <View style={styles.studyInfoSection}>
                               <Text style={styles.studyInfoLabel}>Study conducted with: </Text>
                               <Text style={styles.studyInfoValue}>
-                                {study.participants} women
+                                {`${study.participants} women`}
                               </Text>
                             </View>
                           )}
