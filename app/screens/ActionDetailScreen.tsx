@@ -50,12 +50,15 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
     hormone_persona_intro?: string;
     research_studies?: Array<{
       title: string;
-      authors: string;
+      authors?: string;
       year: number;
       journal: string;
       finding: string;
-      participants?: string;
+      participants?: string | number;
       doi?: string;
+      pmid?: string;
+      verification_link?: string;
+      source?: string;
     }>;
     variants?: Array<{
       variant_type: string;
@@ -458,37 +461,57 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                 {/* Study Details Content */}
                 {showStudyDetails && action?.research_studies && action.research_studies.length > 0 && (
                   <View style={styles.studyDetailsContent}>
-                    {action.research_studies.map((study, index) => (
-                      <View key={index} style={styles.studyCard}>
-                        <View style={styles.studyTitleRow}>
-                          <Text style={styles.studyIcon}>🔗</Text>
-                          <Text style={styles.studyTitle}>{study.title}</Text>
-                        </View>
+                    {action.research_studies
+                      .filter((study: any) => study && typeof study === 'object' && study.title)
+                      .map((study: any, index: number) => (
+                        <View key={index} style={styles.studyCard}>
+                          <View style={styles.studyTitleRow}>
+                            <Text style={styles.studyIcon}>🔗</Text>
+                            <Text style={styles.studyTitle}>{String(study.title || 'Research Study')}</Text>
+                          </View>
 
-                        <View style={styles.studyInfoSection}>
-                          <Text style={styles.studyInfoLabel}>Journal: </Text>
-                          <Text style={styles.studyInfoValue}>
-                            {study.journal} ({study.year})
-                          </Text>
-                        </View>
-
-                        {study.participants && (
                           <View style={styles.studyInfoSection}>
-                            <Text style={styles.studyInfoLabel}>Participants: </Text>
+                            <Text style={styles.studyInfoLabel}>Journal: </Text>
                             <Text style={styles.studyInfoValue}>
-                              {study.participants} women
+                              {String(study.journal || 'Journal')} ({String(study.year || 'N/A')})
                             </Text>
                           </View>
-                        )}
 
-                        <View style={styles.studyInfoSection}>
-                          <Text style={styles.studyInfoLabel}>Results: </Text>
-                          <Text style={styles.studyInfoValue}>
-                            {study.finding}
-                          </Text>
+                          {study.participants && typeof study.participants === 'number' && study.participants > 0 && (
+                            <View style={styles.studyInfoSection}>
+                              <Text style={styles.studyInfoLabel}>Study conducted with: </Text>
+                              <Text style={styles.studyInfoValue}>
+                                {`${study.participants} women`}
+                              </Text>
+                            </View>
+                          )}
+
+                          {study.finding && (
+                            <View style={styles.studyInfoSection}>
+                              <Text style={styles.studyInfoLabel}>Results: </Text>
+                              <Text style={styles.studyInfoValue}>
+                                {String(study.finding)}
+                              </Text>
+                            </View>
+                          )}
+
+                          {/* Verification Link - NEW for real citations */}
+                          {(study.pmid || study.verification_link) && (
+                            <TouchableOpacity
+                              style={styles.verifyButton}
+                              onPress={() => {
+                                const url = study.verification_link ||
+                                  (study.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${study.pmid}/` : null);
+                                if (url) Linking.openURL(url);
+                              }}
+                            >
+                              <Text style={styles.verifyButtonText}>
+                                {study.pmid ? 'See details in PubMed' : 'View Study →'}
+                              </Text>
+                            </TouchableOpacity>
+                          )}
                         </View>
-                      </View>
-                    ))}
+                      ))}
                   </View>
                 )}
 
@@ -818,6 +841,19 @@ const styles = StyleSheet.create({
   },
   doiText: {
     fontSize: moderateScale(12, 1.5),
+    fontFamily: 'Inter500',
+    color: '#FFFFFF',
+  },
+  verifyButton: {
+    marginTop: verticalScale(10),
+    paddingVertical: verticalScale(8),
+    paddingHorizontal: moderateScale(12),
+    backgroundColor: '#C17EC9',
+    borderRadius: moderateScale(8),
+    alignSelf: 'flex-start',
+  },
+  verifyButtonText: {
+    fontSize: moderateScale(11, 1.5),
     fontFamily: 'Inter500',
     color: '#FFFFFF',
   },

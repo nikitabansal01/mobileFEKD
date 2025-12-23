@@ -80,11 +80,15 @@ export interface Assignment {
   hormone_persona_intro?: string;
   research_studies?: Array<{
     title: string;
-    authors: string;
+    authors?: string;
     year: number;
     journal: string;
     finding: string;
+    participants?: string | number;
     doi?: string;
+    pmid?: string;
+    verification_link?: string;
+    source?: string;
   }>;
   variants?: Array<{
     variant_type: string;
@@ -144,11 +148,15 @@ export interface ActionPlanItem {
   hero_image_url: string;
   research_studies: Array<{
     title: string;
-    authors: string;
+    authors?: string;
     year: number;
     journal: string;
     finding: string;
+    participants?: string | number;
     doi?: string;
+    pmid?: string;
+    verification_link?: string;
+    source?: string;
   }>;
   is_completed: boolean;
   is_replaced: boolean;

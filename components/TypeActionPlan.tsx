@@ -534,8 +534,16 @@ export default function TypeActionPlan({
           } : undefined}
           delayLongPress={2000} // 2 second long press
         >
-          {/* Use emoji instead of actual image */}
-          <Text style={styles.actionImage}>📋</Text>
+          {/* Render actual hero image */}
+          {assignment.hero_image_url ? (
+            <Image
+              source={{ uri: assignment.hero_image_url }}
+              style={styles.actionImagePhoto}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={styles.actionImage}>📋</Text>
+          )}
         </TouchableOpacity>
 
         {/* Action information */}
@@ -823,6 +831,11 @@ const styles = StyleSheet.create({
   },
   actionImage: {
     fontSize: responsiveFontSize(3),
+  },
+  actionImagePhoto: {
+    width: '100%',
+    height: '100%',
+    borderRadius: scale(25),
   },
   actionDetails: {
     flex: 1,
