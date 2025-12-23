@@ -465,13 +465,13 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                       <View key={index} style={styles.studyCard}>
                         <View style={styles.studyTitleRow}>
                           <Text style={styles.studyIcon}>🔗</Text>
-                          <Text style={styles.studyTitle}>{study.title}</Text>
+                          <Text style={styles.studyTitle}>{study.title || 'Research Study'}</Text>
                         </View>
 
                         <View style={styles.studyInfoSection}>
                           <Text style={styles.studyInfoLabel}>Journal: </Text>
                           <Text style={styles.studyInfoValue}>
-                            {study.journal} ({study.year})
+                            {study.journal || 'Journal'} ({study.year || 'N/A'})
                           </Text>
                         </View>
 
@@ -484,12 +484,14 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                           </View>
                         )}
 
-                        <View style={styles.studyInfoSection}>
-                          <Text style={styles.studyInfoLabel}>Results: </Text>
-                          <Text style={styles.studyInfoValue}>
-                            {study.finding}
-                          </Text>
-                        </View>
+                        {study.finding && (
+                          <View style={styles.studyInfoSection}>
+                            <Text style={styles.studyInfoLabel}>Results: </Text>
+                            <Text style={styles.studyInfoValue}>
+                              {study.finding}
+                            </Text>
+                          </View>
+                        )}
 
                         {/* Verification Link - NEW for real citations */}
                         {(study.pmid || study.verification_link) && (
