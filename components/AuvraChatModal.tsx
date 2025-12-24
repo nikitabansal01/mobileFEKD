@@ -47,17 +47,27 @@ const AuvraChatModal: React.FC<AuvraChatModalProps> = ({
   const [showSelectionMode, setShowSelectionMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
 
-  // Don't filter completed actions - show them grayed out instead
-  const availableActions = actions; // Show ALL actions
+  // Show ALL actions - completed ones will be grayed out
+  const availableActions = actions;
+  // Count selectable (non-completed) actions
+  const selectableActions = actions.filter(a => !a.is_completed);
+  const allCompleted = actions.length > 0 && selectableActions.length === 0;
 
   // Handle "I want to change it" click
   const handleWantToChange = () => {
-    // Always show selection mode if there are any actions
-    // User can see completed (grayed) and select non-completed ones
+    // Always show selection mode if there are ANY actions
+    // Even if all completed, show the selection view with a message
     if (actions.length === 0) {
       // No actions at all - just close
       onResponse('positive');
       return;
+    }
+
+    // Check if ANY actions are non-completed (selectable)
+    const nonCompletedActions = actions.filter(a => !a.is_completed);
+    if (nonCompletedActions.length === 0) {
+      // All actions are completed - still show selection mode
+      // renderSelectionView will display an appropriate message
     }
 
     // Show selection mode - completed items will be grayed out
@@ -132,9 +142,14 @@ const AuvraChatModal: React.FC<AuvraChatModalProps> = ({
     <>
       {/* Header */}
       <View style={styles.selectionHeader}>
-        <Text style={styles.selectionTitle}>Select actions to replace</Text>
+        <Text style={styles.selectionTitle}>
+          {allCompleted ? 'All actions completed!' : 'Select actions to replace'}
+        </Text>
         <Text style={styles.selectionSubtitle}>
-          We'll find better alternatives for you 💜
+          {allCompleted
+            ? 'You\'ve already done all your actions today. Great job! 🎉'
+            : 'We\'ll find better alternatives for you 💜'
+          }
         </Text>
       </View>
 
