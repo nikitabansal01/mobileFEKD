@@ -223,17 +223,29 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     const hormoneStats: HormoneStats = {};
     const supportedHormones = ['androgens', 'progesterone', 'estrogen', 'thyroid', 'insulin', 'cortisol', 'FSH', 'LH', 'prolactin', 'ghrelin', 'testosterone'];
 
+    // Create a case-insensitive lookup of the API data keys
+    const dataKeysLower: Record<string, string> = {};
+    if (hormoneStatsData) {
+      Object.keys(hormoneStatsData).forEach(key => {
+        dataKeysLower[key.toLowerCase()] = key;
+      });
+    }
+
     supportedHormones.forEach(hormone => {
-      if (hormoneStatsData[hormone]) {
+      // Check both the original key and case-insensitive match
+      const actualKey = hormoneStatsData?.[hormone] ? hormone : dataKeysLower[hormone.toLowerCase()];
+      if (actualKey && hormoneStatsData[actualKey]) {
         hormoneStats[hormone as keyof HormoneStats] = {
-          completed: hormoneStatsData[hormone].completed || 0,
-          total: hormoneStatsData[hormone].total || 0
+          completed: hormoneStatsData[actualKey].completed || 0,
+          total: hormoneStatsData[actualKey].total || 0
         };
       }
     });
 
+    console.log('🧬 convertHormoneStats result:', { input: hormoneStatsData, output: hormoneStats });
     return hormoneStats;
   };
+
 
   useEffect(() => {
     // Check for refreshed data from ActionCompletedScreen

@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import Svg, { Defs, Path, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
+import MultiSelectCheckSvg from '../assets/images/SVG/MultiSelectCheckSvg';
 
 // ====== Type imports ======
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
@@ -23,16 +24,16 @@ type AssignmentsMap = Record<string, Assignment[]>;
 
 // ====== Time slot icon mapping ======
 const TIME_ICONS: Record<string, string> = {
-  completed: '', // No icon for completed
+  completed: '', // No icon for completed section (just the gradient line)
   morning: '🌤️',
   afternoon: '☀️',
   evening: '🌙',
-  anytime: 'Anytime',
+  anytime: '', // No icon for anytime
   // Add common variations
   'Morning': '🌤️',
   'Afternoon': '☀️',
   'Evening': '🌙',
-  'Anytime': 'Anytime',
+  'Anytime': '', // No icon for anytime
   // Add more common API variations
   'am': '🌤️',
   'pm': '☀️',
@@ -164,8 +165,19 @@ export default function ActionPlanTimeline({
     });
   };
 
+  // Time slot priority for sorting (lower = earlier in day)
+  const TIME_SLOT_PRIORITY: Record<string, number> = {
+    'completed': 0, // Completed items have highest priority (show first)
+    'morning': 1,
+    'afternoon': 2,
+    'evening': 3,
+    'night': 3,
+    'anytime': 4,
+  };
+
   /**
    * Separates and manages Today and Tomorrow actions
+   * SORTED: Completed items first, then pending items by time slot
    */
   const todayAssignments: Assignment[] = useMemo(() => {
     const arr: Assignment[] = [];
@@ -190,18 +202,45 @@ export default function ActionPlanTimeline({
       exercise_intensities: [],
       mindfulness_durations: [],
       mindfulness_techniques: [],
+      time_slot: 'morning', // Add time_slot for sorting
     };
-    arr.push(weeklyCheckIn);
 
-    Object.values(assignments).forEach((group) => {
-      group?.forEach((a) => arr.push(a));
+    // Process ALL keys from assignments object (including 'completed' if present)
+    // This ensures we don't miss any items regardless of what keys the backend returns
+    const allKeys = Object.keys(assignments);
+    console.log('🔍 Processing assignment keys:', allKeys);
+
+    allKeys.forEach((slot) => {
+      const group = assignments[slot];
+      group?.forEach((a) => {
+        // Use the item's own time_slot if available, otherwise use the key
+        const itemTimeSlot = a.time_slot || slot;
+        arr.push({ ...a, time_slot: itemTimeSlot } as Assignment);
+      });
     });
 
-    console.log('🔍 Today Assignments processing:', {
+    // Sort: Completed items first, then by time slot priority
+    arr.sort((a, b) => {
+      // Primary sort: completed items first
+      if (a.is_completed && !b.is_completed) return -1;
+      if (!a.is_completed && b.is_completed) return 1;
+
+      // Secondary sort: by time slot priority
+      const aPriority = TIME_SLOT_PRIORITY[(a as any).time_slot || 'anytime'] || 4;
+      const bPriority = TIME_SLOT_PRIORITY[(b as any).time_slot || 'anytime'] || 4;
+      return aPriority - bPriority;
+    });
+
+    // Add Weekly Check-in after completed items (so it's first among pending items)
+    const completedCount = arr.filter(a => a.is_completed).length;
+    arr.splice(completedCount, 0, weeklyCheckIn);
+
+    console.log('🔍 Today Assignments processing (SORTED):', {
       originalAssignments: assignments,
-      processedTodayAssignments: arr,
-      assignmentsKeys: Object.keys(assignments),
-      totalItems: arr.length
+      allKeys,
+      processedTodayAssignments: arr.map(a => ({ id: a.id, title: a.title, completed: a.is_completed, time_slot: (a as any).time_slot })),
+      totalItems: arr.length,
+      completedCount
     });
 
     return arr;
@@ -326,96 +365,68 @@ export default function ActionPlanTimeline({
     // Set existing anchors to Today (for existing logic compatibility)
     setAnchors(todayNext);
 
-    // Calculate time slot icon positions - use smart detection for 'anytime' slots
-    const timeSlots = Object.keys(assignments).filter(slot => assignments[slot]?.length > 0); // Exclude empty arrays
-
-    // If we only have 'anytime' slot, create smart time slots based on assignment content
-    let smartTimeSlots = timeSlots;
-    let smartAssignments = assignments;
-
-    if (timeSlots.length === 1 && timeSlots[0] === 'anytime') {
-      const smartSlots = new Set<string>();
-      const smartAssignmentsMap: Record<string, Assignment[]> = {};
-
-      assignments.anytime?.forEach(assignment => {
-        const smartSlot = getSmartTimeSlot(assignment);
-        smartSlots.add(smartSlot);
-
-        if (!smartAssignmentsMap[smartSlot]) {
-          smartAssignmentsMap[smartSlot] = [];
-        }
-        smartAssignmentsMap[smartSlot].push(assignment);
-      });
-
-      smartTimeSlots = Array.from(smartSlots);
-      smartAssignments = smartAssignmentsMap;
-
-      console.log('🔍 Smart time slot detection:', {
-        originalSlots: timeSlots,
-        smartSlots: smartTimeSlots,
-        smartAssignmentsMap,
-        assignments: assignments.anytime?.map(a => ({ title: a.title, smartSlot: getSmartTimeSlot(a) }))
-      });
-    }
-
-    console.log('🔍 Time slot icon calculation:', {
-      allKeys: Object.keys(assignments),
-      filteredSlots: timeSlots,
-      smartTimeSlots,
-      assignmentsData: assignments
-    });
-
+    // Calculate time slot icon positions based on SORTED todayAssignments
+    // Now we need to detect: 1) Completed section at top, 2) Pending sections by time slot
     const positions: TimeSlotPosition[] = [];
 
-    if (smartTimeSlots.length > 0) {
-      let previousY = BASE_TOP; // End Y coordinate of previous section
+    // Find completed items count (they are at the top due to sorting)
+    const completedItems = todayAssignments.filter(a => a.is_completed);
+    const pendingItems = todayAssignments.filter(a => !a.is_completed);
 
-      smartTimeSlots.forEach((timeSlot, index) => {
-        const slotAssignments = smartAssignments[timeSlot] || [];
-
-        if (index === 0) {
-          // First time slot: place at Cap center
-          const iconY = BASE_TOP + CAP_TOP / 2;
-          positions.push({
-            timeSlot,
-            iconY,
-            isCapCenter: true,
-          });
-
-          // Calculate this time slot's last anchor Y coordinate
-          if (slotAssignments.length > 0) {
-            const slotStartIdx = todayNext.findIndex(anchor =>
-              slotAssignments.some(a => a.id.toString() === anchor.id)
-            );
-            const slotEndIdx = slotStartIdx + slotAssignments.length - 1;
-            previousY = todayNext[slotEndIdx]?.y ?? previousY;
-          }
-        } else {
-          // Next time slots: center of horizontal line between previous and next anchor
-          const slotStartIdx = todayNext.findIndex(anchor =>
-            slotAssignments.some(a => a.id.toString() === anchor.id)
-          );
-
-          if (slotStartIdx > 0) {
-            const prevAnchorY = todayNext[slotStartIdx - 1]?.y ?? previousY;
-            const currentAnchorY = todayNext[slotStartIdx]?.y ?? (prevAnchorY + ITEM_BLOCK_H);
-            const iconY = (prevAnchorY + currentAnchorY) / 2;
-
-            positions.push({
-              timeSlot,
-              iconY,
-              isCapCenter: false,
-            });
-
-            // Update this time slot's last anchor Y coordinate
-            if (slotAssignments.length > 0) {
-              const slotEndIdx = slotStartIdx + slotAssignments.length - 1;
-              previousY = todayNext[slotEndIdx]?.y ?? previousY;
-            }
-          }
-        }
+    // If there are completed items, add "completed" icon at the top
+    if (completedItems.length > 0) {
+      const iconY = BASE_TOP + CAP_TOP / 2;
+      positions.push({
+        timeSlot: 'completed',
+        iconY,
+        isCapCenter: true,
       });
     }
+
+    // Find unique time slots in pending items and their positions
+    const pendingTimeSlots: string[] = [];
+    const timeSlotFirstIndex: Record<string, number> = {};
+
+    pendingItems.forEach((a, pendingIdx) => {
+      const slot = (a as any).time_slot || 'anytime';
+      if (!timeSlotFirstIndex.hasOwnProperty(slot)) {
+        pendingTimeSlots.push(slot);
+        // Calculate absolute index in todayAssignments (completed count + pending index)
+        timeSlotFirstIndex[slot] = completedItems.length + pendingIdx;
+      }
+    });
+
+    // Add icons for pending time slots
+    pendingTimeSlots.forEach((timeSlot, idx) => {
+      const absoluteIndex = timeSlotFirstIndex[timeSlot];
+
+      if (completedItems.length === 0 && idx === 0) {
+        // No completed items - first pending slot goes at cap center
+        const iconY = BASE_TOP + CAP_TOP / 2;
+        positions.push({
+          timeSlot,
+          iconY,
+          isCapCenter: true,
+        });
+      } else if (absoluteIndex > 0) {
+        // Position between previous anchor and current anchor
+        const prevAnchorY = todayNext[absoluteIndex - 1]?.y ?? BASE_TOP;
+        const currentAnchorY = todayNext[absoluteIndex]?.y ?? (prevAnchorY + ITEM_BLOCK_H);
+        const iconY = (prevAnchorY + currentAnchorY) / 2;
+
+        positions.push({
+          timeSlot,
+          iconY,
+          isCapCenter: false,
+        });
+      }
+    });
+
+    console.log('🔍 Time slot icon calculation (SORTED):', {
+      completedCount: completedItems.length,
+      pendingTimeSlots,
+      positions: positions.map(p => ({ slot: p.timeSlot, y: p.iconY })),
+    });
 
     setTimeSlotPositions(positions);
   }, [todayAssignments, tomorrowAssignments, assignments, geom]);
@@ -910,6 +921,7 @@ export default function ActionPlanTimeline({
                   {/* (hormone image rendered behind the circle) */}
 
                   {/* Hormone number (relative to image) - hide for Weekly Check-in */}
+                  {/* Shows checkmark for completed items, +N for pending */}
                   {a.id !== -1 && (
                     <View style={[
                       styles.hormoneBadge,
@@ -919,11 +931,11 @@ export default function ActionPlanTimeline({
                         top: isLeft ? -responsiveHeight(2) : -responsiveHeight(2.5),
                         left: isLeft ? -responsiveWidth(12) : undefined,
                         right: isLeft ? undefined : -responsiveWidth(12),
-                        backgroundColor: getHormoneColor(a.hormones?.[0]),
+                        backgroundColor: a.is_completed ? '#4CAF50' : getHormoneColor(a.hormones?.[0]),
                       }
                     ]}>
-                      <Text style={styles.hormoneBadgeText} allowFontScaling={false}>
-                        +{a.hormones?.length || 0}
+                      <Text style={[styles.hormoneBadgeText, a.is_completed && { color: '#FFFFFF' }]} allowFontScaling={false}>
+                        {a.is_completed ? '✓' : `+${a.hormones?.length || 0}`}
                       </Text>
                     </View>
                   )}
