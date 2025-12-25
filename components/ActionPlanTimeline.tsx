@@ -907,12 +907,22 @@ export default function ActionPlanTimeline({
                   } : undefined}
                   delayLongPress={2000} // 2 seconds long press
                 >
-                  {a.hero_image_url ? (
-                    <Image
-                      source={{ uri: a.hero_image_url }}
-                      style={styles.circleImage}
-                      resizeMode="cover"
-                    />
+                  {a.hero_image_url || (a.variants && a.variants.length > 0 && a.variants[0].image_url) ? (
+                    (() => {
+                      const imgUri = a.hero_image_url || (a.variants && a.variants[0] ? a.variants[0].image_url : '');
+                      // Debug image URL
+                      if (a.id !== -1 && imgUri) {
+                        // console.log(`[Timeline] Image for ${a.title}: ${imgUri?.substring(0, 50)}...`);
+                      }
+                      return (
+                        <Image
+                          source={{ uri: imgUri }}
+                          style={styles.circleImage}
+                          resizeMode="cover"
+                          onError={(e) => console.log(`[Timeline] Image load error for ${a.title}:`, e.nativeEvent.error)}
+                        />
+                      );
+                    })()
                   ) : (
                     <Text style={styles.imageFallback} allowFontScaling={false}>
                       📋
