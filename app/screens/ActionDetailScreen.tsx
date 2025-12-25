@@ -7,10 +7,21 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, Linking } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, Linking, TextInput, ActivityIndicator, Alert } from 'react-native';
 import AppIntroSlider from "react-native-app-intro-slider";
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { moderateScale, verticalScale } from 'react-native-size-matters';
+import homeService from '@/services/homeService';
+
+// Replacement reasons for "Not for me" feedback
+const REPLACEMENT_REASONS = [
+  { id: 'dont_like' as const, emoji: '😕', text: "Don't like this" },
+  { id: 'allergic' as const, emoji: '🚫', text: "I'm allergic" },
+  { id: 'no_ingredients' as const, emoji: '🛒', text: "Don't have ingredients" },
+  { id: 'no_time' as const, emoji: '⏰', text: "No time today" },
+  { id: 'already_done' as const, emoji: '✅', text: "Already did similar" },
+  { id: 'other' as const, emoji: '💬', text: "Other..." },
+];
 
 type RootStackParamList = {
   OnboardingScreen: undefined;
@@ -79,6 +90,16 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [showStudyDetails, setShowStudyDetails] = useState(false);
   const sliderRef = React.useRef<AppIntroSlider>(null);
+
+  // Feedback state
+  const [selectedFeedback, setSelectedFeedback] = useState<'loved' | 'completed' | 'skipped' | 'not_for_me' | null>(null);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [isSavingFeedback, setIsSavingFeedback] = useState(false);
+  const [feedbackSaved, setFeedbackSaved] = useState(false);
+  const [showReplaceModal, setShowReplaceModal] = useState(false);
+  const [selectedReason, setSelectedReason] = useState<typeof REPLACEMENT_REASONS[number]['id'] | null>(null);
+  const [customReason, setCustomReason] = useState('');
+  const [isReplacing, setIsReplacing] = useState(false);
 
   // Auto-slide logic for Advice Slider
   React.useEffect(() => {
@@ -166,6 +187,69 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
    */
   const handleTellMeMore = () => {
     // TODO: Implement "Tell me best ways to consume" functionality
+  };
+
+  /**
+   * Handle saving feedback
+   */
+  const handleSaveFeedback = async () => {
+    if (!action?.id || !selectedFeedback) return;
+
+    setIsSavingFeedback(true);
+    try {
+      const result = await homeService.submitActionFeedback(
+        action.id,
+        selectedFeedback,
+        feedbackText || undefined,
+        'detail'
+      );
+
+      if (result?.success) {
+        setFeedbackSaved(true);
+        // Show success feedback briefly
+        setTimeout(() => {
+          setFeedbackSaved(false);
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Failed to save feedback:', error);
+      Alert.alert('Error', 'Failed to save feedback. Please try again.');
+    } finally {
+      setIsSavingFeedback(false);
+    }
+  };
+
+  /**
+   * Handle replacing action with a new one
+   */
+  const handleReplaceAction = async () => {
+    if (!action?.id || !selectedReason) return;
+
+    setIsReplacing(true);
+    try {
+      const reasonText = selectedReason === 'other' ? customReason : undefined;
+      const result = await homeService.replaceAction(
+        action.id,
+        reasonText,
+        selectedReason
+      );
+
+      if (result?.success) {
+        setShowReplaceModal(false);
+        Alert.alert(
+          'Action Replaced! 🎉',
+          'Your new action has been generated. Go back to see it.',
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+      } else {
+        Alert.alert('Error', 'Failed to replace action. Please try again.');
+      }
+    } catch (error) {
+      console.error('Failed to replace action:', error);
+      Alert.alert('Error', 'Failed to replace action. Please try again.');
+    } finally {
+      setIsReplacing(false);
+    }
   };
 
   return (
@@ -533,10 +617,193 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                   </View>
                 )}
               </View>
+
+              {/* Feedback Section */}
+              <View style={styles.feedbackSection}>
+                <Text style={styles.feedbackTitle}>💬 How was this for you?</Text>
+
+                {/* Quick Reaction Buttons */}
+                <View style={styles.feedbackButtons}>
+                  <TouchableOpacity
+                    style={[
+                      styles.feedbackButton,
+                      selectedFeedback === 'loved' && styles.feedbackButtonActive
+                    ]}
+                    onPress={() => setSelectedFeedback('loved')}
+                  >
+                    <Text style={styles.feedbackEmoji}>😊</Text>
+                    <Text style={[
+                      styles.feedbackButtonText,
+                      selectedFeedback === 'loved' && styles.feedbackButtonTextActive
+                    ]}>Loved it</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.feedbackButton,
+                      selectedFeedback === 'completed' && styles.feedbackButtonActive
+                    ]}
+                    onPress={() => setSelectedFeedback('completed')}
+                  >
+                    <Text style={styles.feedbackEmoji}>👍</Text>
+                    <Text style={[
+                      styles.feedbackButtonText,
+                      selectedFeedback === 'completed' && styles.feedbackButtonTextActive
+                    ]}>Did it</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.feedbackButton,
+                      selectedFeedback === 'skipped' && styles.feedbackButtonActive
+                    ]}
+                    onPress={() => setSelectedFeedback('skipped')}
+                  >
+                    <Text style={styles.feedbackEmoji}>😐</Text>
+                    <Text style={[
+                      styles.feedbackButtonText,
+                      selectedFeedback === 'skipped' && styles.feedbackButtonTextActive
+                    ]}>Skipped</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.feedbackButton,
+                      selectedFeedback === 'not_for_me' && styles.feedbackButtonActive
+                    ]}
+                    onPress={() => setSelectedFeedback('not_for_me')}
+                  >
+                    <Text style={styles.feedbackEmoji}>👎</Text>
+                    <Text style={[
+                      styles.feedbackButtonText,
+                      selectedFeedback === 'not_for_me' && styles.feedbackButtonTextActive
+                    ]}>Not for me</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Text Input (shows after selection) */}
+                {selectedFeedback && (
+                  <View style={styles.textFeedbackContainer}>
+                    <TextInput
+                      style={styles.textFeedbackInput}
+                      placeholder="Want to share more? (optional)"
+                      placeholderTextColor="#9E9E9E"
+                      multiline
+                      numberOfLines={3}
+                      value={feedbackText}
+                      onChangeText={setFeedbackText}
+                      maxLength={500}
+                    />
+                    <TouchableOpacity
+                      style={[
+                        styles.saveFeedbackButton,
+                        feedbackSaved && styles.saveFeedbackButtonSuccess
+                      ]}
+                      onPress={handleSaveFeedback}
+                      disabled={isSavingFeedback || feedbackSaved}
+                    >
+                      {isSavingFeedback ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Text style={styles.saveFeedbackButtonText}>
+                          {feedbackSaved ? '✓ Saved!' : 'Save Feedback'}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Replace Option (for "Not for me") */}
+                {selectedFeedback === 'not_for_me' && (
+                  <TouchableOpacity
+                    style={styles.replaceButton}
+                    onPress={() => setShowReplaceModal(true)}
+                  >
+                    <Text style={styles.replaceButtonText}>🔄 Get a different action</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </>
           )}
         </View>
       </ScrollView>
+
+      {/* Replace Action Modal */}
+      <Modal
+        visible={showReplaceModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowReplaceModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.replaceModal}>
+            <Text style={styles.replaceModalTitle}>Why doesn't this work for you?</Text>
+
+            {/* Reason Selection */}
+            <View style={styles.reasonOptions}>
+              {REPLACEMENT_REASONS.map((reason) => (
+                <TouchableOpacity
+                  key={reason.id}
+                  style={[
+                    styles.reasonOption,
+                    selectedReason === reason.id && styles.reasonOptionActive
+                  ]}
+                  onPress={() => setSelectedReason(reason.id)}
+                >
+                  <Text style={styles.reasonEmoji}>{reason.emoji}</Text>
+                  <Text style={[
+                    styles.reasonText,
+                    selectedReason === reason.id && styles.reasonTextActive
+                  ]}>{reason.text}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Custom Reason Input */}
+            {selectedReason === 'other' && (
+              <TextInput
+                style={styles.customReasonInput}
+                placeholder="Tell us more..."
+                placeholderTextColor="#9E9E9E"
+                value={customReason}
+                onChangeText={setCustomReason}
+                multiline
+                numberOfLines={2}
+              />
+            )}
+
+            {/* Actions */}
+            <View style={styles.replaceModalActions}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => {
+                  setShowReplaceModal(false);
+                  setSelectedReason(null);
+                  setCustomReason('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.getNewActionButton,
+                  !selectedReason && styles.getNewActionButtonDisabled
+                ]}
+                onPress={handleReplaceAction}
+                disabled={!selectedReason || isReplacing}
+              >
+                {isReplacing ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.getNewActionButtonText}>Get New Action</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
 
       {/* Fixed Bottom Container */}
       <FixedBottomContainer>
@@ -1039,6 +1306,200 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(1.98),
     color: '#6F6F6F',
     fontFamily: 'Inter500',
+  },
+
+  // ============ FEEDBACK SECTION STYLES ============
+  feedbackSection: {
+    width: '100%',
+    marginTop: responsiveHeight(3),
+    paddingTop: responsiveHeight(2),
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  feedbackTitle: {
+    fontSize: moderateScale(14, 1.5),
+    fontFamily: 'Poppins500',
+    color: '#333333',
+    marginBottom: responsiveHeight(1.5),
+    textAlign: 'center',
+  },
+  feedbackButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: responsiveHeight(2),
+  },
+  feedbackButton: {
+    alignItems: 'center',
+    paddingVertical: responsiveHeight(1),
+    paddingHorizontal: responsiveWidth(2),
+    borderRadius: moderateScale(12),
+    backgroundColor: '#F9F1FB',
+    minWidth: responsiveWidth(18),
+  },
+  feedbackButtonActive: {
+    backgroundColor: '#C17EC9',
+    transform: [{ scale: 1.05 }],
+  },
+  feedbackEmoji: {
+    fontSize: moderateScale(20),
+    marginBottom: verticalScale(4),
+  },
+  feedbackButtonText: {
+    fontSize: moderateScale(10, 1.5),
+    fontFamily: 'Inter500',
+    color: '#666666',
+  },
+  feedbackButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  textFeedbackContainer: {
+    marginTop: responsiveHeight(1),
+    marginBottom: responsiveHeight(1),
+  },
+  textFeedbackInput: {
+    backgroundColor: '#F9F9F9',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: moderateScale(12),
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: moderateScale(12),
+    fontSize: moderateScale(13, 1.5),
+    fontFamily: 'Inter400',
+    color: '#333333',
+    minHeight: verticalScale(80),
+    textAlignVertical: 'top',
+    marginBottom: responsiveHeight(1.5),
+  },
+  saveFeedbackButton: {
+    backgroundColor: '#C17EC9',
+    paddingVertical: responsiveHeight(1.5),
+    paddingHorizontal: responsiveWidth(6),
+    borderRadius: moderateScale(10),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveFeedbackButtonSuccess: {
+    backgroundColor: '#4CAF50',
+  },
+  saveFeedbackButtonText: {
+    fontSize: moderateScale(13, 1.5),
+    fontFamily: 'Inter600',
+    color: '#FFFFFF',
+  },
+  replaceButton: {
+    backgroundColor: '#FFF3E0',
+    paddingVertical: responsiveHeight(1.5),
+    paddingHorizontal: responsiveWidth(4),
+    borderRadius: moderateScale(10),
+    alignItems: 'center',
+    marginTop: responsiveHeight(1),
+  },
+  replaceButtonText: {
+    fontSize: moderateScale(13, 1.5),
+    fontFamily: 'Inter600',
+    color: '#E65100',
+  },
+
+  // ============ REPLACE MODAL STYLES ============
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  replaceModal: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: moderateScale(24),
+    borderTopRightRadius: moderateScale(24),
+    paddingTop: responsiveHeight(3),
+    paddingHorizontal: responsiveWidth(5),
+    paddingBottom: responsiveHeight(5),
+    maxHeight: '80%',
+  },
+  replaceModalTitle: {
+    fontSize: moderateScale(18, 1.5),
+    fontFamily: 'Poppins600',
+    color: '#333333',
+    textAlign: 'center',
+    marginBottom: responsiveHeight(2.5),
+  },
+  reasonOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: moderateScale(10),
+    marginBottom: responsiveHeight(2),
+  },
+  reasonOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9F1FB',
+    paddingVertical: responsiveHeight(1.2),
+    paddingHorizontal: responsiveWidth(3),
+    borderRadius: moderateScale(20),
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  reasonOptionActive: {
+    backgroundColor: '#F3E5F5',
+    borderColor: '#C17EC9',
+  },
+  reasonEmoji: {
+    fontSize: moderateScale(16),
+    marginRight: moderateScale(6),
+  },
+  reasonText: {
+    fontSize: moderateScale(12, 1.5),
+    fontFamily: 'Inter500',
+    color: '#666666',
+  },
+  reasonTextActive: {
+    color: '#C17EC9',
+    fontFamily: 'Inter600',
+  },
+  customReasonInput: {
+    backgroundColor: '#F9F9F9',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: moderateScale(12),
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: moderateScale(12),
+    fontSize: moderateScale(13, 1.5),
+    fontFamily: 'Inter400',
+    color: '#333333',
+    minHeight: verticalScale(60),
+    textAlignVertical: 'top',
+    marginBottom: responsiveHeight(2),
+  },
+  replaceModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: responsiveHeight(2),
+  },
+  cancelButton: {
+    paddingVertical: responsiveHeight(1.5),
+    paddingHorizontal: responsiveWidth(5),
+  },
+  cancelButtonText: {
+    fontSize: moderateScale(14, 1.5),
+    fontFamily: 'Inter500',
+    color: '#9E9E9E',
+  },
+  getNewActionButton: {
+    backgroundColor: '#C17EC9',
+    paddingVertical: responsiveHeight(1.5),
+    paddingHorizontal: responsiveWidth(6),
+    borderRadius: moderateScale(10),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  getNewActionButtonDisabled: {
+    backgroundColor: '#E0E0E0',
+  },
+  getNewActionButtonText: {
+    fontSize: moderateScale(14, 1.5),
+    fontFamily: 'Inter600',
+    color: '#FFFFFF',
   },
 });
 

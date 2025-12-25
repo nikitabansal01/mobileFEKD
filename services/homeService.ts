@@ -471,6 +471,137 @@ class HomeService {
       return null;
     }
   }
+
+  /**
+   * Submits detailed feedback for an action from ActionDetailScreen
+   * 
+   * @param itemId - ID of the action item
+   * @param feedbackType - 'loved' | 'completed' | 'skipped' | 'not_for_me' | 'like' | 'dislike'
+   * @param feedbackText - Optional text feedback from user
+   * @param feedbackSource - 'home' or 'detail'
+   * @returns Promise resolving to feedback response or null on error
+   */
+  async submitActionFeedback(
+    itemId: number,
+    feedbackType: 'loved' | 'completed' | 'skipped' | 'not_for_me' | 'like' | 'dislike',
+    feedbackText?: string,
+    feedbackSource: 'home' | 'detail' = 'detail'
+  ): Promise<{ success: boolean; feedback_id?: number; can_replace: boolean } | null> {
+    try {
+      console.log('🔄 Submitting action feedback:', `${API_BASE_URL}/api/v1/new-scheduling/feedback`);
+
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('🔑 Firebase token included');
+      } else {
+        console.log('⚠️ No Firebase token available');
+      }
+
+      const requestBody: {
+        item_id: number;
+        feedback_type: string;
+        feedback_text?: string;
+        feedback_source: string;
+      } = {
+        item_id: itemId,
+        feedback_type: feedbackType,
+        feedback_source: feedbackSource,
+      };
+
+      if (feedbackText && feedbackText.trim()) {
+        requestBody.feedback_text = feedbackText;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/feedback`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to submit action feedback:', errorText);
+        throw new Error(`Failed to submit action feedback: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Successfully submitted action feedback:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Error submitting action feedback:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Replaces an action with a new one
+   * 
+   * @param itemId - ID of the action item to replace
+   * @param reason - Optional reason text
+   * @param replacementCategory - Categorized reason: 'allergic', 'no_time', 'dont_like', etc.
+   * @returns Promise resolving to replacement result or null on error
+   */
+  async replaceAction(
+    itemId: number,
+    reason?: string,
+    replacementCategory?: 'dont_like' | 'allergic' | 'no_ingredients' | 'no_time' | 'already_done' | 'not_feeling_it' | 'other'
+  ): Promise<{ success: boolean; replacement_action?: ActionPlanItem } | null> {
+    try {
+      console.log('🔄 Replacing action:', `${API_BASE_URL}/api/v1/new-scheduling/replace`);
+
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('🔑 Firebase token included');
+      } else {
+        console.log('⚠️ No Firebase token available');
+      }
+
+      const requestBody: {
+        item_id: number;
+        reason?: string;
+        replacement_category?: string;
+      } = {
+        item_id: itemId,
+      };
+
+      if (reason && reason.trim()) {
+        requestBody.reason = reason;
+      }
+
+      if (replacementCategory) {
+        requestBody.replacement_category = replacementCategory;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/replace`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to replace action:', errorText);
+        throw new Error(`Failed to replace action: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Successfully replaced action:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Error replacing action:', error);
+      return null;
+    }
+  }
 }
 
 export default new HomeService();
