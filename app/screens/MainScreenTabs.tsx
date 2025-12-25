@@ -49,37 +49,36 @@ export default function MainScreenTabs({ route }: MainScreenTabsProps) {
         return <BottomNavigationBar {...props} />;
       }}
     >
-      <Tab.Screen 
-        name="home" 
+      <Tab.Screen
+        name="home"
         component={HomeScreen}
         initialParams={{ freshSignup }}
       />
-      <Tab.Screen 
-        name="personalize" 
+      <Tab.Screen
+        name="personalize"
         component={PersonalizeScreen}
       />
-      <Tab.Screen 
-        name="insights" 
+      <Tab.Screen
+        name="insights"
         component={InsightScreen}
       />
-      <Tab.Screen 
-        name="progress" 
+      <Tab.Screen
+        name="progress"
         component={InsightScreen}
       />
-      <Tab.Screen 
-        name="community" 
+      <Tab.Screen
+        name="community"
         component={CommunityScreen}
       />
-      <Tab.Screen 
-        name="profile" 
+      <Tab.Screen
+        name="profile"
         component={ProfileScreen}
       />
-      <Tab.Screen 
-        name="auvra" 
+      <Tab.Screen
+        name="auvra"
         component={ChatHistoryScreen}
-        initialParams={{ 
+        initialParams={{
           chatContext: chatContext,
-          onBackToHome: () => {}, // This will be handled by navigation
         }}
       />
     </Tab.Navigator>

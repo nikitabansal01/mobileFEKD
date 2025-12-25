@@ -2,10 +2,10 @@
   "expo": {
     "name": "Hormone Insight",
     "slug": "auvra-fe",
+    "scheme": "hormoneinsight",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
