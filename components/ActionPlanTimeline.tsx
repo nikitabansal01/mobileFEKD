@@ -600,8 +600,15 @@ export default function ActionPlanTimeline({
 
   // Function to return first hormone icon (left/right aware)
   const getFirstHormoneIcon = (assignment: Assignment, isLeft: boolean): string | any => {
-    if (assignment.hormones && assignment.hormones.length > 0) {
-      return getHormoneIcon(assignment.hormones[0], isLeft);
+    const hormoneName = assignment.hormones?.[0];
+
+    // Debug log to trace hormone icon selection
+    if (assignment.id !== -1) { // Skip for Weekly Check-in
+      console.log(`🔍 Hormone icon for "${assignment.title}": hormones=${JSON.stringify(assignment.hormones)}, using="${hormoneName}", isLeft=${isLeft}`);
+    }
+
+    if (hormoneName && hormoneName.trim() !== '') {
+      return getHormoneIcon(hormoneName, isLeft);
     }
     return '🧬'; // Default icon
   };
@@ -907,22 +914,12 @@ export default function ActionPlanTimeline({
                   } : undefined}
                   delayLongPress={2000} // 2 seconds long press
                 >
-                  {a.hero_image_url || (a.variants && a.variants.length > 0 && a.variants[0].image_url) ? (
-                    (() => {
-                      const imgUri = a.hero_image_url || (a.variants && a.variants[0] ? a.variants[0].image_url : '');
-                      // Debug image URL
-                      if (a.id !== -1 && imgUri) {
-                        // console.log(`[Timeline] Image for ${a.title}: ${imgUri?.substring(0, 50)}...`);
-                      }
-                      return (
-                        <Image
-                          source={{ uri: imgUri }}
-                          style={styles.circleImage}
-                          resizeMode="cover"
-                          onError={(e) => console.log(`[Timeline] Image load error for ${a.title}:`, e.nativeEvent.error)}
-                        />
-                      );
-                    })()
+                  {a.hero_image_url ? (
+                    <Image
+                      source={{ uri: a.hero_image_url }}
+                      style={styles.circleImage}
+                      resizeMode="cover"
+                    />
                   ) : (
                     <Text style={styles.imageFallback} allowFontScaling={false}>
                       📋
