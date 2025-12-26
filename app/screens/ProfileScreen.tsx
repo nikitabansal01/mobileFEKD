@@ -81,29 +81,29 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
           if (user) {
             setUserData(prev => ({
               ...prev,
-              displayName: user.displayName || 'User',
               email: user.email || '',
             }));
           }
 
-          // Fetch profile data from backend (concerns/diagnosis)
+          // Fetch user name from cycle phase endpoint (reliable source)
           try {
             const token = await user?.getIdToken();
             if (token) {
-              const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/profile`, {
+              const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/cycle/phase`, {
                 headers: { Authorization: `Bearer ${token}` },
               });
               if (response.ok) {
-                const profileData = await response.json();
-                setUserData(prev => ({
-                  ...prev,
-                  concerns: profileData.symptoms || profileData.concerns || [],
-                  diagnosis: profileData.diagnosis || profileData.conditions || [],
-                }));
+                const data = await response.json();
+                if (data?.cycle_info?.user_name) {
+                  setUserData(prev => ({
+                    ...prev,
+                    displayName: data.cycle_info.user_name,
+                  }));
+                }
               }
             }
-          } catch (profileError) {
-            console.log('Could not fetch profile:', profileError);
+          } catch (cycleError) {
+            console.log('Could not fetch cycle phase:', cycleError);
           }
         } catch (error) {
           console.log('Could not fetch data:', error);
