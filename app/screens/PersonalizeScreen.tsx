@@ -5,7 +5,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import React, { useState, useCallback } from "react";
-import { ActivityIndicator, Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { FONT_FAMILIES, useAppFonts } from '../../constants/fonts';
@@ -310,6 +310,13 @@ export default function PersonalizeScreen() {
           case 'first_improvement':
             // Badge is automatically marked - show celebration
             console.log('🏆 Congratulations! You\'ve unlocked the First Improvement badge!');
+            setTimeout(() => {
+              Alert.alert(
+                '🏆 First Improvement!',
+                'Congratulations! You\'ve noticed your first symptom improvement. This badge is now displayed in your profile!',
+                [{ text: 'Amazing!', style: 'default' }]
+              );
+            }, 500);
             break;
 
           default:
