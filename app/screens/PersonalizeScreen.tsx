@@ -172,6 +172,7 @@ type RootStackParamList = {
   PersonalizeScreen: undefined;
   MainScreenTabs: undefined;
   PaywallScreen: undefined;
+  InsightsScreen: undefined;
 };
 
 export default function PersonalizeScreen() {
@@ -343,7 +344,7 @@ export default function PersonalizeScreen() {
           case 'symptom_patterns':
             // Navigate to InsightsScreen to view analytics
             setTimeout(() => {
-              navigation.navigate('InsightsScreen' as never);
+              navigation.navigate('InsightsScreen');
             }, 500);
             break;
 
