@@ -278,6 +278,48 @@ export default function PersonalizeScreen() {
     }
   };
 
+  // Handle both claimed and available reward actions
+  const handleRewardAction = async (rewardId: string) => {
+    // Check if reward is already claimed using rewards state
+    const reward = rewardsData?.rewards?.find(r => r.id === rewardId);
+    const isClaimed = reward?.state === 'claimed';
+
+    if (isClaimed) {
+      // Reward already claimed - navigate directly to feature
+      switch (rewardId) {
+        case 'symptom_patterns':
+          navigation.navigate('InsightsScreen');
+          break;
+        case 'diet_prefs':
+          setActiveModal('diet_preference');
+          break;
+        case 'food_allergies':
+          setActiveModal('food_allergies');
+          break;
+        case 'cuisine_prefs':
+          setActiveModal('cuisine_preference');
+          break;
+        case 'dine_out':
+          setActiveModal('dine_out_frequency');
+          break;
+        case 'ethnicity':
+          setActiveModal('cultural_background');
+          break;
+        case 'bmi_ratio':
+          setActiveModal('body_metrics');
+          break;
+        case 'cravings_healthy':
+          setActiveModal('cravings');
+          break;
+        default:
+          console.log('No action for claimed reward:', rewardId);
+      }
+    } else {
+      // Reward not claimed - claim it first
+      await claimReward(rewardId);
+    }
+  };
+
   const claimReward = async (rewardId: string) => {
     if (claimingRewardId) return; // Prevent double tap
 
@@ -520,33 +562,39 @@ export default function PersonalizeScreen() {
     return state === 'claimed' || state === 'available';
   }).map(item => {
     const state = getRewardState(item);
-    // Automatically add button for available rewards with REWARD-SPECIFIC button text
-    if (state === 'available') {
-      // Define reward-specific button text and behavior
-      const getButtonConfig = (rewardId: string) => {
-        switch (rewardId) {
-          case 'streak_freeze':
-            return { buttonText: "Collected ✓", buttonStyle: 'collected' };
-          case 'plan_refresh_2x':
-            return { buttonText: "Activated ✓", buttonStyle: 'collected' };
-          case 'symptom_patterns':
-            return { buttonText: "View Insights", buttonStyle: 'action' };
-          case 'first_improvement':
-            return { buttonText: "Claimed 🎉", buttonStyle: 'collected' };
-          default:
-            // All preference rewards (diet_prefs, food_allergies, cuisine_prefs, dine_out, ethnicity, bmi_ratio, cravings_healthy)
-            return { buttonText: "Personalize now", buttonStyle: 'action' };
-        }
-      };
-      const config = getButtonConfig(item.id);
-      return {
-        ...item,
-        hasButton: true,
-        buttonText: config.buttonText,
-        buttonStyle: config.buttonStyle
-      };
-    }
-    return item;
+
+    // Define button config for both available AND claimed states
+    const getButtonConfig = (rewardId: string, rewardState: string) => {
+      switch (rewardId) {
+        case 'streak_freeze':
+          return rewardState === 'claimed'
+            ? { buttonText: "Active ✓", buttonStyle: 'collected' as const, hasButton: true }
+            : { buttonText: "Collected ✓", buttonStyle: 'collected' as const, hasButton: true };
+        case 'plan_refresh_2x':
+          return rewardState === 'claimed'
+            ? { buttonText: "Active ✓", buttonStyle: 'collected' as const, hasButton: true }
+            : { buttonText: "Activated ✓", buttonStyle: 'collected' as const, hasButton: true };
+        case 'symptom_patterns':
+          // ALWAYS show "View Insights" button for both available and claimed
+          return { buttonText: "View Insights", buttonStyle: 'action' as const, hasButton: true };
+        case 'first_improvement':
+          return { buttonText: "Claimed 🎉", buttonStyle: 'collected' as const, hasButton: true };
+        default:
+          // All preference rewards - show "Edit" when claimed, "Personalize now" when available
+          if (rewardState === 'claimed') {
+            return { buttonText: "Edit ✏️", buttonStyle: 'action' as const, hasButton: true };
+          }
+          return { buttonText: "Personalize now", buttonStyle: 'action' as const, hasButton: true };
+      }
+    };
+
+    const config = getButtonConfig(item.id, state);
+    return {
+      ...item,
+      hasButton: config.hasButton,
+      buttonText: config.buttonText,
+      buttonStyle: config.buttonStyle
+    };
   });
 
   const growRewards = getAllRewards().filter(item => {
@@ -800,7 +848,7 @@ export default function PersonalizeScreen() {
             >
               <TouchableOpacity
                 style={styles.personalizeButton}
-                onPress={() => claimReward(item.id)}
+                onPress={() => handleRewardAction(item.id)}
                 activeOpacity={0.7}
               >
                 <MaskedView
