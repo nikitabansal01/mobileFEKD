@@ -259,21 +259,61 @@ export default function PersonalizeScreen() {
         await loadRewardsData();
         console.log('Reward claimed:', result.title);
 
-        // Open preference modal for personalization rewards
-        const rewardToModalMap: Record<string, PreferenceType> = {
-          'diet_prefs': 'diet_preference',
-          'food_allergies': 'food_allergies',
-          'cuisine_prefs': 'cuisine_preference',
-          'dine_out': 'dine_out_frequency',
-          'ethnicity': 'cultural_background',
-          'bmi_ratio': 'body_metrics',
-          'cravings_healthy': 'cravings',
-        };
+        // Handle different reward types
+        switch (rewardId) {
+          // ═══════════════════════════════════════════════════════════════
+          // PERSONALIZATION REWARDS - Open modal to set preference
+          // ═══════════════════════════════════════════════════════════════
+          case 'diet_prefs':
+            setTimeout(() => setActiveModal('diet_preference'), 500);
+            break;
+          case 'food_allergies':
+            setTimeout(() => setActiveModal('food_allergies'), 500);
+            break;
+          case 'cuisine_prefs':
+            setTimeout(() => setActiveModal('cuisine_preference'), 500);
+            break;
+          case 'dine_out':
+            setTimeout(() => setActiveModal('dine_out_frequency'), 500);
+            break;
+          case 'ethnicity':
+            setTimeout(() => setActiveModal('cultural_background'), 500);
+            break;
+          case 'bmi_ratio':
+            setTimeout(() => setActiveModal('body_metrics'), 500);
+            break;
+          case 'cravings_healthy':
+            setTimeout(() => setActiveModal('cravings'), 500);
+            break;
 
-        const modalType = rewardToModalMap[rewardId];
-        if (modalType) {
-          // Small delay for better UX
-          setTimeout(() => setActiveModal(modalType), 500);
+          // ═══════════════════════════════════════════════════════════════
+          // SPECIAL REWARDS - Non-modal actions
+          // ═══════════════════════════════════════════════════════════════
+          case 'streak_freeze':
+            // Freeze token is automatically added by backend
+            // Show confirmation toast
+            console.log('✅ Streak freeze token claimed! You can now protect your streak.');
+            break;
+
+          case 'symptom_patterns':
+            // Navigate to InsightsScreen to view analytics
+            setTimeout(() => {
+              navigation.navigate('InsightsScreen' as never);
+            }, 500);
+            break;
+
+          case 'plan_refresh_2x':
+            // Refresh limit is automatically doubled by backend
+            console.log('✅ 2x plan refresh unlocked! You can now refresh actions twice per day.');
+            break;
+
+          case 'first_improvement':
+            // Badge is automatically marked - show celebration
+            console.log('🏆 Congratulations! You\'ve unlocked the First Improvement badge!');
+            break;
+
+          default:
+            console.log('Unknown reward:', rewardId);
         }
       }
     } catch (error) {
