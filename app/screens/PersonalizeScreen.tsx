@@ -812,20 +812,35 @@ export default function PersonalizeScreen() {
         {renderStreakSection()}
 
         <View style={styles.rewardsContainer}>
-          {renderDivider("Seed Rewards")}
-          <View style={styles.rewardsList}>
-            {seedRewards.map(renderRewardItem)}
-          </View>
+          {/* Only show if there are available/claimed rewards */}
+          {seedRewards.length > 0 && (
+            <>
+              {renderDivider("✨ Your Rewards")}
+              <View style={styles.rewardsList}>
+                {seedRewards.map(renderRewardItem)}
+              </View>
+            </>
+          )}
 
-          {renderDivider("Grow Rewards")}
-          <View style={styles.rewardsList}>
-            {growRewards.map(renderRewardItem)}
-          </View>
+          {/* Upcoming - Early Rewards (days 1-15) */}
+          {growRewards.length > 0 && (
+            <>
+              {renderDivider("🌱 Upcoming Rewards")}
+              <View style={styles.rewardsList}>
+                {growRewards.map(renderRewardItem)}
+              </View>
+            </>
+          )}
 
-          {renderDivider("Rise Rewards")}
-          <View style={styles.rewardsList}>
-            {riseRewards.map(renderRewardItem)}
-          </View>
+          {/* Premium - Later Rewards (days 16+) */}
+          {riseRewards.length > 0 && (
+            <>
+              {renderDivider("🚀 Premium Rewards")}
+              <View style={styles.rewardsList}>
+                {riseRewards.map(renderRewardItem)}
+              </View>
+            </>
+          )}
         </View>
       </ScrollView>
 
