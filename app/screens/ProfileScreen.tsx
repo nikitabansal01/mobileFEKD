@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { useNavigation, CommonActions, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getAuth } from 'firebase/auth';
 import { useState, useCallback } from 'react';
 import { rewardService } from '../../services/rewardService';
 import {
@@ -49,22 +50,66 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
   const [locationInsightsEnabled, setLocationInsightsEnabled] = useState(true);
   const [badges, setBadges] = useState<Array<{ id: string; title: string; icon: string; claimed_at: string | null }>>([]);
 
-  // Fetch badges on mount
+  // User profile data (fetched from Firebase + backend)
+  const [userData, setUserData] = useState<{
+    displayName: string;
+    email: string;
+    concerns: string[];
+    diagnosis: string[];
+  }>({
+    displayName: '',
+    email: '',
+    concerns: [],
+    diagnosis: [],
+  });
+
+  // Fetch badges and user data on mount
   useFocusEffect(
     useCallback(() => {
-      const fetchBadges = async () => {
+      const fetchData = async () => {
         try {
+          // Fetch badges
           const claimed = await rewardService.getClaimedRewards();
-          // Filter for badge-type rewards (first_improvement)
           const badgeRewards = claimed.filter((r: any) =>
             r.id === 'first_improvement'
           );
           setBadges(badgeRewards);
+
+          // Fetch Firebase user data
+          const auth = getAuth();
+          const user = auth.currentUser;
+          if (user) {
+            setUserData(prev => ({
+              ...prev,
+              displayName: user.displayName || 'User',
+              email: user.email || '',
+            }));
+          }
+
+          // Fetch profile data from backend (concerns/diagnosis)
+          try {
+            const token = await user?.getIdToken();
+            if (token) {
+              const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/profile`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (response.ok) {
+                const profileData = await response.json();
+                setUserData(prev => ({
+                  ...prev,
+                  concerns: profileData.symptoms || profileData.concerns || [],
+                  diagnosis: profileData.diagnosis || profileData.conditions || [],
+                }));
+              }
+            }
+          } catch (profileError) {
+            console.log('Could not fetch profile:', profileError);
+          }
         } catch (error) {
-          console.log('Could not fetch badges:', error);
+          console.log('Could not fetch data:', error);
         }
       };
-      fetchBadges();
+      fetchData();
     }, [])
   );
 
@@ -188,8 +233,8 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
 
             {/* User Info */}
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>Jessica</Text>
-              <Text style={styles.userEmail}>jessica03@gmail.com</Text>
+              <Text style={styles.userName}>{userData.displayName || 'User'}</Text>
+              <Text style={styles.userEmail}>{userData.email || ''}</Text>
             </View>
           </View>
 
@@ -295,8 +340,12 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
               <View style={styles.healthText}>
                 <Text style={styles.healthTitle}>Change top concerns/diagnosis</Text>
                 <View style={styles.healthDetails}>
-                  <Text style={styles.healthDetail}>Concerns: #1 Acne, Bloating, Period Pain</Text>
-                  <Text style={styles.healthDetail}>Diagnosis: PCOS</Text>
+                  <Text style={styles.healthDetail}>
+                    Concerns: {userData.concerns.length > 0 ? userData.concerns.slice(0, 3).join(', ') : 'None set'}
+                  </Text>
+                  <Text style={styles.healthDetail}>
+                    Diagnosis: {userData.diagnosis.length > 0 ? userData.diagnosis.join(', ') : 'None set'}
+                  </Text>
                 </View>
               </View>
             </View>
