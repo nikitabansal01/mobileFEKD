@@ -563,7 +563,9 @@ export default function PersonalizeScreen() {
             ? { buttonText: "", buttonStyle: 'collected' as const, hasButton: false }
             : { buttonText: "Claim", buttonStyle: 'action' as const, hasButton: true };
         case 'first_improvement':
-          return { buttonText: "Claimed 🎉", buttonStyle: 'collected' as const, hasButton: true };
+          return rewardState === 'claimed'
+            ? { buttonText: "", buttonStyle: 'collected' as const, hasButton: false }
+            : { buttonText: "Claim", buttonStyle: 'action' as const, hasButton: true };
         default:
           // All preference rewards - show "Edit" when claimed, "Personalize now" when available
           if (rewardState === 'claimed') {
