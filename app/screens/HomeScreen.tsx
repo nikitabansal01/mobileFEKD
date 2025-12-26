@@ -276,9 +276,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             setProgressStats({ hormone_stats: convertHormoneStats(updatedAssignments.hormone_stats) });
           }
         }
+      } else if (result?.error === 'rate_limit') {
+        // Show friendly message for daily limit
+        Alert.alert(
+          '🌙 Come Back Tomorrow!',
+          result.message || 'You\'ve reached your daily limit for changes.',
+          [{ text: 'Got it!' }]
+        );
+      } else {
+        Alert.alert('Oops!', result?.message || 'Could not replace actions. Try again.');
       }
 
-      // Close the modal after successful replacement
+      // Close the modal after replacement attempt
       setShowAuvraChat(false);
     } catch (error) {
       console.error('❌ Error replacing items:', error);

@@ -199,6 +199,7 @@ export interface PlanSatisfactionRequest {
 export interface PlanSatisfactionResponse {
   success: boolean;
   message: string;
+  error?: string;
   feedback_count?: number;
   new_actions?: ActionPlanItem[];
 }
@@ -458,17 +459,27 @@ class HomeService {
       });
 
       if (!response.ok) {
+        // Handle rate limit (429) - daily replacement limit reached
+        if (response.status === 429) {
+          console.log('⚠️ Daily replacement limit reached');
+          return {
+            success: false,
+            error: 'rate_limit',
+            message: 'You\'ve reached your daily limit for action replacements. Try again tomorrow! 🌙'
+          };
+        }
+
         const errorText = await response.text();
         console.error('❌ Failed to submit plan satisfaction:', errorText);
-        throw new Error(`Failed to submit plan satisfaction: ${response.status} - ${errorText}`);
+        return { success: false, error: 'server_error', message: 'Unable to process. Please try again.' };
       }
 
       const result = await response.json();
       console.log('✅ Successfully submitted plan satisfaction:', result);
-      return result;
+      return { success: true, ...result };
     } catch (error) {
       console.error('❌ Error submitting plan satisfaction:', error);
-      return null;
+      return { success: false, error: 'network_error', message: 'Network error. Check your connection.' };
     }
   }
 
