@@ -10,6 +10,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Dimensions,
   Image,
@@ -991,7 +992,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             {/* Refresh All button */}
             {refreshStatus && refreshStatus.can_refresh && (
               <TouchableOpacity
-                style={styles.refreshAllButton}
+                style={[
+                  styles.refreshAllButton,
+                  isRefreshingAll && styles.refreshAllButtonLoading
+                ]}
                 onPress={async () => {
                   setIsRefreshingAll(true);
                   try {
@@ -1018,9 +1022,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                 }}
                 disabled={isRefreshingAll}
               >
-                <Text style={styles.refreshAllButtonText}>
-                  {isRefreshingAll ? '⏳' : '🔄'} Refresh All
-                </Text>
+                {isRefreshingAll ? (
+                  <View style={styles.refreshAllLoadingContent}>
+                    <ActivityIndicator size="small" color="#6750A4" />
+                    <Text style={styles.refreshAllButtonText}>Refreshing...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.refreshAllButtonText}>🔄 Refresh All</Text>
+                )}
               </TouchableOpacity>
             )}
           </View>
@@ -1617,6 +1626,15 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(1.4),
     fontFamily: 'Inter500',
     color: '#6750A4',
+  },
+  refreshAllButtonLoading: {
+    opacity: 0.8,
+    minWidth: scale(120),
+  },
+  refreshAllLoadingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(6),
   },
 });
 
