@@ -390,33 +390,31 @@ export default function ActionPlanTimeline({
       slot => timeSlotGroups[slot] && timeSlotGroups[slot].length > 0
     );
 
-    // Calculate icon positions for each time section
-    // Start after completed items (skip completed section)
-    let currentIndex = completedItems.length + 1; // +1 for Weekly Check-in
+    // If we have pending items, show ONE icon at the start of pending section
+    // (between completed section and first pending item)
+    if (orderedSlots.length > 0 && pendingItems.length > 0) {
+      const firstTimeSlot = orderedSlots[0]; // Get earliest pending time slot
 
-    orderedSlots.forEach((slot, slotIndex) => {
-      const itemsInSlot = timeSlotGroups[slot];
-      if (!itemsInSlot || itemsInSlot.length === 0) return;
+      // Calculate position: after completed items + Weekly Check-in
+      // Use the first pending item's anchor to find the right Y position
+      const firstPendingItem = pendingItems[0];
+      const anchorForFirst = todayNext.find(a => a.id === firstPendingItem.id.toString());
 
-      // Find the first item in this time slot to get its anchor position
-      const firstItemInSlot = itemsInSlot[0];
-      const anchorForSlot = todayNext.find(a => a.id === firstItemInSlot.id.toString());
-
-      if (anchorForSlot) {
-        // Position the icon at the TOP of this time section (above first item)
-        const iconY = anchorForSlot.y - ITEM_BLOCK_H / 2 - CAP_TOP / 2;
+      if (anchorForFirst) {
+        // Position icon at the TOP of pending section - on the line between completed and pending
+        // This should be at the cap/break point in the timeline
+        const iconY = anchorForFirst.y - ITEM_BLOCK_H / 2;
         positions.push({
-          timeSlot: slot,
+          timeSlot: firstTimeSlot,
           iconY: iconY,
-          isCapCenter: slotIndex === 0, // First slot gets cap center styling
+          isCapCenter: true,
         });
       }
-    });
+    }
 
-    console.log('🔍 Time slot icons (per section):', {
+    console.log('🔍 Time slot icons (pending section):', {
       completedCount: completedItems.length,
       pendingCount: pendingItems.length,
-      timeSlotGroups: Object.keys(timeSlotGroups).map(k => ({ slot: k, count: timeSlotGroups[k].length })),
       orderedSlots,
       positions: positions.map(p => ({ slot: p.timeSlot, y: p.iconY })),
     });
