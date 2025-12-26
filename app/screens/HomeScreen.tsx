@@ -51,6 +51,7 @@ interface HomeScreenProps {
       skipLoading?: boolean;
       skipTodayLoading?: boolean;
       freshSignup?: boolean;
+      shouldRefresh?: boolean; // Added: trigger refetch after action replacement
     };
   };
 }
@@ -94,6 +95,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         });
       };
     }, [navigation])
+  );
+
+  // Refetch data when returning with shouldRefresh param (e.g., after action replacement)
+  useFocusEffect(
+    React.useCallback(() => {
+      const shouldRefresh = route?.params?.shouldRefresh;
+      if (shouldRefresh) {
+        console.log('🔄 Refreshing data after action replacement');
+        // Reset the flag and refetch
+        initialDataLoadedRef.current = false;
+        loadHomeData();
+        // Clear the param to prevent re-fetch on future focus
+        navigation.setParams({ shouldRefresh: false } as any);
+      }
+    }, [route?.params?.shouldRefresh])
   );
 
   // Reset inactivity timer - Shows Auvra modal after configured seconds from backend

@@ -32,7 +32,7 @@ type RootStackParamList = {
   LoadingScreen: undefined;
   ResultLoadingScreen: undefined;
   LoginScreen: undefined;
-  HomeScreen: undefined;
+  HomeScreen: { shouldRefresh?: boolean };
   ActionDetailScreen: { action?: string; };
   ActionCompletedScreen: { action?: string; };
 };
@@ -238,8 +238,14 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
         setShowReplaceModal(false);
         Alert.alert(
           'Action Replaced! 🎉',
-          'Your new action has been generated. Go back to see it.',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
+          'Your new action is ready!',
+          [{
+            text: 'OK',
+            onPress: () => {
+              // Navigate back with refresh flag to reload assignments
+              navigation.navigate('HomeScreen', { shouldRefresh: true });
+            }
+          }]
         );
       } else {
         Alert.alert('Error', 'Failed to replace action. Please try again.');
@@ -641,20 +647,6 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                   <TouchableOpacity
                     style={[
                       styles.feedbackButton,
-                      selectedFeedback === 'completed' && styles.feedbackButtonActive
-                    ]}
-                    onPress={() => setSelectedFeedback('completed')}
-                  >
-                    <Text style={styles.feedbackEmoji}>👍</Text>
-                    <Text style={[
-                      styles.feedbackButtonText,
-                      selectedFeedback === 'completed' && styles.feedbackButtonTextActive
-                    ]}>Did it</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.feedbackButton,
                       selectedFeedback === 'skipped' && styles.feedbackButtonActive
                     ]}
                     onPress={() => setSelectedFeedback('skipped')}
@@ -713,8 +705,8 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                   </View>
                 )}
 
-                {/* Replace Option (for "Not for me") */}
-                {selectedFeedback === 'not_for_me' && (
+                {/* Replace Option (for "Skipped" or "Not for me") */}
+                {(selectedFeedback === 'skipped' || selectedFeedback === 'not_for_me') && (
                   <TouchableOpacity
                     style={styles.replaceButton}
                     onPress={() => setShowReplaceModal(true)}
