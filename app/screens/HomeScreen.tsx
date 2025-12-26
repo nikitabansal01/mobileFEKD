@@ -12,7 +12,9 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Dimensions,
+  Easing,
   Image,
   ScrollView,
   StyleSheet,
@@ -78,6 +80,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   // Refresh status for 2x plan refresh reward
   const [refreshStatus, setRefreshStatus] = useState<RefreshStatus | null>(null);
   const [isRefreshingAll, setIsRefreshingAll] = useState(false);
+
+  // Animated value for hourglass rotation
+  const spinValue = useRef(new Animated.Value(0)).current;
+
+  // Start/stop rotation animation when refreshing
+  useEffect(() => {
+    if (isRefreshingAll) {
+      spinValue.setValue(0);
+      Animated.loop(
+        Animated.timing(spinValue, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+    } else {
+      spinValue.stopAnimation();
+    }
+  }, [isRefreshingAll]);
 
   // Auvra chat modal state
   const [showAuvraChat, setShowAuvraChat] = useState(false);
@@ -1024,7 +1046,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
               >
                 {isRefreshingAll ? (
                   <View style={styles.refreshAllLoadingContent}>
-                    <ActivityIndicator size="small" color="#6750A4" />
+                    <Animated.Text
+                      style={[
+                        styles.refreshHourglass,
+                        {
+                          transform: [{
+                            rotate: spinValue.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: ['0deg', '360deg']
+                            })
+                          }]
+                        }
+                      ]}
+                    >
+                      ⏳
+                    </Animated.Text>
                     <Text style={styles.refreshAllButtonText}>Refreshing...</Text>
                   </View>
                 ) : (
@@ -1635,6 +1671,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(6),
+  },
+  refreshHourglass: {
+    fontSize: responsiveFontSize(1.6),
   },
 });
 
