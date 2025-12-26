@@ -367,7 +367,7 @@ export default function ActionPlanTimeline({
     setAnchors(todayNext);
 
     // Calculate time slot icon positions
-    // RULE: Show icon for EACH distinct time section (morning/afternoon/evening)
+    // RULE: Show icon for EACH distinct time section (morning/afternoon/evening/anytime)
     // NO icons for completed section - only for pending items
     const positions: TimeSlotPosition[] = [];
 
@@ -390,13 +390,34 @@ export default function ActionPlanTimeline({
       slot => timeSlotGroups[slot] && timeSlotGroups[slot].length > 0
     );
 
-    // Add icon for EACH time section (not just the first one)
+    console.log('🔍 Time slot grouping:', {
+      pendingItemsCount: pendingItems.length,
+      groups: Object.entries(timeSlotGroups).map(([slot, items]) => ({
+        slot,
+        itemIds: items.map(i => i.id),
+        itemTitles: items.map(i => i.title),
+      })),
+      orderedSlots,
+    });
+
+    // Add icon for EACH time section (morning, afternoon, evening, anytime)
     orderedSlots.forEach((timeSlot, slotIndex) => {
       const slotItems = timeSlotGroups[timeSlot];
       if (slotItems && slotItems.length > 0) {
         // Find the first item of this time slot
         const firstItemOfSlot = slotItems[0];
-        const anchorForItem = todayNext.find(a => a.id === firstItemOfSlot.id.toString());
+        // Fix: Compare as strings to handle both number and string id types
+        const itemIdStr = String(firstItemOfSlot.id);
+        const anchorForItem = todayNext.find(a => a.id === itemIdStr) ||
+          todayNext.find(a => String(a.id) === itemIdStr);
+
+        console.log(`🔍 Looking for anchor for ${timeSlot}:`, {
+          itemId: firstItemOfSlot.id,
+          itemIdStr,
+          itemTitle: firstItemOfSlot.title,
+          foundAnchor: !!anchorForItem,
+          availableAnchorIds: todayNext.map(a => a.id),
+        });
 
         if (anchorForItem) {
           // Position icon at the TOP of this section
@@ -414,7 +435,7 @@ export default function ActionPlanTimeline({
       completedCount: completedItems.length,
       pendingCount: pendingItems.length,
       orderedSlots,
-      positions: positions.map(p => ({ slot: p.timeSlot, y: p.iconY })),
+      positions: positions.map(p => ({ slot: p.timeSlot, y: Math.round(p.iconY) })),
     });
 
     setTimeSlotPositions(positions);
