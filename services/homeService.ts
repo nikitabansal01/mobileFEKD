@@ -602,6 +602,49 @@ class HomeService {
       return null;
     }
   }
+
+  /**
+   * Refresh all incomplete actions for today.
+   * Uses daily refresh limit (1 default, 2 with plan_refresh_2x reward).
+   */
+  async refreshAllIncomplete(): Promise<{
+    success: boolean;
+    message: string;
+    replaced_count: number;
+    refresh_status: { limit: number; used: number; remaining: number; can_refresh: boolean };
+  } | null> {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        console.error('❌ No auth token available for refresh all');
+        return null;
+      }
+
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/refresh-all-incomplete`, {
+        method: 'POST',
+        headers,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to refresh all:', errorText);
+        throw new Error(`Failed to refresh all: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Successfully refreshed all:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Error refreshing all:', error);
+      return null;
+    }
+  }
 }
 
 export default new HomeService();

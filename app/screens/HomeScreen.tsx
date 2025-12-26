@@ -76,6 +76,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
   // Refresh status for 2x plan refresh reward
   const [refreshStatus, setRefreshStatus] = useState<RefreshStatus | null>(null);
+  const [isRefreshingAll, setIsRefreshingAll] = useState(false);
 
   // Auvra chat modal state
   const [showAuvraChat, setShowAuvraChat] = useState(false);
@@ -987,6 +988,41 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             <Text style={styles.dateText}>
               {assignments?.date ? formatDate(assignments.date) : '15th July, 2025'}
             </Text>
+            {/* Refresh All button */}
+            {refreshStatus && refreshStatus.can_refresh && (
+              <TouchableOpacity
+                style={styles.refreshAllButton}
+                onPress={async () => {
+                  setIsRefreshingAll(true);
+                  try {
+                    const result = await homeService.refreshAllIncomplete();
+                    if (result?.success) {
+                      Alert.alert(
+                        '✅ Refreshed!',
+                        result.message,
+                        [{ text: 'OK' }]
+                      );
+                      setRefreshStatus(result.refresh_status);
+                      // Reload assignments
+                      const newAssignments = await homeService.getTodayAssignments();
+                      setAssignments(newAssignments);
+                      if (newAssignments) wireUpActionPlan(newAssignments);
+                    } else {
+                      Alert.alert('Error', 'Could not refresh actions. Try again.');
+                    }
+                  } catch (error: any) {
+                    Alert.alert('Error', error?.message || 'Could not refresh actions');
+                  } finally {
+                    setIsRefreshingAll(false);
+                  }
+                }}
+                disabled={isRefreshingAll}
+              >
+                <Text style={styles.refreshAllButtonText}>
+                  {isRefreshingAll ? '⏳' : '🔄'} Refresh All
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Timeline and sort buttons container */}
@@ -1567,6 +1603,18 @@ const styles = StyleSheet.create({
   },
   refreshBadgeText: {
     fontSize: responsiveFontSize(1.3),
+    fontFamily: 'Inter500',
+    color: '#6750A4',
+  },
+  refreshAllButton: {
+    backgroundColor: '#E8DEF8',
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(6),
+    borderRadius: scale(16),
+    marginLeft: scale(8),
+  },
+  refreshAllButtonText: {
+    fontSize: responsiveFontSize(1.4),
     fontFamily: 'Inter500',
     color: '#6750A4',
   },
