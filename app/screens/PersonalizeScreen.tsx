@@ -792,28 +792,31 @@ export default function PersonalizeScreen() {
           {/* Active progress line - dynamic width based on streak */}
           {(() => {
             // Calculate progress percentage across all milestones
-            // Milestones are at positions: Day 7, 30, 60, 180, 270
-            // 5 milestones = 4 gaps, each gap is 25% of the line
-            const milestoneDays = [7, 30, 60, 180, 270];
+            // Milestones are at positions: Day 7, 30, 60, 180, 270 
+            // Line should extend TO the center of the current milestone dot
+            // 5 dots evenly spaced = each dot at 0%, 25%, 50%, 75%, 100%
             let progressPercent = 0;
 
+            // When reaching a milestone, line should reach TO that milestone's center
             if (currentStreakDays >= 270) {
-              progressPercent = 100;
+              progressPercent = 100;  // Reaches Glow
             } else if (currentStreakDays >= 180) {
-              // Between Peak (180) and Glow (270) - 75% to 100%
+              // At Peak (180) - line reaches 75% (Peak position), then progresses toward Glow
               progressPercent = 75 + ((currentStreakDays - 180) / (270 - 180)) * 25;
             } else if (currentStreakDays >= 60) {
-              // Between Rise (60) and Peak (180) - 50% to 75%
+              // At Rise (60) - line reaches 50% (Rise position), then progresses toward Peak
               progressPercent = 50 + ((currentStreakDays - 60) / (180 - 60)) * 25;
             } else if (currentStreakDays >= 30) {
-              // Between Grow (30) and Rise (60) - 25% to 50%
+              // At Grow (30) - line reaches 25% (Grow position), then progresses toward Rise
+              // FIXED: When exactly at 30, show 25% (at Grow dot center)
               progressPercent = 25 + ((currentStreakDays - 30) / (60 - 30)) * 25;
             } else if (currentStreakDays >= 7) {
-              // Between Seed (7) and Grow (30) - 0% to 25%
-              progressPercent = ((currentStreakDays - 7) / (30 - 7)) * 25;
+              // At Seed (7) - line starts at 0% (Seed position), then progresses toward Grow
+              // FIXED: progress from Seed (0%) toward Grow (25%)
+              progressPercent = 0 + ((currentStreakDays - 7) / (30 - 7)) * 25;
             } else if (currentStreakDays >= 1) {
-              // Before Seed (1 to 7) - partial progress to first milestone
-              progressPercent = (currentStreakDays / 7) * 0; // Don't show progress before first milestone
+              // Before Seed - no progress shown
+              progressPercent = 0;
             }
 
             // Clamp to valid range
