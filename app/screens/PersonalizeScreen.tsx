@@ -286,25 +286,8 @@ export default function PersonalizeScreen() {
   const getRewardState = (item: RewardItem): RewardState => {
     // Use API data if available
     if (rewardsData) {
-      // Map local IDs to API IDs (API uses different ID format)
-      const idMapping: Record<string, string> = {
-        "1": "streak_freeze",
-        "2": "diet_prefs",
-        "3": "food_allergies",
-        "4": "symptom_patterns",
-        "5": "plan_refresh_2x",
-        "6": "ethnicity",
-        "7": "cuisine_prefs",
-        "8": "dine_out",
-        "9": "bmi_ratio",
-        "10": "first_improvement",
-        "11": "plan_refresh_2x",
-        "12": "cravings_healthy",
-        "13": "first_improvement",
-      };
-
-      const apiId = idMapping[item.id];
-      const apiReward = rewardsData.rewards.find(r => r.id === apiId);
+      // Frontend IDs now match backend IDs directly - no mapping needed
+      const apiReward = rewardsData.rewards.find(r => r.id === item.id);
       if (apiReward) {
         if (apiReward.state === 'claimed') return 'claimed';
         if (apiReward.state === 'available') return 'available';
@@ -317,32 +300,35 @@ export default function PersonalizeScreen() {
   };
 
   // Dynamic reward organization based on current state
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // REWARDS CONFIG - Must match backend REWARDS_CONFIG exactly
+  // Source of truth: /app/services/streak_service.py
+  // ═══════════════════════════════════════════════════════════════════════════════
   const getAllRewards = (): RewardItem[] => {
     return [
+      // SEED REWARDS (days 1-15)
       {
-        id: "1",
+        id: "streak_freeze",  // Backend ID
         title: "Streak freeze",
         description: "Protect your streak when you miss a day",
         icon: "🧊",
         backgroundColor: COLORS.lightBlue,
         streak: "3 day streak",
         requiredStreakDays: 3,
-        state: 'claimed',
+        state: 'in_progress',
       },
       {
-        id: "2",
+        id: "diet_prefs",
         title: "Diet preferences",
         description: "Personalize recommendations to your diet",
         icon: "🥗",
         backgroundColor: COLORS.lightViolet,
         streak: "7 day streak",
         requiredStreakDays: 7,
-        state: 'available',
-        hasButton: true,
-        buttonText: "Personalize now",
+        state: 'in_progress',
       },
       {
-        id: "3",
+        id: "food_allergies",
         title: "Food Allergies",
         description: "Skip foods that don't work for your body",
         icon: "🥜",
@@ -352,7 +338,17 @@ export default function PersonalizeScreen() {
         state: 'in_progress',
       },
       {
-        id: "4",
+        id: "cuisine_prefs",
+        title: "Cuisine preferences",
+        description: "The plan adapts to your favorite cuisines",
+        icon: "🥘",
+        backgroundColor: COLORS.lightViolet,
+        streak: "12 day streak",
+        requiredStreakDays: 12,
+        state: 'in_progress',
+      },
+      {
+        id: "symptom_patterns",
         title: "Symptom patterns unlocked",
         description: "Understand your bodily trends",
         icon: "✨",
@@ -362,18 +358,29 @@ export default function PersonalizeScreen() {
         state: 'in_progress',
       },
       {
-        id: "5",
+        id: "dine_out",
+        title: "Dine out habits",
+        description: "Healthier alternatives to your fav orders",
+        icon: "🍔",
+        backgroundColor: COLORS.lightViolet,
+        streak: "14 day streak",
+        requiredStreakDays: 14,
+        state: 'in_progress',
+      },
+      // RISE REWARDS (days 16+)
+      {
+        id: "plan_refresh_2x",
         title: "2x plan refresh",
-        description: "Additional refreshes for the action plan",
-        icon: "🧊",
+        description: "Double your daily action refreshes",
+        icon: "🔄",
         backgroundColor: COLORS.lightBlue,
         streak: "16 day streak",
         requiredStreakDays: 16,
         state: 'in_progress',
       },
       {
-        id: "6",
-        title: "Ethnicity/cultural habits",
+        id: "ethnicity",
+        title: "Cultural preferences",
         description: "Tailor the plan to your traditions & lifestyle",
         icon: "🌏",
         backgroundColor: COLORS.lightViolet,
@@ -382,28 +389,8 @@ export default function PersonalizeScreen() {
         state: 'in_progress',
       },
       {
-        id: "7",
-        title: "Cuisine preferences",
-        description: "The plan to adapts to your favorite cuisines",
-        icon: "🥘",
-        backgroundColor: COLORS.lightViolet,
-        streak: "12 day streak",
-        requiredStreakDays: 12,
-        state: 'in_progress',
-      },
-      {
-        id: "8",
-        title: "Dine out habits",
-        description: "Healthier alternatives to your fav order",
-        icon: "🍔",
-        backgroundColor: COLORS.lightViolet,
-        streak: "14 day streak",
-        requiredStreakDays: 14,
-        state: 'in_progress',
-      },
-      {
-        id: "9",
-        title: "BMI/Waist to height ratio",
+        id: "bmi_ratio",
+        title: "Body metrics",
         description: "Adjust actions to your body's unique profile",
         icon: "⚖️",
         backgroundColor: COLORS.lightViolet,
@@ -412,30 +399,9 @@ export default function PersonalizeScreen() {
         state: 'in_progress',
       },
       {
-        id: "10",
-        title: "First signs of improvement",
-        description: "Start to feel relief for top concerns",
-        icon: "✨",
-        backgroundColor: COLORS.lightYellow,
-        streak: "21 day streak",
-        requiredStreakDays: 21,
-        state: 'in_progress',
-      },
-      // Rise Rewards
-      {
-        id: "11",
-        title: "2x plan refresh",
-        description: "Additional refreshes for the action plan",
-        icon: "🧊",
-        backgroundColor: COLORS.lightBlue,
-        streak: "12 days to go",
-        requiredStreakDays: 16,
-        state: 'in_progress',
-      },
-      {
-        id: "12",
+        id: "cravings_healthy",
         title: "Cravings made healthy",
-        description: "Personalize support for food cravings",
+        description: "Get healthy alternatives for your cravings",
         icon: "🥮",
         backgroundColor: COLORS.lightViolet,
         streak: "18 day streak",
@@ -443,10 +409,10 @@ export default function PersonalizeScreen() {
         state: 'in_progress',
       },
       {
-        id: "13",
+        id: "first_improvement",
         title: "First signs of improvement",
-        description: "Start to feel relief for top concerns",
-        icon: "✨",
+        description: "You'll start to feel relief for top concerns",
+        icon: "🏆",
         backgroundColor: COLORS.lightYellow,
         streak: "21 day streak",
         requiredStreakDays: 21,
