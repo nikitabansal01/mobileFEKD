@@ -835,7 +835,7 @@ export default function PersonalizeScreen() {
               {item.description}
             </Text>
           )}
-          {isAvailable && item.hasButton && (
+          {(isAvailable || isClaimed) && item.hasButton && (
             <LinearGradient
               colors={['#A29AEA', '#C17EC9', '#D482B9', '#E98BAC', '#FDC6D1']}
               locations={[0, 0.4, 0.6, 0.9, 1]}
