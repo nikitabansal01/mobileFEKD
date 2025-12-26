@@ -465,7 +465,7 @@ class HomeService {
           return {
             success: false,
             error: 'rate_limit',
-            message: 'No changes left. Try again tomorrow!'
+            message: 'You have reached your daily limit. Try again tomorrow!'
           };
         }
 
@@ -650,7 +650,7 @@ class HomeService {
           return {
             success: false,
             error: 'rate_limit',
-            message: 'No refreshes left. Try again tomorrow!'
+            message: 'You have reached your daily limit. Try again tomorrow!'
           };
         }
 
