@@ -242,8 +242,8 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
           [{
             text: 'OK',
             onPress: () => {
-              // Navigate back with refresh flag to reload assignments
-              navigation.navigate('HomeScreen', { shouldRefresh: true });
+              // Go back to HomeScreen - it will auto-refresh on focus
+              navigation.goBack();
             }
           }]
         );
