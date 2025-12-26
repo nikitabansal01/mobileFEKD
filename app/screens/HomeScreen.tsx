@@ -280,7 +280,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         // Show friendly message for daily limit
         Alert.alert(
           'Limit Reached',
-          result.message || 'You have reached your daily limit. Try again tomorrow!',
+          result.message || 'You have reached your daily limit.',
           [{ text: 'OK' }]
         );
       } else {
@@ -1068,7 +1068,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                       // Show friendly no-refresh message
                       Alert.alert(
                         'Limit Reached',
-                        result.message || 'You have reached your daily limit. Try again tomorrow!',
+                        result.message || 'You have reached your daily limit.',
                         [{ text: 'OK' }]
                       );
                     } else {
