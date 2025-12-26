@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import Svg, { Defs, Path, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
+import MultiSelectCheckSvg from '../assets/images/SVG/MultiSelectCheckSvg';
+import CompletedCheckSvg from '../assets/images/SVG/CompletedCheckSvg';
 
 // ====== Type imports ======
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
@@ -23,16 +25,16 @@ type AssignmentsMap = Record<string, Assignment[]>;
 
 // ====== Time slot icon mapping ======
 const TIME_ICONS: Record<string, string> = {
-  completed: '', // No icon for completed
+  completed: '', // No icon for completed section (just the gradient line)
   morning: '🌤️',
   afternoon: '☀️',
   evening: '🌙',
-  anytime: 'Anytime',
+  anytime: '', // No icon for anytime
   // Add common variations
   'Morning': '🌤️',
   'Afternoon': '☀️',
   'Evening': '🌙',
-  'Anytime': 'Anytime',
+  'Anytime': '', // No icon for anytime
   // Add more common API variations
   'am': '🌤️',
   'pm': '☀️',
@@ -164,8 +166,19 @@ export default function ActionPlanTimeline({
     });
   };
 
+  // Time slot priority for sorting (lower = earlier in day)
+  const TIME_SLOT_PRIORITY: Record<string, number> = {
+    'completed': 0, // Completed items have highest priority (show first)
+    'morning': 1,
+    'afternoon': 2,
+    'evening': 3,
+    'night': 3,
+    'anytime': 4,
+  };
+
   /**
    * Separates and manages Today and Tomorrow actions
+   * SORTED: Completed items first, then pending items by time slot
    */
   const todayAssignments: Assignment[] = useMemo(() => {
     const arr: Assignment[] = [];
@@ -190,18 +203,45 @@ export default function ActionPlanTimeline({
       exercise_intensities: [],
       mindfulness_durations: [],
       mindfulness_techniques: [],
+      time_slot: 'morning', // Add time_slot for sorting
     };
-    arr.push(weeklyCheckIn);
 
-    Object.values(assignments).forEach((group) => {
-      group?.forEach((a) => arr.push(a));
+    // Process ALL keys from assignments object (including 'completed' if present)
+    // This ensures we don't miss any items regardless of what keys the backend returns
+    const allKeys = Object.keys(assignments);
+    console.log('🔍 Processing assignment keys:', allKeys);
+
+    allKeys.forEach((slot) => {
+      const group = assignments[slot];
+      group?.forEach((a) => {
+        // Use the item's own time_slot if available, otherwise use the key
+        const itemTimeSlot = a.time_slot || slot;
+        arr.push({ ...a, time_slot: itemTimeSlot } as Assignment);
+      });
     });
 
-    console.log('🔍 Today Assignments processing:', {
+    // Sort: Completed items first, then by time slot priority
+    arr.sort((a, b) => {
+      // Primary sort: completed items first
+      if (a.is_completed && !b.is_completed) return -1;
+      if (!a.is_completed && b.is_completed) return 1;
+
+      // Secondary sort: by time slot priority
+      const aPriority = TIME_SLOT_PRIORITY[(a as any).time_slot || 'anytime'] || 4;
+      const bPriority = TIME_SLOT_PRIORITY[(b as any).time_slot || 'anytime'] || 4;
+      return aPriority - bPriority;
+    });
+
+    // Add Weekly Check-in after completed items (so it's first among pending items)
+    const completedCount = arr.filter(a => a.is_completed).length;
+    arr.splice(completedCount, 0, weeklyCheckIn);
+
+    console.log('🔍 Today Assignments processing (SORTED):', {
       originalAssignments: assignments,
-      processedTodayAssignments: arr,
-      assignmentsKeys: Object.keys(assignments),
-      totalItems: arr.length
+      allKeys,
+      processedTodayAssignments: arr.map(a => ({ id: a.id, title: a.title, completed: a.is_completed, time_slot: (a as any).time_slot })),
+      totalItems: arr.length,
+      completedCount
     });
 
     return arr;
@@ -326,96 +366,58 @@ export default function ActionPlanTimeline({
     // Set existing anchors to Today (for existing logic compatibility)
     setAnchors(todayNext);
 
-    // Calculate time slot icon positions - use smart detection for 'anytime' slots
-    const timeSlots = Object.keys(assignments).filter(slot => assignments[slot]?.length > 0); // Exclude empty arrays
-
-    // If we only have 'anytime' slot, create smart time slots based on assignment content
-    let smartTimeSlots = timeSlots;
-    let smartAssignments = assignments;
-
-    if (timeSlots.length === 1 && timeSlots[0] === 'anytime') {
-      const smartSlots = new Set<string>();
-      const smartAssignmentsMap: Record<string, Assignment[]> = {};
-
-      assignments.anytime?.forEach(assignment => {
-        const smartSlot = getSmartTimeSlot(assignment);
-        smartSlots.add(smartSlot);
-
-        if (!smartAssignmentsMap[smartSlot]) {
-          smartAssignmentsMap[smartSlot] = [];
-        }
-        smartAssignmentsMap[smartSlot].push(assignment);
-      });
-
-      smartTimeSlots = Array.from(smartSlots);
-      smartAssignments = smartAssignmentsMap;
-
-      console.log('🔍 Smart time slot detection:', {
-        originalSlots: timeSlots,
-        smartSlots: smartTimeSlots,
-        smartAssignmentsMap,
-        assignments: assignments.anytime?.map(a => ({ title: a.title, smartSlot: getSmartTimeSlot(a) }))
-      });
-    }
-
-    console.log('🔍 Time slot icon calculation:', {
-      allKeys: Object.keys(assignments),
-      filteredSlots: timeSlots,
-      smartTimeSlots,
-      assignmentsData: assignments
-    });
-
+    // Calculate time slot icon positions
+    // RULE: Separate icon for EACH time section (morning/afternoon/evening)
+    // NO icons for completed section - only for pending items
     const positions: TimeSlotPosition[] = [];
 
-    if (smartTimeSlots.length > 0) {
-      let previousY = BASE_TOP; // End Y coordinate of previous section
+    // Find completed and pending items
+    const completedItems = todayAssignments.filter(a => a.is_completed);
+    const pendingItems = todayAssignments.filter(a => !a.is_completed && a.id !== -1); // Exclude Weekly Check-in
 
-      smartTimeSlots.forEach((timeSlot, index) => {
-        const slotAssignments = smartAssignments[timeSlot] || [];
+    // Group pending items by time slot
+    const timeSlotGroups: { [key: string]: Assignment[] } = {};
+    pendingItems.forEach(item => {
+      const slot = (item as any).time_slot || 'anytime';
+      if (!timeSlotGroups[slot]) {
+        timeSlotGroups[slot] = [];
+      }
+      timeSlotGroups[slot].push(item);
+    });
 
-        if (index === 0) {
-          // First time slot: place at Cap center
-          const iconY = BASE_TOP + CAP_TOP / 2;
-          positions.push({
-            timeSlot,
-            iconY,
-            isCapCenter: true,
-          });
+    // Sort time slots in order: morning, afternoon, evening, anytime
+    const orderedSlots = ['morning', 'afternoon', 'evening', 'anytime'].filter(
+      slot => timeSlotGroups[slot] && timeSlotGroups[slot].length > 0
+    );
 
-          // Calculate this time slot's last anchor Y coordinate
-          if (slotAssignments.length > 0) {
-            const slotStartIdx = todayNext.findIndex(anchor =>
-              slotAssignments.some(a => a.id.toString() === anchor.id)
-            );
-            const slotEndIdx = slotStartIdx + slotAssignments.length - 1;
-            previousY = todayNext[slotEndIdx]?.y ?? previousY;
-          }
-        } else {
-          // Next time slots: center of horizontal line between previous and next anchor
-          const slotStartIdx = todayNext.findIndex(anchor =>
-            slotAssignments.some(a => a.id.toString() === anchor.id)
-          );
+    // If we have pending items, show ONE icon at the start of pending section
+    // (between completed section and first pending item)
+    if (orderedSlots.length > 0 && pendingItems.length > 0) {
+      const firstTimeSlot = orderedSlots[0]; // Get earliest pending time slot
 
-          if (slotStartIdx > 0) {
-            const prevAnchorY = todayNext[slotStartIdx - 1]?.y ?? previousY;
-            const currentAnchorY = todayNext[slotStartIdx]?.y ?? (prevAnchorY + ITEM_BLOCK_H);
-            const iconY = (prevAnchorY + currentAnchorY) / 2;
+      // Calculate position: after completed items + Weekly Check-in
+      // Use the first pending item's anchor to find the right Y position
+      const firstPendingItem = pendingItems[0];
+      const anchorForFirst = todayNext.find(a => a.id === firstPendingItem.id.toString());
 
-            positions.push({
-              timeSlot,
-              iconY,
-              isCapCenter: false,
-            });
-
-            // Update this time slot's last anchor Y coordinate
-            if (slotAssignments.length > 0) {
-              const slotEndIdx = slotStartIdx + slotAssignments.length - 1;
-              previousY = todayNext[slotEndIdx]?.y ?? previousY;
-            }
-          }
-        }
-      });
+      if (anchorForFirst) {
+        // Position icon at the TOP of pending section - on the line between completed and pending
+        // This should be at the cap/break point in the timeline
+        const iconY = anchorForFirst.y - ITEM_BLOCK_H / 2;
+        positions.push({
+          timeSlot: firstTimeSlot,
+          iconY: iconY,
+          isCapCenter: true,
+        });
+      }
     }
+
+    console.log('🔍 Time slot icons (pending section):', {
+      completedCount: completedItems.length,
+      pendingCount: pendingItems.length,
+      orderedSlots,
+      positions: positions.map(p => ({ slot: p.timeSlot, y: p.iconY })),
+    });
 
     setTimeSlotPositions(positions);
   }, [todayAssignments, tomorrowAssignments, assignments, geom]);
@@ -589,8 +591,15 @@ export default function ActionPlanTimeline({
 
   // Function to return first hormone icon (left/right aware)
   const getFirstHormoneIcon = (assignment: Assignment, isLeft: boolean): string | any => {
-    if (assignment.hormones && assignment.hormones.length > 0) {
-      return getHormoneIcon(assignment.hormones[0], isLeft);
+    const hormoneName = assignment.hormones?.[0];
+
+    // Debug log to trace hormone icon selection
+    if (assignment.id !== -1) { // Skip for Weekly Check-in
+      console.log(`🔍 Hormone icon for "${assignment.title}": hormones=${JSON.stringify(assignment.hormones)}, using="${hormoneName}", isLeft=${isLeft}`);
+    }
+
+    if (hormoneName && hormoneName.trim() !== '') {
+      return getHormoneIcon(hormoneName, isLeft);
     }
     return '🧬'; // Default icon
   };
@@ -910,22 +919,38 @@ export default function ActionPlanTimeline({
                   {/* (hormone image rendered behind the circle) */}
 
                   {/* Hormone number (relative to image) - hide for Weekly Check-in */}
+                  {/* Shows gradient checkmark SVG for completed items, +N for pending */}
                   {a.id !== -1 && (
-                    <View style={[
-                      styles.hormoneBadge,
-                      {
-                        // When left anchor: left of image
-                        // When right anchor: right of image
-                        top: isLeft ? -responsiveHeight(2) : -responsiveHeight(2.5),
-                        left: isLeft ? -responsiveWidth(12) : undefined,
-                        right: isLeft ? undefined : -responsiveWidth(12),
-                        backgroundColor: getHormoneColor(a.hormones?.[0]),
-                      }
-                    ]}>
-                      <Text style={styles.hormoneBadgeText} allowFontScaling={false}>
-                        +{a.hormones?.length || 0}
-                      </Text>
-                    </View>
+                    a.is_completed ? (
+                      // Premium gradient checkmark for completed items
+                      <View style={[
+                        styles.hormoneBadge,
+                        {
+                          top: isLeft ? -responsiveHeight(2) : -responsiveHeight(2.5),
+                          left: isLeft ? -responsiveWidth(12) : undefined,
+                          right: isLeft ? undefined : -responsiveWidth(12),
+                          backgroundColor: 'transparent', // No background for SVG
+                          padding: 0,
+                        }
+                      ]}>
+                        <CompletedCheckSvg size={responsiveWidth(6)} />
+                      </View>
+                    ) : (
+                      // Hormone badge for pending items
+                      <View style={[
+                        styles.hormoneBadge,
+                        {
+                          top: isLeft ? -responsiveHeight(2) : -responsiveHeight(2.5),
+                          left: isLeft ? -responsiveWidth(12) : undefined,
+                          right: isLeft ? undefined : -responsiveWidth(12),
+                          backgroundColor: getHormoneColor(a.hormones?.[0]),
+                        }
+                      ]}>
+                        <Text style={styles.hormoneBadgeText} allowFontScaling={false}>
+                          {`+${a.hormones?.length || 0}`}
+                        </Text>
+                      </View>
+                    )
                   )}
                 </TouchableOpacity>
 

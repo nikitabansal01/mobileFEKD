@@ -199,6 +199,7 @@ export interface PlanSatisfactionRequest {
 export interface PlanSatisfactionResponse {
   success: boolean;
   message: string;
+  error?: string;
   feedback_count?: number;
   new_actions?: ActionPlanItem[];
 }
@@ -458,17 +459,212 @@ class HomeService {
       });
 
       if (!response.ok) {
+        // Handle rate limit (429) - daily replacement limit reached
+        if (response.status === 429) {
+          console.log('⚠️ Daily replacement limit reached');
+          return {
+            success: false,
+            error: 'rate_limit',
+            message: 'You have reached your daily limit.'
+          };
+        }
+
         const errorText = await response.text();
         console.error('❌ Failed to submit plan satisfaction:', errorText);
-        throw new Error(`Failed to submit plan satisfaction: ${response.status} - ${errorText}`);
+        return { success: false, error: 'server_error', message: 'Unable to process. Please try again.' };
       }
 
       const result = await response.json();
       console.log('✅ Successfully submitted plan satisfaction:', result);
-      return result;
+      return { success: true, ...result };
     } catch (error) {
       console.error('❌ Error submitting plan satisfaction:', error);
+      return { success: false, error: 'network_error', message: 'Network error. Check your connection.' };
+    }
+  }
+
+  /**
+   * Submits detailed feedback for an action from ActionDetailScreen
+   * 
+   * @param itemId - ID of the action item
+   * @param feedbackType - 'loved' | 'completed' | 'skipped' | 'not_for_me' | 'like' | 'dislike'
+   * @param feedbackText - Optional text feedback from user
+   * @param feedbackSource - 'home' or 'detail'
+   * @returns Promise resolving to feedback response or null on error
+   */
+  async submitActionFeedback(
+    itemId: number,
+    feedbackType: 'loved' | 'completed' | 'skipped' | 'not_for_me' | 'like' | 'dislike',
+    feedbackText?: string,
+    feedbackSource: 'home' | 'detail' = 'detail'
+  ): Promise<{ success: boolean; feedback_id?: number; can_replace: boolean } | null> {
+    try {
+      console.log('🔄 Submitting action feedback:', `${API_BASE_URL}/api/v1/new-scheduling/feedback`);
+
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('🔑 Firebase token included');
+      } else {
+        console.log('⚠️ No Firebase token available');
+      }
+
+      const requestBody: {
+        item_id: number;
+        feedback_type: string;
+        feedback_text?: string;
+        feedback_source: string;
+      } = {
+        item_id: itemId,
+        feedback_type: feedbackType,
+        feedback_source: feedbackSource,
+      };
+
+      if (feedbackText && feedbackText.trim()) {
+        requestBody.feedback_text = feedbackText;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/feedback`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to submit action feedback:', errorText);
+        throw new Error(`Failed to submit action feedback: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Successfully submitted action feedback:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Error submitting action feedback:', error);
       return null;
+    }
+  }
+
+  /**
+   * Replaces an action with a new one
+   * 
+   * @param itemId - ID of the action item to replace
+   * @param reason - Optional reason text
+   * @param replacementCategory - Categorized reason: 'allergic', 'no_time', 'dont_like', etc.
+   * @returns Promise resolving to replacement result or null on error
+   */
+  async replaceAction(
+    itemId: number,
+    reason?: string,
+    replacementCategory?: 'dont_like' | 'allergic' | 'no_ingredients' | 'no_time' | 'already_done' | 'not_feeling_it' | 'other'
+  ): Promise<{ success: boolean; replacement_action?: ActionPlanItem } | null> {
+    try {
+      console.log('🔄 Replacing action:', `${API_BASE_URL}/api/v1/new-scheduling/replace`);
+
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('🔑 Firebase token included');
+      } else {
+        console.log('⚠️ No Firebase token available');
+      }
+
+      const requestBody: {
+        item_id: number;
+        reason?: string;
+        replacement_category?: string;
+      } = {
+        item_id: itemId,
+      };
+
+      if (reason && reason.trim()) {
+        requestBody.reason = reason;
+      }
+
+      if (replacementCategory) {
+        requestBody.replacement_category = replacementCategory;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/replace`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to replace action:', errorText);
+        throw new Error(`Failed to replace action: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Successfully replaced action:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Error replacing action:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Refresh all incomplete actions for today.
+   * Uses daily refresh limit (1 default, 2 with plan_refresh_2x reward).
+   */
+  async refreshAllIncomplete(): Promise<{
+    success: boolean;
+    message: string;
+    error?: string;
+    replaced_count?: number;
+    refresh_status?: { limit: number; used: number; remaining: number; can_refresh: boolean };
+  } | null> {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        console.error('❌ No auth token available for refresh all');
+        return null;
+      }
+
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/refresh-all-incomplete`, {
+        method: 'POST',
+        headers,
+      });
+
+      if (!response.ok) {
+        // Handle rate limit (429) - no more refreshes available
+        if (response.status === 429) {
+          console.log('⚠️ No more refreshes available today');
+          return {
+            success: false,
+            error: 'rate_limit',
+            message: 'You have reached your daily limit.'
+          };
+        }
+
+        const errorText = await response.text();
+        console.error('❌ Failed to refresh all:', errorText);
+        return { success: false, error: 'server_error', message: 'Unable to refresh. Please try again.' };
+      }
+
+      const result = await response.json();
+      console.log('✅ Successfully refreshed all:', result);
+      return { success: true, ...result };
+    } catch (error) {
+      console.error('❌ Error refreshing all:', error);
+      return { success: false, error: 'network_error', message: 'Network error. Check your connection.' };
     }
   }
 }

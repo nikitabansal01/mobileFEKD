@@ -4,12 +4,17 @@ import AuvraChatModal from '@/components/AuvraChatModal';
 import CalendarBottomSheet from '@/components/CalendarBottomSheet';
 import apiPromiseManager from '@/services/apiPromiseManager';
 import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse, ActionPlanResponse, ActionPlanItem } from '@/services/homeService';
+import { rewardService, RefreshStatus } from '@/services/rewardService';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
+  Animated,
   Dimensions,
+  Easing,
   Image,
   ScrollView,
   StyleSheet,
@@ -51,6 +56,7 @@ interface HomeScreenProps {
       skipLoading?: boolean;
       skipTodayLoading?: boolean;
       freshSignup?: boolean;
+      shouldRefresh?: boolean; // Added: trigger refetch after action replacement
     };
   };
 }
@@ -70,6 +76,30 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const [actionPlan, setActionPlan] = useState<ActionPlanResponse | null>(null);
   const [feedbackPromptSeconds, setFeedbackPromptSeconds] = useState<number>(30); // Default 30 seconds
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+
+  // Refresh status for 2x plan refresh reward
+  const [refreshStatus, setRefreshStatus] = useState<RefreshStatus | null>(null);
+  const [isRefreshingAll, setIsRefreshingAll] = useState(false);
+
+  // Animated value for hourglass rotation
+  const spinValue = useRef(new Animated.Value(0)).current;
+
+  // Start/stop rotation animation when refreshing
+  useEffect(() => {
+    if (isRefreshingAll) {
+      spinValue.setValue(0);
+      Animated.loop(
+        Animated.timing(spinValue, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+    } else {
+      spinValue.stopAnimation();
+    }
+  }, [isRefreshingAll]);
 
   // Auvra chat modal state
   const [showAuvraChat, setShowAuvraChat] = useState(false);
@@ -94,6 +124,73 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         });
       };
     }, [navigation])
+  );
+
+  // Always refetch data when screen gains focus (e.g., after action replacement, completion, etc.)
+  // Use loadHomeDataWithoutLoading to avoid duplicate-prevention and force fresh API call
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🔄 HomeScreen focused - forcing data refresh');
+      // Directly call APIs and update state (no duplicate prevention)
+      const refreshData = async () => {
+        try {
+          const [cycleData, assignmentsData, rewardsData] = await Promise.all([
+            homeService.getCyclePhase(),
+            homeService.getTodayAssignments(),
+            rewardService.getRewardsStatus().catch(() => null), // Graceful fail
+          ]);
+
+          setCycleInfo(cycleData?.cycle_info || null);
+          setAssignments(assignmentsData);
+
+          // Set refresh status from rewards API
+          if (rewardsData?.refresh_status) {
+            setRefreshStatus(rewardsData.refresh_status);
+          }
+
+          // Check if streak is at risk and user can freeze (manual freeze prompt)
+          if (rewardsData?.streak_at_risk && rewardsData?.can_freeze && rewardsData.missed_days_count > 0) {
+            Alert.alert(
+              '⚠️ Your Streak is at Risk!',
+              `You missed ${rewardsData.missed_days_count} day(s). Use ${rewardsData.freezes_needed} freeze token(s) to protect your ${rewardsData.current_streak}-day streak?`,
+              [
+                { text: 'Let it Reset', style: 'cancel' },
+                {
+                  text: `Use Freeze 🧊`,
+                  style: 'default',
+                  onPress: async () => {
+                    try {
+                      const result = await rewardService.useFreezeReactive();
+                      if (result.success) {
+                        Alert.alert('✅ Streak Protected!', result.message || 'Your streak is safe!');
+                        // Refresh data
+                        loadHomeDataWithoutLoading();
+                      } else {
+                        Alert.alert('Error', result.error || 'Could not use freeze');
+                      }
+                    } catch (error) {
+                      Alert.alert('Error', 'Failed to use freeze');
+                    }
+                  }
+                }
+              ]
+            );
+          }
+
+          if (assignmentsData?.hormone_stats) {
+            setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
+          }
+
+          if (assignmentsData) {
+            wireUpActionPlan(assignmentsData);
+          }
+          console.log('✅ Data refreshed successfully, refresh status:', rewardsData?.refresh_status);
+        } catch (error) {
+          console.error('❌ Failed to refresh data:', error);
+        }
+      };
+      refreshData();
+    }, [])
   );
 
   // Reset inactivity timer - Shows Auvra modal after configured seconds from backend
@@ -179,9 +276,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             setProgressStats({ hormone_stats: convertHormoneStats(updatedAssignments.hormone_stats) });
           }
         }
+      } else if (result?.error === 'rate_limit') {
+        // Show friendly message for daily limit
+        Alert.alert(
+          'Limit Reached',
+          result.message || 'You have reached your daily limit.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert('Oops!', result?.message || 'Could not replace actions. Try again.');
       }
 
-      // Close the modal after successful replacement
+      // Close the modal after replacement attempt
       setShowAuvraChat(false);
     } catch (error) {
       console.error('❌ Error replacing items:', error);
@@ -223,17 +329,29 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     const hormoneStats: HormoneStats = {};
     const supportedHormones = ['androgens', 'progesterone', 'estrogen', 'thyroid', 'insulin', 'cortisol', 'FSH', 'LH', 'prolactin', 'ghrelin', 'testosterone'];
 
+    // Create a case-insensitive lookup of the API data keys
+    const dataKeysLower: Record<string, string> = {};
+    if (hormoneStatsData) {
+      Object.keys(hormoneStatsData).forEach(key => {
+        dataKeysLower[key.toLowerCase()] = key;
+      });
+    }
+
     supportedHormones.forEach(hormone => {
-      if (hormoneStatsData[hormone]) {
+      // Check both the original key and case-insensitive match
+      const actualKey = hormoneStatsData?.[hormone] ? hormone : dataKeysLower[hormone.toLowerCase()];
+      if (actualKey && hormoneStatsData[actualKey]) {
         hormoneStats[hormone as keyof HormoneStats] = {
-          completed: hormoneStatsData[hormone].completed || 0,
-          total: hormoneStatsData[hormone].total || 0
+          completed: hormoneStatsData[actualKey].completed || 0,
+          total: hormoneStatsData[actualKey].total || 0
         };
       }
     });
 
+    console.log('🧬 convertHormoneStats result:', { input: hormoneStatsData, output: hormoneStats });
     return hormoneStats;
   };
+
 
   useEffect(() => {
     // Check for refreshed data from ActionCompletedScreen
@@ -908,10 +1026,86 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         {/* Today's Action Plan */}
         <View style={styles.actionPlanSection}>
           <View style={styles.actionPlanHeader}>
-            <Text style={styles.sectionTitle}>Today's Action Plan</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={styles.sectionTitle}>Today's Action Plan</Text>
+              {/* Refresh count badge */}
+              {refreshStatus && (
+                <View style={styles.refreshBadge}>
+                  <Text style={styles.refreshBadgeText}>
+                    🔄 {refreshStatus.remaining}/{refreshStatus.limit}
+                  </Text>
+                </View>
+              )}
+            </View>
             <Text style={styles.dateText}>
               {assignments?.date ? formatDate(assignments.date) : '15th July, 2025'}
             </Text>
+            {/* Refresh All button */}
+            {refreshStatus && refreshStatus.can_refresh && (
+              <TouchableOpacity
+                style={[
+                  styles.refreshAllButton,
+                  isRefreshingAll && styles.refreshAllButtonLoading
+                ]}
+                onPress={async () => {
+                  setIsRefreshingAll(true);
+                  try {
+                    const result = await homeService.refreshAllIncomplete();
+                    if (result?.success) {
+                      Alert.alert(
+                        '✅ Refreshed!',
+                        result.message,
+                        [{ text: 'OK' }]
+                      );
+                      if (result.refresh_status) {
+                        setRefreshStatus(result.refresh_status);
+                      }
+                      // Reload assignments
+                      const newAssignments = await homeService.getTodayAssignments();
+                      setAssignments(newAssignments);
+                      if (newAssignments) wireUpActionPlan(newAssignments);
+                    } else if (result?.error === 'rate_limit') {
+                      // Show friendly no-refresh message
+                      Alert.alert(
+                        'Limit Reached',
+                        result.message || 'You have reached your daily limit.',
+                        [{ text: 'OK' }]
+                      );
+                    } else {
+                      Alert.alert('Oops!', result?.message || 'Could not refresh actions. Try again.');
+                    }
+                  } catch (error: any) {
+                    Alert.alert('Error', error?.message || 'Could not refresh actions');
+                  } finally {
+                    setIsRefreshingAll(false);
+                  }
+                }}
+                disabled={isRefreshingAll}
+              >
+                {isRefreshingAll ? (
+                  <View style={styles.refreshAllLoadingContent}>
+                    <Animated.Text
+                      style={[
+                        styles.refreshHourglass,
+                        {
+                          transform: [{
+                            rotate: spinValue.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: ['0deg', '360deg']
+                            })
+                          }]
+                        }
+                      ]}
+                    >
+                      ⏳
+                    </Animated.Text>
+                    <Text style={styles.refreshAllButtonText}>Refreshing...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.refreshAllButtonText}>🔄 Refresh All</Text>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Timeline and sort buttons container */}
@@ -1481,6 +1675,43 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(1.7),
     fontFamily: 'Inter400',
     color: '#6F6F6F',
+  },
+  // Refresh count badge for 2x plan refresh reward
+  refreshBadge: {
+    backgroundColor: '#E8DEF8',
+    paddingHorizontal: scale(8),
+    paddingVertical: verticalScale(3),
+    borderRadius: scale(12),
+    marginLeft: scale(8),
+  },
+  refreshBadgeText: {
+    fontSize: responsiveFontSize(1.3),
+    fontFamily: 'Inter500',
+    color: '#6750A4',
+  },
+  refreshAllButton: {
+    backgroundColor: '#E8DEF8',
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(6),
+    borderRadius: scale(16),
+    marginLeft: scale(8),
+  },
+  refreshAllButtonText: {
+    fontSize: responsiveFontSize(1.4),
+    fontFamily: 'Inter500',
+    color: '#6750A4',
+  },
+  refreshAllButtonLoading: {
+    opacity: 0.8,
+    minWidth: scale(120),
+  },
+  refreshAllLoadingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(6),
+  },
+  refreshHourglass: {
+    fontSize: responsiveFontSize(1.6),
   },
 });
 

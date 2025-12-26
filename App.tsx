@@ -16,6 +16,7 @@ import { auth } from './config/firebase';
 import ActionCompletedScreen from './app/screens/ActionCompletedScreen';
 import ActionDetailScreen from './app/screens/ActionDetailScreen';
 import ChatbotScreen from './app/screens/ChatbotScreen';
+import InsightsScreen from './app/screens/InsightsScreen';
 import IntroScreen from './app/screens/IntroScreen';
 import LoadingScreen from './app/screens/LoadingScreen';
 import LoginScreen from './app/screens/LoginScreen';
@@ -91,12 +92,12 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
-        <FirstLog.Provider value={{ firstTimeLog: true, setFirstTimeLog: () => {} }}>
+        <FirstLog.Provider value={{ firstTimeLog: true, setFirstTimeLog: () => { } }}>
           <StatusBar barStyle={"dark-content"} backgroundColor={"#FFF"} />
           <NavigationContainer>
-            <Stack.Navigator 
+            <Stack.Navigator
               initialRouteName="SplashScreen"
-              screenOptions={{ 
+              screenOptions={{
                 headerShown: false,
                 gestureEnabled: Platform.OS === 'ios', // Disable gestures on Android to prevent interference with scrolling
               }}
@@ -115,6 +116,7 @@ export default function App() {
               <Stack.Screen name="ChatbotScreen" component={ChatbotScreen} />
               <Stack.Screen name="ActionDetailScreen" component={ActionDetailScreen} />
               <Stack.Screen name="ActionCompletedScreen" component={ActionCompletedScreen} />
+              <Stack.Screen name="InsightsScreen" component={InsightsScreen} />
               <Stack.Screen name="PaywallScreen" component={PaywallScreen} />
             </Stack.Navigator>
           </NavigationContainer>

@@ -4,11 +4,16 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
-import React, { useState } from "react";
-import { Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import { ActivityIndicator, Alert, Animated, Dimensions, Easing, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { FONT_FAMILIES, useAppFonts } from '../../constants/fonts';
+import { rewardService, RewardsStatusResponse } from '../../services/rewardService';
+import { preferencesService, AllPreferencesResponse, PreferenceType } from '../../services/preferencesService';
+import PreferenceModal from '../../components/PreferenceModal';
+import BodyMetricsModal from '../../components/BodyMetricsModal';
+import CravingsModal from '../../components/CravingsModal';
 // Constants from Figma design
 const BACKGROUND_VECTOR_IMAGE = "http://localhost:3845/assets/cf926b4d5ec2719e28f1af07e084ed30c131abe4.svg";
 // const MILESTONE_BG_IMAGE = require("../../assets/images/milestone-bg.png");
@@ -167,27 +172,82 @@ type RootStackParamList = {
   PersonalizeScreen: undefined;
   MainScreenTabs: undefined;
   PaywallScreen: undefined;
+  InsightsScreen: undefined;
 };
 
 export default function PersonalizeScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const fontsLoaded = useAppFonts();
-  const [currentStreakDays, setCurrentStreakDays] = useState(9); // Current streak from the UI
-  const [claimedRewards, setClaimedRewards] = useState<Set<string>>(new Set());
+  const [currentStreakDays, setCurrentStreakDays] = useState(0);
+  const [rewardsData, setRewardsData] = useState<RewardsStatusResponse | null>(null);
+  const [preferencesData, setPreferencesData] = useState<AllPreferencesResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [claimingRewardId, setClaimingRewardId] = useState<string | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationEmoji, setCelebrationEmoji] = useState('🎉');
 
-  // Disable back gesture to prevent interference with scrolling
+  // Animation values for celebration
+  const celebrationScale = useRef(new Animated.Value(0)).current;
+  const celebrationOpacity = useRef(new Animated.Value(0)).current;
+
+  // Trigger celebration animation
+  const triggerCelebration = (emoji: string = '🎉') => {
+    setCelebrationEmoji(emoji);
+    setShowCelebration(true);
+    celebrationScale.setValue(0);
+    celebrationOpacity.setValue(1);
+
+    Animated.sequence([
+      Animated.spring(celebrationScale, {
+        toValue: 1,
+        friction: 3,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(celebrationOpacity, {
+        toValue: 0,
+        duration: 800,
+        delay: 500,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setShowCelebration(false));
+  };
+
+  // Modal visibility state
+  const [activeModal, setActiveModal] = useState<PreferenceType | null>(null);
+
+  // Load rewards and preferences data when screen is focused
+  const loadRewardsData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [rewards, preferences] = await Promise.all([
+        rewardService.getRewardsStatus(),
+        preferencesService.getAllPreferences().catch(() => null),
+      ]);
+      setRewardsData(rewards);
+      setCurrentStreakDays(rewards.current_streak);
+      if (preferences) setPreferencesData(preferences);
+    } catch (error) {
+      console.error('Error loading rewards:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Disable back gesture and load data on focus
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
+      loadRewardsData();
       navigation.setOptions({
         gestureEnabled: false,
       });
 
       return () => {
         navigation.setOptions({
-          gestureEnabled: false, // Keep disabled on Android
+          gestureEnabled: false,
         });
       };
-    }, [navigation])
+    }, [navigation, loadRewardsData])
   );
 
   const navigateToIndex = () => {
@@ -202,7 +262,7 @@ export default function PersonalizeScreen() {
           animationData={require("../../assets/animation/moving-glow-bg.json")}
           loop
           autoPlay
-          style={{...styles.streakBackgroundAnimation, objectFit: 'cover'}}
+          style={{ ...styles.streakBackgroundAnimation, objectFit: 'cover' }}
         />
       );
     } else {
@@ -212,68 +272,218 @@ export default function PersonalizeScreen() {
           source={require("../../assets/animation/moving-glow-bg.json")}
           autoPlay
           loop
-          style={{...styles.streakBackgroundAnimation, objectFit: 'cover'}}
+          style={{ ...styles.streakBackgroundAnimation, objectFit: 'cover' }}
         />
       );
     }
   };
 
-  const claimReward = (rewardId: string) => {
-    setClaimedRewards(prev => new Set([...prev, rewardId]));
+  // Handle both claimed and available reward actions
+  const handleRewardAction = async (rewardId: string) => {
+    // Check if reward is already claimed using rewards state
+    const reward = rewardsData?.rewards?.find(r => r.id === rewardId);
+    const isClaimed = reward?.state === 'claimed';
+
+    if (isClaimed) {
+      // Reward already claimed - navigate directly to feature
+      switch (rewardId) {
+        case 'symptom_patterns':
+          navigation.navigate('InsightsScreen');
+          break;
+        case 'diet_prefs':
+          setActiveModal('diet_preference');
+          break;
+        case 'food_allergies':
+          setActiveModal('food_allergies');
+          break;
+        case 'cuisine_prefs':
+          setActiveModal('cuisine_preference');
+          break;
+        case 'dine_out':
+          setActiveModal('dine_out_frequency');
+          break;
+        case 'ethnicity':
+          setActiveModal('cultural_background');
+          break;
+        case 'bmi_ratio':
+          setActiveModal('body_metrics');
+          break;
+        case 'cravings_healthy':
+          setActiveModal('cravings');
+          break;
+        default:
+          console.log('No action for claimed reward:', rewardId);
+      }
+    } else {
+      // Reward not claimed - claim it first
+      await claimReward(rewardId);
+    }
+  };
+
+  const claimReward = async (rewardId: string) => {
+    if (claimingRewardId) return; // Prevent double tap
+
+    setClaimingRewardId(rewardId);
+    try {
+      const result = await rewardService.claimReward(rewardId);
+      if (result.success) {
+        // Refresh rewards data
+        await loadRewardsData();
+        console.log('Reward claimed:', result.title);
+
+        // Trigger celebration animation with reward-specific emoji
+        const emojiMap: Record<string, string> = {
+          'streak_freeze': '🧊',
+          'diet_prefs': '🥗',
+          'food_allergies': '🥜',
+          'cuisine_prefs': '🍜',
+          'dine_out': '🍔',
+          'ethnicity': '🌍',
+          'bmi_ratio': '📊',
+          'cravings_healthy': '🍫',
+          'symptom_patterns': '✨',
+          'plan_refresh_2x': '🔄',
+          'first_improvement': '🏆',
+        };
+        triggerCelebration(emojiMap[rewardId] || '🎉');
+
+        // Handle different reward types
+        switch (rewardId) {
+          // ═══════════════════════════════════════════════════════════════
+          // PERSONALIZATION REWARDS - Open modal to set preference
+          // ═══════════════════════════════════════════════════════════════
+          case 'diet_prefs':
+            setTimeout(() => setActiveModal('diet_preference'), 500);
+            break;
+          case 'food_allergies':
+            setTimeout(() => setActiveModal('food_allergies'), 500);
+            break;
+          case 'cuisine_prefs':
+            setTimeout(() => setActiveModal('cuisine_preference'), 500);
+            break;
+          case 'dine_out':
+            setTimeout(() => setActiveModal('dine_out_frequency'), 500);
+            break;
+          case 'ethnicity':
+            setTimeout(() => setActiveModal('cultural_background'), 500);
+            break;
+          case 'bmi_ratio':
+            setTimeout(() => setActiveModal('body_metrics'), 500);
+            break;
+          case 'cravings_healthy':
+            setTimeout(() => setActiveModal('cravings'), 500);
+            break;
+
+          // ═══════════════════════════════════════════════════════════════
+          // SPECIAL REWARDS - Non-modal actions
+          // ═══════════════════════════════════════════════════════════════
+          case 'streak_freeze':
+            // Freeze token is automatically added by backend
+            // Show confirmation toast
+            console.log('✅ Streak freeze token claimed! You can now protect your streak.');
+            break;
+
+          case 'symptom_patterns':
+            // Navigate to InsightsScreen to view analytics
+            setTimeout(() => {
+              navigation.navigate('InsightsScreen');
+            }, 500);
+            break;
+
+          case 'plan_refresh_2x':
+            // Refresh limit is automatically doubled by backend
+            console.log('✅ 2x plan refresh unlocked! You can now refresh actions twice per day.');
+            break;
+
+          case 'first_improvement':
+            // Badge is automatically marked - show celebration
+            console.log('🏆 Congratulations! You\'ve unlocked the First Improvement badge!');
+            setTimeout(() => {
+              Alert.alert(
+                '🏆 First Improvement!',
+                'Congratulations! You\'ve noticed your first symptom improvement. This badge is now displayed in your profile!',
+                [{ text: 'Amazing!', style: 'default' }]
+              );
+            }, 500);
+            break;
+
+          default:
+            console.log('Unknown reward:', rewardId);
+        }
+      }
+    } catch (error) {
+      console.error('Error claiming reward:', error);
+    } finally {
+      setClaimingRewardId(null);
+    }
   };
 
   const getRewardState = (item: RewardItem): RewardState => {
-    // If already claimed in state management, return claimed
-    if (claimedRewards.has(item.id)) {
-      return 'claimed';
+    // Use API data if available
+    if (rewardsData) {
+      // Frontend IDs now match backend IDs directly - no mapping needed
+      const apiReward = rewardsData.rewards.find(r => r.id === item.id);
+      if (apiReward) {
+        if (apiReward.state === 'claimed') return 'claimed';
+        if (apiReward.state === 'available') return 'available';
+        return 'in_progress';
+      }
     }
-    // If marked as claimed in data, return claimed
-    if (item.state === 'claimed') {
-      return 'claimed';
-    }
-    // If streak requirement is met, return available
-    if (currentStreakDays >= item.requiredStreakDays) {
-      return 'available';
-    }
-    // Otherwise, return in_progress
+    // Fallback to local calculation
+    if (currentStreakDays >= item.requiredStreakDays) return 'available';
     return 'in_progress';
   };
 
   // Dynamic reward organization based on current state
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // REWARDS CONFIG - Must match backend REWARDS_CONFIG exactly
+  // Source of truth: /app/services/streak_service.py
+  // ═══════════════════════════════════════════════════════════════════════════════
   const getAllRewards = (): RewardItem[] => {
     return [
+      // SEED REWARDS (days 1-15)
       {
-        id: "1",
+        id: "streak_freeze",  // Backend ID
         title: "Streak freeze",
-        description: "",
+        description: "Protect your streak when you miss a day",
         icon: "🧊",
         backgroundColor: COLORS.lightBlue,
+        streak: "3 day streak",
         requiredStreakDays: 3,
-        state: 'claimed',
+        state: 'in_progress',
       },
       {
-        id: "2",
+        id: "diet_prefs",
         title: "Diet preferences",
-        description: "",
+        description: "Personalize recommendations to your diet",
         icon: "🥗",
         backgroundColor: COLORS.lightViolet,
+        streak: "7 day streak",
         requiredStreakDays: 7,
-        state: 'available',
-        hasButton: true,
-        buttonText: "Personalize now",
+        state: 'in_progress',
       },
       {
-        id: "3",
+        id: "food_allergies",
         title: "Food Allergies",
         description: "Skip foods that don't work for your body",
         icon: "🥜",
         backgroundColor: COLORS.lightViolet,
-        streak: "12 day streak",
+        streak: "8 day streak",
         requiredStreakDays: 8,
         state: 'in_progress',
       },
       {
-        id: "4",
+        id: "cuisine_prefs",
+        title: "Cuisine preferences",
+        description: "The plan adapts to your favorite cuisines",
+        icon: "🥘",
+        backgroundColor: COLORS.lightViolet,
+        streak: "12 day streak",
+        requiredStreakDays: 12,
+        state: 'in_progress',
+      },
+      {
+        id: "symptom_patterns",
         title: "Symptom patterns unlocked",
         description: "Understand your bodily trends",
         icon: "✨",
@@ -283,18 +493,29 @@ export default function PersonalizeScreen() {
         state: 'in_progress',
       },
       {
-        id: "5",
+        id: "dine_out",
+        title: "Dine out habits",
+        description: "Healthier alternatives to your fav orders",
+        icon: "🍔",
+        backgroundColor: COLORS.lightViolet,
+        streak: "14 day streak",
+        requiredStreakDays: 14,
+        state: 'in_progress',
+      },
+      // RISE REWARDS (days 16+)
+      {
+        id: "plan_refresh_2x",
         title: "2x plan refresh",
-        description: "Additional refreshes for the action plan",
-        icon: "🧊",
+        description: "Double your daily action refreshes",
+        icon: "🔄",
         backgroundColor: COLORS.lightBlue,
         streak: "16 day streak",
         requiredStreakDays: 16,
         state: 'in_progress',
       },
       {
-        id: "6",
-        title: "Ethnicity/cultural habits",
+        id: "ethnicity",
+        title: "Cultural preferences",
         description: "Tailor the plan to your traditions & lifestyle",
         icon: "🌏",
         backgroundColor: COLORS.lightViolet,
@@ -303,28 +524,8 @@ export default function PersonalizeScreen() {
         state: 'in_progress',
       },
       {
-        id: "7",
-        title: "Cuisine preferences",
-        description: "The plan to adapts to your favorite cuisines",
-        icon: "🥘",
-        backgroundColor: COLORS.lightViolet,
-        streak: "12 day streak",
-        requiredStreakDays: 12,
-        state: 'in_progress',
-      },
-      {
-        id: "8",
-        title: "Dine out habits",
-        description: "Healthier alternatives to your fav order",
-        icon: "🍔",
-        backgroundColor: COLORS.lightViolet,
-        streak: "14 day streak",
-        requiredStreakDays: 14,
-        state: 'in_progress',
-      },
-      {
-        id: "9",
-        title: "BMI/Waist to height ratio",
+        id: "bmi_ratio",
+        title: "Body metrics",
         description: "Adjust actions to your body's unique profile",
         icon: "⚖️",
         backgroundColor: COLORS.lightViolet,
@@ -333,30 +534,9 @@ export default function PersonalizeScreen() {
         state: 'in_progress',
       },
       {
-        id: "10",
-        title: "First signs of improvement",
-        description: "Start to feel relief for top concerns",
-        icon: "✨",
-        backgroundColor: COLORS.lightYellow,
-        streak: "21 day streak",
-        requiredStreakDays: 21,
-        state: 'in_progress',
-      },
-      // Rise Rewards
-      {
-        id: "11",
-        title: "2x plan refresh",
-        description: "Additional refreshes for the action plan",
-        icon: "🧊",
-        backgroundColor: COLORS.lightBlue,
-        streak: "12 days to go",
-        requiredStreakDays: 16,
-        state: 'in_progress',
-      },
-      {
-        id: "12",
+        id: "cravings_healthy",
         title: "Cravings made healthy",
-        description: "Personalize support for food cravings",
+        description: "Get healthy alternatives for your cravings",
         icon: "🥮",
         backgroundColor: COLORS.lightViolet,
         streak: "18 day streak",
@@ -364,10 +544,10 @@ export default function PersonalizeScreen() {
         state: 'in_progress',
       },
       {
-        id: "13",
+        id: "first_improvement",
         title: "First signs of improvement",
-        description: "Start to feel relief for top concerns",
-        icon: "✨",
+        description: "You'll start to feel relief for top concerns",
+        icon: "🏆",
         backgroundColor: COLORS.lightYellow,
         streak: "21 day streak",
         requiredStreakDays: 21,
@@ -382,15 +562,39 @@ export default function PersonalizeScreen() {
     return state === 'claimed' || state === 'available';
   }).map(item => {
     const state = getRewardState(item);
-    // Automatically add button for available rewards
-    if (state === 'available') {
-      return {
-        ...item,
-        hasButton: true,
-        buttonText: "Personalize now"
-      };
-    }
-    return item;
+
+    // Define button config for both available AND claimed states
+    const getButtonConfig = (rewardId: string, rewardState: string) => {
+      switch (rewardId) {
+        case 'streak_freeze':
+          return rewardState === 'claimed'
+            ? { buttonText: "Collected ✓", buttonStyle: 'collected' as const, hasButton: false }
+            : { buttonText: "Claim", buttonStyle: 'action' as const, hasButton: true };
+        case 'plan_refresh_2x':
+          return rewardState === 'claimed'
+            ? { buttonText: "Collected ✓", buttonStyle: 'collected' as const, hasButton: false }
+            : { buttonText: "Claim", buttonStyle: 'action' as const, hasButton: true };
+        case 'symptom_patterns':
+          // ALWAYS show "View Insights" button for both available and claimed
+          return { buttonText: "View Insights", buttonStyle: 'action' as const, hasButton: true };
+        case 'first_improvement':
+          return { buttonText: "Claimed 🎉", buttonStyle: 'collected' as const, hasButton: true };
+        default:
+          // All preference rewards - show "Edit" when claimed, "Personalize now" when available
+          if (rewardState === 'claimed') {
+            return { buttonText: "Edit ✏️", buttonStyle: 'action' as const, hasButton: true };
+          }
+          return { buttonText: "Personalize now", buttonStyle: 'action' as const, hasButton: true };
+      }
+    };
+
+    const config = getButtonConfig(item.id, state);
+    return {
+      ...item,
+      hasButton: config.hasButton,
+      buttonText: config.buttonText,
+      buttonStyle: config.buttonStyle
+    };
   });
 
   const growRewards = getAllRewards().filter(item => {
@@ -408,13 +612,20 @@ export default function PersonalizeScreen() {
     return null; // or a loading component
   }
 
-  // Sample data based on Figma design
+  // Dynamic milestones based on current streak
+  const getMilestoneActive = (dayThreshold: number, nextThreshold?: number) => {
+    if (nextThreshold) {
+      return currentStreakDays >= dayThreshold && currentStreakDays < nextThreshold;
+    }
+    return currentStreakDays >= dayThreshold;
+  };
+
   const milestones: Milestone[] = [
-    { id: "1", name: "Seed", day: "Day 7", isActive: true },
-    { id: "2", name: "Grow", day: "Day 30", isActive: false },
-    { id: "3", name: "Rise", day: "Day 60", isActive: false },
-    { id: "4", name: "Peak", day: "Day 180", isActive: false },
-    { id: "5", name: "Glow", day: "Day 270", isActive: false },
+    { id: "1", name: "Seed", day: "Day 7", isActive: getMilestoneActive(0, 30) },
+    { id: "2", name: "Grow", day: "Day 30", isActive: getMilestoneActive(30, 60) },
+    { id: "3", name: "Rise", day: "Day 60", isActive: getMilestoneActive(60, 180) },
+    { id: "4", name: "Peak", day: "Day 180", isActive: getMilestoneActive(180, 270) },
+    { id: "5", name: "Glow", day: "Day 270", isActive: getMilestoneActive(270) },
   ];
 
   const renderLabsSection = () => (
@@ -493,11 +704,11 @@ export default function PersonalizeScreen() {
       > */}
 
       {/* Background Animation instead of Image */}
-        {/* <Animation /> */}
+      {/* <Animation /> */}
 
-        {/* Gradient overlay */}
-<View style={styles.streakSection}>
-    <Animation />
+      {/* Gradient overlay */}
+      <View style={styles.streakSection}>
+        <Animation />
         <LinearGradient
           colors={['rgba(255, 255, 255, 0)', 'rgba(221, 194, 233, 0.6)']}
           locations={[0, 1]}
@@ -505,7 +716,7 @@ export default function PersonalizeScreen() {
           end={{ x: 0, y: 1 }}
           style={styles.streakGradientOverlay}
         />
-       
+
         <View style={styles.streakContent}>
           <Text style={styles.streakTitle}>🎁 Milestones & Rewards 🎁</Text>
 
@@ -521,7 +732,7 @@ export default function PersonalizeScreen() {
                       textAlignVertical: isAndroid ? 'center' : undefined,
                     }
                   ]}>
-                    9
+                    {currentStreakDays}
                   </Text>
                 }
                 style={[
@@ -553,7 +764,7 @@ export default function PersonalizeScreen() {
                       textAlignVertical: isAndroid ? 'center' : undefined,
                     }
                   ]}>
-                    9
+                    {currentStreakDays}
                   </Text>
                 </LinearGradient>
               </MaskedView>
@@ -566,7 +777,7 @@ export default function PersonalizeScreen() {
             </View>
           </View>
         </View>
-</View>
+      </View>
       {/* </ImageBackground> */}
       <View style={styles.milestonesContainer}>
         <View style={styles.milestonesProgress}>
@@ -631,7 +842,7 @@ export default function PersonalizeScreen() {
               {item.description}
             </Text>
           )}
-          {isAvailable && item.hasButton && (
+          {(isAvailable || isClaimed) && item.hasButton && (
             <LinearGradient
               colors={['#A29AEA', '#C17EC9', '#D482B9', '#E98BAC', '#FDC6D1']}
               locations={[0, 0.4, 0.6, 0.9, 1]}
@@ -644,7 +855,7 @@ export default function PersonalizeScreen() {
             >
               <TouchableOpacity
                 style={styles.personalizeButton}
-                onPress={() => claimReward(item.id)}
+                onPress={() => handleRewardAction(item.id)}
                 activeOpacity={0.7}
               >
                 <MaskedView
@@ -723,6 +934,21 @@ export default function PersonalizeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={isAndroid ? [] : []}>
+      {/* Celebration Overlay */}
+      {showCelebration && (
+        <Animated.View
+          style={[
+            styles.celebrationOverlay,
+            {
+              opacity: celebrationOpacity,
+              transform: [{ scale: celebrationScale }],
+            }
+          ]}
+          pointerEvents="none"
+        >
+          <Text style={styles.celebrationEmoji}>{celebrationEmoji}</Text>
+        </Animated.View>
+      )}
       <StatusBar style="dark" backgroundColor={isAndroid ? COLORS.background : COLORS.background} />
       <ScrollView
         style={styles.scrollView}
@@ -734,23 +960,251 @@ export default function PersonalizeScreen() {
         {renderLabsSection()}
         {renderStreakSection()}
 
+        {/* Your Preferences & Tokens Section */}
+        {((rewardsData?.freeze_count ?? 0) > 0 || preferencesData) && (
+          <View style={styles.preferencesSection}>
+            <Text style={styles.preferencesSectionTitle}>Your Status</Text>
+
+            {/* Freeze Tokens with Use Button */}
+            {(rewardsData?.freeze_count ?? 0) > 0 && (
+              <View style={styles.preferenceItem}>
+                <Text style={styles.preferenceLabel}>🧊 Streak Freeze</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <Text style={styles.preferenceValue}>{rewardsData?.freeze_count}</Text>
+                  {!rewardsData?.today_frozen && (
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: COLORS.warmPurple,
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 12,
+                      }}
+                      onPress={() => {
+                        Alert.alert(
+                          '❄️ Use Streak Freeze?',
+                          'This will protect your streak for today. You won\'t need to complete any actions.',
+                          [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Use Freeze',
+                              onPress: async () => {
+                                try {
+                                  const result = await rewardService.useFreezeProactive();
+                                  if (result.success) {
+                                    Alert.alert('✅ Frozen!', result.message || 'Streak protected for today!');
+                                    loadRewardsData();
+                                  } else {
+                                    Alert.alert('Error', result.error || 'Could not use freeze');
+                                  }
+                                } catch (error) {
+                                  Alert.alert('Error', 'Failed to use freeze');
+                                }
+                              }
+                            }
+                          ]
+                        );
+                      }}
+                    >
+                      <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>Use</Text>
+                    </TouchableOpacity>
+                  )}
+                  {rewardsData?.today_frozen && (
+                    <Text style={{ color: '#22c55e', fontWeight: '600', fontSize: 12 }}>❄️ Frozen</Text>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {/* Refresh Status */}
+            {rewardsData?.refresh_status && (
+              <View style={styles.preferenceItem}>
+                <Text style={styles.preferenceLabel}>🔄 Daily Refreshes</Text>
+                <Text style={styles.preferenceValue}>
+                  {rewardsData.refresh_status.remaining}/{rewardsData.refresh_status.limit}
+                </Text>
+              </View>
+            )}
+
+            {/* Set Preferences */}
+            {preferencesData?.preferences?.diet_preference && (
+              <TouchableOpacity
+                style={styles.preferenceItem}
+                onPress={() => setActiveModal('diet_preference')}
+              >
+                <Text style={styles.preferenceLabel}>🥗 Diet</Text>
+                <Text style={styles.preferenceValue}>{preferencesData.preferences.diet_preference}</Text>
+              </TouchableOpacity>
+            )}
+
+            {preferencesData?.preferences?.food_allergies && preferencesData.preferences.food_allergies.length > 0 && (
+              <TouchableOpacity
+                style={styles.preferenceItem}
+                onPress={() => setActiveModal('food_allergies')}
+              >
+                <Text style={styles.preferenceLabel}>🚫 Allergies</Text>
+                <Text style={styles.preferenceValue}>{preferencesData.preferences.food_allergies.join(', ')}</Text>
+              </TouchableOpacity>
+            )}
+
+            {preferencesData?.preferences?.cuisine_preference && preferencesData.preferences.cuisine_preference.length > 0 && (
+              <TouchableOpacity
+                style={styles.preferenceItem}
+                onPress={() => setActiveModal('cuisine_preference')}
+              >
+                <Text style={styles.preferenceLabel}>🍽️ Cuisines</Text>
+                <Text style={styles.preferenceValue}>{preferencesData.preferences.cuisine_preference.join(', ')}</Text>
+              </TouchableOpacity>
+            )}
+
+            {preferencesData?.preferences?.cultural_background && (
+              <TouchableOpacity
+                style={styles.preferenceItem}
+                onPress={() => setActiveModal('cultural_background')}
+              >
+                <Text style={styles.preferenceLabel}>🌍 Background</Text>
+                <Text style={styles.preferenceValue}>{preferencesData.preferences.cultural_background}</Text>
+              </TouchableOpacity>
+            )}
+
+            {preferencesData?.preferences?.dine_out_frequency && (
+              <TouchableOpacity
+                style={styles.preferenceItem}
+                onPress={() => setActiveModal('dine_out_frequency')}
+              >
+                <Text style={styles.preferenceLabel}>🍴 Dining Out</Text>
+                <Text style={styles.preferenceValue}>{preferencesData.preferences.dine_out_frequency}</Text>
+              </TouchableOpacity>
+            )}
+
+            {preferencesData?.preferences?.body_metrics?.bmi && (
+              <TouchableOpacity
+                style={styles.preferenceItem}
+                onPress={() => setActiveModal('body_metrics')}
+              >
+                <Text style={styles.preferenceLabel}>📊 BMI</Text>
+                <Text style={styles.preferenceValue}>{preferencesData.preferences.body_metrics.bmi.toFixed(1)}</Text>
+              </TouchableOpacity>
+            )}
+
+            {preferencesData?.preferences?.cravings && preferencesData.preferences.cravings.length > 0 && (
+              <TouchableOpacity
+                style={styles.preferenceItem}
+                onPress={() => setActiveModal('cravings')}
+              >
+                <Text style={styles.preferenceLabel}>🍫 Cravings</Text>
+                <Text style={styles.preferenceValue}>{preferencesData.preferences.cravings.join(', ')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
         <View style={styles.rewardsContainer}>
-          {renderDivider("Seed Rewards")}
-          <View style={styles.rewardsList}>
-            {seedRewards.map(renderRewardItem)}
-          </View>
+          {/* Only show if there are available/claimed rewards */}
+          {seedRewards.length > 0 && (
+            <>
+              {renderDivider("Seed Rewards")}
+              <View style={styles.rewardsList}>
+                {seedRewards.map(renderRewardItem)}
+              </View>
+            </>
+          )}
 
-          {renderDivider("Grow Rewards")}
-          <View style={styles.rewardsList}>
-            {growRewards.map(renderRewardItem)}
-          </View>
+          {/* Upcoming - Early Rewards (days 1-15) */}
+          {growRewards.length > 0 && (
+            <>
+              {renderDivider("Grow Rewards")}
+              <View style={styles.rewardsList}>
+                {growRewards.map(renderRewardItem)}
+              </View>
+            </>
+          )}
 
-          {renderDivider("Rise Rewards")}
-          <View style={styles.rewardsList}>
-            {riseRewards.map(renderRewardItem)}
-          </View>
+          {/* Premium - Later Rewards (days 16+) */}
+          {riseRewards.length > 0 && (
+            <>
+              {renderDivider("Rise Rewards")}
+              <View style={styles.rewardsList}>
+                {riseRewards.map(renderRewardItem)}
+              </View>
+            </>
+          )}
         </View>
       </ScrollView>
+
+      {/* Preference Modals */}
+      <PreferenceModal
+        visible={activeModal === 'diet_preference'}
+        onClose={() => setActiveModal(null)}
+        onSaved={loadRewardsData}
+        preferenceType="diet_preference"
+        title="🥗 Diet Preference"
+        subtitle="We'll personalize your food recommendations"
+        options={preferencesData?.preference_options?.diet_preference || []}
+        currentValue={preferencesData?.preferences?.diet_preference}
+        isMultiSelect={false}
+      />
+
+      <PreferenceModal
+        visible={activeModal === 'food_allergies'}
+        onClose={() => setActiveModal(null)}
+        onSaved={loadRewardsData}
+        preferenceType="food_allergies"
+        title="🥜 Food Allergies"
+        subtitle="We'll never recommend these foods"
+        options={preferencesData?.preference_options?.food_allergies || []}
+        currentValue={preferencesData?.preferences?.food_allergies}
+        isMultiSelect={true}
+      />
+
+      <PreferenceModal
+        visible={activeModal === 'cuisine_preference'}
+        onClose={() => setActiveModal(null)}
+        onSaved={loadRewardsData}
+        preferenceType="cuisine_preference"
+        title="🥘 Cuisine Preferences"
+        subtitle="Select your favorite cuisines"
+        options={preferencesData?.preference_options?.cuisine_preference || []}
+        currentValue={preferencesData?.preferences?.cuisine_preference}
+        isMultiSelect={true}
+      />
+
+      <PreferenceModal
+        visible={activeModal === 'dine_out_frequency'}
+        onClose={() => setActiveModal(null)}
+        onSaved={loadRewardsData}
+        preferenceType="dine_out_frequency"
+        title="🍔 Dining Out Frequency"
+        subtitle="How often do you eat out?"
+        options={preferencesData?.preference_options?.dine_out_frequency || []}
+        currentValue={preferencesData?.preferences?.dine_out_frequency}
+        isMultiSelect={false}
+      />
+
+      <PreferenceModal
+        visible={activeModal === 'cultural_background'}
+        onClose={() => setActiveModal(null)}
+        onSaved={loadRewardsData}
+        preferenceType="cultural_background"
+        title="🌏 Cultural Background"
+        subtitle="For culturally appropriate recommendations"
+        options={preferencesData?.preference_options?.cultural_background || []}
+        currentValue={preferencesData?.preferences?.cultural_background}
+        isMultiSelect={false}
+      />
+
+      <BodyMetricsModal
+        visible={activeModal === 'body_metrics'}
+        onClose={() => setActiveModal(null)}
+        onSaved={loadRewardsData}
+        currentMetrics={preferencesData?.preferences?.body_metrics}
+      />
+
+      <CravingsModal
+        visible={activeModal === 'cravings'}
+        onClose={() => setActiveModal(null)}
+        onSaved={loadRewardsData}
+        currentCravings={preferencesData?.preferences?.cravings}
+      />
     </SafeAreaView>
   );
 }
@@ -946,15 +1400,15 @@ const styles = StyleSheet.create({
     // backgroundColor: COLORS.white,
     // width: "100%",       // ✅ ensure parent covers the whole screen width
     // minHeight: isAndroid ? 300 : undefined,
-    
-  
+
+
   },
   streakBackgroundAnimation: {
     position: "absolute",
     top: -screenHeight * 0.13,      // 10% of screen height above
     left: -screenWidth * 0.2,
-    width: screenWidth  * 1.4, // full device width
-    zIndex: -2, 
+    width: screenWidth * 1.4, // full device width
+    zIndex: -2,
     minHeight: screenHeight * 0.6, // give a fixed % of screen height (40% here)
     opacity: 0.3,
   },
@@ -1261,5 +1715,54 @@ const styles = StyleSheet.create({
     lineHeight: moderateScale(12.5, 1.5),
     includeFontPadding: isAndroid ? false : undefined,
     textAlignVertical: isAndroid ? 'center' : undefined,
+  },
+  // Your Status / Preferences Section
+  preferencesSection: {
+    marginHorizontal: scale(20),
+    marginTop: verticalScale(20),
+    backgroundColor: '#F8F4FF',
+    borderRadius: moderateScale(16),
+    padding: scale(16),
+  },
+  preferencesSectionTitle: {
+    fontSize: moderateScale(16, 1.5),
+    fontFamily: FONT_FAMILIES['Inter-SemiBold'],
+    color: '#4A3D5C',
+    marginBottom: verticalScale(12),
+  },
+  preferenceItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: verticalScale(10),
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E1F0',
+  },
+  preferenceLabel: {
+    fontSize: moderateScale(14, 1.5),
+    fontFamily: FONT_FAMILIES['Inter-Regular'],
+    color: '#6B5B7A',
+  },
+  preferenceValue: {
+    fontSize: moderateScale(14, 1.5),
+    fontFamily: FONT_FAMILIES['Inter-SemiBold'],
+    color: '#8B5CF6',
+    maxWidth: '50%',
+    textAlign: 'right',
+  },
+  // Celebration overlay styles
+  celebrationOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  celebrationEmoji: {
+    fontSize: moderateScale(100),
   },
 });

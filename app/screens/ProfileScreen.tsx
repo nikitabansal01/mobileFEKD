@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import MaskedView from '@react-native-masked-view/masked-view';
-import { useNavigation, CommonActions } from '@react-navigation/native';
+import { useNavigation, CommonActions, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
+import { getAuth } from 'firebase/auth';
+import { useState, useCallback } from 'react';
+import { rewardService } from '../../services/rewardService';
 import {
   Alert,
   Dimensions,
@@ -46,6 +48,87 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
   const navigation = propNavigation || hookNavigation;
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationInsightsEnabled, setLocationInsightsEnabled] = useState(true);
+  const [badges, setBadges] = useState<Array<{ id: string; title: string; icon: string; claimed_at: string | null }>>([]);
+
+  // User profile data (fetched from Firebase + backend)
+  const [userData, setUserData] = useState<{
+    displayName: string;
+    email: string;
+    concerns: string[];
+    diagnosis: string[];
+  }>({
+    displayName: '',
+    email: '',
+    concerns: [],
+    diagnosis: [],
+  });
+
+  // Fetch badges and user data on mount
+  useFocusEffect(
+    useCallback(() => {
+      const fetchData = async () => {
+        try {
+          // Fetch badges
+          const claimed = await rewardService.getClaimedRewards();
+          const badgeRewards = claimed.filter((r: any) =>
+            r.id === 'first_improvement'
+          );
+          setBadges(badgeRewards);
+
+          // Fetch Firebase user data
+          const auth = getAuth();
+          const user = auth.currentUser;
+          if (user) {
+            setUserData(prev => ({
+              ...prev,
+              email: user.email || '',
+            }));
+          }
+
+          const token = await user?.getIdToken();
+          if (token) {
+            // Fetch user name from cycle phase endpoint (reliable source)
+            try {
+              const cycleResponse = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/cycle/phase`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (cycleResponse.ok) {
+                const data = await cycleResponse.json();
+                if (data?.cycle_info?.user_name) {
+                  setUserData(prev => ({
+                    ...prev,
+                    displayName: data.cycle_info.user_name,
+                  }));
+                }
+              }
+            } catch (cycleError) {
+              console.log('Could not fetch cycle phase:', cycleError);
+            }
+
+            // Fetch concerns and diagnosis from profile endpoint
+            try {
+              const profileResponse = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/users/profile/me`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (profileResponse.ok) {
+                const profileData = await profileResponse.json();
+                setUserData(prev => ({
+                  ...prev,
+                  concerns: profileData.concerns || [],
+                  diagnosis: profileData.diagnosis || [],
+                }));
+              }
+            } catch (profileError) {
+              console.log('Could not fetch profile:', profileError);
+            }
+          }
+        } catch (error) {
+          console.log('Could not fetch data:', error);
+        }
+      };
+      fetchData();
+    }, [])
+  );
 
   const navigateToIndex = () => {
     navigation.goBack();
@@ -112,8 +195,8 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
 
   return (
     <View style={styles.container}>
-      <ScrollView 
-        style={styles.scrollView} 
+      <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -123,7 +206,7 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
             <Defs>
               <ClipPath id="headerClip">
                 <Path
-                  d={`M0,0 L${screenWidth},0 L${screenWidth},${verticalScale(140)} Q${screenWidth/2},${verticalScale(170)} 0,${verticalScale(140)} Z`}
+                  d={`M0,0 L${screenWidth},0 L${screenWidth},${verticalScale(140)} Q${screenWidth / 2},${verticalScale(170)} 0,${verticalScale(140)} Z`}
                   fill="white"
                 />
               </ClipPath>
@@ -142,7 +225,7 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
               <Stop offset="89.13%" stopColor="#FEDDE3" />
             </SvgLinearGradient>
             <Path
-              d={`M0,0 L${screenWidth},0 L${screenWidth},${verticalScale(140)} Q${screenWidth/2},${verticalScale(170)} 0,${verticalScale(140)} Z`}
+              d={`M0,0 L${screenWidth},0 L${screenWidth},${verticalScale(140)} Q${screenWidth / 2},${verticalScale(170)} 0,${verticalScale(140)} Z`}
               fill="url(#headerGradient)"
               clipPath="url(#headerClip)"
             />
@@ -164,11 +247,11 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
                 </View>
               </TouchableOpacity>
             </View>
-            
+
             {/* User Info */}
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>Jessica</Text>
-              <Text style={styles.userEmail}>jessica03@gmail.com</Text>
+              <Text style={styles.userName}>{userData.displayName || 'User'}</Text>
+              <Text style={styles.userEmail}>{userData.email || ''}</Text>
             </View>
           </View>
 
@@ -177,48 +260,48 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
             <View style={styles.personalizationContent}>
               {/* Progress Indicator */}
               <View style={styles.progressContainer}>
-                  <View style={styles.progressCircle}>
-                    <Svg width={scale(50)} height={scale(50)}>
-                      <Defs>
-                        <SvgLinearGradient id="grad" x1="0" y1="0" x2="1" y2="0">
-                          <Stop offset="14.79%" stopColor="#A29AEA" />
-                          <Stop offset="38.58%" stopColor="#C17EC9" />
-                          <Stop offset="51.96%" stopColor="#D482B9" />
-                          <Stop offset="69.06%" stopColor="#E98BAC" />
-                          <Stop offset="89.13%" stopColor="#FDC6D1" />
-                        </SvgLinearGradient>
-                      </Defs>
+                <View style={styles.progressCircle}>
+                  <Svg width={scale(50)} height={scale(50)}>
+                    <Defs>
+                      <SvgLinearGradient id="grad" x1="0" y1="0" x2="1" y2="0">
+                        <Stop offset="14.79%" stopColor="#A29AEA" />
+                        <Stop offset="38.58%" stopColor="#C17EC9" />
+                        <Stop offset="51.96%" stopColor="#D482B9" />
+                        <Stop offset="69.06%" stopColor="#E98BAC" />
+                        <Stop offset="89.13%" stopColor="#FDC6D1" />
+                      </SvgLinearGradient>
+                    </Defs>
 
-                      {/* Background Circle */}
-                      <Circle
-                        cx={scale(25)}
-                        cy={scale(25)}
-                        r={scale(15)}
-                        stroke="#E5E5E5"
-                        strokeWidth={scale(5)}
-                        fill="none"
-                      />
+                    {/* Background Circle */}
+                    <Circle
+                      cx={scale(25)}
+                      cy={scale(25)}
+                      r={scale(15)}
+                      stroke="#E5E5E5"
+                      strokeWidth={scale(5)}
+                      fill="none"
+                    />
 
-                      {/* Progress Circle with gradient */}
-                      <Circle
-                        cx={scale(25)}
-                        cy={scale(25)}
-                        r={scale(15)}
-                        stroke="url(#grad)"
-                        strokeWidth={scale(5)}
-                        fill="none"
-                        strokeDasharray={scale(94.25)} // 2 * π * r
-                        strokeDashoffset={scale(47.125)} // 50% of circumference
-                        strokeLinecap="round"
-                        rotation="-90"
-                        originX={scale(25)}
-                        originY={scale(25)}
-                      />
-                    </Svg>
-                    <View style={styles.progressTextContainer}>
-                      <Text style={styles.progressText}>50%</Text>
-                    </View>
+                    {/* Progress Circle with gradient */}
+                    <Circle
+                      cx={scale(25)}
+                      cy={scale(25)}
+                      r={scale(15)}
+                      stroke="url(#grad)"
+                      strokeWidth={scale(5)}
+                      fill="none"
+                      strokeDasharray={scale(94.25)} // 2 * π * r
+                      strokeDashoffset={scale(47.125)} // 50% of circumference
+                      strokeLinecap="round"
+                      rotation="-90"
+                      originX={scale(25)}
+                      originY={scale(25)}
+                    />
+                  </Svg>
+                  <View style={styles.progressTextContainer}>
+                    <Text style={styles.progressText}>50%</Text>
                   </View>
+                </View>
               </View>
 
               {/* Text Content */}
@@ -248,6 +331,21 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
           </TouchableOpacity>
         </View>
 
+        {/* Badges Section */}
+        {badges.length > 0 && (
+          <View style={styles.badgesSection}>
+            <Text style={styles.badgesSectionTitle}>🏆 Your Achievements</Text>
+            <View style={styles.badgesList}>
+              {badges.map((badge, index) => (
+                <View key={index} style={styles.badgeItem}>
+                  <Text style={styles.badgeIcon}>{badge.icon}</Text>
+                  <Text style={styles.badgeTitle}>{badge.title}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* Settings Menu */}
         <View style={styles.settingsContainer}>
           {/* Health Section */}
@@ -259,8 +357,12 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
               <View style={styles.healthText}>
                 <Text style={styles.healthTitle}>Change top concerns/diagnosis</Text>
                 <View style={styles.healthDetails}>
-                  <Text style={styles.healthDetail}>Concerns: #1 Acne, Bloating, Period Pain</Text>
-                  <Text style={styles.healthDetail}>Diagnosis: PCOS</Text>
+                  <Text style={styles.healthDetail}>
+                    Concerns: {userData.concerns.length > 0 ? userData.concerns.slice(0, 3).join(', ') : 'None set'}
+                  </Text>
+                  <Text style={styles.healthDetail}>
+                    Diagnosis: {userData.diagnosis.length > 0 ? userData.diagnosis.join(', ') : 'None set'}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -268,8 +370,8 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
 
           {/* Menu Items */}
           <View style={styles.menuSection}>
-            <TouchableOpacity 
-              style={styles.menuItem} 
+            <TouchableOpacity
+              style={styles.menuItem}
               onPress={() => handleMenuAction('Get Auvra Pro')}
             >
               <View style={styles.menuIcon}>
@@ -278,8 +380,8 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
               <Text style={styles.menuText}>Get Auvra Pro</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.menuItem} 
+            <TouchableOpacity
+              style={styles.menuItem}
               onPress={() => handleMenuAction('Integration with Cycle app')}
             >
               <View style={styles.menuIcon}>
@@ -288,8 +390,8 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
               <Text style={styles.menuText}>Integration with Cycle app</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.menuItem} 
+            <TouchableOpacity
+              style={styles.menuItem}
               onPress={() => handleMenuAction('Invite your friend')}
             >
               <View style={styles.menuIcon}>
@@ -304,8 +406,8 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
                 <Ionicons name="notifications-outline" size={24} color={COLORS.black} />
               </View>
               <Text style={styles.menuText}>Notifications</Text>
-              <TouchableOpacity 
-                style={styles.toggleContainer} 
+              <TouchableOpacity
+                style={styles.toggleContainer}
                 onPress={toggleNotifications}
               >
                 {notificationsEnabled ? (
@@ -332,8 +434,8 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
                 <Ionicons name="location-outline" size={24} color={COLORS.black} />
               </View>
               <Text style={styles.menuText}>Location based insights</Text>
-              <TouchableOpacity 
-                style={styles.toggleContainer} 
+              <TouchableOpacity
+                style={styles.toggleContainer}
                 onPress={toggleLocationInsights}
               >
                 {locationInsightsEnabled ? (
@@ -354,8 +456,8 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity 
-              style={styles.menuItem} 
+            <TouchableOpacity
+              style={styles.menuItem}
               onPress={() => handleMenuAction('Contact us')}
             >
               <View style={styles.menuIcon}>
@@ -364,8 +466,8 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
               <Text style={styles.menuText}>Contact us</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.menuItem} 
+            <TouchableOpacity
+              style={styles.menuItem}
               onPress={() => handleMenuAction('Help & Support')}
             >
               <View style={styles.menuIcon}>
@@ -374,8 +476,8 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
               <Text style={styles.menuText}>Help & Support</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.menuItem} 
+            <TouchableOpacity
+              style={styles.menuItem}
               onPress={() => handleMenuAction('Privacy policy')}
             >
               <View style={styles.menuIcon}>
@@ -385,8 +487,8 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
             </TouchableOpacity>
 
             {/* Logout Button */}
-            <TouchableOpacity 
-              style={[styles.menuItem, styles.logoutMenuItem]} 
+            <TouchableOpacity
+              style={[styles.menuItem, styles.logoutMenuItem]}
               onPress={handleLogout}
             >
               <View style={styles.menuIcon}>
@@ -679,5 +781,48 @@ const styles = StyleSheet.create({
   logoutText: {
     color: '#FF3B30',
     fontFamily: FONT_FAMILIES['Inter-Medium'],
+  },
+  // Badges Section
+  badgesSection: {
+    marginHorizontal: scale(20),
+    marginBottom: verticalScale(20),
+    backgroundColor: COLORS.white,
+    borderRadius: scale(12),
+    padding: scale(16),
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  badgesSectionTitle: {
+    fontSize: moderateScale(16, 1.5),
+    fontFamily: FONT_FAMILIES['Inter-SemiBold'] ?? FONT_FAMILIES['Inter-Medium'],
+    color: COLORS.black,
+    marginBottom: verticalScale(12),
+  },
+  badgesList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: scale(12),
+  },
+  badgeItem: {
+    alignItems: 'center',
+    paddingVertical: verticalScale(10),
+    paddingHorizontal: scale(16),
+    backgroundColor: '#FFF9E6',
+    borderRadius: scale(12),
+    borderWidth: 1,
+    borderColor: '#FFD700',
+  },
+  badgeIcon: {
+    fontSize: moderateScale(32),
+    marginBottom: verticalScale(4),
+  },
+  badgeTitle: {
+    fontSize: moderateScale(12, 1.5),
+    fontFamily: FONT_FAMILIES['Inter-Medium'],
+    color: COLORS.black,
+    textAlign: 'center',
   },
 });
