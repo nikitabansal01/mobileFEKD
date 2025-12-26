@@ -815,7 +815,7 @@ export default function PersonalizeScreen() {
           {/* Only show if there are available/claimed rewards */}
           {seedRewards.length > 0 && (
             <>
-              {renderDivider("✨ Your Rewards")}
+              {renderDivider("Seed Rewards")}
               <View style={styles.rewardsList}>
                 {seedRewards.map(renderRewardItem)}
               </View>
@@ -825,7 +825,7 @@ export default function PersonalizeScreen() {
           {/* Upcoming - Early Rewards (days 1-15) */}
           {growRewards.length > 0 && (
             <>
-              {renderDivider("🌱 Upcoming Rewards")}
+              {renderDivider("Grow Rewards")}
               <View style={styles.rewardsList}>
                 {growRewards.map(renderRewardItem)}
               </View>
@@ -835,7 +835,7 @@ export default function PersonalizeScreen() {
           {/* Premium - Later Rewards (days 16+) */}
           {riseRewards.length > 0 && (
             <>
-              {renderDivider("🚀 Premium Rewards")}
+              {renderDivider("Rise Rewards")}
               <View style={styles.rewardsList}>
                 {riseRewards.map(renderRewardItem)}
               </View>
