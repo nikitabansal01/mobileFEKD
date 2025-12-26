@@ -279,9 +279,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       } else if (result?.error === 'rate_limit') {
         // Show friendly message for daily limit
         Alert.alert(
-          '🌙 Come Back Tomorrow!',
-          result.message || 'You\'ve reached your daily limit for changes.',
-          [{ text: 'Got it!' }]
+          'Limit Reached',
+          result.message || 'No changes left. Try again tomorrow!',
+          [{ text: 'OK' }]
         );
       } else {
         Alert.alert('Oops!', result?.message || 'Could not replace actions. Try again.');
@@ -1067,9 +1067,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                     } else if (result?.error === 'rate_limit') {
                       // Show friendly no-refresh message
                       Alert.alert(
-                        '🌙 Come Back Tomorrow!',
-                        result.message || 'No more refreshes available today.',
-                        [{ text: 'Got it!' }]
+                        'Limit Reached',
+                        result.message || 'No refreshes left. Try again tomorrow!',
+                        [{ text: 'OK' }]
                       );
                     } else {
                       Alert.alert('Oops!', result?.message || 'Could not refresh actions. Try again.');
