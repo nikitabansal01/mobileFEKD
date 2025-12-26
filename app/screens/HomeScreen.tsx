@@ -10,6 +10,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
+  Alert,
   Dimensions,
   Image,
   ScrollView,
@@ -121,6 +122,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           // Set refresh status from rewards API
           if (rewardsData?.refresh_status) {
             setRefreshStatus(rewardsData.refresh_status);
+          }
+
+          // Show freeze notification if one was just used
+          if (rewardsData?.freeze_just_used) {
+            Alert.alert(
+              '🧊 Streak Freeze Used!',
+              'You missed yesterday, but your streak is protected! One freeze token has been used.',
+              [{ text: 'Great!', style: 'default' }]
+            );
           }
 
           if (assignmentsData?.hormone_stats) {

@@ -67,6 +67,8 @@ export interface RewardsStatusResponse {
     freeze_count: number;
     refresh_status: RefreshStatus;
     last_activity_date: string | null;
+    freeze_used_today: boolean;      // True if freeze protects yesterday's streak
+    freeze_just_used: boolean;       // True if freeze was JUST consumed in this request
     rewards: RewardItem[];
 }
 
@@ -149,6 +151,30 @@ class RewardService {
 
         if (!response.ok) {
             throw new Error("Failed to fetch rewards config");
+        }
+
+        return response.json();
+    }
+
+    /**
+     * Get claimed rewards (for badge display).
+     */
+    async getClaimedRewards(): Promise<Array<{ id: string; title: string; icon: string; claimed_at: string | null }>> {
+        const token = await getAuthToken();
+        if (!token) {
+            throw new Error("Not authenticated");
+        }
+
+        const response = await fetch(`${API_BASE_URL}/api/v1/rewards/claimed`, {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch claimed rewards");
         }
 
         return response.json();
