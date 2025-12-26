@@ -16,6 +16,7 @@ import {
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import Svg, { Defs, Path, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import MultiSelectCheckSvg from '../assets/images/SVG/MultiSelectCheckSvg';
+import CompletedCheckSvg from '../assets/images/SVG/CompletedCheckSvg';
 
 // ====== Type imports ======
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
@@ -907,23 +908,38 @@ export default function ActionPlanTimeline({
                   {/* (hormone image rendered behind the circle) */}
 
                   {/* Hormone number (relative to image) - hide for Weekly Check-in */}
-                  {/* Shows checkmark for completed items, +N for pending */}
+                  {/* Shows gradient checkmark SVG for completed items, +N for pending */}
                   {a.id !== -1 && (
-                    <View style={[
-                      styles.hormoneBadge,
-                      {
-                        // When left anchor: left of image
-                        // When right anchor: right of image
-                        top: isLeft ? -responsiveHeight(2) : -responsiveHeight(2.5),
-                        left: isLeft ? -responsiveWidth(12) : undefined,
-                        right: isLeft ? undefined : -responsiveWidth(12),
-                        backgroundColor: a.is_completed ? '#4CAF50' : getHormoneColor(a.hormones?.[0]),
-                      }
-                    ]}>
-                      <Text style={[styles.hormoneBadgeText, a.is_completed && { color: '#FFFFFF' }]} allowFontScaling={false}>
-                        {a.is_completed ? '✓' : `+${a.hormones?.length || 0}`}
-                      </Text>
-                    </View>
+                    a.is_completed ? (
+                      // Premium gradient checkmark for completed items
+                      <View style={[
+                        styles.hormoneBadge,
+                        {
+                          top: isLeft ? -responsiveHeight(2) : -responsiveHeight(2.5),
+                          left: isLeft ? -responsiveWidth(12) : undefined,
+                          right: isLeft ? undefined : -responsiveWidth(12),
+                          backgroundColor: 'transparent', // No background for SVG
+                          padding: 0,
+                        }
+                      ]}>
+                        <CompletedCheckSvg size={responsiveWidth(6)} />
+                      </View>
+                    ) : (
+                      // Hormone badge for pending items
+                      <View style={[
+                        styles.hormoneBadge,
+                        {
+                          top: isLeft ? -responsiveHeight(2) : -responsiveHeight(2.5),
+                          left: isLeft ? -responsiveWidth(12) : undefined,
+                          right: isLeft ? undefined : -responsiveWidth(12),
+                          backgroundColor: getHormoneColor(a.hormones?.[0]),
+                        }
+                      ]}>
+                        <Text style={styles.hormoneBadgeText} allowFontScaling={false}>
+                          {`+${a.hormones?.length || 0}`}
+                        </Text>
+                      </View>
+                    )
                   )}
                 </TouchableOpacity>
 
