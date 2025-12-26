@@ -474,12 +474,30 @@ export default function PersonalizeScreen() {
     return state === 'claimed' || state === 'available';
   }).map(item => {
     const state = getRewardState(item);
-    // Automatically add button for available rewards
+    // Automatically add button for available rewards with REWARD-SPECIFIC button text
     if (state === 'available') {
+      // Define reward-specific button text and behavior
+      const getButtonConfig = (rewardId: string) => {
+        switch (rewardId) {
+          case 'streak_freeze':
+            return { buttonText: "Collected ✓", buttonStyle: 'collected' };
+          case 'plan_refresh_2x':
+            return { buttonText: "Activated ✓", buttonStyle: 'collected' };
+          case 'symptom_patterns':
+            return { buttonText: "View Insights", buttonStyle: 'action' };
+          case 'first_improvement':
+            return { buttonText: "Claimed 🎉", buttonStyle: 'collected' };
+          default:
+            // All preference rewards (diet_prefs, food_allergies, cuisine_prefs, dine_out, ethnicity, bmi_ratio, cravings_healthy)
+            return { buttonText: "Personalize now", buttonStyle: 'action' };
+        }
+      };
+      const config = getButtonConfig(item.id);
       return {
         ...item,
         hasButton: true,
-        buttonText: "Personalize now"
+        buttonText: config.buttonText,
+        buttonStyle: config.buttonStyle
       };
     }
     return item;
