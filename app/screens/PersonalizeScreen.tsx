@@ -159,11 +159,14 @@ type RewardItem = {
   buttonText?: string;
 };
 
+type MilestoneState = 'completed' | 'active' | 'locked';
+
 type Milestone = {
   id: string;
   name: string;
   day: string;
-  isActive: boolean;
+  dayNumber: number;  // For progress calculation
+  state: MilestoneState;
 };
 
 // Navigation type
@@ -599,20 +602,31 @@ export default function PersonalizeScreen() {
     return null; // or a loading component
   }
 
-  // Dynamic milestones based on current streak
-  const getMilestoneActive = (dayThreshold: number, nextThreshold?: number) => {
+  // Dynamic milestones based on current streak - 3 states: completed, active, locked
+  const getMilestoneState = (dayThreshold: number, nextThreshold?: number): MilestoneState => {
     if (nextThreshold) {
-      return currentStreakDays >= dayThreshold && currentStreakDays < nextThreshold;
+      // Has a next threshold - check if we've passed this range
+      if (currentStreakDays >= nextThreshold) {
+        return 'completed';  // Past this milestone entirely
+      } else if (currentStreakDays >= dayThreshold) {
+        return 'active';     // Currently in this milestone range
+      }
+      return 'locked';       // Haven't reached this milestone yet
+    } else {
+      // No next threshold - this is the last milestone
+      if (currentStreakDays >= dayThreshold) {
+        return 'active';     // Reached the final milestone
+      }
+      return 'locked';
     }
-    return currentStreakDays >= dayThreshold;
   };
 
   const milestones: Milestone[] = [
-    { id: "1", name: "Seed", day: "Day 7", isActive: getMilestoneActive(0, 30) },
-    { id: "2", name: "Grow", day: "Day 30", isActive: getMilestoneActive(30, 60) },
-    { id: "3", name: "Rise", day: "Day 60", isActive: getMilestoneActive(60, 180) },
-    { id: "4", name: "Peak", day: "Day 180", isActive: getMilestoneActive(180, 270) },
-    { id: "5", name: "Glow", day: "Day 270", isActive: getMilestoneActive(270) },
+    { id: "1", name: "Seed", day: "Day 7", dayNumber: 7, state: getMilestoneState(7, 30) },
+    { id: "2", name: "Grow", day: "Day 30", dayNumber: 30, state: getMilestoneState(30, 60) },
+    { id: "3", name: "Rise", day: "Day 60", dayNumber: 60, state: getMilestoneState(60, 180) },
+    { id: "4", name: "Peak", day: "Day 180", dayNumber: 180, state: getMilestoneState(180, 270) },
+    { id: "5", name: "Glow", day: "Day 270", dayNumber: 270, state: getMilestoneState(270) },
   ];
 
   const renderLabsSection = () => (
@@ -776,28 +790,45 @@ export default function PersonalizeScreen() {
           <View style={styles.progressLine} />
           <View style={styles.progressLineActive} />
 
-          {milestones.map((milestone, index) => (
-            <View key={milestone.id} style={styles.milestoneItem}>
-              <View style={[
-                styles.milestoneDot,
-                { backgroundColor: milestone.isActive ? COLORS.warmPurple : '#D9D9D9' }
-              ]} />
-              <View style={styles.milestoneTextContainer}>
-                <Text style={[
-                  styles.milestoneName,
-                  { color: milestone.isActive ? COLORS.warmPurple : COLORS.greyLight }
-                ]}>
-                  {milestone.name}
-                </Text>
-                <Text style={[
-                  styles.milestoneDay,
-                  { color: milestone.isActive ? COLORS.warmPurple : COLORS.greyLight }
-                ]}>
-                  {milestone.day}
-                </Text>
+          {milestones.map((milestone, index) => {
+            const isCompleted = milestone.state === 'completed';
+            const isActive = milestone.state === 'active';
+            const dotColor = isCompleted || isActive ? COLORS.warmPurple : '#D9D9D9';
+            const textColor = isCompleted || isActive ? COLORS.warmPurple : COLORS.greyLight;
+            // Active milestone gets larger dot
+            const dotSize = isActive ? 16 : 12;
+
+            return (
+              <View key={milestone.id} style={styles.milestoneItem}>
+                <View style={[
+                  styles.milestoneDot,
+                  {
+                    backgroundColor: dotColor,
+                    width: scale(dotSize),
+                    height: scale(dotSize),
+                    borderRadius: scale(dotSize / 2),
+                  }
+                ]} />
+                <View style={styles.milestoneTextContainer}>
+                  <Text style={[
+                    styles.milestoneName,
+                    {
+                      color: textColor,
+                      fontWeight: isActive ? '600' : '400',
+                    }
+                  ]}>
+                    {milestone.name}
+                  </Text>
+                  <Text style={[
+                    styles.milestoneDay,
+                    { color: textColor }
+                  ]}>
+                    {milestone.day}
+                  </Text>
+                </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       </View>
     </>
