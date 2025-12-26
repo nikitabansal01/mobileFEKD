@@ -29,12 +29,12 @@ const TIME_ICONS: Record<string, string> = {
   morning: '🌤️',
   afternoon: '☀️',
   evening: '🌙',
-  anytime: '', // No icon for anytime
+  anytime: '⏰', // Clock icon for anytime
   // Add common variations
   'Morning': '🌤️',
   'Afternoon': '☀️',
   'Evening': '🌙',
-  'Anytime': '', // No icon for anytime
+  'Anytime': '⏰', // Clock icon for anytime
   // Add more common API variations
   'am': '🌤️',
   'pm': '☀️',
