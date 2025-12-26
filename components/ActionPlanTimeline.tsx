@@ -365,66 +365,45 @@ export default function ActionPlanTimeline({
     // Set existing anchors to Today (for existing logic compatibility)
     setAnchors(todayNext);
 
-    // Calculate time slot icon positions based on SORTED todayAssignments
-    // Now we need to detect: 1) Completed section at top, 2) Pending sections by time slot
+    // Calculate time slot icon positions
+    // RULE: ONE time icon at the VERY TOP - based on the EARLIEST time slot in the list
+    // (morning beats afternoon beats evening)
     const positions: TimeSlotPosition[] = [];
 
-    // Find completed items count (they are at the top due to sorting)
+    // Find completed and pending items
     const completedItems = todayAssignments.filter(a => a.is_completed);
     const pendingItems = todayAssignments.filter(a => !a.is_completed);
 
-    // If there are completed items, add "completed" icon at the top
-    if (completedItems.length > 0) {
-      const iconY = BASE_TOP + CAP_TOP / 2;
-      positions.push({
-        timeSlot: 'completed',
-        iconY,
-        isCapCenter: true,
-      });
-    }
+    // Get the EARLIEST time slot from ALL items (not just first pending)
+    // This ensures the icon matches the earliest original time slot
+    const allTimeSlots = todayAssignments
+      .filter(a => a.id !== -1) // Exclude Weekly Check-in
+      .map(a => (a as any).time_slot || 'morning');
 
-    // Find unique time slots in pending items and their positions
-    const pendingTimeSlots: string[] = [];
-    const timeSlotFirstIndex: Record<string, number> = {};
+    // Find earliest time slot (morning = 1, afternoon = 2, evening = 3)
+    let earliestTimeSlot = 'morning';
+    const earliestPriority = Math.min(
+      ...allTimeSlots.map(slot => TIME_SLOT_PRIORITY[slot] || 4)
+    );
 
-    pendingItems.forEach((a, pendingIdx) => {
-      const slot = (a as any).time_slot || 'anytime';
-      if (!timeSlotFirstIndex.hasOwnProperty(slot)) {
-        pendingTimeSlots.push(slot);
-        // Calculate absolute index in todayAssignments (completed count + pending index)
-        timeSlotFirstIndex[slot] = completedItems.length + pendingIdx;
-      }
+    // Map priority back to time slot name
+    if (earliestPriority === 1) earliestTimeSlot = 'morning';
+    else if (earliestPriority === 2) earliestTimeSlot = 'afternoon';
+    else if (earliestPriority === 3) earliestTimeSlot = 'evening';
+
+    // Add ONE time icon at the VERY TOP
+    const iconY = BASE_TOP + CAP_TOP / 2;
+    positions.push({
+      timeSlot: earliestTimeSlot,  // Use earliest time slot (🌤️, ☀️, or 🌙)
+      iconY,
+      isCapCenter: true,
     });
 
-    // Add icons for pending time slots
-    pendingTimeSlots.forEach((timeSlot, idx) => {
-      const absoluteIndex = timeSlotFirstIndex[timeSlot];
-
-      if (completedItems.length === 0 && idx === 0) {
-        // No completed items - first pending slot goes at cap center
-        const iconY = BASE_TOP + CAP_TOP / 2;
-        positions.push({
-          timeSlot,
-          iconY,
-          isCapCenter: true,
-        });
-      } else if (absoluteIndex > 0) {
-        // Position between previous anchor and current anchor
-        const prevAnchorY = todayNext[absoluteIndex - 1]?.y ?? BASE_TOP;
-        const currentAnchorY = todayNext[absoluteIndex]?.y ?? (prevAnchorY + ITEM_BLOCK_H);
-        const iconY = (prevAnchorY + currentAnchorY) / 2;
-
-        positions.push({
-          timeSlot,
-          iconY,
-          isCapCenter: false,
-        });
-      }
-    });
-
-    console.log('🔍 Time slot icon calculation (SORTED):', {
+    console.log('🔍 Time slot icon (TOP ICON):', {
       completedCount: completedItems.length,
-      pendingTimeSlots,
+      pendingCount: pendingItems.length,
+      earliestTimeSlot,
+      allTimeSlots,
       positions: positions.map(p => ({ slot: p.timeSlot, y: p.iconY })),
     });
 
