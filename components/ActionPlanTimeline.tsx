@@ -367,44 +367,57 @@ export default function ActionPlanTimeline({
     setAnchors(todayNext);
 
     // Calculate time slot icon positions
-    // RULE: ONE time icon at the VERY TOP - based on the EARLIEST time slot in the list
-    // (morning beats afternoon beats evening)
+    // RULE: Separate icon for EACH time section (morning/afternoon/evening)
+    // NO icons for completed section - only for pending items
     const positions: TimeSlotPosition[] = [];
 
     // Find completed and pending items
     const completedItems = todayAssignments.filter(a => a.is_completed);
-    const pendingItems = todayAssignments.filter(a => !a.is_completed);
+    const pendingItems = todayAssignments.filter(a => !a.is_completed && a.id !== -1); // Exclude Weekly Check-in
 
-    // Get the EARLIEST time slot from ALL items (not just first pending)
-    // This ensures the icon matches the earliest original time slot
-    const allTimeSlots = todayAssignments
-      .filter(a => a.id !== -1) // Exclude Weekly Check-in
-      .map(a => (a as any).time_slot || 'morning');
-
-    // Find earliest time slot (morning = 1, afternoon = 2, evening = 3)
-    let earliestTimeSlot = 'morning';
-    const earliestPriority = Math.min(
-      ...allTimeSlots.map(slot => TIME_SLOT_PRIORITY[slot] || 4)
-    );
-
-    // Map priority back to time slot name
-    if (earliestPriority === 1) earliestTimeSlot = 'morning';
-    else if (earliestPriority === 2) earliestTimeSlot = 'afternoon';
-    else if (earliestPriority === 3) earliestTimeSlot = 'evening';
-
-    // Add ONE time icon at the VERY TOP
-    const iconY = BASE_TOP + CAP_TOP / 2;
-    positions.push({
-      timeSlot: earliestTimeSlot,  // Use earliest time slot (🌤️, ☀️, or 🌙)
-      iconY,
-      isCapCenter: true,
+    // Group pending items by time slot
+    const timeSlotGroups: { [key: string]: Assignment[] } = {};
+    pendingItems.forEach(item => {
+      const slot = (item as any).time_slot || 'anytime';
+      if (!timeSlotGroups[slot]) {
+        timeSlotGroups[slot] = [];
+      }
+      timeSlotGroups[slot].push(item);
     });
 
-    console.log('🔍 Time slot icon (TOP ICON):', {
+    // Sort time slots in order: morning, afternoon, evening, anytime
+    const orderedSlots = ['morning', 'afternoon', 'evening', 'anytime'].filter(
+      slot => timeSlotGroups[slot] && timeSlotGroups[slot].length > 0
+    );
+
+    // Calculate icon positions for each time section
+    // Start after completed items (skip completed section)
+    let currentIndex = completedItems.length + 1; // +1 for Weekly Check-in
+
+    orderedSlots.forEach((slot, slotIndex) => {
+      const itemsInSlot = timeSlotGroups[slot];
+      if (!itemsInSlot || itemsInSlot.length === 0) return;
+
+      // Find the first item in this time slot to get its anchor position
+      const firstItemInSlot = itemsInSlot[0];
+      const anchorForSlot = todayNext.find(a => a.id === firstItemInSlot.id.toString());
+
+      if (anchorForSlot) {
+        // Position the icon at the TOP of this time section (above first item)
+        const iconY = anchorForSlot.y - ITEM_BLOCK_H / 2 - CAP_TOP / 2;
+        positions.push({
+          timeSlot: slot,
+          iconY: iconY,
+          isCapCenter: slotIndex === 0, // First slot gets cap center styling
+        });
+      }
+    });
+
+    console.log('🔍 Time slot icons (per section):', {
       completedCount: completedItems.length,
       pendingCount: pendingItems.length,
-      earliestTimeSlot,
-      allTimeSlots,
+      timeSlotGroups: Object.keys(timeSlotGroups).map(k => ({ slot: k, count: timeSlotGroups[k].length })),
+      orderedSlots,
       positions: positions.map(p => ({ slot: p.timeSlot, y: p.iconY })),
     });
 
