@@ -786,9 +786,53 @@ export default function PersonalizeScreen() {
           <View style={styles.milestoneVector1} />
           <View style={styles.milestoneVector2} />
 
-          {/* Progress line */}
+          {/* Progress line - gray background */}
           <View style={styles.progressLine} />
-          <View style={styles.progressLineActive} />
+
+          {/* Active progress line - dynamic width based on streak */}
+          {(() => {
+            // Calculate progress percentage across all milestones
+            // Milestones are at positions: Day 7, 30, 60, 180, 270
+            // 5 milestones = 4 gaps, each gap is 25% of the line
+            const milestoneDays = [7, 30, 60, 180, 270];
+            let progressPercent = 0;
+
+            if (currentStreakDays >= 270) {
+              progressPercent = 100;
+            } else if (currentStreakDays >= 180) {
+              // Between Peak (180) and Glow (270) - 75% to 100%
+              progressPercent = 75 + ((currentStreakDays - 180) / (270 - 180)) * 25;
+            } else if (currentStreakDays >= 60) {
+              // Between Rise (60) and Peak (180) - 50% to 75%
+              progressPercent = 50 + ((currentStreakDays - 60) / (180 - 60)) * 25;
+            } else if (currentStreakDays >= 30) {
+              // Between Grow (30) and Rise (60) - 25% to 50%
+              progressPercent = 25 + ((currentStreakDays - 30) / (60 - 30)) * 25;
+            } else if (currentStreakDays >= 7) {
+              // Between Seed (7) and Grow (30) - 0% to 25%
+              progressPercent = ((currentStreakDays - 7) / (30 - 7)) * 25;
+            } else if (currentStreakDays >= 1) {
+              // Before Seed (1 to 7) - partial progress to first milestone
+              progressPercent = (currentStreakDays / 7) * 0; // Don't show progress before first milestone
+            }
+
+            // Clamp to valid range
+            progressPercent = Math.max(0, Math.min(100, progressPercent));
+
+            return (
+              <View style={styles.progressLineContainer}>
+                <LinearGradient
+                  colors={['#A29AEA', '#C17EC9', '#D482B9']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[
+                    styles.progressLineActive,
+                    { width: `${progressPercent}%` }
+                  ]}
+                />
+              </View>
+            );
+          })()}
 
           {milestones.map((milestone, index) => {
             const isCompleted = milestone.state === 'completed';
@@ -1559,13 +1603,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#D9D9D9',
   },
   progressLineActive: {
+    height: 3,
+    borderRadius: 1.5,
+  },
+  progressLineContainer: {
     position: 'absolute',
     top: 5,
     left: 15,
-    width: 40,
+    right: 15,
     height: 3,
-    borderRadius: 1.5,
-    backgroundColor: COLORS.warmPurple,
   },
   milestoneItem: {
     alignItems: 'center',
