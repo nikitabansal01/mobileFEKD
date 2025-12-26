@@ -190,27 +190,10 @@ export default function PersonalizeScreen() {
   const celebrationScale = useRef(new Animated.Value(0)).current;
   const celebrationOpacity = useRef(new Animated.Value(0)).current;
 
-  // Trigger celebration animation
+  // Trigger celebration animation - DISABLED per user request
   const triggerCelebration = (emoji: string = '🎉') => {
-    setCelebrationEmoji(emoji);
-    setShowCelebration(true);
-    celebrationScale.setValue(0);
-    celebrationOpacity.setValue(1);
-
-    Animated.sequence([
-      Animated.spring(celebrationScale, {
-        toValue: 1,
-        friction: 3,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(celebrationOpacity, {
-        toValue: 0,
-        duration: 800,
-        delay: 500,
-        useNativeDriver: true,
-      }),
-    ]).start(() => setShowCelebration(false));
+    // Animation disabled - just do nothing
+    return;
   };
 
   // Modal visibility state
@@ -568,15 +551,17 @@ export default function PersonalizeScreen() {
       switch (rewardId) {
         case 'streak_freeze':
           return rewardState === 'claimed'
-            ? { buttonText: "Collected ✓", buttonStyle: 'collected' as const, hasButton: false }
+            ? { buttonText: "", buttonStyle: 'collected' as const, hasButton: false }
             : { buttonText: "Claim", buttonStyle: 'action' as const, hasButton: true };
         case 'plan_refresh_2x':
           return rewardState === 'claimed'
-            ? { buttonText: "Collected ✓", buttonStyle: 'collected' as const, hasButton: false }
+            ? { buttonText: "", buttonStyle: 'collected' as const, hasButton: false }
             : { buttonText: "Claim", buttonStyle: 'action' as const, hasButton: true };
         case 'symptom_patterns':
-          // ALWAYS show "View Insights" button for both available and claimed
-          return { buttonText: "View Insights", buttonStyle: 'action' as const, hasButton: true };
+          // When unlocked, just show checkmark - no View Insights button (effect is in Insights screen)
+          return rewardState === 'claimed'
+            ? { buttonText: "", buttonStyle: 'collected' as const, hasButton: false }
+            : { buttonText: "Claim", buttonStyle: 'action' as const, hasButton: true };
         case 'first_improvement':
           return { buttonText: "Claimed 🎉", buttonStyle: 'collected' as const, hasButton: true };
         default:
@@ -1719,7 +1704,8 @@ const styles = StyleSheet.create({
   // Your Status / Preferences Section
   preferencesSection: {
     marginHorizontal: scale(20),
-    marginTop: verticalScale(20),
+    marginTop: verticalScale(12),  // Reduced from 20 to balance spacing
+    marginBottom: verticalScale(16),  // Added bottom margin
     backgroundColor: '#F8F4FF',
     borderRadius: moderateScale(16),
     padding: scale(16),
@@ -1728,13 +1714,13 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(16, 1.5),
     fontFamily: FONT_FAMILIES['Inter-SemiBold'],
     color: '#4A3D5C',
-    marginBottom: verticalScale(12),
+    marginBottom: verticalScale(8),  // Reduced from 12 for tighter spacing
   },
   preferenceItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: verticalScale(10),
+    paddingVertical: verticalScale(8),  // Reduced from 10 for consistent spacing
     borderBottomWidth: 1,
     borderBottomColor: '#E8E1F0',
   },
