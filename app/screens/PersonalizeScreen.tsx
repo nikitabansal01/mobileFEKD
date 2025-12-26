@@ -4,8 +4,8 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
-import React, { useState, useCallback } from "react";
-import { ActivityIndicator, Alert, Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import { ActivityIndicator, Alert, Animated, Dimensions, Easing, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { FONT_FAMILIES, useAppFonts } from '../../constants/fonts';
@@ -182,6 +182,35 @@ export default function PersonalizeScreen() {
   const [preferencesData, setPreferencesData] = useState<AllPreferencesResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [claimingRewardId, setClaimingRewardId] = useState<string | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationEmoji, setCelebrationEmoji] = useState('🎉');
+
+  // Animation values for celebration
+  const celebrationScale = useRef(new Animated.Value(0)).current;
+  const celebrationOpacity = useRef(new Animated.Value(0)).current;
+
+  // Trigger celebration animation
+  const triggerCelebration = (emoji: string = '🎉') => {
+    setCelebrationEmoji(emoji);
+    setShowCelebration(true);
+    celebrationScale.setValue(0);
+    celebrationOpacity.setValue(1);
+
+    Animated.sequence([
+      Animated.spring(celebrationScale, {
+        toValue: 1,
+        friction: 3,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(celebrationOpacity, {
+        toValue: 0,
+        duration: 800,
+        delay: 500,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setShowCelebration(false));
+  };
 
   // Modal visibility state
   const [activeModal, setActiveModal] = useState<PreferenceType | null>(null);
@@ -258,6 +287,22 @@ export default function PersonalizeScreen() {
         // Refresh rewards data
         await loadRewardsData();
         console.log('Reward claimed:', result.title);
+
+        // Trigger celebration animation with reward-specific emoji
+        const emojiMap: Record<string, string> = {
+          'streak_freeze': '🧊',
+          'diet_prefs': '🥗',
+          'food_allergies': '🥜',
+          'cuisine_prefs': '🍜',
+          'dine_out': '🍔',
+          'ethnicity': '🌍',
+          'bmi_ratio': '📊',
+          'cravings_healthy': '🍫',
+          'symptom_patterns': '✨',
+          'plan_refresh_2x': '🔄',
+          'first_improvement': '🏆',
+        };
+        triggerCelebration(emojiMap[rewardId] || '🎉');
 
         // Handle different reward types
         switch (rewardId) {
@@ -833,6 +878,21 @@ export default function PersonalizeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={isAndroid ? [] : []}>
+      {/* Celebration Overlay */}
+      {showCelebration && (
+        <Animated.View
+          style={[
+            styles.celebrationOverlay,
+            {
+              opacity: celebrationOpacity,
+              transform: [{ scale: celebrationScale }],
+            }
+          ]}
+          pointerEvents="none"
+        >
+          <Text style={styles.celebrationEmoji}>{celebrationEmoji}</Text>
+        </Animated.View>
+      )}
       <StatusBar style="dark" backgroundColor={isAndroid ? COLORS.background : COLORS.background} />
       <ScrollView
         style={styles.scrollView}
@@ -1591,5 +1651,20 @@ const styles = StyleSheet.create({
     color: '#8B5CF6',
     maxWidth: '50%',
     textAlign: 'right',
+  },
+  // Celebration overlay styles
+  celebrationOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  celebrationEmoji: {
+    fontSize: moderateScale(100),
   },
 });
