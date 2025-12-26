@@ -97,19 +97,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }, [navigation])
   );
 
-  // Refetch data when returning with shouldRefresh param (e.g., after action replacement)
+  // Always refetch data when screen gains focus (e.g., after action replacement, completion, etc.)
   useFocusEffect(
     React.useCallback(() => {
-      const shouldRefresh = route?.params?.shouldRefresh;
-      if (shouldRefresh) {
-        console.log('🔄 Refreshing data after action replacement');
-        // Reset the flag and refetch
-        initialDataLoadedRef.current = false;
-        loadHomeData();
-        // Clear the param to prevent re-fetch on future focus
-        navigation.setParams({ shouldRefresh: false } as any);
-      }
-    }, [route?.params?.shouldRefresh])
+      console.log('🔄 HomeScreen focused - refreshing data');
+      loadHomeData();
+    }, [])
   );
 
   // Reset inactivity timer - Shows Auvra modal after configured seconds from backend
