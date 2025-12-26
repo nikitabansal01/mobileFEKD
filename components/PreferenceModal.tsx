@@ -18,6 +18,8 @@ import {
     StyleSheet,
     Dimensions,
     ActivityIndicator,
+    TextInput,
+    Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
@@ -53,6 +55,8 @@ const PreferenceModal: React.FC<PreferenceModalProps> = ({
     );
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [customEntry, setCustomEntry] = useState('');
+    const [showCustomInput, setShowCustomInput] = useState(false);
 
     // Initialize with current value when modal opens
     useEffect(() => {
@@ -81,6 +85,22 @@ const PreferenceModal: React.FC<PreferenceModalProps> = ({
             return (selectedValue as string[]).includes(optionId);
         }
         return selectedValue === optionId;
+    };
+
+    const addCustomEntry = () => {
+        if (!customEntry.trim()) return;
+
+        const customId = `custom_${customEntry.toLowerCase().replace(/\s+/g, '_')}`;
+        if (isMultiSelect) {
+            const current = selectedValue as string[];
+            if (!current.includes(customId)) {
+                setSelectedValue([...current, customId]);
+            }
+        } else {
+            setSelectedValue(customId);
+        }
+        setCustomEntry('');
+        setShowCustomInput(false);
     };
 
     const handleSave = async () => {
@@ -147,6 +167,43 @@ const PreferenceModal: React.FC<PreferenceModalProps> = ({
                             </TouchableOpacity>
                         ))}
                     </ScrollView>
+
+                    {/* Custom Entry Section */}
+                    <View style={styles.customEntryContainer}>
+                        {showCustomInput ? (
+                            <View style={styles.customInputRow}>
+                                <TextInput
+                                    style={styles.customInput}
+                                    placeholder="Enter your own..."
+                                    placeholderTextColor="#999"
+                                    value={customEntry}
+                                    onChangeText={setCustomEntry}
+                                    onSubmitEditing={addCustomEntry}
+                                    autoFocus
+                                />
+                                <TouchableOpacity
+                                    style={styles.addButton}
+                                    onPress={addCustomEntry}
+                                >
+                                    <Text style={styles.addButtonText}>Add</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.cancelButton}
+                                    onPress={() => setShowCustomInput(false)}
+                                >
+                                    <Text style={styles.cancelButtonText}>✕</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <TouchableOpacity
+                                style={styles.addOtherButton}
+                                onPress={() => setShowCustomInput(true)}
+                            >
+                                <Text style={styles.addOtherIcon}>➕</Text>
+                                <Text style={styles.addOtherText}>Add Other</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
 
                     {/* Error */}
                     {error && <Text style={styles.errorText}>{error}</Text>}
@@ -274,6 +331,67 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: moderateScale(16),
         fontWeight: '700',
+    },
+    // Custom entry styles
+    customEntryContainer: {
+        paddingHorizontal: moderateScale(16),
+        paddingVertical: verticalScale(12),
+        borderTopWidth: 1,
+        borderTopColor: '#F0F0F0',
+    },
+    customInputRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: scale(8),
+    },
+    customInput: {
+        flex: 1,
+        backgroundColor: '#F8F8F8',
+        borderRadius: moderateScale(12),
+        paddingHorizontal: scale(16),
+        paddingVertical: verticalScale(12),
+        fontSize: moderateScale(15),
+        color: '#333',
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+    },
+    addButton: {
+        backgroundColor: '#A29AEA',
+        paddingHorizontal: scale(16),
+        paddingVertical: verticalScale(12),
+        borderRadius: moderateScale(12),
+    },
+    addButtonText: {
+        color: '#FFFFFF',
+        fontSize: moderateScale(14),
+        fontWeight: '600',
+    },
+    cancelButton: {
+        padding: moderateScale(8),
+    },
+    cancelButtonText: {
+        fontSize: moderateScale(18),
+        color: '#999',
+    },
+    addOtherButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: verticalScale(14),
+        backgroundColor: '#F8F8F8',
+        borderRadius: moderateScale(12),
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderStyle: 'dashed',
+    },
+    addOtherIcon: {
+        fontSize: moderateScale(16),
+        marginRight: scale(8),
+    },
+    addOtherText: {
+        fontSize: moderateScale(15),
+        color: '#666',
+        fontWeight: '500',
     },
 });
 
