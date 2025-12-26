@@ -568,12 +568,12 @@ export default function PersonalizeScreen() {
       switch (rewardId) {
         case 'streak_freeze':
           return rewardState === 'claimed'
-            ? { buttonText: "Active ✓", buttonStyle: 'collected' as const, hasButton: true }
-            : { buttonText: "Collected ✓", buttonStyle: 'collected' as const, hasButton: true };
+            ? { buttonText: "Collected ✓", buttonStyle: 'collected' as const, hasButton: false }
+            : { buttonText: "Claim", buttonStyle: 'action' as const, hasButton: true };
         case 'plan_refresh_2x':
           return rewardState === 'claimed'
-            ? { buttonText: "Active ✓", buttonStyle: 'collected' as const, hasButton: true }
-            : { buttonText: "Activated ✓", buttonStyle: 'collected' as const, hasButton: true };
+            ? { buttonText: "Collected ✓", buttonStyle: 'collected' as const, hasButton: false }
+            : { buttonText: "Claim", buttonStyle: 'action' as const, hasButton: true };
         case 'symptom_patterns':
           // ALWAYS show "View Insights" button for both available and claimed
           return { buttonText: "View Insights", buttonStyle: 'action' as const, hasButton: true };
@@ -612,13 +612,20 @@ export default function PersonalizeScreen() {
     return null; // or a loading component
   }
 
-  // Sample data based on Figma design
+  // Dynamic milestones based on current streak
+  const getMilestoneActive = (dayThreshold: number, nextThreshold?: number) => {
+    if (nextThreshold) {
+      return currentStreakDays >= dayThreshold && currentStreakDays < nextThreshold;
+    }
+    return currentStreakDays >= dayThreshold;
+  };
+
   const milestones: Milestone[] = [
-    { id: "1", name: "Seed", day: "Day 7", isActive: true },
-    { id: "2", name: "Grow", day: "Day 30", isActive: false },
-    { id: "3", name: "Rise", day: "Day 60", isActive: false },
-    { id: "4", name: "Peak", day: "Day 180", isActive: false },
-    { id: "5", name: "Glow", day: "Day 270", isActive: false },
+    { id: "1", name: "Seed", day: "Day 7", isActive: getMilestoneActive(0, 30) },
+    { id: "2", name: "Grow", day: "Day 30", isActive: getMilestoneActive(30, 60) },
+    { id: "3", name: "Rise", day: "Day 60", isActive: getMilestoneActive(60, 180) },
+    { id: "4", name: "Peak", day: "Day 180", isActive: getMilestoneActive(180, 270) },
+    { id: "5", name: "Glow", day: "Day 270", isActive: getMilestoneActive(270) },
   ];
 
   const renderLabsSection = () => (
