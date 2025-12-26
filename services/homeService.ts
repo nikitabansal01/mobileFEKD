@@ -610,8 +610,9 @@ class HomeService {
   async refreshAllIncomplete(): Promise<{
     success: boolean;
     message: string;
-    replaced_count: number;
-    refresh_status: { limit: number; used: number; remaining: number; can_refresh: boolean };
+    error?: string;
+    replaced_count?: number;
+    refresh_status?: { limit: number; used: number; remaining: number; can_refresh: boolean };
   } | null> {
     try {
       const token = await getAuthToken();
@@ -632,17 +633,27 @@ class HomeService {
       });
 
       if (!response.ok) {
+        // Handle rate limit (429) - no more refreshes available
+        if (response.status === 429) {
+          console.log('⚠️ No more refreshes available today');
+          return {
+            success: false,
+            error: 'rate_limit',
+            message: 'No more refreshes available today. Try again tomorrow! 🌙'
+          };
+        }
+
         const errorText = await response.text();
         console.error('❌ Failed to refresh all:', errorText);
-        throw new Error(`Failed to refresh all: ${response.status} - ${errorText}`);
+        return { success: false, error: 'server_error', message: 'Unable to refresh. Please try again.' };
       }
 
       const result = await response.json();
       console.log('✅ Successfully refreshed all:', result);
-      return result;
+      return { success: true, ...result };
     } catch (error) {
       console.error('❌ Error refreshing all:', error);
-      return null;
+      return { success: false, error: 'network_error', message: 'Network error. Check your connection.' };
     }
   }
 }

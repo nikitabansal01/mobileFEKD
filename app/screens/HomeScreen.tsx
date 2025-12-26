@@ -1048,13 +1048,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                         result.message,
                         [{ text: 'OK' }]
                       );
-                      setRefreshStatus(result.refresh_status);
+                      if (result.refresh_status) {
+                        setRefreshStatus(result.refresh_status);
+                      }
                       // Reload assignments
                       const newAssignments = await homeService.getTodayAssignments();
                       setAssignments(newAssignments);
                       if (newAssignments) wireUpActionPlan(newAssignments);
+                    } else if (result?.error === 'rate_limit') {
+                      // Show friendly no-refresh message
+                      Alert.alert(
+                        '🌙 Come Back Tomorrow!',
+                        result.message || 'No more refreshes available today.',
+                        [{ text: 'Got it!' }]
+                      );
                     } else {
-                      Alert.alert('Error', 'Could not refresh actions. Try again.');
+                      Alert.alert('Oops!', result?.message || 'Could not refresh actions. Try again.');
                     }
                   } catch (error: any) {
                     Alert.alert('Error', error?.message || 'Could not refresh actions');
