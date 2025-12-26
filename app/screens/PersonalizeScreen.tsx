@@ -1515,13 +1515,12 @@ const styles = StyleSheet.create({
   },
   milestonesContainer: {
     width: '100%',
-    paddingTop: verticalScale(40),
-    paddingBottom: verticalScale(40),
+    paddingTop: verticalScale(20),    // Reduced from 40
+    paddingBottom: verticalScale(16), // Reduced from 40
     paddingHorizontal: scale(20),
     backgroundColor: COLORS.white,
     borderRadius: 10,
     position: 'relative',
-    // overflow: 'hidden', // Remove to allow animation to extend beyond
     zIndex: 2,
     marginHorizontal: isAndroid ? 0 : undefined,
   },
@@ -1604,7 +1603,8 @@ const styles = StyleSheet.create({
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: verticalScale(26),
+    marginTop: verticalScale(8),     // Added top margin
+    marginBottom: verticalScale(16), // Reduced from 26
     gap: moderateScale(6),
   },
   dividerLine: {
@@ -1737,11 +1737,11 @@ const styles = StyleSheet.create({
   // Your Status / Preferences Section
   preferencesSection: {
     marginHorizontal: scale(20),
-    marginTop: verticalScale(12),  // Reduced from 20 to balance spacing
-    marginBottom: verticalScale(16),  // Added bottom margin
+    marginTop: verticalScale(4),   // Reduced from 12 - closer to milestones
+    marginBottom: verticalScale(8), // Reduced from 16 - closer to Seed Rewards
     backgroundColor: '#F8F4FF',
     borderRadius: moderateScale(16),
-    padding: scale(16),
+    padding: scale(14),  // Slightly reduced from 16
   },
   preferencesSectionTitle: {
     fontSize: moderateScale(16, 1.5),
