@@ -819,6 +819,102 @@ export default function PersonalizeScreen() {
         {renderLabsSection()}
         {renderStreakSection()}
 
+        {/* Your Preferences & Tokens Section */}
+        {((rewardsData?.freeze_count ?? 0) > 0 || preferencesData) && (
+          <View style={styles.preferencesSection}>
+            <Text style={styles.preferencesSectionTitle}>Your Status</Text>
+
+            {/* Freeze Tokens */}
+            {(rewardsData?.freeze_count ?? 0) > 0 && (
+              <View style={styles.preferenceItem}>
+                <Text style={styles.preferenceLabel}>🧊 Streak Freeze Tokens</Text>
+                <Text style={styles.preferenceValue}>{rewardsData?.freeze_count}</Text>
+              </View>
+            )}
+
+            {/* Refresh Status */}
+            {rewardsData?.refresh_status && (
+              <View style={styles.preferenceItem}>
+                <Text style={styles.preferenceLabel}>🔄 Daily Refreshes</Text>
+                <Text style={styles.preferenceValue}>
+                  {rewardsData.refresh_status.remaining}/{rewardsData.refresh_status.limit}
+                </Text>
+              </View>
+            )}
+
+            {/* Set Preferences */}
+            {preferencesData?.preferences?.diet_preference && (
+              <TouchableOpacity
+                style={styles.preferenceItem}
+                onPress={() => setActiveModal('diet_preference')}
+              >
+                <Text style={styles.preferenceLabel}>🥗 Diet</Text>
+                <Text style={styles.preferenceValue}>{preferencesData.preferences.diet_preference}</Text>
+              </TouchableOpacity>
+            )}
+
+            {preferencesData?.preferences?.food_allergies && preferencesData.preferences.food_allergies.length > 0 && (
+              <TouchableOpacity
+                style={styles.preferenceItem}
+                onPress={() => setActiveModal('food_allergies')}
+              >
+                <Text style={styles.preferenceLabel}>🚫 Allergies</Text>
+                <Text style={styles.preferenceValue}>{preferencesData.preferences.food_allergies.join(', ')}</Text>
+              </TouchableOpacity>
+            )}
+
+            {preferencesData?.preferences?.cuisine_preference && preferencesData.preferences.cuisine_preference.length > 0 && (
+              <TouchableOpacity
+                style={styles.preferenceItem}
+                onPress={() => setActiveModal('cuisine_preference')}
+              >
+                <Text style={styles.preferenceLabel}>🍽️ Cuisines</Text>
+                <Text style={styles.preferenceValue}>{preferencesData.preferences.cuisine_preference.join(', ')}</Text>
+              </TouchableOpacity>
+            )}
+
+            {preferencesData?.preferences?.cultural_background && (
+              <TouchableOpacity
+                style={styles.preferenceItem}
+                onPress={() => setActiveModal('cultural_background')}
+              >
+                <Text style={styles.preferenceLabel}>🌍 Background</Text>
+                <Text style={styles.preferenceValue}>{preferencesData.preferences.cultural_background}</Text>
+              </TouchableOpacity>
+            )}
+
+            {preferencesData?.preferences?.dine_out_frequency && (
+              <TouchableOpacity
+                style={styles.preferenceItem}
+                onPress={() => setActiveModal('dine_out_frequency')}
+              >
+                <Text style={styles.preferenceLabel}>🍴 Dining Out</Text>
+                <Text style={styles.preferenceValue}>{preferencesData.preferences.dine_out_frequency}</Text>
+              </TouchableOpacity>
+            )}
+
+            {preferencesData?.preferences?.body_metrics?.bmi && (
+              <TouchableOpacity
+                style={styles.preferenceItem}
+                onPress={() => setActiveModal('body_metrics')}
+              >
+                <Text style={styles.preferenceLabel}>📊 BMI</Text>
+                <Text style={styles.preferenceValue}>{preferencesData.preferences.body_metrics.bmi.toFixed(1)}</Text>
+              </TouchableOpacity>
+            )}
+
+            {preferencesData?.preferences?.cravings && preferencesData.preferences.cravings.length > 0 && (
+              <TouchableOpacity
+                style={styles.preferenceItem}
+                onPress={() => setActiveModal('cravings')}
+              >
+                <Text style={styles.preferenceLabel}>🍫 Cravings</Text>
+                <Text style={styles.preferenceValue}>{preferencesData.preferences.cravings.join(', ')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
         <View style={styles.rewardsContainer}>
           {/* Only show if there are available/claimed rewards */}
           {seedRewards.length > 0 && (
@@ -1436,5 +1532,39 @@ const styles = StyleSheet.create({
     lineHeight: moderateScale(12.5, 1.5),
     includeFontPadding: isAndroid ? false : undefined,
     textAlignVertical: isAndroid ? 'center' : undefined,
+  },
+  // Your Status / Preferences Section
+  preferencesSection: {
+    marginHorizontal: scale(20),
+    marginTop: verticalScale(20),
+    backgroundColor: '#F8F4FF',
+    borderRadius: moderateScale(16),
+    padding: scale(16),
+  },
+  preferencesSectionTitle: {
+    fontSize: moderateScale(16, 1.5),
+    fontFamily: FONT_FAMILIES['Inter-SemiBold'],
+    color: '#4A3D5C',
+    marginBottom: verticalScale(12),
+  },
+  preferenceItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: verticalScale(10),
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E1F0',
+  },
+  preferenceLabel: {
+    fontSize: moderateScale(14, 1.5),
+    fontFamily: FONT_FAMILIES['Inter-Regular'],
+    color: '#6B5B7A',
+  },
+  preferenceValue: {
+    fontSize: moderateScale(14, 1.5),
+    fontFamily: FONT_FAMILIES['Inter-SemiBold'],
+    color: '#8B5CF6',
+    maxWidth: '50%',
+    textAlign: 'right',
   },
 });

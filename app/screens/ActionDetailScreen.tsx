@@ -12,6 +12,7 @@ import AppIntroSlider from "react-native-app-intro-slider";
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { moderateScale, verticalScale } from 'react-native-size-matters';
 import homeService from '@/services/homeService';
+import { rewardService, RefreshStatus } from '@/services/rewardService';
 
 // Replacement reasons for "Not for me" feedback
 const REPLACEMENT_REASONS = [
@@ -100,6 +101,26 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
   const [selectedReason, setSelectedReason] = useState<typeof REPLACEMENT_REASONS[number]['id'] | null>(null);
   const [customReason, setCustomReason] = useState('');
   const [isReplacing, setIsReplacing] = useState(false);
+
+  // Refresh status for 2x plan refresh reward
+  const [refreshStatus, setRefreshStatus] = useState<RefreshStatus | null>(null);
+
+  // Fetch refresh status on screen focus
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchRefreshStatus = async () => {
+        try {
+          const rewardsData = await rewardService.getRewardsStatus();
+          if (rewardsData?.refresh_status) {
+            setRefreshStatus(rewardsData.refresh_status);
+          }
+        } catch (error) {
+          console.log('Could not fetch refresh status:', error);
+        }
+      };
+      fetchRefreshStatus();
+    }, [])
+  );
 
   // Auto-slide logic for Advice Slider
   React.useEffect(() => {
@@ -708,10 +729,29 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                 {/* Replace Option (for "Skipped" or "Not for me") */}
                 {(selectedFeedback === 'skipped' || selectedFeedback === 'not_for_me') && (
                   <TouchableOpacity
-                    style={styles.replaceButton}
-                    onPress={() => setShowReplaceModal(true)}
+                    style={[
+                      styles.replaceButton,
+                      refreshStatus && !refreshStatus.can_refresh && styles.replaceButtonDisabled
+                    ]}
+                    onPress={() => {
+                      if (refreshStatus && !refreshStatus.can_refresh) {
+                        Alert.alert(
+                          'No Refreshes Left',
+                          `You've used all ${refreshStatus.limit} refresh${refreshStatus.limit > 1 ? 'es' : ''} for today. Come back tomorrow!`,
+                          [{ text: 'OK' }]
+                        );
+                        return;
+                      }
+                      setShowReplaceModal(true);
+                    }}
+                    disabled={refreshStatus ? !refreshStatus.can_refresh : false}
                   >
-                    <Text style={styles.replaceButtonText}>🔄 Get a different action</Text>
+                    <Text style={[
+                      styles.replaceButtonText,
+                      refreshStatus && !refreshStatus.can_refresh && styles.replaceButtonTextDisabled
+                    ]}>
+                      🔄 Get a different action {refreshStatus ? `(${refreshStatus.remaining}/${refreshStatus.limit} left)` : ''}
+                    </Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -1390,6 +1430,13 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(13, 1.5),
     fontFamily: 'Inter600',
     color: '#E65100',
+  },
+  replaceButtonDisabled: {
+    backgroundColor: '#E0E0E0',
+    borderColor: '#BDBDBD',
+  },
+  replaceButtonTextDisabled: {
+    color: '#9E9E9E',
   },
 
   // ============ REPLACE MODAL STYLES ============

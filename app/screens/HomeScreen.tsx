@@ -4,6 +4,7 @@ import AuvraChatModal from '@/components/AuvraChatModal';
 import CalendarBottomSheet from '@/components/CalendarBottomSheet';
 import apiPromiseManager from '@/services/apiPromiseManager';
 import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse, ActionPlanResponse, ActionPlanItem } from '@/services/homeService';
+import { rewardService, RefreshStatus } from '@/services/rewardService';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -72,6 +73,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const [feedbackPromptSeconds, setFeedbackPromptSeconds] = useState<number>(30); // Default 30 seconds
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
+  // Refresh status for 2x plan refresh reward
+  const [refreshStatus, setRefreshStatus] = useState<RefreshStatus | null>(null);
+
   // Auvra chat modal state
   const [showAuvraChat, setShowAuvraChat] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -105,13 +109,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       // Directly call APIs and update state (no duplicate prevention)
       const refreshData = async () => {
         try {
-          const [cycleData, assignmentsData] = await Promise.all([
+          const [cycleData, assignmentsData, rewardsData] = await Promise.all([
             homeService.getCyclePhase(),
             homeService.getTodayAssignments(),
+            rewardService.getRewardsStatus().catch(() => null), // Graceful fail
           ]);
 
           setCycleInfo(cycleData?.cycle_info || null);
           setAssignments(assignmentsData);
+
+          // Set refresh status from rewards API
+          if (rewardsData?.refresh_status) {
+            setRefreshStatus(rewardsData.refresh_status);
+          }
 
           if (assignmentsData?.hormone_stats) {
             setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
@@ -120,7 +130,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           if (assignmentsData) {
             wireUpActionPlan(assignmentsData);
           }
-          console.log('✅ Data refreshed successfully');
+          console.log('✅ Data refreshed successfully, refresh status:', rewardsData?.refresh_status);
         } catch (error) {
           console.error('❌ Failed to refresh data:', error);
         }
@@ -953,7 +963,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         {/* Today's Action Plan */}
         <View style={styles.actionPlanSection}>
           <View style={styles.actionPlanHeader}>
-            <Text style={styles.sectionTitle}>Today's Action Plan</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={styles.sectionTitle}>Today's Action Plan</Text>
+              {/* Refresh count badge */}
+              {refreshStatus && (
+                <View style={styles.refreshBadge}>
+                  <Text style={styles.refreshBadgeText}>
+                    🔄 {refreshStatus.remaining}/{refreshStatus.limit}
+                  </Text>
+                </View>
+              )}
+            </View>
             <Text style={styles.dateText}>
               {assignments?.date ? formatDate(assignments.date) : '15th July, 2025'}
             </Text>
@@ -1526,6 +1546,19 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(1.7),
     fontFamily: 'Inter400',
     color: '#6F6F6F',
+  },
+  // Refresh count badge for 2x plan refresh reward
+  refreshBadge: {
+    backgroundColor: '#E8DEF8',
+    paddingHorizontal: scale(8),
+    paddingVertical: verticalScale(3),
+    borderRadius: scale(12),
+    marginLeft: scale(8),
+  },
+  refreshBadgeText: {
+    fontSize: responsiveFontSize(1.3),
+    fontFamily: 'Inter500',
+    color: '#6750A4',
   },
 });
 
