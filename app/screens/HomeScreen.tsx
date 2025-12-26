@@ -98,10 +98,34 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   );
 
   // Always refetch data when screen gains focus (e.g., after action replacement, completion, etc.)
+  // Use loadHomeDataWithoutLoading to avoid duplicate-prevention and force fresh API call
   useFocusEffect(
     React.useCallback(() => {
-      console.log('🔄 HomeScreen focused - refreshing data');
-      loadHomeData();
+      console.log('🔄 HomeScreen focused - forcing data refresh');
+      // Directly call APIs and update state (no duplicate prevention)
+      const refreshData = async () => {
+        try {
+          const [cycleData, assignmentsData] = await Promise.all([
+            homeService.getCyclePhase(),
+            homeService.getTodayAssignments(),
+          ]);
+
+          setCycleInfo(cycleData?.cycle_info || null);
+          setAssignments(assignmentsData);
+
+          if (assignmentsData?.hormone_stats) {
+            setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
+          }
+
+          if (assignmentsData) {
+            wireUpActionPlan(assignmentsData);
+          }
+          console.log('✅ Data refreshed successfully');
+        } catch (error) {
+          console.error('❌ Failed to refresh data:', error);
+        }
+      };
+      refreshData();
     }, [])
   );
 
