@@ -4,11 +4,16 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
-import React, { useState } from "react";
-import { Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useState, useCallback } from "react";
+import { ActivityIndicator, Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { FONT_FAMILIES, useAppFonts } from '../../constants/fonts';
+import { rewardService, RewardsStatusResponse } from '../../services/rewardService';
+import { preferencesService, AllPreferencesResponse, PreferenceType } from '../../services/preferencesService';
+import PreferenceModal from '../../components/PreferenceModal';
+import BodyMetricsModal from '../../components/BodyMetricsModal';
+import CravingsModal from '../../components/CravingsModal';
 // Constants from Figma design
 const BACKGROUND_VECTOR_IMAGE = "http://localhost:3845/assets/cf926b4d5ec2719e28f1af07e084ed30c131abe4.svg";
 // const MILESTONE_BG_IMAGE = require("../../assets/images/milestone-bg.png");
@@ -172,22 +177,47 @@ type RootStackParamList = {
 export default function PersonalizeScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const fontsLoaded = useAppFonts();
-  const [currentStreakDays, setCurrentStreakDays] = useState(9); // Current streak from the UI
-  const [claimedRewards, setClaimedRewards] = useState<Set<string>>(new Set());
+  const [currentStreakDays, setCurrentStreakDays] = useState(0);
+  const [rewardsData, setRewardsData] = useState<RewardsStatusResponse | null>(null);
+  const [preferencesData, setPreferencesData] = useState<AllPreferencesResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [claimingRewardId, setClaimingRewardId] = useState<string | null>(null);
 
-  // Disable back gesture to prevent interference with scrolling
+  // Modal visibility state
+  const [activeModal, setActiveModal] = useState<PreferenceType | null>(null);
+
+  // Load rewards and preferences data when screen is focused
+  const loadRewardsData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [rewards, preferences] = await Promise.all([
+        rewardService.getRewardsStatus(),
+        preferencesService.getAllPreferences().catch(() => null),
+      ]);
+      setRewardsData(rewards);
+      setCurrentStreakDays(rewards.current_streak);
+      if (preferences) setPreferencesData(preferences);
+    } catch (error) {
+      console.error('Error loading rewards:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Disable back gesture and load data on focus
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
+      loadRewardsData();
       navigation.setOptions({
         gestureEnabled: false,
       });
 
       return () => {
         navigation.setOptions({
-          gestureEnabled: false, // Keep disabled on Android
+          gestureEnabled: false,
         });
       };
-    }, [navigation])
+    }, [navigation, loadRewardsData])
   );
 
   const navigateToIndex = () => {
@@ -202,7 +232,7 @@ export default function PersonalizeScreen() {
           animationData={require("../../assets/animation/moving-glow-bg.json")}
           loop
           autoPlay
-          style={{...styles.streakBackgroundAnimation, objectFit: 'cover'}}
+          style={{ ...styles.streakBackgroundAnimation, objectFit: 'cover' }}
         />
       );
     } else {
@@ -212,30 +242,77 @@ export default function PersonalizeScreen() {
           source={require("../../assets/animation/moving-glow-bg.json")}
           autoPlay
           loop
-          style={{...styles.streakBackgroundAnimation, objectFit: 'cover'}}
+          style={{ ...styles.streakBackgroundAnimation, objectFit: 'cover' }}
         />
       );
     }
   };
 
-  const claimReward = (rewardId: string) => {
-    setClaimedRewards(prev => new Set([...prev, rewardId]));
+  const claimReward = async (rewardId: string) => {
+    if (claimingRewardId) return; // Prevent double tap
+
+    setClaimingRewardId(rewardId);
+    try {
+      const result = await rewardService.claimReward(rewardId);
+      if (result.success) {
+        // Refresh rewards data
+        await loadRewardsData();
+        console.log('Reward claimed:', result.title);
+
+        // Open preference modal for personalization rewards
+        const rewardToModalMap: Record<string, PreferenceType> = {
+          'diet_prefs': 'diet_preference',
+          'food_allergies': 'food_allergies',
+          'cuisine_prefs': 'cuisine_preference',
+          'dine_out': 'dine_out_frequency',
+          'ethnicity': 'cultural_background',
+          'bmi_ratio': 'body_metrics',
+          'cravings_healthy': 'cravings',
+        };
+
+        const modalType = rewardToModalMap[rewardId];
+        if (modalType) {
+          // Small delay for better UX
+          setTimeout(() => setActiveModal(modalType), 500);
+        }
+      }
+    } catch (error) {
+      console.error('Error claiming reward:', error);
+    } finally {
+      setClaimingRewardId(null);
+    }
   };
 
   const getRewardState = (item: RewardItem): RewardState => {
-    // If already claimed in state management, return claimed
-    if (claimedRewards.has(item.id)) {
-      return 'claimed';
+    // Use API data if available
+    if (rewardsData) {
+      // Map local IDs to API IDs (API uses different ID format)
+      const idMapping: Record<string, string> = {
+        "1": "streak_freeze",
+        "2": "diet_prefs",
+        "3": "food_allergies",
+        "4": "symptom_patterns",
+        "5": "plan_refresh_2x",
+        "6": "ethnicity",
+        "7": "cuisine_prefs",
+        "8": "dine_out",
+        "9": "bmi_ratio",
+        "10": "first_improvement",
+        "11": "plan_refresh_2x",
+        "12": "cravings_healthy",
+        "13": "first_improvement",
+      };
+
+      const apiId = idMapping[item.id];
+      const apiReward = rewardsData.rewards.find(r => r.id === apiId);
+      if (apiReward) {
+        if (apiReward.state === 'claimed') return 'claimed';
+        if (apiReward.state === 'available') return 'available';
+        return 'in_progress';
+      }
     }
-    // If marked as claimed in data, return claimed
-    if (item.state === 'claimed') {
-      return 'claimed';
-    }
-    // If streak requirement is met, return available
-    if (currentStreakDays >= item.requiredStreakDays) {
-      return 'available';
-    }
-    // Otherwise, return in_progress
+    // Fallback to local calculation
+    if (currentStreakDays >= item.requiredStreakDays) return 'available';
     return 'in_progress';
   };
 
@@ -493,11 +570,11 @@ export default function PersonalizeScreen() {
       > */}
 
       {/* Background Animation instead of Image */}
-        {/* <Animation /> */}
+      {/* <Animation /> */}
 
-        {/* Gradient overlay */}
-<View style={styles.streakSection}>
-    <Animation />
+      {/* Gradient overlay */}
+      <View style={styles.streakSection}>
+        <Animation />
         <LinearGradient
           colors={['rgba(255, 255, 255, 0)', 'rgba(221, 194, 233, 0.6)']}
           locations={[0, 1]}
@@ -505,7 +582,7 @@ export default function PersonalizeScreen() {
           end={{ x: 0, y: 1 }}
           style={styles.streakGradientOverlay}
         />
-       
+
         <View style={styles.streakContent}>
           <Text style={styles.streakTitle}>🎁 Milestones & Rewards 🎁</Text>
 
@@ -521,7 +598,7 @@ export default function PersonalizeScreen() {
                       textAlignVertical: isAndroid ? 'center' : undefined,
                     }
                   ]}>
-                    9
+                    {currentStreakDays}
                   </Text>
                 }
                 style={[
@@ -553,7 +630,7 @@ export default function PersonalizeScreen() {
                       textAlignVertical: isAndroid ? 'center' : undefined,
                     }
                   ]}>
-                    9
+                    {currentStreakDays}
                   </Text>
                 </LinearGradient>
               </MaskedView>
@@ -566,7 +643,7 @@ export default function PersonalizeScreen() {
             </View>
           </View>
         </View>
-</View>
+      </View>
       {/* </ImageBackground> */}
       <View style={styles.milestonesContainer}>
         <View style={styles.milestonesProgress}>
@@ -751,6 +828,81 @@ export default function PersonalizeScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Preference Modals */}
+      <PreferenceModal
+        visible={activeModal === 'diet_preference'}
+        onClose={() => setActiveModal(null)}
+        onSaved={loadRewardsData}
+        preferenceType="diet_preference"
+        title="🥗 Diet Preference"
+        subtitle="We'll personalize your food recommendations"
+        options={preferencesData?.preference_options?.diet_preference || []}
+        currentValue={preferencesData?.preferences?.diet_preference}
+        isMultiSelect={false}
+      />
+
+      <PreferenceModal
+        visible={activeModal === 'food_allergies'}
+        onClose={() => setActiveModal(null)}
+        onSaved={loadRewardsData}
+        preferenceType="food_allergies"
+        title="🥜 Food Allergies"
+        subtitle="We'll never recommend these foods"
+        options={preferencesData?.preference_options?.food_allergies || []}
+        currentValue={preferencesData?.preferences?.food_allergies}
+        isMultiSelect={true}
+      />
+
+      <PreferenceModal
+        visible={activeModal === 'cuisine_preference'}
+        onClose={() => setActiveModal(null)}
+        onSaved={loadRewardsData}
+        preferenceType="cuisine_preference"
+        title="🥘 Cuisine Preferences"
+        subtitle="Select your favorite cuisines"
+        options={preferencesData?.preference_options?.cuisine_preference || []}
+        currentValue={preferencesData?.preferences?.cuisine_preference}
+        isMultiSelect={true}
+      />
+
+      <PreferenceModal
+        visible={activeModal === 'dine_out_frequency'}
+        onClose={() => setActiveModal(null)}
+        onSaved={loadRewardsData}
+        preferenceType="dine_out_frequency"
+        title="🍔 Dining Out Frequency"
+        subtitle="How often do you eat out?"
+        options={preferencesData?.preference_options?.dine_out_frequency || []}
+        currentValue={preferencesData?.preferences?.dine_out_frequency}
+        isMultiSelect={false}
+      />
+
+      <PreferenceModal
+        visible={activeModal === 'cultural_background'}
+        onClose={() => setActiveModal(null)}
+        onSaved={loadRewardsData}
+        preferenceType="cultural_background"
+        title="🌏 Cultural Background"
+        subtitle="For culturally appropriate recommendations"
+        options={preferencesData?.preference_options?.cultural_background || []}
+        currentValue={preferencesData?.preferences?.cultural_background}
+        isMultiSelect={false}
+      />
+
+      <BodyMetricsModal
+        visible={activeModal === 'body_metrics'}
+        onClose={() => setActiveModal(null)}
+        onSaved={loadRewardsData}
+        currentMetrics={preferencesData?.preferences?.body_metrics}
+      />
+
+      <CravingsModal
+        visible={activeModal === 'cravings'}
+        onClose={() => setActiveModal(null)}
+        onSaved={loadRewardsData}
+        currentCravings={preferencesData?.preferences?.cravings}
+      />
     </SafeAreaView>
   );
 }
@@ -946,15 +1098,15 @@ const styles = StyleSheet.create({
     // backgroundColor: COLORS.white,
     // width: "100%",       // ✅ ensure parent covers the whole screen width
     // minHeight: isAndroid ? 300 : undefined,
-    
-  
+
+
   },
   streakBackgroundAnimation: {
     position: "absolute",
     top: -screenHeight * 0.13,      // 10% of screen height above
     left: -screenWidth * 0.2,
-    width: screenWidth  * 1.4, // full device width
-    zIndex: -2, 
+    width: screenWidth * 1.4, // full device width
+    zIndex: -2,
     minHeight: screenHeight * 0.6, // give a fixed % of screen height (40% here)
     opacity: 0.3,
   },
