@@ -85,15 +85,15 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
             }));
           }
 
-          // Fetch user name from cycle phase endpoint (reliable source)
-          try {
-            const token = await user?.getIdToken();
-            if (token) {
-              const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/cycle/phase`, {
+          const token = await user?.getIdToken();
+          if (token) {
+            // Fetch user name from cycle phase endpoint (reliable source)
+            try {
+              const cycleResponse = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/cycle/phase`, {
                 headers: { Authorization: `Bearer ${token}` },
               });
-              if (response.ok) {
-                const data = await response.json();
+              if (cycleResponse.ok) {
+                const data = await cycleResponse.json();
                 if (data?.cycle_info?.user_name) {
                   setUserData(prev => ({
                     ...prev,
@@ -101,9 +101,26 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
                   }));
                 }
               }
+            } catch (cycleError) {
+              console.log('Could not fetch cycle phase:', cycleError);
             }
-          } catch (cycleError) {
-            console.log('Could not fetch cycle phase:', cycleError);
+
+            // Fetch concerns and diagnosis from profile endpoint
+            try {
+              const profileResponse = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/users/profile/me`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (profileResponse.ok) {
+                const profileData = await profileResponse.json();
+                setUserData(prev => ({
+                  ...prev,
+                  concerns: profileData.concerns || [],
+                  diagnosis: profileData.diagnosis || [],
+                }));
+              }
+            } catch (profileError) {
+              console.log('Could not fetch profile:', profileError);
+            }
           }
         } catch (error) {
           console.log('Could not fetch data:', error);
