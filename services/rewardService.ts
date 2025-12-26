@@ -67,8 +67,15 @@ export interface RewardsStatusResponse {
     freeze_count: number;
     refresh_status: RefreshStatus;
     last_activity_date: string | null;
-    freeze_used_today: boolean;      // True if freeze protects yesterday's streak
-    freeze_just_used: boolean;       // True if freeze was JUST consumed in this request
+    // Streak risk status (for freeze prompts)
+    streak_at_risk: boolean;
+    missed_days_count: number;
+    missed_dates: string[];
+    can_freeze: boolean;
+    freezes_needed: number;
+    today_completed: boolean;
+    today_frozen: boolean;
+    // Rewards list
     rewards: RewardItem[];
 }
 
@@ -80,6 +87,15 @@ export interface ClaimResponse {
     error?: string;
     effect?: string;
     effect_result?: string;
+}
+
+export interface FreezeResponse {
+    success: boolean;
+    message?: string;
+    error?: string;
+    freeze_count: number;
+    days_frozen?: number;
+    frozen_dates?: string[];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -175,6 +191,58 @@ class RewardService {
 
         if (!response.ok) {
             throw new Error("Failed to fetch claimed rewards");
+        }
+
+        return response.json();
+    }
+
+    /**
+     * Use freeze proactively for TODAY.
+     * Call when user knows they won't complete actions today.
+     */
+    async useFreezeProactive(): Promise<FreezeResponse> {
+        const token = await getAuthToken();
+        if (!token) {
+            throw new Error("Not authenticated");
+        }
+
+        const response = await fetch(`${API_BASE_URL}/api/v1/rewards/use-freeze`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || "Failed to use freeze");
+        }
+
+        return response.json();
+    }
+
+    /**
+     * Use freeze(s) reactively to protect streak from missed days.
+     * Supports multi-day: will use X freezes for X missed days.
+     */
+    async useFreezeReactive(): Promise<FreezeResponse> {
+        const token = await getAuthToken();
+        if (!token) {
+            throw new Error("Not authenticated");
+        }
+
+        const response = await fetch(`${API_BASE_URL}/api/v1/rewards/use-freeze-reactive`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || "Failed to use freeze");
         }
 
         return response.json();

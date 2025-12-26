@@ -148,12 +148,32 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             setRefreshStatus(rewardsData.refresh_status);
           }
 
-          // Show freeze notification if one was just used
-          if (rewardsData?.freeze_just_used) {
+          // Check if streak is at risk and user can freeze (manual freeze prompt)
+          if (rewardsData?.streak_at_risk && rewardsData?.can_freeze && rewardsData.missed_days_count > 0) {
             Alert.alert(
-              '🧊 Streak Freeze Used!',
-              'You missed yesterday, but your streak is protected! One freeze token has been used.',
-              [{ text: 'Great!', style: 'default' }]
+              '⚠️ Your Streak is at Risk!',
+              `You missed ${rewardsData.missed_days_count} day(s). Use ${rewardsData.freezes_needed} freeze token(s) to protect your ${rewardsData.current_streak}-day streak?`,
+              [
+                { text: 'Let it Reset', style: 'cancel' },
+                {
+                  text: `Use Freeze 🧊`,
+                  style: 'default',
+                  onPress: async () => {
+                    try {
+                      const result = await rewardService.useFreezeReactive();
+                      if (result.success) {
+                        Alert.alert('✅ Streak Protected!', result.message || 'Your streak is safe!');
+                        // Refresh data
+                        loadHomeDataWithoutLoading();
+                      } else {
+                        Alert.alert('Error', result.error || 'Could not use freeze');
+                      }
+                    } catch (error) {
+                      Alert.alert('Error', 'Failed to use freeze');
+                    }
+                  }
+                }
+              ]
             );
           }
 
