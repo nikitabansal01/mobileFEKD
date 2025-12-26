@@ -367,7 +367,7 @@ export default function ActionPlanTimeline({
     setAnchors(todayNext);
 
     // Calculate time slot icon positions
-    // RULE: Separate icon for EACH time section (morning/afternoon/evening)
+    // RULE: Show icon for EACH distinct time section (morning/afternoon/evening)
     // NO icons for completed section - only for pending items
     const positions: TimeSlotPosition[] = [];
 
@@ -390,29 +390,27 @@ export default function ActionPlanTimeline({
       slot => timeSlotGroups[slot] && timeSlotGroups[slot].length > 0
     );
 
-    // If we have pending items, show ONE icon at the start of pending section
-    // (between completed section and first pending item)
-    if (orderedSlots.length > 0 && pendingItems.length > 0) {
-      const firstTimeSlot = orderedSlots[0]; // Get earliest pending time slot
+    // Add icon for EACH time section (not just the first one)
+    orderedSlots.forEach((timeSlot, slotIndex) => {
+      const slotItems = timeSlotGroups[timeSlot];
+      if (slotItems && slotItems.length > 0) {
+        // Find the first item of this time slot
+        const firstItemOfSlot = slotItems[0];
+        const anchorForItem = todayNext.find(a => a.id === firstItemOfSlot.id.toString());
 
-      // Calculate position: after completed items + Weekly Check-in
-      // Use the first pending item's anchor to find the right Y position
-      const firstPendingItem = pendingItems[0];
-      const anchorForFirst = todayNext.find(a => a.id === firstPendingItem.id.toString());
-
-      if (anchorForFirst) {
-        // Position icon at the TOP of pending section - on the line between completed and pending
-        // This should be at the cap/break point in the timeline
-        const iconY = anchorForFirst.y - ITEM_BLOCK_H / 2;
-        positions.push({
-          timeSlot: firstTimeSlot,
-          iconY: iconY,
-          isCapCenter: true,
-        });
+        if (anchorForItem) {
+          // Position icon at the TOP of this section
+          const iconY = anchorForItem.y - ITEM_BLOCK_H / 2;
+          positions.push({
+            timeSlot: timeSlot,
+            iconY: iconY,
+            isCapCenter: slotIndex === 0, // First slot icon is at cap center
+          });
+        }
       }
-    }
+    });
 
-    console.log('🔍 Time slot icons (pending section):', {
+    console.log('🔍 Time slot icons (ALL sections):', {
       completedCount: completedItems.length,
       pendingCount: pendingItems.length,
       orderedSlots,
