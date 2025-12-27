@@ -1026,59 +1026,62 @@ export default function PersonalizeScreen() {
         {renderStreakSection()}
 
         {/* Your Preferences & Tokens Section */}
-        {((rewardsData?.freeze_count ?? 0) > 0 || preferencesData) && (
+        {(rewardsData || preferencesData) && (
           <View style={styles.preferencesSection}>
             <Text style={styles.preferencesSectionTitle}>Your Status</Text>
 
-            {/* Freeze Tokens with Use Button */}
-            {(rewardsData?.freeze_count ?? 0) > 0 && (
-              <View style={styles.preferenceItem}>
-                <Text style={styles.preferenceLabel}>🧊 Streak Freeze</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <Text style={styles.preferenceValue}>{rewardsData?.freeze_count}</Text>
-                  {!rewardsData?.today_frozen && (
-                    <TouchableOpacity
-                      style={{
-                        backgroundColor: COLORS.warmPurple,
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        borderRadius: 12,
-                      }}
-                      onPress={() => {
-                        Alert.alert(
-                          '❄️ Use Streak Freeze?',
-                          'This will protect your streak for today. You won\'t need to complete any actions.',
-                          [
-                            { text: 'Cancel', style: 'cancel' },
-                            {
-                              text: 'Use Freeze',
-                              onPress: async () => {
-                                try {
-                                  const result = await rewardService.useFreezeProactive();
-                                  if (result.success) {
-                                    Alert.alert('✅ Frozen!', result.message || 'Streak protected for today!');
-                                    loadRewardsData();
-                                  } else {
-                                    Alert.alert('Error', result.error || 'Could not use freeze');
+            {/* Freeze Tokens with Use Button - ALWAYS SHOW */}
+            <View style={styles.preferenceItem}>
+              <Text style={styles.preferenceLabel}>🧊 Streak Freeze</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Text style={styles.preferenceValue}>{rewardsData?.freeze_count ?? 0}</Text>
+                {(rewardsData?.freeze_count ?? 0) > 0 ? (
+                  <>
+                    {!rewardsData?.today_frozen ? (
+                      <TouchableOpacity
+                        style={{
+                          backgroundColor: COLORS.warmPurple,
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 12,
+                        }}
+                        onPress={() => {
+                          Alert.alert(
+                            '❄️ Use Streak Freeze?',
+                            'This will protect your streak for today. You won\'t need to complete any actions.',
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              {
+                                text: 'Use Freeze',
+                                onPress: async () => {
+                                  try {
+                                    const result = await rewardService.useFreezeProactive();
+                                    if (result.success) {
+                                      Alert.alert('✅ Frozen!', result.message || 'Streak protected for today!');
+                                      loadRewardsData();
+                                    } else {
+                                      Alert.alert('Error', result.error || 'Could not use freeze');
+                                    }
+                                  } catch (error) {
+                                    Alert.alert('Error', 'Failed to use freeze');
                                   }
-                                } catch (error) {
-                                  Alert.alert('Error', 'Failed to use freeze');
                                 }
                               }
-                            }
-                          ]
-                        );
-                      }}
-                    >
-                      <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>Use</Text>
-                    </TouchableOpacity>
-                  )}
-                  {rewardsData?.today_frozen && (
-                    <Text style={{ color: '#22c55e', fontWeight: '600', fontSize: 12 }}>❄️ Frozen</Text>
-                  )}
-                </View>
+                            ]
+                          );
+                        }}
+                      >
+                        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>Use</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={{ color: '#22c55e', fontWeight: '600', fontSize: 12 }}>❄️ Frozen</Text>
+                    )}
+                  </>
+                ) : (
+                  <Text style={{ color: '#9ca3af', fontSize: 11 }}>Earn at Day 3</Text>
+                )}
               </View>
-            )}
+            </View>
 
             {/* Refresh Status */}
             {rewardsData?.refresh_status && (
