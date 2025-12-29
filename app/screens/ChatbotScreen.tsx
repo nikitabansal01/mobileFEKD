@@ -830,7 +830,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
             >
-              <Avatar showMessage={true} />
+              <Avatar showMessage={false} />
               <View style={styles.messagesWrapper}>
                 {/* Show all messages from the messages array */}
                 {messages.map((message, index) => (
