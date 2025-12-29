@@ -5,7 +5,7 @@ import CalendarBottomSheet from '@/components/CalendarBottomSheet';
 import apiPromiseManager from '@/services/apiPromiseManager';
 import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse, ActionPlanResponse, ActionPlanItem } from '@/services/homeService';
 import { rewardService, RefreshStatus, RewardsStatusResponse } from '@/services/rewardService';
-import StreakAtRiskBanner from '@/components/StreakAtRiskBanner';
+// StreakAtRiskBanner removed - using one-time Alert popup instead
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -150,8 +150,41 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             setRefreshStatus(rewardsData.refresh_status);
           }
 
-          // Store rewards data for streak risk banner (no dismissable alert)
+          // Store rewards data
           setRewardsData(rewardsData || null);
+
+          // Show one-time popup if streak is at risk and user can freeze
+          if (rewardsData?.streak_at_risk && rewardsData?.can_freeze && rewardsData?.missed_days_count > 0) {
+            const missedDays = rewardsData.missed_days_count;
+            const freezesNeeded = rewardsData.freezes_needed || missedDays;
+            const freezeCount = rewardsData.freeze_count || 0;
+            const dayText = missedDays === 1 ? 'day' : 'days';
+            const tokenText = freezesNeeded === 1 ? 'token' : 'tokens';
+
+            Alert.alert(
+              '⚠️ Your Streak is at Risk!',
+              `You missed ${missedDays} ${dayText}. Use ${freezesNeeded} freeze ${tokenText} to protect your streak?\n\nYou have ${freezeCount} ${freezeCount === 1 ? 'token' : 'tokens'} available.`,
+              [
+                { text: 'Later', style: 'cancel' },
+                {
+                  text: `Use ${freezesNeeded} 🧊`,
+                  style: 'default',
+                  onPress: async () => {
+                    try {
+                      const result = await rewardService.useFreezeReactive();
+                      if (result.success) {
+                        Alert.alert('✅ Streak Saved!', result.message || `${result.days_frozen} day(s) frozen. Your streak is safe!`);
+                      } else {
+                        Alert.alert('Error', result.error || 'Could not freeze streak');
+                      }
+                    } catch (error) {
+                      Alert.alert('Error', 'Failed to freeze streak. Please try again.');
+                    }
+                  },
+                },
+              ]
+            );
+          }
 
           if (assignmentsData?.hormone_stats) {
             setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
@@ -929,18 +962,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Streak At Risk Banner - Shows only when streak is at risk */}
-        {rewardsData && (
-          <StreakAtRiskBanner
-            streakAtRisk={rewardsData.streak_at_risk || false}
-            canFreeze={rewardsData.can_freeze || false}
-            missedDaysCount={rewardsData.missed_days_count || 0}
-            freezesNeeded={rewardsData.freezes_needed || 0}
-            freezeCount={rewardsData.freeze_count || 0}
-            onFreezeSuccess={loadHomeDataWithoutLoading}
-            style="full"
-          />
-        )}
+{/* Streak at risk popup is shown once on data load - no permanent banner */}
 
         {/* Hormone Quests Section - only show if there are any non-zero hormone totals */}
         {progressStats?.hormone_stats &&
