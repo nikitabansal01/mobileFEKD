@@ -21,7 +21,7 @@ import { useNavigation } from '@react-navigation/native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { insightsService, SymptomPatternsResponse } from '../../services/insightsService';
 import { rewardService, RewardsStatusResponse } from '../../services/rewardService';
-import StreakAtRiskBanner from '../../components/StreakAtRiskBanner';
+// StreakAtRiskBanner removed - streak alerts handled via popup in HomeScreen
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -114,19 +114,6 @@ export default function InsightsScreen() {
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {/* Streak At Risk Banner - Compact Style */}
-                {rewardsData && (
-                    <StreakAtRiskBanner
-                        streakAtRisk={rewardsData.streak_at_risk || false}
-                        canFreeze={rewardsData.can_freeze || false}
-                        missedDaysCount={rewardsData.missed_days_count || 0}
-                        freezesNeeded={rewardsData.freezes_needed || 0}
-                        freezeCount={rewardsData.freeze_count || 0}
-                        onFreezeSuccess={loadData}
-                        style="compact"
-                    />
-                )}
-
                 {/* Insights */}
                 {data?.insights && data.insights.length > 0 && (
                     <View style={styles.section}>

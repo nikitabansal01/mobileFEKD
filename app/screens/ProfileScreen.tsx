@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { getAuth } from 'firebase/auth';
 import { useState, useCallback } from 'react';
 import { rewardService, RewardsStatusResponse } from '../../services/rewardService';
-import StreakAtRiskBanner from '../../components/StreakAtRiskBanner';
+// StreakAtRiskBanner removed - streak alerts handled via popup in HomeScreen
 import {
   Alert,
   Dimensions,
@@ -239,23 +239,6 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
         </View>
         {/* Profile Header */}
         <View style={styles.profileHeader}>
-          {/* Streak At Risk Banner - Minimal Style in corner */}
-          {rewardsData && rewardsData.streak_at_risk && rewardsData.can_freeze && (
-            <View style={{ position: 'absolute', top: scale(10), right: scale(20), zIndex: 100 }}>
-              <StreakAtRiskBanner
-                streakAtRisk={rewardsData.streak_at_risk}
-                canFreeze={rewardsData.can_freeze}
-                missedDaysCount={rewardsData.missed_days_count || 0}
-                freezesNeeded={rewardsData.freezes_needed || 0}
-                freezeCount={rewardsData.freeze_count || 0}
-                onFreezeSuccess={async () => {
-                  const rewards = await rewardService.getRewardsStatus();
-                  setRewardsData(rewards);
-                }}
-                style="minimal"
-              />
-            </View>
-          )}
           {/* Avatar Section */}
           <View style={styles.avatarSection}>
             <View style={styles.avatarContainer}>

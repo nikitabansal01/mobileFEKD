@@ -14,7 +14,7 @@ import { preferencesService, AllPreferencesResponse, PreferenceType } from '../.
 import PreferenceModal from '../../components/PreferenceModal';
 import BodyMetricsModal from '../../components/BodyMetricsModal';
 import CravingsModal from '../../components/CravingsModal';
-import StreakAtRiskBanner from '../../components/StreakAtRiskBanner';
+// StreakAtRiskBanner removed - streak alerts handled via popup in HomeScreen
 import StreakMilestoneModal from '../../components/StreakMilestoneModal';
 import { shouldCelebrateMilestone, markMilestoneCelebrated } from '../../utils/streakMilestones';
 // Constants from Figma design
@@ -1036,18 +1036,6 @@ export default function PersonalizeScreen() {
         bounces={isIOS}
         overScrollMode={isAndroid ? "never" : "auto"}
       >
-        {/* Streak At Risk Alert - Compact Style */}
-        {rewardsData && (
-          <StreakAtRiskBanner
-            streakAtRisk={rewardsData.streak_at_risk || false}
-            canFreeze={rewardsData.can_freeze || false}
-            missedDaysCount={rewardsData.missed_days_count || 0}
-            freezesNeeded={rewardsData.freezes_needed || 0}
-            freezeCount={rewardsData.freeze_count || 0}
-            onFreezeSuccess={loadRewardsData}
-            style="compact"
-          />
-        )}
         {renderLabsSection()}
         {renderStreakSection()}
 
