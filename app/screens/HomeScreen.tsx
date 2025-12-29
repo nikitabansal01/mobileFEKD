@@ -6,6 +6,7 @@ import apiPromiseManager from '@/services/apiPromiseManager';
 import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse, ActionPlanResponse, ActionPlanItem } from '@/services/homeService';
 import { rewardService, RefreshStatus, RewardsStatusResponse } from '@/services/rewardService';
 import StreakAtRiskBanner from '@/components/StreakAtRiskBanner';
+import StreakShieldStatus from '@/components/StreakShieldStatus';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -928,6 +929,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             />
           </TouchableOpacity>
         </View>
+
+        {/* Streak Shield Status - Always visible to show streak count and freeze tokens */}
+        {rewardsData && (
+          <StreakShieldStatus
+            currentStreak={rewardsData.current_streak || 0}
+            longestStreak={rewardsData.longest_streak || 0}
+            freezeCount={rewardsData.freeze_count || 0}
+            streakAtRisk={rewardsData.streak_at_risk || false}
+            missedDaysCount={rewardsData.missed_days_count || 0}
+            onPress={() => navigation.navigate('MainScreenTabs', { activeTab: 'personalize' })}
+          />
+        )}
 
         {/* Streak At Risk Banner - Full Style - Always visible when at risk */}
         {rewardsData && (

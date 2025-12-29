@@ -15,6 +15,8 @@ import PreferenceModal from '../../components/PreferenceModal';
 import BodyMetricsModal from '../../components/BodyMetricsModal';
 import CravingsModal from '../../components/CravingsModal';
 import StreakAtRiskBanner from '../../components/StreakAtRiskBanner';
+import StreakMilestoneModal from '../../components/StreakMilestoneModal';
+import { shouldCelebrateMilestone, markMilestoneCelebrated } from '../../utils/streakMilestones';
 // Constants from Figma design
 const BACKGROUND_VECTOR_IMAGE = "http://localhost:3845/assets/cf926b4d5ec2719e28f1af07e084ed30c131abe4.svg";
 // const MILESTONE_BG_IMAGE = require("../../assets/images/milestone-bg.png");
@@ -189,6 +191,9 @@ export default function PersonalizeScreen() {
   const [claimingRewardId, setClaimingRewardId] = useState<string | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationEmoji, setCelebrationEmoji] = useState('🎉');
+  
+  // Streak milestone celebration state
+  const [milestoneToShow, setMilestoneToShow] = useState<number | null>(null);
 
   // Animation values for celebration
   const celebrationScale = useRef(new Animated.Value(0)).current;
@@ -214,6 +219,14 @@ export default function PersonalizeScreen() {
       setRewardsData(rewards);
       setCurrentStreakDays(rewards.current_streak);
       if (preferences) setPreferencesData(preferences);
+      
+      // Check for streak milestone celebration
+      if (rewards.current_streak > 0) {
+        const milestone = await shouldCelebrateMilestone(rewards.current_streak);
+        if (milestone) {
+          setMilestoneToShow(milestone);
+        }
+      }
     } catch (error) {
       console.error('Error loading rewards:', error);
     } finally {
@@ -1285,6 +1298,18 @@ export default function PersonalizeScreen() {
         onClose={() => setActiveModal(null)}
         onSaved={loadRewardsData}
         currentCravings={preferencesData?.preferences?.cravings}
+      />
+
+      {/* Streak Milestone Celebration Modal */}
+      <StreakMilestoneModal
+        visible={milestoneToShow !== null}
+        milestone={milestoneToShow || 7}
+        onClose={async () => {
+          if (milestoneToShow) {
+            await markMilestoneCelebrated(milestoneToShow);
+          }
+          setMilestoneToShow(null);
+        }}
       />
     </SafeAreaView>
   );
