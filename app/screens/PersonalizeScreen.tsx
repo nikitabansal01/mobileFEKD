@@ -14,6 +14,7 @@ import { preferencesService, AllPreferencesResponse, PreferenceType } from '../.
 import PreferenceModal from '../../components/PreferenceModal';
 import BodyMetricsModal from '../../components/BodyMetricsModal';
 import CravingsModal from '../../components/CravingsModal';
+import StreakAtRiskBanner from '../../components/StreakAtRiskBanner';
 // Constants from Figma design
 const BACKGROUND_VECTOR_IMAGE = "http://localhost:3845/assets/cf926b4d5ec2719e28f1af07e084ed30c131abe4.svg";
 // const MILESTONE_BG_IMAGE = require("../../assets/images/milestone-bg.png");
@@ -1022,6 +1023,18 @@ export default function PersonalizeScreen() {
         bounces={isIOS}
         overScrollMode={isAndroid ? "never" : "auto"}
       >
+        {/* Streak At Risk Alert - Compact Style */}
+        {rewardsData && (
+          <StreakAtRiskBanner
+            streakAtRisk={rewardsData.streak_at_risk || false}
+            canFreeze={rewardsData.can_freeze || false}
+            missedDaysCount={rewardsData.missed_days_count || 0}
+            freezesNeeded={rewardsData.freezes_needed || 0}
+            freezeCount={rewardsData.freeze_count || 0}
+            onFreezeSuccess={loadRewardsData}
+            style="compact"
+          />
+        )}
         {renderLabsSection()}
         {renderStreakSection()}
 

@@ -20,6 +20,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { insightsService, SymptomPatternsResponse } from '../../services/insightsService';
+import { rewardService, RewardsStatusResponse } from '../../services/rewardService';
+import StreakAtRiskBanner from '../../components/StreakAtRiskBanner';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -42,13 +44,18 @@ export default function InsightsScreen() {
     const [data, setData] = useState<SymptomPatternsResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [rewardsData, setRewardsData] = useState<RewardsStatusResponse | null>(null);
 
     const loadData = useCallback(async () => {
         setIsLoading(true);
         setError(null);
         try {
-            const result = await insightsService.getSymptomPatterns();
+            const [result, rewards] = await Promise.all([
+                insightsService.getSymptomPatterns(),
+                rewardService.getRewardsStatus().catch(() => null),
+            ]);
             setData(result);
+            setRewardsData(rewards);
         } catch (err) {
             if (err instanceof Error && err.message === 'REWARD_REQUIRED') {
                 setError('Unlock this feature by claiming the "Symptom Patterns" reward (14-day streak)');
@@ -107,6 +114,19 @@ export default function InsightsScreen() {
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                {/* Streak At Risk Banner - Compact Style */}
+                {rewardsData && (
+                    <StreakAtRiskBanner
+                        streakAtRisk={rewardsData.streak_at_risk || false}
+                        canFreeze={rewardsData.can_freeze || false}
+                        missedDaysCount={rewardsData.missed_days_count || 0}
+                        freezesNeeded={rewardsData.freezes_needed || 0}
+                        freezeCount={rewardsData.freeze_count || 0}
+                        onFreezeSuccess={loadData}
+                        style="compact"
+                    />
+                )}
+
                 {/* Insights */}
                 {data?.insights && data.insights.length > 0 && (
                     <View style={styles.section}>

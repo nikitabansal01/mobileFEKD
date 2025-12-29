@@ -4,7 +4,8 @@ import AuvraChatModal from '@/components/AuvraChatModal';
 import CalendarBottomSheet from '@/components/CalendarBottomSheet';
 import apiPromiseManager from '@/services/apiPromiseManager';
 import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse, ActionPlanResponse, ActionPlanItem } from '@/services/homeService';
-import { rewardService, RefreshStatus } from '@/services/rewardService';
+import { rewardService, RefreshStatus, RewardsStatusResponse } from '@/services/rewardService';
+import StreakAtRiskBanner from '@/components/StreakAtRiskBanner';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -80,6 +81,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   // Refresh status for 2x plan refresh reward
   const [refreshStatus, setRefreshStatus] = useState<RefreshStatus | null>(null);
   const [isRefreshingAll, setIsRefreshingAll] = useState(false);
+  const [rewardsData, setRewardsData] = useState<RewardsStatusResponse | null>(null);
 
   // Animated value for hourglass rotation
   const spinValue = useRef(new Animated.Value(0)).current;
@@ -148,34 +150,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             setRefreshStatus(rewardsData.refresh_status);
           }
 
-          // Check if streak is at risk and user can freeze (manual freeze prompt)
-          if (rewardsData?.streak_at_risk && rewardsData?.can_freeze && rewardsData.missed_days_count > 0) {
-            Alert.alert(
-              '⚠️ Your Streak is at Risk!',
-              `You missed ${rewardsData.missed_days_count} day(s). Use ${rewardsData.freezes_needed} freeze token(s) to protect your ${rewardsData.current_streak}-day streak?`,
-              [
-                { text: 'Let it Reset', style: 'cancel' },
-                {
-                  text: `Use Freeze 🧊`,
-                  style: 'default',
-                  onPress: async () => {
-                    try {
-                      const result = await rewardService.useFreezeReactive();
-                      if (result.success) {
-                        Alert.alert('✅ Streak Protected!', result.message || 'Your streak is safe!');
-                        // Refresh data
-                        loadHomeDataWithoutLoading();
-                      } else {
-                        Alert.alert('Error', result.error || 'Could not use freeze');
-                      }
-                    } catch (error) {
-                      Alert.alert('Error', 'Failed to use freeze');
-                    }
-                  }
-                }
-              ]
-            );
-          }
+          // Store rewards data for streak risk banner (no dismissable alert)
+          setRewardsData(rewardsData || null);
 
           if (assignmentsData?.hormone_stats) {
             setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
@@ -952,6 +928,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             />
           </TouchableOpacity>
         </View>
+
+        {/* Streak At Risk Banner - Full Style - Always visible when at risk */}
+        {rewardsData && (
+          <StreakAtRiskBanner
+            streakAtRisk={rewardsData.streak_at_risk || false}
+            canFreeze={rewardsData.can_freeze || false}
+            missedDaysCount={rewardsData.missed_days_count || 0}
+            freezesNeeded={rewardsData.freezes_needed || 0}
+            freezeCount={rewardsData.freeze_count || 0}
+            onFreezeSuccess={loadHomeDataWithoutLoading}
+            style="full"
+          />
+        )}
 
         {/* Hormone Quests Section - only show if there are any non-zero hormone totals */}
         {progressStats?.hormone_stats &&

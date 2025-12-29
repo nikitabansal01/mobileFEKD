@@ -4,7 +4,8 @@ import { useNavigation, CommonActions, useFocusEffect } from '@react-navigation/
 import { LinearGradient } from 'expo-linear-gradient';
 import { getAuth } from 'firebase/auth';
 import { useState, useCallback } from 'react';
-import { rewardService } from '../../services/rewardService';
+import { rewardService, RewardsStatusResponse } from '../../services/rewardService';
+import StreakAtRiskBanner from '../../components/StreakAtRiskBanner';
 import {
   Alert,
   Dimensions,
@@ -49,6 +50,7 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationInsightsEnabled, setLocationInsightsEnabled] = useState(true);
   const [badges, setBadges] = useState<Array<{ id: string; title: string; icon: string; claimed_at: string | null }>>([]);
+  const [rewardsData, setRewardsData] = useState<RewardsStatusResponse | null>(null);
 
   // User profile data (fetched from Firebase + backend)
   const [userData, setUserData] = useState<{
@@ -68,8 +70,12 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
     useCallback(() => {
       const fetchData = async () => {
         try {
-          // Fetch badges
-          const claimed = await rewardService.getClaimedRewards();
+          // Fetch badges and rewards status
+          const [claimed, rewards] = await Promise.all([
+            rewardService.getClaimedRewards(),
+            rewardService.getRewardsStatus().catch(() => null),
+          ]);
+          setRewardsData(rewards);
           const badgeRewards = claimed.filter((r: any) =>
             r.id === 'first_improvement'
           );
@@ -233,6 +239,23 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
         </View>
         {/* Profile Header */}
         <View style={styles.profileHeader}>
+          {/* Streak At Risk Banner - Minimal Style in corner */}
+          {rewardsData && rewardsData.streak_at_risk && rewardsData.can_freeze && (
+            <View style={{ position: 'absolute', top: scale(10), right: scale(20), zIndex: 100 }}>
+              <StreakAtRiskBanner
+                streakAtRisk={rewardsData.streak_at_risk}
+                canFreeze={rewardsData.can_freeze}
+                missedDaysCount={rewardsData.missed_days_count || 0}
+                freezesNeeded={rewardsData.freezes_needed || 0}
+                freezeCount={rewardsData.freeze_count || 0}
+                onFreezeSuccess={async () => {
+                  const rewards = await rewardService.getRewardsStatus();
+                  setRewardsData(rewards);
+                }}
+                style="minimal"
+              />
+            </View>
+          )}
           {/* Avatar Section */}
           <View style={styles.avatarSection}>
             <View style={styles.avatarContainer}>
