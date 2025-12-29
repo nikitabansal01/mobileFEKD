@@ -1063,7 +1063,48 @@ export default function PersonalizeScreen() {
                 <Text style={styles.preferenceValue}>{rewardsData?.freeze_count ?? 0}</Text>
                 {(rewardsData?.freeze_count ?? 0) > 0 ? (
                   <>
-                    {!rewardsData?.today_frozen ? (
+                    {/* Priority 1: Save streak if at risk (missed days) */}
+                    {rewardsData?.streak_at_risk && rewardsData?.can_freeze && (rewardsData?.missed_days_count ?? 0) > 0 ? (
+                      <TouchableOpacity
+                        style={{
+                          backgroundColor: '#F39C12',
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 12,
+                        }}
+                        onPress={() => {
+                          const missedDays = rewardsData?.missed_days_count ?? 1;
+                          const freezesNeeded = rewardsData?.freezes_needed ?? missedDays;
+                          const dayText = missedDays === 1 ? 'day' : 'days';
+                          Alert.alert(
+                            '⚠️ Save Your Streak!',
+                            `You missed ${missedDays} ${dayText}. Use ${freezesNeeded} freeze token${freezesNeeded > 1 ? 's' : ''} to save your streak?`,
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              {
+                                text: `Save Streak (${freezesNeeded} 🧊)`,
+                                onPress: async () => {
+                                  try {
+                                    const result = await rewardService.useFreezeReactive();
+                                    if (result.success) {
+                                      Alert.alert('✅ Streak Saved!', result.message || 'Your streak is protected!');
+                                      loadRewardsData();
+                                    } else {
+                                      Alert.alert('Error', result.error || 'Could not save streak');
+                                    }
+                                  } catch (error) {
+                                    Alert.alert('Error', 'Failed to save streak');
+                                  }
+                                }
+                              }
+                            ]
+                          );
+                        }}
+                      >
+                        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>Save Streak</Text>
+                      </TouchableOpacity>
+                    ) : !rewardsData?.today_frozen ? (
+                      /* Priority 2: Proactive freeze for today */
                       <TouchableOpacity
                         style={{
                           backgroundColor: COLORS.warmPurple,
@@ -1097,7 +1138,7 @@ export default function PersonalizeScreen() {
                           );
                         }}
                       >
-                        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>Use</Text>
+                        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>Use Today</Text>
                       </TouchableOpacity>
                     ) : (
                       <Text style={{ color: '#22c55e', fontWeight: '600', fontSize: 12 }}>❄️ Frozen</Text>
