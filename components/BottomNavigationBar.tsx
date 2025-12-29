@@ -41,7 +41,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
   useEffect(() => {
     const fetchStreakStatus = async () => {
       try {
-        const data = await rewardService.getRewardsData();
+        const data = await rewardService.getRewardsStatus();
         if (data) {
           setStreakAtRisk(data.streak_at_risk || false);
           setCanFreeze(data.can_freeze || false);

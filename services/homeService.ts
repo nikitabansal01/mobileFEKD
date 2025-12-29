@@ -111,6 +111,19 @@ export interface Assignment {
 }
 
 /**
+ * Weekly Check-in status from API
+ */
+export interface WeeklyCheckinStatus {
+  is_available: boolean;
+  is_due: boolean;
+  due_date: string | null;
+  incomplete_id: string | null;
+  last_completed: string | null;
+  checkin_streak: number;
+  unlock_days_remaining: number;
+}
+
+/**
  * Response structure for assignments API
  */
 export interface AssignmentsResponse {
@@ -130,6 +143,7 @@ export interface AssignmentsResponse {
   primary_hormone?: string;
   cycle_phase?: string;
   show_feedback_prompt_after_seconds?: number;
+  weekly_checkin?: WeeklyCheckinStatus | null;
 }
 
 /**

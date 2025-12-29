@@ -22,6 +22,17 @@ import Svg, { Defs, Line, Stop, LinearGradient as SvgLinearGradient } from 'reac
 import { Assignment } from '../services/homeService';
 type AssignmentsMap = Record<string, Assignment[]>;
 
+// Weekly Check-in status from API
+interface WeeklyCheckinStatus {
+  is_available: boolean;
+  is_due: boolean;
+  due_date: string | null;
+  incomplete_id: string | null;
+  last_completed: string | null;
+  checkin_streak: number;
+  unlock_days_remaining: number;
+}
+
 // ====== Main component ======
 /**
  * Props for the TypeActionPlan component
@@ -31,6 +42,10 @@ type Props = {
   dateLabel?: string;
   /** Time-based action assignments */
   assignments?: AssignmentsMap;
+  /** Weekly check-in status from API */
+  weeklyCheckinStatus?: WeeklyCheckinStatus | null;
+  /** User's top concern for personalized check-in messaging */
+  topConcern?: string;
 };
 
 /**
@@ -82,6 +97,8 @@ const TIME_EMOJI_MAP: Record<string, string> = {
 export default function TypeActionPlan({
   dateLabel = formatToday(new Date()),
   assignments = {},
+  weeklyCheckinStatus = null,
+  topConcern = 'your symptoms',
 }: Props) {
   const [completedCategories, setCompletedCategories] = useState<Set<string>>(new Set());
   const navigation = useNavigation();
@@ -97,9 +114,12 @@ export default function TypeActionPlan({
       if (actionData.id === -1) {
         (navigation as any).navigate('ChatbotScreen', {
           conversationContext: {
-            initialMessage: 'Weekly Check-in',
+            initialMessage: weeklyCheckinStatus?.incomplete_id 
+              ? 'Continue your weekly check-in'
+              : 'Weekly Check-in',
             userResponse: 'Continue conversation',
             context: 'weekly_checkin',
+            checkinId: weeklyCheckinStatus?.incomplete_id || null,
           },
         });
         return;
@@ -121,29 +141,38 @@ export default function TypeActionPlan({
   const categorizedAssignments = useMemo(() => {
     const allAssignments: (Assignment & { timeSlot: string })[] = [];
 
-    // Add static "Weekly Check-in" assignment at the beginning
-    const weeklyCheckIn: Assignment & { timeSlot: string } = {
-      id: -1, // Special ID for static assignment
-      recommendation_id: -1,
-      title: 'Weekly Check-in',
-      purpose: 'Vent your concerns & progress | Acne',
-      category: 'food', // Categorized as food to appear in Eat section
-      conditions: [],
-      symptoms: [],
-      hormones: [],
-      is_completed: false,
-      completed_at: '',
-      advices: [],
-      food_amounts: [],
-      food_items: [],
-      exercise_durations: [],
-      exercise_types: [],
-      exercise_intensities: [],
-      mindfulness_durations: [],
-      mindfulness_techniques: [],
-      timeSlot: 'anytime',
-    };
-    allAssignments.push(weeklyCheckIn);
+    // Add "Weekly Check-in" assignment ONLY if available and due (dynamic from API)
+    let weeklyCheckInItem: (Assignment & { timeSlot: string }) | undefined = undefined;
+    
+    if (weeklyCheckinStatus?.is_available && weeklyCheckinStatus?.is_due) {
+      const isResume = !!weeklyCheckinStatus.incomplete_id;
+      const purpose = isResume 
+        ? `Continue your check-in | ${topConcern}`
+        : `Track your progress & concerns | ${topConcern}`;
+      
+      weeklyCheckInItem = {
+        id: -1, // Special ID for check-in
+        recommendation_id: -1,
+        title: isResume ? 'Continue Check-in' : 'Weekly Check-in',
+        purpose: purpose,
+        category: 'food', // Categorized as food to appear in Eat section
+        conditions: [],
+        symptoms: [],
+        hormones: [],
+        is_completed: false,
+        completed_at: '',
+        advices: [],
+        food_amounts: [],
+        food_items: [],
+        exercise_durations: [],
+        exercise_types: [],
+        exercise_intensities: [],
+        mindfulness_durations: [],
+        mindfulness_techniques: [],
+        timeSlot: 'anytime',
+      };
+      allAssignments.push(weeklyCheckInItem);
+    }
 
     // Collect actions from all time slots
     console.log('🔍 TypeActionPlan processing assignments:', {
@@ -173,8 +202,7 @@ export default function TypeActionPlan({
       mindfulness: [],
     };
 
-    // Separate Weekly Check-in from other assignments
-    const weeklyCheckInItem = allAssignments.find(a => a.id === -1);
+    // Separate Weekly Check-in from other assignments (weeklyCheckInItem already defined above)
     const otherAssignments = allAssignments.filter(a => a.id !== -1);
 
     otherAssignments.forEach(assignment => {
@@ -214,7 +242,7 @@ export default function TypeActionPlan({
     });
 
     return { categorized, weeklyCheckInItem };
-  }, [assignments]);
+  }, [assignments, weeklyCheckinStatus, topConcern]);
 
   // Helper functions
   const getActionAmount = (assignment: Assignment): string => {

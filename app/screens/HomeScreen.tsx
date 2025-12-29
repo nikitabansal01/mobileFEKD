@@ -1135,6 +1135,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                 <TypeActionPlan
                   dateLabel={assignments?.date ? formatDate(assignments.date) : '15th July, 2025'}
                   assignments={assignments.assignments}
+                  weeklyCheckinStatus={assignments.weekly_checkin}
+                  topConcern={assignments.primary_hormone || 'your symptoms'}
                 />
               )
             ) : (
