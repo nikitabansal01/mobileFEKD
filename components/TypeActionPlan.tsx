@@ -114,7 +114,7 @@ export default function TypeActionPlan({
       if (actionData.id === -1) {
         (navigation as any).navigate('ChatbotScreen', {
           conversationContext: {
-            initialMessage: weeklyCheckinStatus?.incomplete_id 
+            initialMessage: weeklyCheckinStatus?.incomplete_id
               ? 'Continue your weekly check-in'
               : 'Weekly Check-in',
             userResponse: 'Continue conversation',
@@ -143,13 +143,13 @@ export default function TypeActionPlan({
 
     // Add "Weekly Check-in" assignment ONLY if available and due (dynamic from API)
     let weeklyCheckInItem: (Assignment & { timeSlot: string }) | undefined = undefined;
-    
+
     if (weeklyCheckinStatus?.is_available && weeklyCheckinStatus?.is_due) {
       const isResume = !!weeklyCheckinStatus.incomplete_id;
-      const purpose = isResume 
+      const purpose = isResume
         ? `Continue your check-in | ${topConcern}`
         : `Track your progress & concerns | ${topConcern}`;
-      
+
       weeklyCheckInItem = {
         id: -1, // Special ID for check-in
         recommendation_id: -1,
@@ -170,6 +170,7 @@ export default function TypeActionPlan({
         mindfulness_durations: [],
         mindfulness_techniques: [],
         timeSlot: 'anytime',
+        hero_image_url: require('../assets/images/logo.png'), // Weekly check-in logo
       };
       allAssignments.push(weeklyCheckInItem);
     }
@@ -565,7 +566,11 @@ export default function TypeActionPlan({
           {/* Render actual hero image */}
           {assignment.hero_image_url ? (
             <Image
-              source={{ uri: assignment.hero_image_url }}
+              source={
+                typeof assignment.hero_image_url === 'number'
+                  ? assignment.hero_image_url  // Local require() result
+                  : { uri: assignment.hero_image_url }  // Remote URL
+              }
               style={styles.actionImagePhoto}
               resizeMode="cover"
             />

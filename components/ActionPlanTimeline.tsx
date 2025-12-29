@@ -204,6 +204,7 @@ export default function ActionPlanTimeline({
       mindfulness_durations: [],
       mindfulness_techniques: [],
       time_slot: 'morning', // Add time_slot for sorting
+      hero_image_url: require('../assets/images/logo.png'), // Weekly check-in logo
     };
 
     // Process ALL keys from assignments object (including 'completed' if present)
@@ -926,7 +927,11 @@ export default function ActionPlanTimeline({
                 >
                   {a.hero_image_url ? (
                     <Image
-                      source={{ uri: a.hero_image_url }}
+                      source={
+                        typeof a.hero_image_url === 'number'
+                          ? a.hero_image_url  // Local require() result
+                          : { uri: a.hero_image_url }  // Remote URL
+                      }
                       style={styles.circleImage}
                       resizeMode="cover"
                     />
