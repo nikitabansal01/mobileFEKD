@@ -153,50 +153,40 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           // Store rewards data
           setRewardsData(rewardsData || null);
 
-          // Show one-time popup if streak is at risk and user can freeze
-          // Only show once per day to avoid spamming user
+          // Show popup every time if streak is at risk and user can freeze
           if (rewardsData?.streak_at_risk && rewardsData?.can_freeze && rewardsData?.missed_days_count > 0) {
-            const today = new Date().toISOString().split('T')[0];
-            const alertKey = `@streak_alert_shown_${today}`;
-            const alreadyShown = await AsyncStorage.getItem(alertKey);
-            
-            if (!alreadyShown) {
-              // Mark as shown today
-              await AsyncStorage.setItem(alertKey, 'true');
-              
-              const missedDays = rewardsData.missed_days_count;
-              const freezesNeeded = rewardsData.freezes_needed || missedDays;
-              const freezeCount = rewardsData.freeze_count || 0;
-              const dayText = missedDays === 1 ? 'day' : 'days';
-              const tokenText = freezesNeeded === 1 ? 'token' : 'tokens';
+            const missedDays = rewardsData.missed_days_count;
+            const freezesNeeded = rewardsData.freezes_needed || missedDays;
+            const freezeCount = rewardsData.freeze_count || 0;
+            const dayText = missedDays === 1 ? 'day' : 'days';
+            const tokenText = freezesNeeded === 1 ? 'token' : 'tokens';
 
-              Alert.alert(
-                '⚠️ Your Streak is at Risk!',
-                `You missed ${missedDays} ${dayText}. Use ${freezesNeeded} freeze ${tokenText} to protect your streak?\n\nYou have ${freezeCount} ${freezeCount === 1 ? 'token' : 'tokens'} available.`,
-                [
-                  { text: 'Later', style: 'cancel' },
-                  {
-                    text: `Use ${freezesNeeded} 🧊`,
-                    style: 'default',
-                    onPress: async () => {
-                      try {
-                        const result = await rewardService.useFreezeReactive();
-                        if (result.success) {
-                          Alert.alert('✅ Streak Saved!', result.message || `${result.days_frozen} day(s) frozen. Your streak is safe!`);
-                          // Refresh data after successful freeze
-                          const updatedRewards = await rewardService.getRewardsStatus().catch(() => null);
-                          if (updatedRewards) setRewardsData(updatedRewards);
-                        } else {
-                          Alert.alert('Error', result.error || 'Could not freeze streak');
-                        }
-                      } catch (error) {
-                        Alert.alert('Error', 'Failed to freeze streak. Please try again.');
+            Alert.alert(
+              '⚠️ Your Streak is at Risk!',
+              `You missed ${missedDays} ${dayText}. Use ${freezesNeeded} freeze ${tokenText} to protect your streak?\n\nYou have ${freezeCount} ${freezeCount === 1 ? 'token' : 'tokens'} available.`,
+              [
+                { text: 'Later', style: 'cancel' },
+                {
+                  text: `Use ${freezesNeeded} 🧊`,
+                  style: 'default',
+                  onPress: async () => {
+                    try {
+                      const result = await rewardService.useFreezeReactive();
+                      if (result.success) {
+                        Alert.alert('✅ Streak Saved!', result.message || `${result.days_frozen} day(s) frozen. Your streak is safe!`);
+                        // Refresh data after successful freeze
+                        const updatedRewards = await rewardService.getRewardsStatus().catch(() => null);
+                        if (updatedRewards) setRewardsData(updatedRewards);
+                      } else {
+                        Alert.alert('Error', result.error || 'Could not freeze streak');
                       }
-                    },
+                    } catch (error) {
+                      Alert.alert('Error', 'Failed to freeze streak. Please try again.');
+                    }
                   },
-                ]
-              );
-            }
+                },
+              ]
+            );
           }
 
           if (assignmentsData?.hormone_stats) {
