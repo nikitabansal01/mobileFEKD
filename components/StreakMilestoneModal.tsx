@@ -8,9 +8,20 @@ import {
   TouchableOpacity, 
   View 
 } from 'react-native';
-import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
+import { moderateScale, verticalScale, scale } from 'react-native-size-matters';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// AUVRA app colors
+const COLORS = {
+  white: "#FFFFFF",
+  warmPurple: "#C17EC9",
+  gradPurple: "#A29AEA",
+  gradPink: "#FDC6D1",
+  textPrimary: "#4A3D5C",
+  textSecondary: "#6B5B7A",
+  accent: "#8B5CF6",
+};
 
 interface StreakMilestoneModalProps {
   visible: boolean;
@@ -99,8 +110,8 @@ const StreakMilestoneModal: React.FC<StreakMilestoneModalProps> = ({
         title: 'LEGENDARY!',
         subtitle: `${milestone} DAYS`,
         message: "You're in the top 0.01% of all users!",
-        color: '#9B59B6',
-        bgColor: '#F5EEF8',
+        color: COLORS.warmPurple,
+        bgColor: '#F3F0FF',
       };
     }
     if (milestone >= 365) {
@@ -109,8 +120,8 @@ const StreakMilestoneModal: React.FC<StreakMilestoneModalProps> = ({
         title: 'ONE YEAR!',
         subtitle: `${milestone} DAYS`,
         message: "A full year of dedication! Incredible!",
-        color: '#F1C40F',
-        bgColor: '#FEF9E7',
+        color: COLORS.gradPurple,
+        bgColor: '#F3F0FF',
       };
     }
     if (milestone >= 100) {
@@ -119,8 +130,8 @@ const StreakMilestoneModal: React.FC<StreakMilestoneModalProps> = ({
         title: 'TRIPLE DIGITS!',
         subtitle: `${milestone} DAYS`,
         message: "100+ days! You're unstoppable!",
-        color: '#3498DB',
-        bgColor: '#EBF5FB',
+        color: COLORS.accent,
+        bgColor: '#F3F0FF',
       };
     }
     if (milestone >= 50) {
@@ -129,18 +140,18 @@ const StreakMilestoneModal: React.FC<StreakMilestoneModalProps> = ({
         title: 'HALFWAY TO 100!',
         subtitle: `${milestone} DAYS`,
         message: "50 days of consistent health habits!",
-        color: '#E67E22',
-        bgColor: '#FEF5E7',
+        color: COLORS.warmPurple,
+        bgColor: '#FDF2F8',
       };
     }
     if (milestone >= 30) {
       return {
         emoji: '⭐',
-        title: '30 DAY LEGEND!',
+        title: '30 DAY STREAK!',
         subtitle: `${milestone} DAYS`,
         message: "A whole month of dedication!",
-        color: '#27AE60',
-        bgColor: '#E9F7EF',
+        color: COLORS.gradPurple,
+        bgColor: '#F3F0FF',
       };
     }
     if (milestone >= 14) {
@@ -149,8 +160,8 @@ const StreakMilestoneModal: React.FC<StreakMilestoneModalProps> = ({
         title: 'TWO WEEKS!',
         subtitle: `${milestone} DAYS`,
         message: "You're building a real habit!",
-        color: '#16A085',
-        bgColor: '#E8F8F5',
+        color: COLORS.accent,
+        bgColor: '#F3F0FF',
       };
     }
     // 7 days
@@ -159,8 +170,8 @@ const StreakMilestoneModal: React.FC<StreakMilestoneModalProps> = ({
       title: 'FIRST WEEK!',
       subtitle: `${milestone} DAYS`,
       message: "One week down, many more to go!",
-      color: '#E74C3C',
-      bgColor: '#FDEDEC',
+      color: COLORS.warmPurple,
+      bgColor: '#FDF2F8',
     };
   };
 
@@ -267,8 +278,8 @@ const styles = StyleSheet.create({
   },
   container: {
     width: SCREEN_WIDTH * 0.85,
-    borderRadius: 24,
-    padding: responsiveWidth(6),
+    borderRadius: moderateScale(24),
+    padding: scale(24),
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
@@ -278,51 +289,51 @@ const styles = StyleSheet.create({
   },
   sparkle: {
     position: 'absolute',
-    fontSize: responsiveFontSize(3),
+    fontSize: moderateScale(24),
     zIndex: 10,
   },
   mainEmoji: {
-    fontSize: responsiveFontSize(8),
-    marginBottom: responsiveHeight(2),
+    fontSize: moderateScale(64),
+    marginBottom: verticalScale(16),
   },
   title: {
-    fontSize: responsiveFontSize(3.5),
+    fontSize: moderateScale(28),
     fontWeight: 'bold',
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: responsiveFontSize(4),
+    fontSize: moderateScale(32),
     fontWeight: '800',
-    color: '#2C3E50',
-    marginTop: responsiveHeight(1),
+    color: COLORS.textPrimary,
+    marginTop: verticalScale(8),
   },
   message: {
-    fontSize: responsiveFontSize(1.8),
-    color: '#7F8C8D',
+    fontSize: moderateScale(14),
+    color: COLORS.textSecondary,
     textAlign: 'center',
-    marginTop: responsiveHeight(1.5),
-    marginHorizontal: responsiveWidth(4),
+    marginTop: verticalScale(12),
+    marginHorizontal: scale(16),
   },
   streakBadge: {
-    borderRadius: 20,
-    paddingVertical: responsiveHeight(1),
-    paddingHorizontal: responsiveWidth(5),
-    marginTop: responsiveHeight(2.5),
+    borderRadius: moderateScale(20),
+    paddingVertical: verticalScale(8),
+    paddingHorizontal: scale(20),
+    marginTop: verticalScale(20),
   },
   streakBadgeText: {
-    color: '#FFFFFF',
-    fontSize: responsiveFontSize(1.6),
+    color: COLORS.white,
+    fontSize: moderateScale(14),
     fontWeight: 'bold',
   },
   closeButton: {
-    borderRadius: 16,
-    paddingVertical: responsiveHeight(1.8),
-    paddingHorizontal: responsiveWidth(10),
-    marginTop: responsiveHeight(2.5),
+    borderRadius: moderateScale(16),
+    paddingVertical: verticalScale(14),
+    paddingHorizontal: scale(40),
+    marginTop: verticalScale(20),
   },
   closeButtonText: {
-    color: '#FFFFFF',
-    fontSize: responsiveFontSize(2),
+    color: COLORS.white,
+    fontSize: moderateScale(16),
     fontWeight: 'bold',
   },
 });
