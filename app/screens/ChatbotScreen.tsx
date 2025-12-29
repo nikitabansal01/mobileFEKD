@@ -1,6 +1,7 @@
 import Avatar from "@/components/customComponent/AvatarChatbot";
 import Header from "@/components/customComponent/ChatbotHeader";
 import FooterCTA from "@/components/customComponent/FooterChatbotCTA";
+import weeklyCheckinService, { QuestionResponse, TapOption } from "@/services/weeklyCheckinService";
 import { Ionicons } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { useNavigation } from '@react-navigation/native';
@@ -223,6 +224,11 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const [value, setValue] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   
+  // Weekly Check-in state
+  const [checkinId, setCheckinId] = useState<string | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<QuestionResponse | null>(null);
+  const [dynamicTapOptions, setDynamicTapOptions] = useState<TapOption[]>([]);
+  const [isLoadingCheckin, setIsLoadingCheckin] = useState(false);
   
   // Handle conversation context from different chats
   useEffect(() => {
@@ -264,8 +270,11 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       // Disable slider and selected value for care plan modal
       setShowSlider(false);
       setShowSelectedValue(false);
+    } else if (contextFromRoute?.context === "weekly_checkin") {
+      // Weekly check-in flow - start or resume from API
+      initializeWeeklyCheckin();
     } else {
-      // Default: Weekly check-in content
+      // Default: Weekly check-in content (fallback)
       setMessages([
         { id: "1", text: "How was your bloating this week?", isBot: true },
         { id: "3", text: "Were there any big changes in your week? related to food, lifestyle, stress, etc", isBot: true },
@@ -273,17 +282,138 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     }
   }, [route?.params?.conversationContext]);
   
+  // Initialize weekly check-in from API
+  const initializeWeeklyCheckin = async () => {
+    setIsLoadingCheckin(true);
+    try {
+      const result = await weeklyCheckinService.startCheckin();
+      
+      if (result) {
+        setCheckinId(result.checkin_id);
+        setCurrentQuestion(result.question);
+        setDynamicTapOptions(result.question.tap_options || []);
+        
+        // Set messages from history if available, otherwise use current message
+        if (result.question.history && result.question.history.length > 0) {
+          setMessages(result.question.history);
+        } else {
+          setMessages([
+            { id: "1", text: result.question.message, isBot: true },
+          ]);
+        }
+        
+        // Set mode based on question type
+        if (result.question.question_type === "slider") {
+          setShowSlider(true);
+          setMode("idle");
+        } else if (result.question.question_type === "tap_choice" || result.question.question_type === "multi_select") {
+          setShowSlider(false);
+          setMode("tap");
+        } else {
+          setShowSlider(false);
+          setMode("idle");
+        }
+        
+        setShowSelectedValue(false);
+      } else {
+        // Fallback if API fails
+        setMessages([
+          { id: "1", text: "Let's do a quick check-in. How are you feeling this week?", isBot: true },
+        ]);
+      }
+    } catch (error) {
+      console.error('Failed to initialize weekly check-in:', error);
+      setMessages([
+        { id: "1", text: "Let's do a quick check-in. How are you feeling this week?", isBot: true },
+      ]);
+    }
+    setIsLoadingCheckin(false);
+  };
+  
+  // Submit response and get next question
+  const submitCheckinResponse = async (response: any, displayText: string) => {
+    if (!checkinId || !currentQuestion) return;
+    
+    // Add user message
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: displayText,
+      isBot: false,
+    };
+    setMessages(prev => [...prev, userMessage]);
+    scrollToBottom();
+    
+    setIsLoadingCheckin(true);
+    try {
+      const result = await weeklyCheckinService.submitResponse(
+        checkinId,
+        currentQuestion.question_key || '',
+        response,
+        displayText
+      );
+      
+      if (result) {
+        setCurrentQuestion(result.question);
+        setDynamicTapOptions(result.question.tap_options || []);
+        
+        // Update messages from history if available
+        if (result.question.history && result.question.history.length > 0) {
+          setMessages(result.question.history);
+        } else {
+          // Fallback: Add bot response manually
+          const botMessage: Message = {
+            id: Date.now().toString() + "_bot",
+            text: result.question.message,
+            isBot: true,
+          };
+          setMessages(prev => [...prev, botMessage]);
+        }
+        scrollToBottom();
+        
+        // Update mode based on next question type
+        if (result.question.is_complete) {
+          // Check-in complete
+          setMode("idle");
+          setShowSlider(false);
+          // Reset for next time
+          setTimeout(() => {
+            navigation.goBack();
+          }, 2000);
+        } else if (result.question.question_type === "slider") {
+          setShowSlider(true);
+          setSliderValue(0);
+          setMode("idle");
+        } else if (result.question.question_type === "tap_choice" || result.question.question_type === "multi_select") {
+          setShowSlider(false);
+          setSelectedOptions([]);
+          setMode("tap");
+        } else {
+          setShowSlider(false);
+          setMode("idle");
+        }
+      }
+    } catch (error) {
+      console.error('Failed to submit check-in response:', error);
+    }
+    setIsLoadingCheckin(false);
+  };
+  
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [recordingComplete, setRecordingComplete] = useState(false);
   const [sliderValue, setSliderValue] = useState(0);
   const [sliderHoverValue, setSliderHoverValue] = useState<number | null>(null);
-  const [showSlider, setShowSlider] = useState(true);
+  const [showSlider, setShowSlider] = useState(false);  // Start false - only show when question type is slider
   const [showSelectedValue, setShowSelectedValue] = useState(false);
 
   // Get choice options based on context
   const getChoiceOptions = (): ChoiceOption[] => {
     const contextFromRoute = route?.params?.conversationContext;
+    
+    // Use dynamic tap options from API for weekly check-in
+    if (contextFromRoute?.context === "weekly_checkin" && dynamicTapOptions.length > 0) {
+      return dynamicTapOptions;
+    }
     
     switch (contextFromRoute?.context) {
       case "care_plan_modal":
@@ -291,6 +421,16 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           { id: "want-to-change", text: "👎 I want to change it" },
           { id: "skip-actions", text: "⏩ I want to skip some actions for today" },
           { id: "alternate-suggestions", text: "🔁 I want alternate suggestions" },
+        ];
+      case "weekly_checkin":
+        // Fallback options if API didn't return any
+        return [
+          { id: "acne", text: "Acne" },
+          { id: "bloating", text: "Bloating" },
+          { id: "mood_swings", text: "Mood swings" },
+          { id: "fatigue", text: "Fatigue" },
+          { id: "cramps", text: "Cramps" },
+          { id: "headaches", text: "Headaches" },
         ];
       case "symptom_checkin":
         return [
@@ -340,6 +480,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     switch (contextFromRoute?.context) {
       case "care_plan_modal":
         return "Care Plan Check-in";
+      case "weekly_checkin":
+        return currentQuestion?.current_index !== undefined 
+          ? `Weekly Check-in (${currentQuestion.current_index + 1}/${currentQuestion.total_questions})`
+          : "Weekly Check-in";
       case "symptom_checkin":
         return "Symptom Check-in";
       case "personalise":
@@ -499,7 +643,19 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       ).filter(Boolean);
 
       const messageText = selectedTexts.join(", ");
-      handleSend(messageText);
+      
+      // Use API for weekly check-in
+      const contextFromRoute = route?.params?.conversationContext;
+      if (contextFromRoute?.context === "weekly_checkin" && checkinId && currentQuestion) {
+        // For multi_select, send array; for tap_choice, send single value
+        const response = currentQuestion.question_type === "multi_select" 
+          ? selectedOptions 
+          : selectedOptions[0];
+        submitCheckinResponse(response, messageText);
+      } else {
+        handleSend(messageText);
+      }
+      
       setSelectedOptions([]); // Clear selections after sending
     }
   };
@@ -539,10 +695,46 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const getBloatingLabel = (value: number) => {
+    // Use API-provided slider labels if available
+    if (currentQuestion?.slider_labels) {
+      const labels = currentQuestion.slider_labels;
+      // Check for exact match first
+      if (labels[String(value)]) return labels[String(value)];
+      // Otherwise find closest label
+      if (value <= 2) return labels["1"] || labels["2"] || "None";
+      if (value <= 4) return labels["3"] || labels["4"] || "Mild";
+      if (value <= 6) return labels["5"] || labels["6"] || "Moderate";
+      if (value <= 8) return labels["7"] || labels["8"] || "Strong";
+      return labels["9"] || "Extreme";
+    }
+    
+    // Default labels
+    if (value === 1) return "None";
+    if (value <= 3) return "Mild";
+    if (value <= 5) return "Moderate";
+    if (value <= 7) return "Strong";
+    return "Extreme";
+  };
+
   const handleSliderSelection = (value: number) => {
+    // Prevent selection during loading or without valid check-in state
+    const contextFromRoute = route?.params?.conversationContext;
+    if (contextFromRoute?.context === "weekly_checkin") {
+      if (isLoadingCheckin || !checkinId || !currentQuestion) {
+        console.log('Slider selection blocked - loading or no check-in state:', { isLoadingCheckin, checkinId, currentQuestion });
+        return;  // Block selection until API is ready
+      }
+    }
+    
     setSliderValue(value);
     setShowSlider(false);
     setShowSelectedValue(true);
+
+    // Use API for weekly check-in slider questions
+    if (contextFromRoute?.context === "weekly_checkin" && checkinId && currentQuestion) {
+      submitCheckinResponse(value, `${value} = ${getBloatingLabel(value)} bloating`);
+    }
 
     // Show selected value for 1 second, then show conversation in idle mode
     setTimeout(() => {
@@ -568,14 +760,6 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       9: "#FFEFF6",
     };
     return tints[value] || COLORS.white;
-  };
-
-  const getBloatingLabel = (value: number) => {
-    if (value === 1) return "None";
-    if (value <= 3) return "Mild";
-    if (value <= 5) return "Moderate";
-    if (value <= 7) return "Strong";
-    return "Extreme";
   };
 
   const renderIdleMode = () => {
@@ -628,75 +812,14 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     
     return (
       <View style={styles.idleModeContainer}>
-        {showSlider ? (
-          // Default bloating slider for other contexts
+        {isLoadingCheckin && !showSlider && !showSelectedValue && messages.length === 0 ? (
+          // Show loading state while initializing weekly check-in
           <View style={styles.sliderPageContainer}>
             <View style={styles.sliderTopSpacer} />
             <Avatar showMessage={true} />
-
-            <View style={styles.sliderContainer}>
-              <View style={styles.sliderNumbers}>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                  <TouchableOpacity
-                    key={num}
-                    onPressIn={() => setSliderHoverValue(num)}
-                    onPress={() => handleSliderSelection(num)}
-                    activeOpacity={0.8}
-                    style={[
-                      styles.sliderNumber,
-                      { backgroundColor: getSliderTint(num) },
-                      sliderHoverValue === num && styles.sliderNumberSelected,
-                    ]}
-                  >
-                    <Text style={styles.sliderNumberText}>{num}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.sliderLabels}>
-                <Text style={styles.sliderLabel}>None</Text>
-                <Text style={styles.sliderLabel}>Mild</Text>
-                <Text style={styles.sliderLabel}>Moderate</Text>
-                <Text style={styles.sliderLabel}>Strong</Text>
-                <Text style={styles.sliderLabel}>Extreme</Text>
-              </View>
-            </View>
-
-            <View style={styles.sliderBottomSpacer} />
-          </View>
-        ) : showSelectedValue ? (
-          <View style={styles.sliderPageContainer}>
-            <View style={styles.sliderTopSpacer} />
-            <Avatar showMessage={true} />
-
             <View style={styles.selectedValueContainer}>
-              <Text style={styles.selectedValueNumber}>{sliderValue}</Text>
-              <Text style={styles.selectedValueLabel}>{getBloatingLabel(sliderValue)} bloating</Text>
+              <Text style={styles.selectedValueLabel}>Loading check-in...</Text>
             </View>
-            {/* Keep slider visible during the 1s animation, with the selected cell highlighted */}
-            <View style={styles.sliderContainer}>
-              <View style={styles.sliderNumbers}>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                  <View
-                    key={num}
-                    style={[
-                      styles.sliderNumber,
-                      { backgroundColor: getSliderTint(num) },
-                      sliderValue === num && styles.sliderNumberSelected,
-                    ]}
-                  >
-                    <Text style={styles.sliderNumberText}>{num}</Text>
-                  </View>
-                ))}
-              </View>
-              <View style={styles.sliderLabels}>
-                <Text style={styles.sliderLabel}>None</Text>
-                <Text style={styles.sliderLabel}>Mild</Text>
-                <Text style={styles.sliderLabel}>Moderate</Text>
-                <Text style={styles.sliderLabel}>Strong</Text>
-                <Text style={styles.sliderLabel}>Extreme</Text>
-              </View>
-            </View>
-
             <View style={styles.sliderBottomSpacer} />
           </View>
         ) : (
@@ -707,16 +830,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
             >
-              <Avatar showMessage={true} />
+              <Avatar showMessage={false} />
               <View style={styles.messagesWrapper}>
-                {/* Always show slider value as first message if available - only for non-care-plan contexts */}
-                {sliderValue > 0 && !isCarePlanModal && (
-                  <UserMessage text={`${sliderValue} = ${getBloatingLabel(sliderValue)} bloating`} />
-                )}
-                {/* Show initial bot response if no messages yet - only for non-care-plan contexts */}
-                {messages.length === 0 && sliderValue > 0 && !isCarePlanModal && (
-                  <BotMessage text="Were there any big changes in your week? related to food, lifestyle, stress, etc" />
-                )}
                 {/* Show all messages from the messages array */}
                 {messages.map((message, index) => (
                   <View key={message.id}>
@@ -728,6 +843,36 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                   </View>
                 ))}
               </View>
+              
+              {/* Render Slider INLINE if active */}
+              {showSlider && (
+                <View style={styles.sliderContainer}>
+                  <View style={styles.sliderNumbers}>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                      <TouchableOpacity
+                        key={num}
+                        onPressIn={() => setSliderHoverValue(num)}
+                        onPress={() => handleSliderSelection(num)}
+                        activeOpacity={0.8}
+                        style={[
+                          styles.sliderNumber,
+                          { backgroundColor: getSliderTint(num) },
+                          sliderHoverValue === num && styles.sliderNumberSelected,
+                        ]}
+                      >
+                        <Text style={styles.sliderNumberText}>{num}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <View style={styles.sliderLabels}>
+                    <Text style={styles.sliderLabel}>{currentQuestion?.slider_labels?.["1"] || "None"}</Text>
+                    <Text style={styles.sliderLabel}>{currentQuestion?.slider_labels?.["3"] || "Mild"}</Text>
+                    <Text style={styles.sliderLabel}>{currentQuestion?.slider_labels?.["5"] || "Moderate"}</Text>
+                    <Text style={styles.sliderLabel}>{currentQuestion?.slider_labels?.["7"] || "Strong"}</Text>
+                    <Text style={styles.sliderLabel}>{currentQuestion?.slider_labels?.["9"] || "Extreme"}</Text>
+                  </View>
+                </View>
+              )}
             </ScrollView>
 
             {/* Recording status display */}
@@ -763,9 +908,6 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                 <BotMessage text={message.text} />
               ) : (
                 <UserMessage text={message.text} />
-              )}
-              {index === 0 && !showSlider && sliderValue > 0 && (
-                <UserMessage text={`${sliderValue} = ${getBloatingLabel(sliderValue)} bloating`} />
               )}
             </View>
           ))}
@@ -831,9 +973,6 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                 <BotMessage text={message.text} />
               ) : (
                 <UserMessage text={message.text} />
-              )}
-              {index === 0 && !showSlider && sliderValue > 0 && (
-                <UserMessage text={`${sliderValue} = ${getBloatingLabel(sliderValue)} bloating`} />
               )}
             </View>
           ))}
@@ -948,8 +1087,15 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
       {mode === "idle" && (
         <FooterCTA 
-          setMode={setMode} 
-          disabled={showSlider || showSelectedValue}
+          setMode={(newMode) => {
+            // If showing slider and user clicks tap, stay in idle (slider view)
+            if (showSlider && newMode === "tap") {
+              setMode("idle");
+            } else {
+              setMode(newMode);
+            }
+          }} 
+          disabled={false}
           isRecording={isRecording}
           recordingComplete={recordingComplete}
           onStartRecording={startRecording}

@@ -4,7 +4,8 @@ import { useNavigation, CommonActions, useFocusEffect } from '@react-navigation/
 import { LinearGradient } from 'expo-linear-gradient';
 import { getAuth } from 'firebase/auth';
 import { useState, useCallback } from 'react';
-import { rewardService } from '../../services/rewardService';
+import { rewardService, RewardsStatusResponse } from '../../services/rewardService';
+// StreakAtRiskBanner removed - streak alerts handled via popup in HomeScreen
 import {
   Alert,
   Dimensions,
@@ -49,6 +50,7 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationInsightsEnabled, setLocationInsightsEnabled] = useState(true);
   const [badges, setBadges] = useState<Array<{ id: string; title: string; icon: string; claimed_at: string | null }>>([]);
+  const [rewardsData, setRewardsData] = useState<RewardsStatusResponse | null>(null);
 
   // User profile data (fetched from Firebase + backend)
   const [userData, setUserData] = useState<{
@@ -68,8 +70,12 @@ export default function Profile({ navigation: propNavigation }: ProfileProps) {
     useCallback(() => {
       const fetchData = async () => {
         try {
-          // Fetch badges
-          const claimed = await rewardService.getClaimedRewards();
+          // Fetch badges and rewards status
+          const [claimed, rewards] = await Promise.all([
+            rewardService.getClaimedRewards(),
+            rewardService.getRewardsStatus().catch(() => null),
+          ]);
+          setRewardsData(rewards);
           const badgeRewards = claimed.filter((r: any) =>
             r.id === 'first_improvement'
           );

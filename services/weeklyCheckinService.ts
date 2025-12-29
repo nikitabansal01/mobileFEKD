@@ -1,0 +1,300 @@
+import { getAuth } from 'firebase/auth';
+import { Platform } from 'react-native';
+
+/**
+ * Weekly Check-in Service
+ * Handles API calls for the weekly check-in feature
+ */
+
+const getApiBaseUrl = () => {
+  const envUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (envUrl) return envUrl;
+
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:8000';
+  } else {
+    return 'http://localhost:8000';
+  }
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+const getAuthToken = async (): Promise<string | null> => {
+  try {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (user) {
+      return await user.getIdToken();
+    }
+    return null;
+  } catch (error) {
+    console.error('❌ Failed to get Firebase token:', error);
+    return null;
+  }
+};
+
+/**
+ * Tap option structure
+ */
+export interface TapOption {
+  id: string;
+  text: string;
+}
+
+export interface Message {
+  id: string;
+  text: string;
+  isBot: boolean;
+}
+
+/**
+ * Question response from API
+ */
+export interface QuestionResponse {
+  is_complete: boolean;
+  question_key: string | null;
+  question_type: string | null; // "slider", "tap_choice", "multi_select", "free_text", "confirmation"
+  message: string;
+  tap_options: TapOption[];
+  is_required: boolean;
+  current_index: number;
+  total_questions: number;
+  summary?: string;
+  slider_labels?: { [key: string]: string };  // For slider: {"1": "None", "5": "Moderate", "9": "Extreme"}
+  history?: Message[]; // Chat history for context restoration
+}
+
+/**
+ * Check-in status response
+ */
+export interface CheckInStatusResponse {
+  is_available: boolean;
+  is_due: boolean;
+  due_date: string | null;
+  incomplete_id: string | null;
+  last_completed: string | null;
+  checkin_streak: number;
+  unlock_days_remaining: number;
+}
+
+/**
+ * Start check-in response
+ */
+export interface StartCheckInResponse {
+  checkin_id: string;
+  week_number: number;
+  year: number;
+  question: QuestionResponse;
+}
+
+/**
+ * Submit response result
+ */
+export interface SubmitResponseResult {
+  checkin_id: string;
+  question: QuestionResponse;
+}
+
+class WeeklyCheckinService {
+  /**
+   * Get current check-in status
+   */
+  async getStatus(): Promise<CheckInStatusResponse | null> {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        console.error('❌ No auth token available');
+        return null;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/weekly-checkin/status`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('❌ Failed to get check-in status:', response.status);
+        return null;
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('❌ Error fetching check-in status:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Start a new check-in or resume an incomplete one
+   */
+  async startCheckin(): Promise<StartCheckInResponse | null> {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        console.error('❌ No auth token available');
+        return null;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/weekly-checkin/start`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Failed to start check-in:', errorData);
+        return null;
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('❌ Error starting check-in:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Submit a response to a check-in question
+   */
+  async submitResponse(
+    checkinId: string,
+    questionKey: string,
+    response: any,
+    messageText?: string
+  ): Promise<SubmitResponseResult | null> {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        console.error('❌ No auth token available');
+        return null;
+      }
+
+      const fetchResponse = await fetch(`${API_BASE_URL}/api/v1/weekly-checkin/respond`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          checkin_id: checkinId,
+          question_key: questionKey,
+          response: response,
+          message_text: messageText,
+        }),
+      });
+
+      if (!fetchResponse.ok) {
+        const errorData = await fetchResponse.json();
+        console.error('❌ Failed to submit response:', errorData);
+        return null;
+      }
+
+      return await fetchResponse.json();
+    } catch (error) {
+      console.error('❌ Error submitting response:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get check-in history for insights
+   */
+  async getHistory(limit: number = 12): Promise<any[]> {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        console.error('❌ No auth token available');
+        return [];
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/weekly-checkin/history?limit=${limit}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('❌ Failed to get check-in history:', response.status);
+        return [];
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('❌ Error fetching check-in history:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get severity trends for visualization
+   */
+  async getTrends(weeks: number = 8): Promise<any[]> {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        console.error('❌ No auth token available');
+        return [];
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/weekly-checkin/trends?weeks=${weeks}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('❌ Failed to get trends:', response.status);
+        return [];
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('❌ Error fetching trends:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get factor correlations for insights
+   */
+  async getCorrelations(weeks: number = 12): Promise<any | null> {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        console.error('❌ No auth token available');
+        return null;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/weekly-checkin/correlations?weeks=${weeks}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('❌ Failed to get correlations:', response.status);
+        return null;
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('❌ Error fetching correlations:', error);
+      return null;
+    }
+  }
+}
+
+export const weeklyCheckinService = new WeeklyCheckinService();
+export default weeklyCheckinService;

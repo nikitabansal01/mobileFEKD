@@ -29,12 +29,12 @@ const TIME_ICONS: Record<string, string> = {
   morning: '🌤️',
   afternoon: '☀️',
   evening: '🌙',
-  anytime: '', // No icon for anytime
+  anytime: 'Anytime', // Text for anytime
   // Add common variations
   'Morning': '🌤️',
   'Afternoon': '☀️',
   'Evening': '🌙',
-  'Anytime': '', // No icon for anytime
+  'Anytime': 'Anytime', // Text for anytime
   // Add more common API variations
   'am': '🌤️',
   'pm': '☀️',
@@ -204,6 +204,7 @@ export default function ActionPlanTimeline({
       mindfulness_durations: [],
       mindfulness_techniques: [],
       time_slot: 'morning', // Add time_slot for sorting
+      hero_image_url: require('../assets/images/logo.png'), // Weekly check-in logo
     };
 
     // Process ALL keys from assignments object (including 'completed' if present)
@@ -367,7 +368,7 @@ export default function ActionPlanTimeline({
     setAnchors(todayNext);
 
     // Calculate time slot icon positions
-    // RULE: Separate icon for EACH time section (morning/afternoon/evening)
+    // RULE: Show icon for EACH distinct time section (morning/afternoon/evening/anytime)
     // NO icons for completed section - only for pending items
     const positions: TimeSlotPosition[] = [];
 
@@ -390,33 +391,52 @@ export default function ActionPlanTimeline({
       slot => timeSlotGroups[slot] && timeSlotGroups[slot].length > 0
     );
 
-    // If we have pending items, show ONE icon at the start of pending section
-    // (between completed section and first pending item)
-    if (orderedSlots.length > 0 && pendingItems.length > 0) {
-      const firstTimeSlot = orderedSlots[0]; // Get earliest pending time slot
+    console.log('🔍 Time slot grouping:', {
+      pendingItemsCount: pendingItems.length,
+      groups: Object.entries(timeSlotGroups).map(([slot, items]) => ({
+        slot,
+        itemIds: items.map(i => i.id),
+        itemTitles: items.map(i => i.title),
+      })),
+      orderedSlots,
+    });
 
-      // Calculate position: after completed items + Weekly Check-in
-      // Use the first pending item's anchor to find the right Y position
-      const firstPendingItem = pendingItems[0];
-      const anchorForFirst = todayNext.find(a => a.id === firstPendingItem.id.toString());
+    // Add icon for EACH time section (morning, afternoon, evening, anytime)
+    orderedSlots.forEach((timeSlot, slotIndex) => {
+      const slotItems = timeSlotGroups[timeSlot];
+      if (slotItems && slotItems.length > 0) {
+        // Find the first item of this time slot
+        const firstItemOfSlot = slotItems[0];
+        // Fix: Compare as strings to handle both number and string id types
+        const itemIdStr = String(firstItemOfSlot.id);
+        const anchorForItem = todayNext.find(a => a.id === itemIdStr) ||
+          todayNext.find(a => String(a.id) === itemIdStr);
 
-      if (anchorForFirst) {
-        // Position icon at the TOP of pending section - on the line between completed and pending
-        // This should be at the cap/break point in the timeline
-        const iconY = anchorForFirst.y - ITEM_BLOCK_H / 2;
-        positions.push({
-          timeSlot: firstTimeSlot,
-          iconY: iconY,
-          isCapCenter: true,
+        console.log(`🔍 Looking for anchor for ${timeSlot}:`, {
+          itemId: firstItemOfSlot.id,
+          itemIdStr,
+          itemTitle: firstItemOfSlot.title,
+          foundAnchor: !!anchorForItem,
+          availableAnchorIds: todayNext.map(a => a.id),
         });
-      }
-    }
 
-    console.log('🔍 Time slot icons (pending section):', {
+        if (anchorForItem) {
+          // Position icon at the TOP of this section
+          const iconY = anchorForItem.y - ITEM_BLOCK_H / 2;
+          positions.push({
+            timeSlot: timeSlot,
+            iconY: iconY,
+            isCapCenter: slotIndex === 0, // First slot icon is at cap center
+          });
+        }
+      }
+    });
+
+    console.log('🔍 Time slot icons (ALL sections):', {
       completedCount: completedItems.length,
       pendingCount: pendingItems.length,
       orderedSlots,
-      positions: positions.map(p => ({ slot: p.timeSlot, y: p.iconY })),
+      positions: positions.map(p => ({ slot: p.timeSlot, y: Math.round(p.iconY) })),
     });
 
     setTimeSlotPositions(positions);
@@ -907,7 +927,11 @@ export default function ActionPlanTimeline({
                 >
                   {a.hero_image_url ? (
                     <Image
-                      source={{ uri: a.hero_image_url }}
+                      source={
+                        typeof a.hero_image_url === 'number'
+                          ? a.hero_image_url  // Local require() result
+                          : { uri: a.hero_image_url }  // Remote URL
+                      }
                       style={styles.circleImage}
                       resizeMode="cover"
                     />

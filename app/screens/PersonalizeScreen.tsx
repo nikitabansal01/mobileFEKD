@@ -14,6 +14,9 @@ import { preferencesService, AllPreferencesResponse, PreferenceType } from '../.
 import PreferenceModal from '../../components/PreferenceModal';
 import BodyMetricsModal from '../../components/BodyMetricsModal';
 import CravingsModal from '../../components/CravingsModal';
+// StreakAtRiskBanner removed - streak alerts handled via popup in HomeScreen
+import StreakMilestoneModal from '../../components/StreakMilestoneModal';
+import { shouldCelebrateMilestone, markMilestoneCelebrated } from '../../utils/streakMilestones';
 // Constants from Figma design
 const BACKGROUND_VECTOR_IMAGE = "http://localhost:3845/assets/cf926b4d5ec2719e28f1af07e084ed30c131abe4.svg";
 // const MILESTONE_BG_IMAGE = require("../../assets/images/milestone-bg.png");
@@ -159,11 +162,14 @@ type RewardItem = {
   buttonText?: string;
 };
 
+type MilestoneState = 'completed' | 'active' | 'locked';
+
 type Milestone = {
   id: string;
   name: string;
   day: string;
-  isActive: boolean;
+  dayNumber: number;  // For progress calculation
+  state: MilestoneState;
 };
 
 // Navigation type
@@ -185,32 +191,18 @@ export default function PersonalizeScreen() {
   const [claimingRewardId, setClaimingRewardId] = useState<string | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationEmoji, setCelebrationEmoji] = useState('🎉');
+  
+  // Streak milestone celebration state
+  const [milestoneToShow, setMilestoneToShow] = useState<number | null>(null);
 
   // Animation values for celebration
   const celebrationScale = useRef(new Animated.Value(0)).current;
   const celebrationOpacity = useRef(new Animated.Value(0)).current;
 
-  // Trigger celebration animation
+  // Trigger celebration animation - DISABLED per user request
   const triggerCelebration = (emoji: string = '🎉') => {
-    setCelebrationEmoji(emoji);
-    setShowCelebration(true);
-    celebrationScale.setValue(0);
-    celebrationOpacity.setValue(1);
-
-    Animated.sequence([
-      Animated.spring(celebrationScale, {
-        toValue: 1,
-        friction: 3,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(celebrationOpacity, {
-        toValue: 0,
-        duration: 800,
-        delay: 500,
-        useNativeDriver: true,
-      }),
-    ]).start(() => setShowCelebration(false));
+    // Animation disabled - just do nothing
+    return;
   };
 
   // Modal visibility state
@@ -227,6 +219,14 @@ export default function PersonalizeScreen() {
       setRewardsData(rewards);
       setCurrentStreakDays(rewards.current_streak);
       if (preferences) setPreferencesData(preferences);
+      
+      // Check for streak milestone celebration
+      if (rewards.current_streak > 0) {
+        const milestone = await shouldCelebrateMilestone(rewards.current_streak);
+        if (milestone) {
+          setMilestoneToShow(milestone);
+        }
+      }
     } catch (error) {
       console.error('Error loading rewards:', error);
     } finally {
@@ -568,17 +568,21 @@ export default function PersonalizeScreen() {
       switch (rewardId) {
         case 'streak_freeze':
           return rewardState === 'claimed'
-            ? { buttonText: "Collected ✓", buttonStyle: 'collected' as const, hasButton: false }
+            ? { buttonText: "", buttonStyle: 'collected' as const, hasButton: false }
             : { buttonText: "Claim", buttonStyle: 'action' as const, hasButton: true };
         case 'plan_refresh_2x':
           return rewardState === 'claimed'
-            ? { buttonText: "Collected ✓", buttonStyle: 'collected' as const, hasButton: false }
+            ? { buttonText: "", buttonStyle: 'collected' as const, hasButton: false }
             : { buttonText: "Claim", buttonStyle: 'action' as const, hasButton: true };
         case 'symptom_patterns':
-          // ALWAYS show "View Insights" button for both available and claimed
-          return { buttonText: "View Insights", buttonStyle: 'action' as const, hasButton: true };
+          // When unlocked, just show checkmark - no View Insights button (effect is in Insights screen)
+          return rewardState === 'claimed'
+            ? { buttonText: "", buttonStyle: 'collected' as const, hasButton: false }
+            : { buttonText: "Claim", buttonStyle: 'action' as const, hasButton: true };
         case 'first_improvement':
-          return { buttonText: "Claimed 🎉", buttonStyle: 'collected' as const, hasButton: true };
+          return rewardState === 'claimed'
+            ? { buttonText: "", buttonStyle: 'collected' as const, hasButton: false }
+            : { buttonText: "Claim", buttonStyle: 'action' as const, hasButton: true };
         default:
           // All preference rewards - show "Edit" when claimed, "Personalize now" when available
           if (rewardState === 'claimed') {
@@ -612,20 +616,31 @@ export default function PersonalizeScreen() {
     return null; // or a loading component
   }
 
-  // Dynamic milestones based on current streak
-  const getMilestoneActive = (dayThreshold: number, nextThreshold?: number) => {
+  // Dynamic milestones based on current streak - 3 states: completed, active, locked
+  const getMilestoneState = (dayThreshold: number, nextThreshold?: number): MilestoneState => {
     if (nextThreshold) {
-      return currentStreakDays >= dayThreshold && currentStreakDays < nextThreshold;
+      // Has a next threshold - check if we've passed this range
+      if (currentStreakDays >= nextThreshold) {
+        return 'completed';  // Past this milestone entirely
+      } else if (currentStreakDays >= dayThreshold) {
+        return 'active';     // Currently in this milestone range
+      }
+      return 'locked';       // Haven't reached this milestone yet
+    } else {
+      // No next threshold - this is the last milestone
+      if (currentStreakDays >= dayThreshold) {
+        return 'active';     // Reached the final milestone
+      }
+      return 'locked';
     }
-    return currentStreakDays >= dayThreshold;
   };
 
   const milestones: Milestone[] = [
-    { id: "1", name: "Seed", day: "Day 7", isActive: getMilestoneActive(0, 30) },
-    { id: "2", name: "Grow", day: "Day 30", isActive: getMilestoneActive(30, 60) },
-    { id: "3", name: "Rise", day: "Day 60", isActive: getMilestoneActive(60, 180) },
-    { id: "4", name: "Peak", day: "Day 180", isActive: getMilestoneActive(180, 270) },
-    { id: "5", name: "Glow", day: "Day 270", isActive: getMilestoneActive(270) },
+    { id: "1", name: "Seed", day: "Day 7", dayNumber: 7, state: getMilestoneState(7, 30) },
+    { id: "2", name: "Grow", day: "Day 30", dayNumber: 30, state: getMilestoneState(30, 60) },
+    { id: "3", name: "Rise", day: "Day 60", dayNumber: 60, state: getMilestoneState(60, 180) },
+    { id: "4", name: "Peak", day: "Day 180", dayNumber: 180, state: getMilestoneState(180, 270) },
+    { id: "5", name: "Glow", day: "Day 270", dayNumber: 270, state: getMilestoneState(270) },
   ];
 
   const renderLabsSection = () => (
@@ -785,32 +800,96 @@ export default function PersonalizeScreen() {
           <View style={styles.milestoneVector1} />
           <View style={styles.milestoneVector2} />
 
-          {/* Progress line */}
+          {/* Progress line - gray background */}
           <View style={styles.progressLine} />
-          <View style={styles.progressLineActive} />
 
-          {milestones.map((milestone, index) => (
-            <View key={milestone.id} style={styles.milestoneItem}>
-              <View style={[
-                styles.milestoneDot,
-                { backgroundColor: milestone.isActive ? COLORS.warmPurple : '#D9D9D9' }
-              ]} />
-              <View style={styles.milestoneTextContainer}>
-                <Text style={[
-                  styles.milestoneName,
-                  { color: milestone.isActive ? COLORS.warmPurple : COLORS.greyLight }
-                ]}>
-                  {milestone.name}
-                </Text>
-                <Text style={[
-                  styles.milestoneDay,
-                  { color: milestone.isActive ? COLORS.warmPurple : COLORS.greyLight }
-                ]}>
-                  {milestone.day}
-                </Text>
+          {/* Active progress line - dynamic width based on streak */}
+          {(() => {
+            // Calculate progress percentage across all milestones
+            // Milestones are at positions: Day 7, 30, 60, 180, 270 
+            // Line should extend TO the center of the current milestone dot
+            // 5 dots evenly spaced = each dot at 0%, 25%, 50%, 75%, 100%
+            let progressPercent = 0;
+
+            // When reaching a milestone, line should reach TO that milestone's center
+            if (currentStreakDays >= 270) {
+              progressPercent = 100;  // Reaches Glow
+            } else if (currentStreakDays >= 180) {
+              // At Peak (180) - line reaches 75% (Peak position), then progresses toward Glow
+              progressPercent = 75 + ((currentStreakDays - 180) / (270 - 180)) * 25;
+            } else if (currentStreakDays >= 60) {
+              // At Rise (60) - line reaches 50% (Rise position), then progresses toward Peak
+              progressPercent = 50 + ((currentStreakDays - 60) / (180 - 60)) * 25;
+            } else if (currentStreakDays >= 30) {
+              // At Grow (30) - line reaches 25% (Grow position), then progresses toward Rise
+              // FIXED: When exactly at 30, show 25% (at Grow dot center)
+              progressPercent = 25 + ((currentStreakDays - 30) / (60 - 30)) * 25;
+            } else if (currentStreakDays >= 7) {
+              // At Seed (7) - line starts at 0% (Seed position), then progresses toward Grow
+              // FIXED: progress from Seed (0%) toward Grow (25%)
+              progressPercent = 0 + ((currentStreakDays - 7) / (30 - 7)) * 25;
+            } else if (currentStreakDays >= 1) {
+              // Before Seed - no progress shown
+              progressPercent = 0;
+            }
+
+            // Clamp to valid range
+            progressPercent = Math.max(0, Math.min(100, progressPercent));
+
+            return (
+              <View style={styles.progressLineContainer}>
+                <LinearGradient
+                  colors={['#A29AEA', '#C17EC9', '#D482B9']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[
+                    styles.progressLineActive,
+                    { width: `${progressPercent}%` }
+                  ]}
+                />
               </View>
-            </View>
-          ))}
+            );
+          })()}
+
+          {milestones.map((milestone, index) => {
+            const isCompleted = milestone.state === 'completed';
+            const isActive = milestone.state === 'active';
+            const dotColor = isCompleted || isActive ? COLORS.warmPurple : '#D9D9D9';
+            const textColor = isCompleted || isActive ? COLORS.warmPurple : COLORS.greyLight;
+            // Active milestone gets larger dot
+            const dotSize = isActive ? 16 : 12;
+
+            return (
+              <View key={milestone.id} style={styles.milestoneItem}>
+                <View style={[
+                  styles.milestoneDot,
+                  {
+                    backgroundColor: dotColor,
+                    width: scale(dotSize),
+                    height: scale(dotSize),
+                    borderRadius: scale(dotSize / 2),
+                  }
+                ]} />
+                <View style={styles.milestoneTextContainer}>
+                  <Text style={[
+                    styles.milestoneName,
+                    {
+                      color: textColor,
+                      fontWeight: isActive ? '600' : '400',
+                    }
+                  ]}>
+                    {milestone.name}
+                  </Text>
+                  <Text style={[
+                    styles.milestoneDay,
+                    { color: textColor }
+                  ]}>
+                    {milestone.day}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
         </View>
       </View>
     </>
@@ -961,59 +1040,103 @@ export default function PersonalizeScreen() {
         {renderStreakSection()}
 
         {/* Your Preferences & Tokens Section */}
-        {((rewardsData?.freeze_count ?? 0) > 0 || preferencesData) && (
+        {(rewardsData || preferencesData) && (
           <View style={styles.preferencesSection}>
             <Text style={styles.preferencesSectionTitle}>Your Status</Text>
 
-            {/* Freeze Tokens with Use Button */}
-            {(rewardsData?.freeze_count ?? 0) > 0 && (
-              <View style={styles.preferenceItem}>
-                <Text style={styles.preferenceLabel}>🧊 Streak Freeze</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <Text style={styles.preferenceValue}>{rewardsData?.freeze_count}</Text>
-                  {!rewardsData?.today_frozen && (
-                    <TouchableOpacity
-                      style={{
-                        backgroundColor: COLORS.warmPurple,
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        borderRadius: 12,
-                      }}
-                      onPress={() => {
-                        Alert.alert(
-                          '❄️ Use Streak Freeze?',
-                          'This will protect your streak for today. You won\'t need to complete any actions.',
-                          [
-                            { text: 'Cancel', style: 'cancel' },
-                            {
-                              text: 'Use Freeze',
-                              onPress: async () => {
-                                try {
-                                  const result = await rewardService.useFreezeProactive();
-                                  if (result.success) {
-                                    Alert.alert('✅ Frozen!', result.message || 'Streak protected for today!');
-                                    loadRewardsData();
-                                  } else {
-                                    Alert.alert('Error', result.error || 'Could not use freeze');
+            {/* Freeze Tokens with Use Button - ALWAYS SHOW */}
+            <View style={styles.preferenceItem}>
+              <Text style={styles.preferenceLabel}>🧊 Streak Freeze</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Text style={styles.preferenceValue}>{rewardsData?.freeze_count ?? 0}</Text>
+                {(rewardsData?.freeze_count ?? 0) > 0 ? (
+                  <>
+                    {/* Priority 1: Save streak if at risk (missed days) */}
+                    {rewardsData?.streak_at_risk && rewardsData?.can_freeze && (rewardsData?.missed_days_count ?? 0) > 0 ? (
+                      <TouchableOpacity
+                        style={{
+                          backgroundColor: '#F39C12',
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 12,
+                        }}
+                        onPress={() => {
+                          const missedDays = rewardsData?.missed_days_count ?? 1;
+                          const freezesNeeded = rewardsData?.freezes_needed ?? missedDays;
+                          const dayText = missedDays === 1 ? 'day' : 'days';
+                          Alert.alert(
+                            '⚠️ Save Your Streak!',
+                            `You missed ${missedDays} ${dayText}. Use ${freezesNeeded} freeze token${freezesNeeded > 1 ? 's' : ''} to save your streak?`,
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              {
+                                text: `Save Streak (${freezesNeeded} 🧊)`,
+                                onPress: async () => {
+                                  try {
+                                    const result = await rewardService.useFreezeReactive();
+                                    if (result.success) {
+                                      Alert.alert('✅ Streak Saved!', result.message || 'Your streak is protected!');
+                                      loadRewardsData();
+                                    } else {
+                                      Alert.alert('Error', result.error || 'Could not save streak');
+                                    }
+                                  } catch (error) {
+                                    Alert.alert('Error', 'Failed to save streak');
                                   }
-                                } catch (error) {
-                                  Alert.alert('Error', 'Failed to use freeze');
                                 }
                               }
-                            }
-                          ]
-                        );
-                      }}
-                    >
-                      <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>Use</Text>
-                    </TouchableOpacity>
-                  )}
-                  {rewardsData?.today_frozen && (
-                    <Text style={{ color: '#22c55e', fontWeight: '600', fontSize: 12 }}>❄️ Frozen</Text>
-                  )}
-                </View>
+                            ]
+                          );
+                        }}
+                      >
+                        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>Save Streak</Text>
+                      </TouchableOpacity>
+                    ) : !rewardsData?.today_frozen ? (
+                      /* Priority 2: Proactive freeze for today */
+                      <TouchableOpacity
+                        style={{
+                          backgroundColor: COLORS.warmPurple,
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 12,
+                        }}
+                        onPress={() => {
+                          Alert.alert(
+                            '❄️ Use Streak Freeze?',
+                            'This will protect your streak for today. You won\'t need to complete any actions.',
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              {
+                                text: 'Use Freeze',
+                                onPress: async () => {
+                                  try {
+                                    const result = await rewardService.useFreezeProactive();
+                                    if (result.success) {
+                                      Alert.alert('✅ Frozen!', result.message || 'Streak protected for today!');
+                                      loadRewardsData();
+                                    } else {
+                                      Alert.alert('Error', result.error || 'Could not use freeze');
+                                    }
+                                  } catch (error) {
+                                    Alert.alert('Error', 'Failed to use freeze');
+                                  }
+                                }
+                              }
+                            ]
+                          );
+                        }}
+                      >
+                        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>Use Today</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={{ color: '#22c55e', fontWeight: '600', fontSize: 12 }}>❄️ Frozen</Text>
+                    )}
+                  </>
+                ) : (
+                  <Text style={{ color: '#9ca3af', fontSize: 11 }}>Earn at Day 3</Text>
+                )}
               </View>
-            )}
+            </View>
 
             {/* Refresh Status */}
             {rewardsData?.refresh_status && (
@@ -1204,6 +1327,18 @@ export default function PersonalizeScreen() {
         onClose={() => setActiveModal(null)}
         onSaved={loadRewardsData}
         currentCravings={preferencesData?.preferences?.cravings}
+      />
+
+      {/* Streak Milestone Celebration Modal */}
+      <StreakMilestoneModal
+        visible={milestoneToShow !== null}
+        milestone={milestoneToShow || 7}
+        onClose={async () => {
+          if (milestoneToShow) {
+            await markMilestoneCelebrated(milestoneToShow);
+          }
+          setMilestoneToShow(null);
+        }}
       />
     </SafeAreaView>
   );
@@ -1497,13 +1632,12 @@ const styles = StyleSheet.create({
   },
   milestonesContainer: {
     width: '100%',
-    paddingTop: verticalScale(40),
-    paddingBottom: verticalScale(40),
+    paddingTop: verticalScale(20),    // Reduced from 40
+    paddingBottom: verticalScale(16), // Reduced from 40
     paddingHorizontal: scale(20),
     backgroundColor: COLORS.white,
     borderRadius: 10,
     position: 'relative',
-    // overflow: 'hidden', // Remove to allow animation to extend beyond
     zIndex: 2,
     marginHorizontal: isAndroid ? 0 : undefined,
   },
@@ -1542,13 +1676,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#D9D9D9',
   },
   progressLineActive: {
+    height: 3,
+    borderRadius: 1.5,
+  },
+  progressLineContainer: {
     position: 'absolute',
     top: 5,
     left: 15,
-    width: 40,
+    right: 15,
     height: 3,
-    borderRadius: 1.5,
-    backgroundColor: COLORS.warmPurple,
   },
   milestoneItem: {
     alignItems: 'center',
@@ -1586,7 +1722,8 @@ const styles = StyleSheet.create({
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: verticalScale(26),
+    marginTop: verticalScale(8),     // Added top margin
+    marginBottom: verticalScale(16), // Reduced from 26
     gap: moderateScale(6),
   },
   dividerLine: {
@@ -1719,22 +1856,23 @@ const styles = StyleSheet.create({
   // Your Status / Preferences Section
   preferencesSection: {
     marginHorizontal: scale(20),
-    marginTop: verticalScale(20),
+    marginTop: verticalScale(4),   // Reduced from 12 - closer to milestones
+    marginBottom: verticalScale(8), // Reduced from 16 - closer to Seed Rewards
     backgroundColor: '#F8F4FF',
     borderRadius: moderateScale(16),
-    padding: scale(16),
+    padding: scale(14),  // Slightly reduced from 16
   },
   preferencesSectionTitle: {
     fontSize: moderateScale(16, 1.5),
     fontFamily: FONT_FAMILIES['Inter-SemiBold'],
     color: '#4A3D5C',
-    marginBottom: verticalScale(12),
+    marginBottom: verticalScale(8),  // Reduced from 12 for tighter spacing
   },
   preferenceItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: verticalScale(10),
+    paddingVertical: verticalScale(8),  // Reduced from 10 for consistent spacing
     borderBottomWidth: 1,
     borderBottomColor: '#E8E1F0',
   },

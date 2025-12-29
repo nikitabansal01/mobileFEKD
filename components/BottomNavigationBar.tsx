@@ -1,10 +1,11 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import AuvraCharacterNoShadow from './AuvraCharacterNoShadow';
+import { rewardService } from '../services/rewardService';
 
 /**
  * Props for backwards compatibility
@@ -33,32 +34,60 @@ function isReactNavigationProps(props: BottomNavigationBarProps): props is Botto
 const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
   const hookNavigation = useNavigation();
   const characterSize = responsiveWidth(20);
+  const [streakAtRisk, setStreakAtRisk] = useState(false);
+  const [canFreeze, setCanFreeze] = useState(false);
+
+  // Fetch streak risk status to show badge
+  useEffect(() => {
+    const fetchStreakStatus = async () => {
+      try {
+        const data = await rewardService.getRewardsStatus();
+        if (data) {
+          setStreakAtRisk(data.streak_at_risk || false);
+          setCanFreeze(data.can_freeze || false);
+        }
+      } catch (error) {
+        console.log('Error fetching streak status for nav badge:', error);
+      }
+    };
+
+    fetchStreakStatus();
+    
+    // Refresh every 60 seconds
+    const interval = setInterval(fetchStreakStatus, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const tabs = [
     { 
       key: 'home', 
       label: 'Home', 
       icon: require('../assets/icons/IconHome.png'),
+      showBadge: streakAtRisk && canFreeze, // Show red dot if at risk
     },
     { 
       key: 'personalize', 
       label: 'Personalize', 
       icon: require('../assets/icons/IconPersonalize.png'),
+      showBadge: streakAtRisk && canFreeze, // Show red dot if at risk
     },
     { 
       key: 'auvra', 
       label: 'Auvra', 
       icon: null,
+      showBadge: false,
     },
     { 
       key: 'insights', 
       label: 'Insights', 
       icon: require('../assets/icons/IconProgress.png'),
+      showBadge: false,
     },
     { 
       key: 'profile', 
       label: 'Profile', 
       icon: require('../assets/icons/IconProfile.png'),
+      showBadge: false,
     },
   ];
 
@@ -128,16 +157,24 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
                   ]}
                   onPress={() => handleTabPress(tab.key)}
                 >
-                  {tab.icon ? (
-                    <Image 
-                      source={tab.icon}
-                      style={styles.tabIcon}
-                      tintColor={isActive ? '#C17EC9' : '#000000'}
-                      resizeMode="contain"
-                    />
-                  ) : (
-                    <View style={styles.emptyIconSpace} />
-                  )}
+                  <View>
+                    {tab.icon ? (
+                      <Image 
+                        source={tab.icon}
+                        style={styles.tabIcon}
+                        tintColor={isActive ? '#C17EC9' : '#000000'}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <View style={styles.emptyIconSpace} />
+                    )}
+                    {/* Red alert badge */}
+                    {tab.showBadge && (
+                      <View style={styles.alertBadge}>
+                        <View style={styles.alertBadgePulse} />
+                      </View>
+                    )}
+                  </View>
                   <Text style={[
                     styles.tabLabel,
                     isActive && styles.activeTabLabel
@@ -270,6 +307,28 @@ const styles = StyleSheet.create({
     width: responsiveWidth(4.4),
     height: responsiveWidth(4.4),
     marginBottom: responsiveHeight(0.1),
+  },
+  alertBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#EF4444',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    zIndex: 10,
+  },
+  alertBadgePulse: {
+    position: 'absolute',
+    top: -2,
+    left: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#EF4444',
+    opacity: 0.4,
   },
 });
 

@@ -4,7 +4,8 @@ import AuvraChatModal from '@/components/AuvraChatModal';
 import CalendarBottomSheet from '@/components/CalendarBottomSheet';
 import apiPromiseManager from '@/services/apiPromiseManager';
 import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse, ActionPlanResponse, ActionPlanItem } from '@/services/homeService';
-import { rewardService, RefreshStatus } from '@/services/rewardService';
+import { rewardService, RefreshStatus, RewardsStatusResponse } from '@/services/rewardService';
+// StreakAtRiskBanner removed - using one-time Alert popup instead
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -80,6 +81,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   // Refresh status for 2x plan refresh reward
   const [refreshStatus, setRefreshStatus] = useState<RefreshStatus | null>(null);
   const [isRefreshingAll, setIsRefreshingAll] = useState(false);
+  const [rewardsData, setRewardsData] = useState<RewardsStatusResponse | null>(null);
 
   // Animated value for hourglass rotation
   const spinValue = useRef(new Animated.Value(0)).current;
@@ -148,31 +150,41 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             setRefreshStatus(rewardsData.refresh_status);
           }
 
-          // Check if streak is at risk and user can freeze (manual freeze prompt)
-          if (rewardsData?.streak_at_risk && rewardsData?.can_freeze && rewardsData.missed_days_count > 0) {
+          // Store rewards data
+          setRewardsData(rewardsData || null);
+
+          // Show popup every time if streak is at risk and user can freeze
+          if (rewardsData?.streak_at_risk && rewardsData?.can_freeze && rewardsData?.missed_days_count > 0) {
+            const missedDays = rewardsData.missed_days_count;
+            const freezesNeeded = rewardsData.freezes_needed || missedDays;
+            const freezeCount = rewardsData.freeze_count || 0;
+            const dayText = missedDays === 1 ? 'day' : 'days';
+            const tokenText = freezesNeeded === 1 ? 'token' : 'tokens';
+
             Alert.alert(
               '⚠️ Your Streak is at Risk!',
-              `You missed ${rewardsData.missed_days_count} day(s). Use ${rewardsData.freezes_needed} freeze token(s) to protect your ${rewardsData.current_streak}-day streak?`,
+              `You missed ${missedDays} ${dayText}. Use ${freezesNeeded} freeze ${tokenText} to protect your streak?\n\nYou have ${freezeCount} ${freezeCount === 1 ? 'token' : 'tokens'} available.`,
               [
-                { text: 'Let it Reset', style: 'cancel' },
+                { text: 'Later', style: 'cancel' },
                 {
-                  text: `Use Freeze 🧊`,
+                  text: `Use ${freezesNeeded} 🧊`,
                   style: 'default',
                   onPress: async () => {
                     try {
                       const result = await rewardService.useFreezeReactive();
                       if (result.success) {
-                        Alert.alert('✅ Streak Protected!', result.message || 'Your streak is safe!');
-                        // Refresh data
-                        loadHomeDataWithoutLoading();
+                        Alert.alert('✅ Streak Saved!', result.message || `${result.days_frozen} day(s) frozen. Your streak is safe!`);
+                        // Refresh data after successful freeze
+                        const updatedRewards = await rewardService.getRewardsStatus().catch(() => null);
+                        if (updatedRewards) setRewardsData(updatedRewards);
                       } else {
-                        Alert.alert('Error', result.error || 'Could not use freeze');
+                        Alert.alert('Error', result.error || 'Could not freeze streak');
                       }
                     } catch (error) {
-                      Alert.alert('Error', 'Failed to use freeze');
+                      Alert.alert('Error', 'Failed to freeze streak. Please try again.');
                     }
-                  }
-                }
+                  },
+                },
               ]
             );
           }
@@ -953,6 +965,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           </TouchableOpacity>
         </View>
 
+{/* Streak at risk popup is shown once on data load - no permanent banner */}
+
         {/* Hormone Quests Section - only show if there are any non-zero hormone totals */}
         {progressStats?.hormone_stats &&
           Object.values(progressStats.hormone_stats).some(stats => stats && stats.total > 0) && (
@@ -1121,6 +1135,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                 <TypeActionPlan
                   dateLabel={assignments?.date ? formatDate(assignments.date) : '15th July, 2025'}
                   assignments={assignments.assignments}
+                  weeklyCheckinStatus={assignments.weekly_checkin}
+                  topConcern={assignments.primary_hormone || 'your symptoms'}
                 />
               )
             ) : (
