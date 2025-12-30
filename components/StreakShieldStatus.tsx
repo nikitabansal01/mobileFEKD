@@ -1,19 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { moderateScale, verticalScale, scale } from 'react-native-size-matters';
-
-// Colors matching AUVRA app design
-const COLORS = {
-  white: "#FFFFFF",
-  warmPurple: "#C17EC9",
-  gradPurple: "#A29AEA",
-  textPrimary: "#4A3D5C",
-  textSecondary: "#6B5B7A",
-  accent: "#8B5CF6",
-  border: "#E8E1F0",
-  danger: "#E74C3C",
-  greyLight: "#949494",
-};
+import { COLORS } from '../constants/Colors';
 
 interface StreakShieldStatusProps {
   currentStreak: number;
@@ -59,7 +47,7 @@ const StreakShieldStatus: React.FC<StreakShieldStatusProps> = ({
   };
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[styles.container, streakAtRisk && styles.containerAtRisk]}
       onPress={onPress}
       activeOpacity={0.8}
@@ -141,7 +129,7 @@ const styles = StyleSheet.create({
   },
   number: {
     fontSize: moderateScale(24),
-    fontWeight: '700',
+    fontFamily: 'Inter600',
     color: COLORS.accent,
   },
   numberAtRisk: {
@@ -149,18 +137,19 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: moderateScale(12),
-    fontWeight: '500',
+    fontFamily: 'Inter500',
     color: COLORS.textSecondary,
     marginTop: verticalScale(2),
   },
   subLabel: {
     fontSize: moderateScale(10),
+    fontFamily: 'Inter400',
     color: COLORS.greyLight,
     marginTop: verticalScale(1),
   },
   subLabelAtRisk: {
     color: COLORS.danger,
-    fontWeight: '500',
+    fontFamily: 'Inter500',
   },
   divider: {
     width: 1,
@@ -180,7 +169,7 @@ const styles = StyleSheet.create({
   badgeText: {
     color: COLORS.white,
     fontSize: moderateScale(10),
-    fontWeight: '600',
+    fontFamily: 'Inter600',
   },
 });
 

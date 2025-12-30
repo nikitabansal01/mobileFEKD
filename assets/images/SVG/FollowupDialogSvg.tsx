@@ -20,7 +20,7 @@ const FollowupDialogSvg = ({text,width,height}:Props) => (
           fontSize: 14,
           fontWeight: "500",
           lineHeight: 22,
-          fontFamily: "Poppins500",
+          fontFamily: "Inter500",
           color: "#000",
         }}
       >

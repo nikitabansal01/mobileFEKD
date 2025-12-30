@@ -1280,7 +1280,7 @@ const styles = StyleSheet.create({
   clearButtonText: {
     fontSize: moderateScale(12, 1.5),
     color: '#666666',
-    fontWeight: 'bold',
+    fontFamily: 'Inter600',
   },
   defaultPlaceholder: {
     fontFamily: 'Inter400',

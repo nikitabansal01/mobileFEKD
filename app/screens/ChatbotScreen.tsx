@@ -1446,7 +1446,7 @@ const styles = StyleSheet.create({
   choiceButtonText: {
     fontSize: FONT_SIZES.message,
     fontFamily: FONT_FAMILIES['Inter-Regular'],
-    fontWeight: '400',
+    fontFamily: 'Inter400',
     color: COLORS.white,
     textAlign: 'center',
     lineHeight: LINE_HEIGHTS.normal,
@@ -1456,7 +1456,7 @@ const styles = StyleSheet.create({
   choiceButtonTextUnselected: {
     fontSize: FONT_SIZES.message,
     fontFamily: FONT_FAMILIES['Inter-Regular'],
-    fontWeight: '400',
+    fontFamily: 'Inter400',
     color: COLORS.onSurface,
     textAlign: 'center',
     paddingHorizontal: scale(15),
@@ -1669,7 +1669,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.large,
     fontFamily: FONT_FAMILIES['Inter-Regular'],
     color: COLORS.warmPurple,
-    fontWeight: 'bold',
+    fontFamily: 'Inter600',
     includeFontPadding: isAndroid ? false : undefined,
     textAlignVertical: isAndroid ? 'center' : undefined,
   },

@@ -5,11 +5,12 @@
  * Use for action cards, reward cards, or any loading state.
  */
 import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet, ViewStyle } from 'react-native';
+import { View, Animated, StyleSheet, ViewStyle, DimensionValue } from 'react-native';
 import { moderateScale } from 'react-native-size-matters';
+import { BACKGROUND } from '../constants/Colors';
 
 interface SkeletonLoaderProps {
-    width?: number | string;
+    width?: DimensionValue;
     height?: number;
     borderRadius?: number;
     style?: ViewStyle;
@@ -45,7 +46,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
 
     const backgroundColor = shimmerValue.interpolate({
         inputRange: [0, 1],
-        outputRange: ['#E8E8E8', '#F5F5F5'],
+        outputRange: [BACKGROUND.skeleton, BACKGROUND.skeletonShimmer],
     });
 
     return (
@@ -92,7 +93,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: moderateScale(16),
-        backgroundColor: '#FFFFFF',
+        backgroundColor: BACKGROUND.white,
         borderRadius: moderateScale(12),
         marginBottom: moderateScale(8),
     },
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
     },
     rewardCard: {
         padding: moderateScale(16),
-        backgroundColor: '#FFFFFF',
+        backgroundColor: BACKGROUND.white,
         borderRadius: moderateScale(16),
         marginBottom: moderateScale(12),
         alignItems: 'center',

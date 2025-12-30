@@ -360,7 +360,7 @@ const ResearchingScreen = () => {
                     <Text style={{
                       fontFamily: 'NotoSerif600',
                       fontSize: responsiveFontSize(3.4), //24px
-                      fontWeight: "600",
+                      fontFamily: "Inter600",
                       textAlign: 'center',
                       lineHeight: responsiveHeight(4),
                       backgroundColor: 'transparent'
@@ -412,7 +412,7 @@ const ResearchingScreen = () => {
                     <Text style={{
                       fontFamily: 'NotoSerif600',
                       fontSize: responsiveFontSize(3.4), //24px
-                      fontWeight: "600",
+                      fontFamily: "Inter600",
                       textAlign: 'center',
                       lineHeight: responsiveHeight(4),
                       backgroundColor: 'transparent'
@@ -526,7 +526,7 @@ const ResearchingScreen = () => {
                   <Text style={{
                     fontFamily: 'NotoSerif600',
                     fontSize: responsiveFontSize(3.4), //24px
-                    fontWeight: "600",
+                    fontFamily: "Inter600",
                     textAlign: 'center',
                     lineHeight: responsiveHeight(4),
                     backgroundColor: 'transparent'

@@ -1,27 +1,17 @@
 import React, { useEffect, useRef } from 'react';
-import { 
-  Animated, 
-  Dimensions, 
-  Modal, 
-  StyleSheet, 
-  Text, 
-  TouchableOpacity, 
-  View 
+import {
+  Animated,
+  Dimensions,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { moderateScale, verticalScale, scale } from 'react-native-size-matters';
+import { COLORS } from '../constants/Colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-// AUVRA app colors
-const COLORS = {
-  white: "#FFFFFF",
-  warmPurple: "#C17EC9",
-  gradPurple: "#A29AEA",
-  gradPink: "#FDC6D1",
-  textPrimary: "#4A3D5C",
-  textSecondary: "#6B5B7A",
-  accent: "#8B5CF6",
-};
 
 interface StreakMilestoneModalProps {
   visible: boolean;
@@ -206,10 +196,12 @@ const StreakMilestoneModal: React.FC<StreakMilestoneModalProps> = ({
               {
                 opacity: anim,
                 transform: [
-                  { scale: anim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.5, 1.2],
-                  })},
+                  {
+                    scale: anim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.5, 1.2],
+                    })
+                  },
                 ],
               },
             ]}
@@ -298,17 +290,18 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: moderateScale(28),
-    fontWeight: 'bold',
+    fontFamily: 'NotoSerif600',
     textAlign: 'center',
   },
   subtitle: {
     fontSize: moderateScale(32),
-    fontWeight: '800',
+    fontFamily: 'Inter600',
     color: COLORS.textPrimary,
     marginTop: verticalScale(8),
   },
   message: {
     fontSize: moderateScale(14),
+    fontFamily: 'Inter400',
     color: COLORS.textSecondary,
     textAlign: 'center',
     marginTop: verticalScale(12),
@@ -323,7 +316,7 @@ const styles = StyleSheet.create({
   streakBadgeText: {
     color: COLORS.white,
     fontSize: moderateScale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Inter600',
   },
   closeButton: {
     borderRadius: moderateScale(16),
@@ -334,7 +327,7 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: COLORS.white,
     fontSize: moderateScale(16),
-    fontWeight: 'bold',
+    fontFamily: 'Inter600',
   },
 });
 

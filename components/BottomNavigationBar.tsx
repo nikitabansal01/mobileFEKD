@@ -52,40 +52,40 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
     };
 
     fetchStreakStatus();
-    
+
     // Refresh every 60 seconds
     const interval = setInterval(fetchStreakStatus, 60000);
     return () => clearInterval(interval);
   }, []);
 
   const tabs = [
-    { 
-      key: 'home', 
-      label: 'Home', 
+    {
+      key: 'home',
+      label: 'Home',
       icon: require('../assets/icons/IconHome.png'),
-      showBadge: streakAtRisk && canFreeze, // Show red dot if at risk
+      showBadge: false, // Badge removed as requested
     },
-    { 
-      key: 'personalize', 
-      label: 'Personalize', 
+    {
+      key: 'personalize',
+      label: 'Personalize',
       icon: require('../assets/icons/IconPersonalize.png'),
-      showBadge: streakAtRisk && canFreeze, // Show red dot if at risk
+      showBadge: false, // Badge removed as requested
     },
-    { 
-      key: 'auvra', 
-      label: 'Auvra', 
+    {
+      key: 'auvra',
+      label: 'Auvra',
       icon: null,
       showBadge: false,
     },
-    { 
-      key: 'insights', 
-      label: 'Insights', 
+    {
+      key: 'insights',
+      label: 'Insights',
       icon: require('../assets/icons/IconProgress.png'),
       showBadge: false,
     },
-    { 
-      key: 'profile', 
-      label: 'Profile', 
+    {
+      key: 'profile',
+      label: 'Profile',
       icon: require('../assets/icons/IconProfile.png'),
       showBadge: false,
     },
@@ -99,7 +99,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
     // React Navigation mode
     const { state, navigation } = props;
     activeTab = state.routes[state.index].name;
-    
+
     handleTabPress = (routeName: string) => {
       const event = navigation.emit({
         type: 'tabPress',
@@ -116,7 +116,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
     const { activeTab: legacyActiveTab = 'home', onTabPress, navigation: propNavigation } = props;
     activeTab = legacyActiveTab;
     const navigation = propNavigation || hookNavigation;
-    
+
     handleTabPress = (routeName: string) => {
       if (onTabPress) {
         onTabPress(routeName);
@@ -138,7 +138,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
         locations={[0, 0.6, 1]}
         style={styles.gradientBackground}
       />
-      
+
       {/* Main Navigation Bar */}
       <View style={styles.navigationBar}>
         {/* White navigation background */}
@@ -146,7 +146,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
           <View style={styles.tabsRow}>
             {tabs.map((tab) => {
               const isActive = activeTab === tab.key;
-              
+
               return (
                 <TouchableOpacity
                   key={tab.key}
@@ -159,7 +159,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
                 >
                   <View>
                     {tab.icon ? (
-                      <Image 
+                      <Image
                         source={tab.icon}
                         style={styles.tabIcon}
                         tintColor={isActive ? '#C17EC9' : '#000000'}
@@ -168,12 +168,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
                     ) : (
                       <View style={styles.emptyIconSpace} />
                     )}
-                    {/* Red alert badge */}
-                    {tab.showBadge && (
-                      <View style={styles.alertBadge}>
-                        <View style={styles.alertBadgePulse} />
-                      </View>
-                    )}
+                    {/* Red alert badge removed as requested */}
                   </View>
                   <Text style={[
                     styles.tabLabel,
@@ -186,10 +181,10 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
             })}
           </View>
         </View>
-        
+
         {/* Auvra Character - positioned over the navigation */}
         <View style={styles.characterWrapper}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.characterContainer}
             onPress={() => handleTabPress('auvra')}
             activeOpacity={0.7}

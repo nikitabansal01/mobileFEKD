@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
   },
   mainMessage: {
     fontSize: moderateScale(12, 1.5),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#000000',
     lineHeight: responsiveHeight(2.2),
   },
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   },
   responseText: {
     fontSize: moderateScale(12, 1.5),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#000000',
     lineHeight: responsiveHeight(2.2),
   },
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   closeButtonText: {
     fontSize: responsiveFontSize(2.5),
     color: '#666666',
-    fontWeight: 'bold',
+    fontFamily: 'Inter600',
     lineHeight: responsiveHeight(2.5),
   },
   // Selection mode styles
@@ -331,13 +331,13 @@ const styles = StyleSheet.create({
   },
   selectionTitle: {
     fontSize: moderateScale(14, 1.5),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#000000',
     marginBottom: responsiveHeight(0.3),
   },
   selectionSubtitle: {
     fontSize: moderateScale(11, 1.5),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#666666',
   },
   actionList: {
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   checkmark: {
     fontSize: moderateScale(10),
     color: '#683AF4',
-    fontWeight: 'bold',
+    fontFamily: 'Inter600',
   },
   categoryIcon: {
     fontSize: moderateScale(14),
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
   actionTitle: {
     flex: 1,
     fontSize: moderateScale(11, 1.5),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#000000',
   },
   selectionButtons: {
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: moderateScale(12, 1.5),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#666666',
   },
   replaceButton: {
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   },
   replaceButtonText: {
     fontSize: moderateScale(12, 1.5),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#FFFFFF',
   },
   loadingOverlay: {
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: responsiveHeight(1),
     fontSize: moderateScale(12, 1.5),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#683AF4',
   },
 });

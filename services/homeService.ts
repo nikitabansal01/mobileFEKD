@@ -219,6 +219,69 @@ export interface PlanSatisfactionResponse {
 }
 
 /**
+ * Daily Review item status for each action
+ */
+export interface DailyReviewItemStatus {
+  item_id: number;
+  status: 'forgot_to_mark' | 'replaced' | 'skipped' | 'was_completed';
+  replacement_text?: string;
+  replacement_category?: string;
+}
+
+/**
+ * Daily Review request
+ */
+export interface DailyReviewRequest {
+  plan_id: number;
+  items: DailyReviewItemStatus[];
+  use_freeze: boolean;
+}
+
+/**
+ * Daily Review response
+ */
+export interface DailyReviewResponse {
+  success: boolean;
+  streak_maintained: boolean;
+  streak_broken: boolean;
+  freezes_used: number;
+  new_streak_count: number;
+  items_carried_forward: number[];
+  today_plan_updated: boolean;
+  message: string;
+  error?: string;
+}
+
+/**
+ * Pending review item info
+ */
+export interface PendingReviewItemInfo {
+  id: number;
+  title: string;
+  category: string;
+  time_slot: string;
+  target_hormone: string;
+  is_completed: boolean;
+  hero_image_url?: string;
+}
+
+/**
+ * Pending review response
+ */
+export interface PendingReviewResponse {
+  needs_review: boolean;
+  review_date?: string;
+  plan_id?: number;
+  items: PendingReviewItemInfo[];
+  total_items: number;
+  completed_count: number;
+  incomplete_count: number;
+  streak_at_risk: boolean;
+  freezes_available: number;
+  was_frozen: boolean;
+}
+
+/**
  * Hormone statistics structure
  */
 export interface HormoneStats {
@@ -679,6 +742,116 @@ class HomeService {
     } catch (error) {
       console.error('❌ Error refreshing all:', error);
       return { success: false, error: 'network_error', message: 'Network error. Check your connection.' };
+    }
+  }
+
+  /**
+   * Check if user has a pending daily review
+   * 
+   * @returns Promise resolving to pending review data or null on error
+   */
+  async getPendingReview(): Promise<PendingReviewResponse | null> {
+    try {
+      console.log('🔄 Checking pending review:', `${API_BASE_URL}/api/v1/new-scheduling/pending-review`);
+
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/pending-review`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to check pending review:', errorText);
+        return null;
+      }
+
+      const result = await response.json();
+      console.log('✅ Pending review check result:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Error checking pending review:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Submit daily review for previous day's action plan
+   * 
+   * @param planId - ID of the plan being reviewed
+   * @param items - Status of each item in the review
+   * @param useFreeze - Whether to use streak freeze if needed
+   * @returns Promise resolving to review result or null on error
+   */
+  async submitDailyReview(
+    planId: number,
+    items: DailyReviewItemStatus[],
+    useFreeze: boolean
+  ): Promise<DailyReviewResponse | null> {
+    try {
+      console.log('🔄 Submitting daily review:', `${API_BASE_URL}/api/v1/new-scheduling/submit-daily-review`);
+
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const requestBody: DailyReviewRequest = {
+        plan_id: planId,
+        items,
+        use_freeze: useFreeze,
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/submit-daily-review`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to submit daily review:', errorText);
+        return { 
+          success: false, 
+          error: 'server_error', 
+          message: 'Unable to submit review. Please try again.',
+          streak_maintained: false,
+          streak_broken: false,
+          freezes_used: 0,
+          new_streak_count: 0,
+          items_carried_forward: [],
+          today_plan_updated: false
+        };
+      }
+
+      const result = await response.json();
+      console.log('✅ Daily review submitted:', result);
+      return { success: true, ...result };
+    } catch (error) {
+      console.error('❌ Error submitting daily review:', error);
+      return { 
+        success: false, 
+        error: 'network_error', 
+        message: 'Network error. Check your connection.',
+        streak_maintained: false,
+        streak_broken: false,
+        freezes_used: 0,
+        new_streak_count: 0,
+        items_carried_forward: [],
+        today_plan_updated: false
+      };
     }
   }
 }

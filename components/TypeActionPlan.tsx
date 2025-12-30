@@ -888,7 +888,7 @@ const styles = StyleSheet.create({
   },
   actionArrow: {
     fontSize: responsiveFontSize(1.98), //14px (same as title)
-    fontWeight: '300',
+    fontFamily: 'Inter400',
     color: '#949494', // Grey Light
     marginLeft: 8,
   },
@@ -949,7 +949,7 @@ const styles = StyleSheet.create({
   hormoneIconText: {
     fontSize: responsiveFontSize(1.1), // 9px equivalent
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontFamily: 'Inter600',
   },
   hormoneIconImage: {
     width: '100%',
@@ -966,7 +966,7 @@ const styles = StyleSheet.create({
   },
   timeEmojiSmall: {
     fontSize: moderateScale(12, 1.5), // Smaller font size for "Anytime" text (matching time view)
-    fontWeight: '500',
+    fontFamily: 'Inter500',
     color: '#949494', // Grey color matching time view
   },
   timeEmojiMoon: {
@@ -1023,7 +1023,7 @@ const styles = StyleSheet.create({
   },
   tomorrowCategoryTitle: {
     fontSize: responsiveFontSize(2),
-    fontWeight: '500',
+    fontFamily: 'Inter500',
     color: '#6F6F6F',
     paddingHorizontal: responsiveWidth(2),
   },

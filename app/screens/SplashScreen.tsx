@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
      },
     tagline: {
       fontSize: moderateScale(18, 1.5),
-      fontFamily: 'Poppins400',
+      fontFamily: 'Inter400',
       color: '#6E4B6F',
       textAlign: 'center',
       lineHeight: moderateScale(26, 1.5),

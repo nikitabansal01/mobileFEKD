@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(1.98), //14px
     color: '#000000',
     lineHeight: responsiveHeight(2),
-    fontWeight: '600',
+    fontFamily: 'Inter600',
   },
   hormoneSubtitle: {
     fontFamily: 'Inter400',
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(1.42), //10px
     color: '#6f6f6f',
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: 'Inter500',
   },
   disclaimerContainer: {
     marginBottom: responsiveHeight(2),

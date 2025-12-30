@@ -410,12 +410,12 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: moderateScale(20, 0.5),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#FFFFFF',
   },
   headerSubtitle: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: 'rgba(255, 255, 255, 0.9)',
     marginTop: verticalScale(4),
   },
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
   closeText: {
     fontSize: moderateScale(16),
     color: '#FFFFFF',
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
   },
   content: {
     padding: scale(20),
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
   },
   summaryText: {
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#2D2D2D',
     lineHeight: verticalScale(24),
   },
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: moderateScale(16),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#2D2D2D',
     marginBottom: verticalScale(12),
   },
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
   },
   topicText: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#FFFFFF',
     textTransform: 'capitalize',
   },
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
   },
   emotionLabel: {
     fontSize: moderateScale(11),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#6F6F6F',
     textTransform: 'capitalize',
   },
@@ -522,7 +522,7 @@ const styles = StyleSheet.create({
   },
   trendText: {
     fontSize: moderateScale(13),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
   },
   // Action Items
   actionItem: {
@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
   actionText: {
     flex: 1,
     fontSize: moderateScale(13),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#2D2D2D',
     lineHeight: verticalScale(20),
   },
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
   },
   insightText: {
     fontSize: moderateScale(13),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#5D4037',
     lineHeight: verticalScale(20),
   },
@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#A29AEA',
     color: '#FFFFFF',
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     textAlign: 'center',
     lineHeight: scale(24),
     marginRight: scale(12),
@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
   stepText: {
     flex: 1,
     fontSize: moderateScale(13),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#4A4A4A',
     lineHeight: verticalScale(20),
     paddingTop: verticalScale(2),
@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
   },
   shareText: {
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#A29AEA',
   },
   doneButton: {
@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
   },
   doneText: {
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#FFFFFF',
   },
   // Loading state styles
@@ -639,13 +639,13 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: verticalScale(16),
     fontSize: moderateScale(16),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#2D2D2D',
   },
   loadingSubtext: {
     marginTop: verticalScale(8),
     fontSize: moderateScale(13),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
   // Error state styles
@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
     textAlign: 'center',
     marginBottom: verticalScale(20),
@@ -676,7 +676,7 @@ const styles = StyleSheet.create({
   },
   retryText: {
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#FFFFFF',
   },
   closeBottomButton: {
@@ -685,7 +685,7 @@ const styles = StyleSheet.create({
   },
   closeBottomText: {
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#6F6F6F',
   },
 });

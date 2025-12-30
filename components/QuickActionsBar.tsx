@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: moderateScale(16),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#2D2D2D',
     marginBottom: verticalScale(12),
     paddingHorizontal: responsiveWidth(4),
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     fontSize: moderateScale(11),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#4A4A4A',
     marginTop: verticalScale(6),
     textAlign: 'center',

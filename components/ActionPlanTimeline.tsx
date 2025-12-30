@@ -1665,7 +1665,7 @@ const styles = StyleSheet.create({
   hormoneBadgeText: {
     color: '#6F6F6F',
     fontSize: responsiveFontSize(1.1),
-    fontWeight: '600',
+    fontFamily: 'Inter600',
   },
   textBox: {
     position: 'absolute',
@@ -1681,7 +1681,7 @@ const styles = StyleSheet.create({
   },
   itemArrow: {
     fontSize: responsiveFontSize(1.98),
-    fontWeight: '300',
+    fontFamily: 'Inter400',
     color: '#949494',
     marginLeft: 8,
   },
@@ -1789,7 +1789,7 @@ const styles = StyleSheet.create({
   },
   timeIconTextSmall: {
     fontSize: moderateScale(12, 1.5), // Smaller font size for "Anytime" text
-    fontWeight: '500',
+    fontFamily: 'Inter500',
   },
   timeIconTextMoon: {
     fontSize: responsiveFontSize(1.9), // Smaller size for moon emoji

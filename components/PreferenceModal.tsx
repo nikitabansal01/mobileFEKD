@@ -24,6 +24,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { preferencesService, PreferenceOption, PreferenceType } from '../services/preferencesService';
+import { COLORS, BACKGROUND, BRAND, TEXT, BORDER, BRAND_GRADIENT } from '../constants/Colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -240,7 +241,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     modalContainer: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: BACKGROUND.white,
         borderTopLeftRadius: moderateScale(24),
         borderTopRightRadius: moderateScale(24),
         maxHeight: '80%',
@@ -254,13 +255,14 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: moderateScale(20),
-        fontWeight: '700',
-        color: '#1A1A1A',
+        fontFamily: 'NotoSerif600',
+        color: TEXT.primary,
         marginBottom: verticalScale(4),
     },
     subtitle: {
         fontSize: moderateScale(14),
-        color: '#666666',
+        fontFamily: 'Inter400',
+        color: TEXT.grey,
         textAlign: 'center',
     },
     closeButton: {
@@ -282,14 +284,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: moderateScale(16),
         marginVertical: verticalScale(4),
-        backgroundColor: '#F8F8F8',
+        backgroundColor: BACKGROUND.lightGrey,
         borderRadius: moderateScale(12),
         borderWidth: 2,
         borderColor: 'transparent',
     },
     optionItemSelected: {
-        backgroundColor: '#F3F0FF',
-        borderColor: '#A29AEA',
+        backgroundColor: BACKGROUND.lightViolet,
+        borderColor: BRAND.gradPurple,
     },
     optionIcon: {
         fontSize: moderateScale(24),
@@ -298,17 +300,17 @@ const styles = StyleSheet.create({
     optionLabel: {
         flex: 1,
         fontSize: moderateScale(16),
-        color: '#333333',
-        fontWeight: '500',
+        fontFamily: 'Inter500',
+        color: TEXT.primary,
     },
     optionLabelSelected: {
-        color: '#A29AEA',
-        fontWeight: '600',
+        color: BRAND.gradPurple,
+        fontFamily: 'Inter600',
     },
     checkmark: {
         fontSize: moderateScale(18),
-        color: '#A29AEA',
-        fontWeight: '700',
+        color: BRAND.gradPurple,
+        fontFamily: 'Inter600',
     },
     errorText: {
         color: '#FF4444',
@@ -328,9 +330,9 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     saveText: {
-        color: '#FFFFFF',
+        color: BACKGROUND.white,
         fontSize: moderateScale(16),
-        fontWeight: '700',
+        fontFamily: 'Inter600',
     },
     // Custom entry styles
     customEntryContainer: {
@@ -364,7 +366,7 @@ const styles = StyleSheet.create({
     addButtonText: {
         color: '#FFFFFF',
         fontSize: moderateScale(14),
-        fontWeight: '600',
+        fontFamily: 'Inter600',
     },
     cancelButton: {
         padding: moderateScale(8),
@@ -391,7 +393,7 @@ const styles = StyleSheet.create({
     addOtherText: {
         fontSize: moderateScale(15),
         color: '#666',
-        fontWeight: '500',
+        fontFamily: 'Inter500',
     },
 });
 

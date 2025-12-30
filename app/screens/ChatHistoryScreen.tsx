@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
   },
   chatTitle: {
     fontSize: moderateScale(12, 1.1),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#000000',
     flex: 1,
   },

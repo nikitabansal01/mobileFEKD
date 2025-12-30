@@ -2,8 +2,9 @@ import Images from '@/assets/images';
 import ActionPlanTimeline from '@/components/ActionPlanTimeline';
 import AuvraChatModal from '@/components/AuvraChatModal';
 import CalendarBottomSheet from '@/components/CalendarBottomSheet';
+import DailyReviewModal from '@/components/DailyReviewModal';
 import apiPromiseManager from '@/services/apiPromiseManager';
-import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse, ActionPlanResponse, ActionPlanItem } from '@/services/homeService';
+import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse, ActionPlanResponse, ActionPlanItem, DailyReviewResponse, PendingReviewResponse } from '@/services/homeService';
 import { rewardService, RefreshStatus, RewardsStatusResponse } from '@/services/rewardService';
 // StreakAtRiskBanner removed - using one-time Alert popup instead
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -106,6 +107,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   // Auvra chat modal state
   const [showAuvraChat, setShowAuvraChat] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  
+  // Daily Review modal state (next-day review system)
+  const [showDailyReview, setShowDailyReview] = useState(false);
+  const [pendingReviewData, setPendingReviewData] = useState<PendingReviewResponse | null>(null);
+  const dailyReviewCheckedRef = useRef<boolean>(false); // Prevent duplicate checks per session
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const freshSignupCheckRef = useRef<boolean>(false);
   const initialDataLoadedRef = useRef<boolean>(false); // Prevent duplicate initial fetches
@@ -202,6 +208,40 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         }
       };
       refreshData();
+    }, [])
+  );
+
+  // Check for pending daily review when screen gains focus
+  // Only check once per session (use dailyReviewCheckedRef to prevent repeated checks)
+  useFocusEffect(
+    React.useCallback(() => {
+      const checkPendingReview = async () => {
+        // Only check once per session
+        if (dailyReviewCheckedRef.current) {
+          return;
+        }
+        dailyReviewCheckedRef.current = true;
+
+        try {
+          console.log('📋 Checking for pending daily review...');
+          const reviewResponse = await homeService.getPendingReview();
+          
+          if (reviewResponse?.needs_review && reviewResponse?.plan_id) {
+            console.log('📋 Found pending review for plan:', reviewResponse.plan_id);
+            setPendingReviewData(reviewResponse);
+            // Show review modal after a short delay so home screen loads first
+            setTimeout(() => {
+              setShowDailyReview(true);
+            }, 500);
+          } else {
+            console.log('📋 No pending review needed');
+          }
+        } catch (error) {
+          console.error('❌ Failed to check pending review:', error);
+        }
+      };
+      
+      checkPendingReview();
     }, [])
   );
 
@@ -317,6 +357,39 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const handleAuvraClose = () => {
     setShowAuvraChat(false);
     resetInactivityTimer(); // Reset timer when user closes manually
+  };
+
+  // Handle Daily Review modal close
+  const handleDailyReviewClose = () => {
+    setShowDailyReview(false);
+  };
+
+  // Handle Daily Review complete
+  const handleDailyReviewComplete = async (result: DailyReviewResponse) => {
+    console.log('✅ Daily review completed:', result);
+    
+    // If items were carried forward or streak was affected, refresh home data
+    if (result.today_plan_updated || result.items_carried_forward.length > 0) {
+      try {
+        console.log('🔄 Refreshing home data after review...');
+        const assignmentsData = await homeService.getTodayAssignments();
+        if (assignmentsData) {
+          setAssignments(assignmentsData);
+          if (assignmentsData.hormone_stats) {
+            setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
+          }
+          wireUpActionPlan(assignmentsData);
+        }
+        
+        // Refresh rewards data for streak status
+        const rewardsData = await rewardService.getRewardsStatus().catch(() => null);
+        if (rewardsData) {
+          setRewardsData(rewardsData);
+        }
+      } catch (error) {
+        console.error('❌ Failed to refresh after review:', error);
+      }
+    }
   };
 
   // Start timer when component mounts and data is loaded
@@ -965,7 +1038,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           </TouchableOpacity>
         </View>
 
-{/* Streak at risk popup is shown once on data load - no permanent banner */}
+        {/* Streak at risk popup is shown once on data load - no permanent banner */}
 
         {/* Hormone Quests Section - only show if there are any non-zero hormone totals */}
         {progressStats?.hormone_stats &&
@@ -1042,14 +1115,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           <View style={styles.actionPlanHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={styles.sectionTitle}>Today's Action Plan</Text>
-              {/* Refresh count badge */}
-              {refreshStatus && (
-                <View style={styles.refreshBadge}>
-                  <Text style={styles.refreshBadgeText}>
-                    🔄 {refreshStatus.remaining}/{refreshStatus.limit}
-                  </Text>
-                </View>
-              )}
             </View>
             <Text style={styles.dateText}>
               {assignments?.date ? formatDate(assignments.date) : '15th July, 2025'}
@@ -1194,6 +1259,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       <CalendarBottomSheet
         visible={showCalendar}
         onClose={() => setShowCalendar(false)}
+      />
+
+      {/* Daily Review Modal - Next Day Review System */}
+      <DailyReviewModal
+        visible={showDailyReview}
+        onClose={handleDailyReviewClose}
+        reviewData={pendingReviewData}
+        onReviewComplete={handleDailyReviewComplete}
       />
     </View>
   );
@@ -1604,7 +1677,7 @@ const styles = StyleSheet.create({
   },
   tomorrowCategoryTitle: {
     fontSize: responsiveFontSize(2),
-    fontWeight: '500',
+    fontFamily: 'Inter500',
     color: '#6F6F6F',
     paddingHorizontal: responsiveWidth(2),
   },
@@ -1675,7 +1748,7 @@ const styles = StyleSheet.create({
   hormoneIconText: {
     fontSize: responsiveFontSize(1.2),
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontFamily: 'Inter600',
   },
   timeEmoji: {
     fontSize: responsiveFontSize(2.2),
