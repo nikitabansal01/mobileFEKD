@@ -84,8 +84,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const [isRefreshingAll, setIsRefreshingAll] = useState(false);
   const [rewardsData, setRewardsData] = useState<RewardsStatusResponse | null>(null);
 
-  // Animated value for hourglass rotation
-  const spinValue = useRef(new Animated.Value(0)).current;
+  // Animation values
+  const spinValue = useRef(new Animated.Value(0)).current; // For hourglass rotation
+  const planSlideAnim = useRef(new Animated.Value(0)).current; // For plan reveal animation (0 = hidden, 1 = visible)
+  const planScaleAnim = useRef(new Animated.Value(0.95)).current; // Slight scale for lock-break effect
+  const [showPlanAnimation, setShowPlanAnimation] = useState(false); // Track if we should animate plan entrance
 
   // Start/stop rotation animation when refreshing
   useEffect(() => {
@@ -112,6 +115,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const [showDailyReview, setShowDailyReview] = useState(false);
   const [pendingReviewData, setPendingReviewData] = useState<PendingReviewResponse | null>(null);
   const dailyReviewCheckedRef = useRef<boolean>(false); // Prevent duplicate checks per session
+  const reviewSubmissionInProgressRef = useRef<boolean>(false); // Prevent re-fetch during submission
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const freshSignupCheckRef = useRef<boolean>(false);
   const initialDataLoadedRef = useRef<boolean>(false); // Prevent duplicate initial fetches
@@ -134,32 +138,78 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }, [navigation])
   );
 
+  // State to track if review is blocking data load
+  const [isReviewBlocking, setIsReviewBlocking] = useState(false);
+
   // Always refetch data when screen gains focus (e.g., after action replacement, completion, etc.)
-  // Use loadHomeDataWithoutLoading to avoid duplicate-prevention and force fresh API call
+  // IMPORTANT: Check for pending review FIRST - if review is pending, don't load assignments yet
   useFocusEffect(
     React.useCallback(() => {
-      console.log('🔄 HomeScreen focused - forcing data refresh');
-      // Directly call APIs and update state (no duplicate prevention)
-      const refreshData = async () => {
+      // Skip if daily review modal is already showing - prevents loops and duplicate checks
+      if (showDailyReview) {
+        console.log('🔄 HomeScreen focused - modal already showing, skipping data load');
+        return;
+      }
+      
+      // Skip if a review submission is in progress
+      if (reviewSubmissionInProgressRef.current) {
+        console.log('🔄 HomeScreen focused - review submission in progress, skipping');
+        return;
+      }
+      
+      console.log('🔄 HomeScreen focused - checking review then loading data');
+      
+      const loadDataAfterReviewCheck = async () => {
         try {
+          // STEP 1: Check for pending review FIRST
+          console.log('📋 Checking for pending daily review...');
+          const reviewResponse = await homeService.getPendingReview();
+          
+          if (reviewResponse?.needs_review && reviewResponse?.plan_id) {
+            console.log('📋 Found pending review - BLOCKING data load until review complete');
+            console.log('📋 Review data items count:', reviewResponse.items?.length);
+            setPendingReviewData(reviewResponse);
+            setIsReviewBlocking(true);
+            
+            // Show review modal immediately - user MUST complete before seeing today's plan
+            setShowDailyReview(true);
+            
+            // Still load cycle data and rewards (but NOT assignments)
+            const [cycleData, rewardsData] = await Promise.all([
+              homeService.getCyclePhase(),
+              rewardService.getRewardsStatus().catch(() => null),
+            ]);
+            
+            setCycleInfo(cycleData?.cycle_info || null);
+            setRewardsData(rewardsData || null);
+            if (rewardsData?.refresh_status) {
+              setRefreshStatus(rewardsData.refresh_status);
+            }
+            
+            setLoading(false);
+            return; // Don't load assignments yet - wait for review completion
+          }
+          
+          console.log('📋 No pending review - loading all data normally');
+          setIsReviewBlocking(false);
+          
+          // STEP 2: No pending review - load everything normally
           const [cycleData, assignmentsData, rewardsData] = await Promise.all([
             homeService.getCyclePhase(),
             homeService.getTodayAssignments(),
-            rewardService.getRewardsStatus().catch(() => null), // Graceful fail
+            rewardService.getRewardsStatus().catch(() => null),
           ]);
 
           setCycleInfo(cycleData?.cycle_info || null);
           setAssignments(assignmentsData);
 
-          // Set refresh status from rewards API
           if (rewardsData?.refresh_status) {
             setRefreshStatus(rewardsData.refresh_status);
           }
 
-          // Store rewards data
           setRewardsData(rewardsData || null);
 
-          // Show popup every time if streak is at risk and user can freeze
+          // Show popup if streak is at risk (only if no review was pending)
           if (rewardsData?.streak_at_risk && rewardsData?.can_freeze && rewardsData?.missed_days_count > 0) {
             const missedDays = rewardsData.missed_days_count;
             const freezesNeeded = rewardsData.freezes_needed || missedDays;
@@ -180,7 +230,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                       const result = await rewardService.useFreezeReactive();
                       if (result.success) {
                         Alert.alert('✅ Streak Saved!', result.message || `${result.days_frozen} day(s) frozen. Your streak is safe!`);
-                        // Refresh data after successful freeze
                         const updatedRewards = await rewardService.getRewardsStatus().catch(() => null);
                         if (updatedRewards) setRewardsData(updatedRewards);
                       } else {
@@ -202,47 +251,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           if (assignmentsData) {
             wireUpActionPlan(assignmentsData);
           }
-          console.log('✅ Data refreshed successfully, refresh status:', rewardsData?.refresh_status);
-        } catch (error) {
-          console.error('❌ Failed to refresh data:', error);
-        }
-      };
-      refreshData();
-    }, [])
-  );
-
-  // Check for pending daily review when screen gains focus
-  // Only check once per session (use dailyReviewCheckedRef to prevent repeated checks)
-  useFocusEffect(
-    React.useCallback(() => {
-      const checkPendingReview = async () => {
-        // Only check once per session
-        if (dailyReviewCheckedRef.current) {
-          return;
-        }
-        dailyReviewCheckedRef.current = true;
-
-        try {
-          console.log('📋 Checking for pending daily review...');
-          const reviewResponse = await homeService.getPendingReview();
           
-          if (reviewResponse?.needs_review && reviewResponse?.plan_id) {
-            console.log('📋 Found pending review for plan:', reviewResponse.plan_id);
-            setPendingReviewData(reviewResponse);
-            // Show review modal after a short delay so home screen loads first
-            setTimeout(() => {
-              setShowDailyReview(true);
-            }, 500);
-          } else {
-            console.log('📋 No pending review needed');
-          }
+          setLoading(false);
+          console.log('✅ Data loaded successfully');
         } catch (error) {
-          console.error('❌ Failed to check pending review:', error);
+          console.error('❌ Failed to load data:', error);
+          setLoading(false);
         }
       };
       
-      checkPendingReview();
-    }, [])
+      loadDataAfterReviewCheck();
+    }, [showDailyReview])
   );
 
   // Reset inactivity timer - Shows Auvra modal after configured seconds from backend
@@ -359,37 +378,85 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     resetInactivityTimer(); // Reset timer when user closes manually
   };
 
-  // Handle Daily Review modal close
+  // Handle Daily Review modal close - animate plan entrance
   const handleDailyReviewClose = () => {
+    // Clear review data FIRST, then hide modal - prevents loops
+    setPendingReviewData(null);
     setShowDailyReview(false);
+    
+    // Reset the submission in progress ref so next focus can check for reviews
+    reviewSubmissionInProgressRef.current = false;
+    
+    // If we're animating (coming from review completion), trigger the "lock break" animation
+    if (showPlanAnimation) {
+      // Candy Crush style: slide up from bottom + scale up slightly
+      Animated.parallel([
+        Animated.spring(planSlideAnim, {
+          toValue: 1,
+          friction: 7,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+        Animated.spring(planScaleAnim, {
+          toValue: 1,
+          friction: 6,
+          tension: 50,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setShowPlanAnimation(false);
+      });
+    }
   };
 
-  // Handle Daily Review complete
+  // Handle Daily Review complete - load today's assignments in background while result shows
   const handleDailyReviewComplete = async (result: DailyReviewResponse) => {
-    console.log('✅ Daily review completed:', result);
+    console.log('✅ Daily review submitted:', result);
     
-    // If items were carried forward or streak was affected, refresh home data
-    if (result.today_plan_updated || result.items_carried_forward.length > 0) {
-      try {
-        console.log('🔄 Refreshing home data after review...');
-        const assignmentsData = await homeService.getTodayAssignments();
-        if (assignmentsData) {
-          setAssignments(assignmentsData);
-          if (assignmentsData.hormone_stats) {
-            setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
-          }
-          wireUpActionPlan(assignmentsData);
+    // Mark submission in progress to prevent useFocusEffect from re-checking
+    reviewSubmissionInProgressRef.current = true;
+    
+    // Clear the blocking state - but keep pendingReviewData until modal closes!
+    // This prevents the modal from showing "visible=true, reviewData=null" which causes loops
+    setIsReviewBlocking(false);
+    // NOTE: Don't setPendingReviewData(null) here - wait until handleDailyReviewClose
+    
+    // Prepare animation - reset to starting position
+    planSlideAnim.setValue(0);
+    planScaleAnim.setValue(0.95);
+    setShowPlanAnimation(true);
+    
+    // Load today's assignments in background while user views result
+    // Modal stays open so user can see their streak result and click "Let's Go"
+    try {
+      console.log('🔄 Loading today action plan in background...');
+      
+      const [assignmentsData, rewardsData] = await Promise.all([
+        homeService.getTodayAssignments(),
+        rewardService.getRewardsStatus().catch(() => null),
+      ]);
+      
+      if (assignmentsData) {
+        setAssignments(assignmentsData);
+        if (assignmentsData.hormone_stats) {
+          setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
         }
-        
-        // Refresh rewards data for streak status
-        const rewardsData = await rewardService.getRewardsStatus().catch(() => null);
-        if (rewardsData) {
-          setRewardsData(rewardsData);
-        }
-      } catch (error) {
-        console.error('❌ Failed to refresh after review:', error);
+        wireUpActionPlan(assignmentsData);
       }
+      
+      if (rewardsData) {
+        setRewardsData(rewardsData);
+        if (rewardsData.refresh_status) {
+          setRefreshStatus(rewardsData.refresh_status);
+        }
+      }
+      
+      console.log('✅ Today action plan ready (modal still showing result)');
+    } catch (error) {
+      console.error('❌ Failed to load plan after review:', error);
     }
+    
+    // NOTE: Do NOT close modal here! User clicks "Let's Go" button which calls onClose
   };
 
   // Start timer when component mounts and data is loaded
@@ -1188,15 +1255,43 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           </View>
 
           {/* Timeline and sort buttons container */}
-          <View style={styles.timelineContainer}>
-            {/* Dynamic component rendering */}
-            {assignments?.assignments && Object.keys(assignments.assignments).length > 0 ? (
-              sortBy === 'time' ? (
-                <ActionPlanTimeline
-                  dateLabel={assignments?.date ? formatDate(assignments.date) : '15th July, 2025'}
-                  assignments={assignments.assignments}
-                />
-              ) : (
+          {isReviewBlocking ? (
+            /* Show locked placeholder while review is pending */
+            <View style={styles.lockedPlanContainer}>
+              <View style={styles.lockedPlanContent}>
+                <Text style={styles.lockedIcon}>🔒</Text>
+                <Text style={styles.lockedTitle}>Complete Your Review</Text>
+                <Text style={styles.lockedSubtitle}>
+                  Review yesterday's actions to unlock today's plan
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <Animated.View 
+              style={[
+                styles.timelineContainer,
+                showPlanAnimation && {
+                  opacity: planSlideAnim,
+                  transform: [
+                    { 
+                      translateY: planSlideAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [100, 0], // Slide up from 100px below
+                      })
+                    },
+                    { scale: planScaleAnim },
+                  ],
+                },
+              ]}
+            >
+              {/* Dynamic component rendering */}
+              {assignments?.assignments && Object.keys(assignments.assignments).length > 0 ? (
+                sortBy === 'time' ? (
+                  <ActionPlanTimeline
+                    dateLabel={assignments?.date ? formatDate(assignments.date) : '15th July, 2025'}
+                    assignments={assignments.assignments}
+                  />
+                ) : (
                 <TypeActionPlan
                   dateLabel={assignments?.date ? formatDate(assignments.date) : '15th July, 2025'}
                   assignments={assignments.assignments}
@@ -1239,7 +1334,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                 ]}>Time</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
+          )}
         </View>
       </ScrollView>
 
@@ -1261,12 +1357,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         onClose={() => setShowCalendar(false)}
       />
 
-      {/* Daily Review Modal - Next Day Review System */}
+      {/* Daily Review Modal - Next Day Review System (MANDATORY - blocks home until complete) */}
       <DailyReviewModal
         visible={showDailyReview}
         onClose={handleDailyReviewClose}
         reviewData={pendingReviewData}
         onReviewComplete={handleDailyReviewComplete}
+        isMandatory={true}
       />
     </View>
   );
@@ -1801,6 +1898,40 @@ const styles = StyleSheet.create({
   },
   refreshHourglass: {
     fontSize: responsiveFontSize(1.6),
+  },
+  
+  // Locked plan state (during review)
+  lockedPlanContainer: {
+    minHeight: responsiveHeight(40),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: responsiveWidth(5),
+    marginTop: responsiveHeight(2),
+    backgroundColor: 'rgba(255, 245, 248, 0.9)',
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#E0D5E5',
+    borderStyle: 'dashed',
+  },
+  lockedPlanContent: {
+    alignItems: 'center',
+    padding: responsiveWidth(5),
+  },
+  lockedIcon: {
+    fontSize: responsiveFontSize(4),
+    marginBottom: responsiveHeight(1),
+  },
+  lockedTitle: {
+    fontSize: responsiveFontSize(2.2),
+    fontFamily: 'NotoSerif500',
+    color: '#4A3D5C',
+    marginBottom: responsiveHeight(0.5),
+  },
+  lockedSubtitle: {
+    fontSize: responsiveFontSize(1.6),
+    fontFamily: 'Inter400',
+    color: '#6B5B7A',
+    textAlign: 'center',
   },
 });
 

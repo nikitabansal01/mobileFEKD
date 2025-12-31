@@ -1,13 +1,11 @@
 // ActionPlanTimeline.tsx
 import Images from '@/assets/images';
 import { useNavigation } from '@react-navigation/native';
-import { BlurView } from 'expo-blur';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
   Image,
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -56,30 +54,6 @@ type TimeSlotPosition = {
 // ====== Animated Path ======
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
-// ====== Tomorrow dummy data (first item only) ======
-const DUMMY_TOMORROW_DATA: Assignment[] = [
-  {
-    id: 999,
-    recommendation_id: 1,
-    title: "Pumpkin Seeds",
-    purpose: "Acne, PCOS",
-    category: "food",
-    conditions: ["acne", "pcos"],
-    symptoms: ["skin_issues"],
-    hormones: ["androgens", "progesterone"], // Added hormone information
-    is_completed: false,
-    completed_at: "",
-    advices: [{ type: 'tip', title: 'Take 1 spoon with breakfast' }],
-    food_amounts: ["1 spoon"],
-    food_items: ["pumpkin_seeds"],
-    exercise_durations: [],
-    exercise_types: [],
-    exercise_intensities: [],
-    mindfulness_durations: [],
-    mindfulness_techniques: [],
-  },
-];
-
 // ====== Main component ======
 /**
  * Props for the ActionPlanTimeline component
@@ -94,8 +68,7 @@ type Props = {
 /**
  * ActionPlanTimeline Component
  * 
- * Displays a timeline view of action plans organized by time slots.
- * Shows today's and tomorrow's actions with visual timeline connections.
+ * Displays a timeline view of today's action plans organized by time slots.
  * 
  * @param props - Component props
  * @param props.dateLabel - Date label for display
@@ -177,7 +150,7 @@ export default function ActionPlanTimeline({
   };
 
   /**
-   * Separates and manages Today and Tomorrow actions
+   * Manages Today actions
    * SORTED: Completed items first, then pending items by time slot
    */
   const todayAssignments: Assignment[] = useMemo(() => {
@@ -247,8 +220,6 @@ export default function ActionPlanTimeline({
 
     return arr;
   }, [assignments]);
-
-  const tomorrowAssignments: Assignment[] = DUMMY_TOMORROW_DATA;
 
   // Start pulsing animation for completed actions
   useEffect(() => {
@@ -325,9 +296,8 @@ export default function ActionPlanTimeline({
     }).start();
   }, [doneRatio, progressValue]);
 
-  // Today and Tomorrow anchor generation - separate timelines
+  // Today anchor generation
   const [todayAnchors, setTodayAnchors] = useState<{ id: string; x: number; y: number }[]>([]);
-  const [tomorrowAnchors, setTomorrowAnchors] = useState<{ id: string; x: number; y: number }[]>([]);
 
   // Time slot icon position calculation
   const [timeSlotPositions, setTimeSlotPositions] = useState<TimeSlotPosition[]>([]);
@@ -344,23 +314,10 @@ export default function ActionPlanTimeline({
     });
     setTodayAnchors(todayNext);
 
-    // Calculate Tomorrow start Y coordinate: Today last anchor + margin + Tomorrow label space + text area
+    // Height calculation: based on Today items only (no Tomorrow section)
     const todayLastY = todayNext.at(-1)?.y ?? (BASE_TOP + CAP_TOP + ITEM_BLOCK_H / 2);
-    const tomorrowTextHeight = responsiveHeight(6); // Tomorrow text area height (title + date + margin)
-    const tomorrowStartY = todayLastY + ITEM_BLOCK_H / 2 + CAP_BOTTOM + responsiveHeight(8) + tomorrowTextHeight;
-
-    // Generate Tomorrow anchors: independent timeline
-    const tomorrowNext = tomorrowAssignments.map((a, idx) => {
-      const x = (idx % 2 === 0) ? LEFT_X : RIGHT_X;
-      const y = tomorrowStartY + CAP_TOP + ITEM_BLOCK_H / 2 + idx * ITEM_BLOCK_H;
-      return { id: a.id.toString(), x, y };
-    });
-    setTomorrowAnchors(tomorrowNext);
-
-    // Simple height calculation: to Tomorrow last anchor
-    const lastTomorrowY = tomorrowNext[tomorrowNext.length - 1]?.y ?? tomorrowStartY;
     const circleRadius = Math.round(responsiveWidth(9.72));
-    const naturalHeight = lastTomorrowY + circleRadius; // To below last anchor
+    const naturalHeight = todayLastY + circleRadius + CAP_BOTTOM + responsiveHeight(4); // Add padding at bottom
 
     setContentHeight(naturalHeight);
 
@@ -440,11 +397,10 @@ export default function ActionPlanTimeline({
     });
 
     setTimeSlotPositions(positions);
-  }, [todayAssignments, tomorrowAssignments, assignments, geom]);
+  }, [todayAssignments, assignments, geom]);
 
-  // Today and Tomorrow Path generation
+  // Today Path generation
   const [todayPathD, setTodayPathD] = useState('');
-  const [tomorrowPathD, setTomorrowPathD] = useState('');
   const [completedPathD, setCompletedPathD] = useState('');
 
   useEffect(() => {
@@ -497,26 +453,7 @@ export default function ActionPlanTimeline({
         setCompletedPathD(completedPath);
       }
     }
-
-    // Tomorrow Path generation: only to first anchor
-    if (tomorrowAnchors.length > 0) {
-      const todayLastY = todayAnchors.at(-1)?.y ?? (BASE_TOP + CAP_TOP + ITEM_BLOCK_H / 2);
-      const tomorrowTextHeight = responsiveHeight(6); // Tomorrow text area height
-      const tomorrowBaseY = todayLastY + ITEM_BLOCK_H / 2 + CAP_BOTTOM + responsiveHeight(8) + tomorrowTextHeight;
-
-      // Generate path to first anchor only
-      const firstAnchorOnly = [tomorrowAnchors[0]];
-      const tomorrowPath = generateTomorrowPathToFirstAnchor(
-        firstAnchorOnly,
-        CENTER_X,
-        CAP_TOP,
-        ITEM_BLOCK_H,
-        tomorrowBaseY,
-        CIRCLE_RADIUS
-      );
-      setTomorrowPathD(tomorrowPath);
-    }
-  }, [todayAnchors, tomorrowAnchors, geom]);
+  }, [todayAnchors, geom]);
 
   // 7) path length measurement
   useEffect(() => {
@@ -688,7 +625,6 @@ export default function ActionPlanTimeline({
 
   const lineOpacity = {
     today: 1.0,      // Today fully opaque
-    tomorrow: 1.0,   // Tomorrow also fully opaque
   };
 
   // Render
@@ -760,15 +696,6 @@ export default function ActionPlanTimeline({
                 strokeDasharray={`${pathLen}, ${pathLen}`}
                 // @ts-ignore
                 strokeDashoffset={dashOffset}
-              />
-            )}
-
-            {/* Tomorrow dashed line (future plan) */}
-            {!!tomorrowPathD && (
-              <Path
-                d={tomorrowPathD}
-                opacity={lineOpacity.tomorrow}
-                {...commonLineStyles}
               />
             )}
           </Svg>
@@ -1088,172 +1015,6 @@ export default function ActionPlanTimeline({
             );
           })}
 
-          {/* Tomorrow label - same style as home screen */}
-          {geom && tomorrowAnchors.length > 0 && (() => {
-            // Calculate end point of Today timeline
-            const todayLastY = todayAnchors.at(-1)?.y ?? 0;
-            const todayEndY = todayLastY + geom.ITEM_BLOCK_H / 2 + geom.CAP_BOTTOM;
-
-            // Calculate start point of Tomorrow timeline (for label position - based on default spacing)
-            const tomorrowStartYForLabel = todayLastY + geom.ITEM_BLOCK_H / 2 + geom.CAP_BOTTOM + responsiveHeight(8);
-
-            // Exact center between the two timelines (for label display)
-            const gapCenterY = todayEndY + (tomorrowStartYForLabel - todayEndY) / 2;
-
-            // Calculate date (tomorrow)
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const tomorrowDate = tomorrow.getDate();
-            const tomorrowMonth = tomorrow.toLocaleString('en-US', { month: 'long' });
-
-            return (
-              <View style={[styles.tomorrowHeaderContainer, {
-                top: gapCenterY - responsiveHeight(1.5), // Adjust to avoid overlap with line
-              }]}>
-                <Text style={styles.tomorrowSectionTitle}>Tomorrow</Text>
-                <Text style={styles.tomorrowDateText}>{`${tomorrowMonth} ${tomorrowDate}, ${tomorrow.getFullYear()}`}</Text>
-
-                {/* Lock icon - render below the line */}
-                <View style={styles.tomorrowLockContainer}>
-                  <Image
-                    source={require('../assets/icons/IconLock.png')}
-                    style={styles.tomorrowLockIcon}
-                    resizeMode="contain"
-                  />
-                </View>
-              </View>
-            );
-          })()}
-
-
-          {/* Display only the first Tomorrow item */}
-          {geom && tomorrowAnchors.slice(0, 1).map((anchor, idx) => {
-            const { CIRCLE_RADIUS } = geom;
-            const a = tomorrowAssignments[idx];
-            if (!a) return null;
-
-            const isLeft = idx % 2 === 0;
-            const xCenter = anchor.x;
-            const yCenter = anchor.y;
-
-            const xImage = xCenter - CIRCLE_RADIUS;
-            const yImage = yCenter - CIRCLE_RADIUS;
-
-            const textLeft = isLeft
-              ? xCenter + CIRCLE_RADIUS + responsiveWidth(3)
-              : xCenter - CIRCLE_RADIUS - responsiveWidth(35) - responsiveWidth(3);
-
-            return (
-              <View key={a.id.toString()} style={[StyleSheet.absoluteFill, styles.tomorrowItem]} pointerEvents="box-none">
-                {/* Tomorrow image circle */}
-                <View
-                  style={[
-                    styles.imageCircle,
-                    { left: xImage, top: yImage },
-                  ]}
-                >
-                  <Text style={styles.imageFallback}>🥜</Text>
-
-                  {/* Tomorrow hormone image */}
-                  <View style={[
-                    styles.hormoneImage,
-                    {
-                      // Revert to original working positioning
-                      top: isLeft ? -responsiveHeight(5) : -responsiveHeight(3),
-                      left: isLeft ? -responsiveWidth(8) : undefined,
-                      right: isLeft ? undefined : -responsiveWidth(8),
-
-                    }
-                  ]}
-                    pointerEvents="none">
-                    {(() => {
-                      const hormoneIcon = getFirstHormoneIcon(a, isLeft);
-                      console.log('🔍 Tomorrow hormone icon debug:', {
-                        assignment: a.title,
-                        hormones: a.hormones,
-                        hormoneIcon,
-                        isString: typeof hormoneIcon === 'string',
-                        isLeft
-                      });
-
-                      return typeof hormoneIcon === 'string' ? (
-                        <Text style={styles.hormoneImageText} allowFontScaling={false}>
-                          {hormoneIcon}
-                        </Text>
-                      ) : (
-                        <Image
-                          source={hormoneIcon}
-                          style={[
-                            styles.hormoneImageIcon,
-                            { transform: isLeft ? [{ rotate: '333deg' }] : [{ rotate: '30deg' }] }
-                          ]}
-                          resizeMode="contain"
-                        />
-                      );
-                    })()}
-                  </View>
-
-                  {/* Tomorrow hormone number (relative to image) */}
-                  <View style={[
-                    styles.hormoneBadge,
-                    {
-                      // Match today section positioning
-                      top: isLeft ? -responsiveHeight(2) : -responsiveHeight(2.5),
-                      left: isLeft ? -responsiveWidth(12) : undefined,
-                      right: isLeft ? undefined : -responsiveWidth(12),
-                      backgroundColor: getHormoneColor(a.hormones?.[0]),
-                    }
-                  ]}>
-                    <Text style={styles.hormoneBadgeText} allowFontScaling={false}>
-                      +{a.hormones?.length || 0}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Tomorrow text box */}
-                <View
-                  style={[
-                    styles.textBox,
-                    { left: textLeft, top: yCenter - responsiveHeight(3.5), alignItems: isLeft ? 'flex-start' : 'flex-end', justifyContent: 'center' },
-                  ]}
-                >
-                  <Text style={[styles.itemTitle, { textAlign: isLeft ? 'left' : 'right' }]}>
-                    {a.title}
-                  </Text>
-                  <Text style={[styles.itemSub, { textAlign: isLeft ? 'left' : 'right' }]} numberOfLines={1} allowFontScaling={false}>
-                    {getActionAmount(a)}{getActionSymptomsConditions(a) ? ' | ' : ''}{getActionSymptomsConditions(a)}
-                  </Text>
-                </View>
-              </View>
-            );
-          })}
-
-          {/* Tomorrow blur overlay - positioned after all items to appear on top */}
-          {geom && tomorrowAnchors.length > 0 && (() => {
-            const todayLastY = todayAnchors.at(-1)?.y ?? 0;
-            const tomorrowTextHeight = responsiveHeight(6);
-            const tomorrowStartY = todayLastY + geom.ITEM_BLOCK_H / 2 + geom.CAP_BOTTOM + responsiveHeight(8) + tomorrowTextHeight;
-
-            return (
-              <BlurView
-                intensity={Platform.OS === 'android' ? 8 : 18}
-                tint="light"
-                // Use a more compatible blur method for Android to better handle SVG content behind
-                {...(Platform.OS === 'android' ? { experimentalBlurMethod: 'dimezisBlurView' as any } : {})}
-                style={[
-                  styles.tomorrowSectionBlur,
-                  {
-                    top: tomorrowStartY,
-                    height: contentHeight - tomorrowStartY,
-                    left: -responsiveWidth(5),
-                    right: -responsiveWidth(5),
-                    zIndex: 100,
-                  }
-                ]}
-              />
-            );
-          })()}
-
           {/* Expanding circle animation overlay */}
           {expandingCircle && (
             <Animated.View
@@ -1416,77 +1177,6 @@ export function generatePathRectilinear(
 
   // Combine all segments into one path
   return segments.join(' ');
-}
-
-/**
- * Tomorrow timeline: function to draw only to first anchor
- */
-function generateTomorrowPathToFirstAnchor(
-  anchors: { id: string; x: number; y: number }[],
-  centerX: number,
-  TOP_CAP: number,
-  ITEM_BLOCK_H: number,
-  BASE_TOP: number,
-  circleR: number,
-) {
-  if (!anchors.length) return '';
-
-  const s = (n: number) => Math.round(n);
-  const cornerR = 15;
-  const first = anchors[0];
-
-  // Helper function for rounded corners
-  const addRoundedCorner = (x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): string => {
-    const dx1 = x2 - x1, dy1 = y2 - y1;
-    const dx2 = x3 - x2, dy2 = y3 - y2;
-
-    const len1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
-    const len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
-
-    if (len1 < 1 || len2 < 1) return ` L ${s(x2)},${s(y2)}`;
-
-    const ux1 = dx1 / len1, uy1 = dy1 / len1;
-    const ux2 = dx2 / len2, uy2 = dy2 / len2;
-
-    const maxR = Math.min(len1 * 0.4, len2 * 0.4);
-    const actualR = Math.min(cornerR, maxR);
-
-    if (actualR < 2) return ` L ${s(x2)},${s(y2)}`;
-
-    const inX = x2 - ux1 * actualR, inY = y2 - uy1 * actualR;
-    const outX = x2 + ux2 * actualR, outY = y2 + uy2 * actualR;
-
-    const cross = dx1 * dy2 - dy1 * dx2;
-    const sweep = cross > 0 ? 1 : 0;
-
-    return ` L ${s(inX)},${s(inY)} A ${actualR} ${actualR} 0 0 ${sweep} ${s(outX)},${s(outY)}`;
-  };
-
-  // Path points array - only to first anchor top edge
-  const pathPoints: [number, number][] = [
-    [centerX, BASE_TOP],
-    [centerX, BASE_TOP + TOP_CAP],
-    [first.x, BASE_TOP + TOP_CAP],
-    [first.x, first.y - circleR] // to first anchor top edge
-  ];
-
-  // Path generation
-  let d = `M ${s(pathPoints[0][0])},${s(pathPoints[0][1])}`;
-
-  // Connect with rounded corners
-  for (let i = 1; i < pathPoints.length - 1; i++) {
-    const [x1, y1] = pathPoints[i - 1];
-    const [x2, y2] = pathPoints[i];
-    const [x3, y3] = pathPoints[i + 1];
-
-    d += addRoundedCorner(x1, y1, x2, y2, x3, y3);
-  }
-
-  // Straight to last point
-  const [lastX, lastY] = pathPoints[pathPoints.length - 1];
-  d += ` L ${s(lastX)},${s(lastY)}`;
-
-  return d;
 }
 
 /**
@@ -1690,69 +1380,6 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(1.7),
     fontFamily: 'Inter400',
     color: '#949494',
-  },
-
-  // Tomorrow label style (same as Home screen)
-  tomorrowHeaderContainer: {
-    position: 'absolute',
-    alignItems: 'center',
-    zIndex: 10,
-    left: 0,
-    right: 0,
-    paddingHorizontal: responsiveWidth(5),
-    backgroundColor: '#FFFFFF',
-    paddingVertical: responsiveHeight(1),
-  },
-  tomorrowSectionTitle: {
-    fontSize: responsiveFontSize(1.98),
-    fontFamily: 'NotoSerif500',
-    color: '#000000',
-    textAlign: 'center',
-    marginBottom: responsiveHeight(1),
-  },
-  tomorrowDateText: {
-    fontSize: responsiveFontSize(1.7),
-    fontFamily: 'Inter400',
-    color: '#6F6F6F',
-    textAlign: 'center',
-  },
-  tomorrowLockContainer: {
-    alignItems: 'center',
-    marginTop: responsiveHeight(2),
-  },
-  tomorrowLockIcon: {
-    width: responsiveWidth(6),
-    height: responsiveWidth(6),
-    tintColor: '#949494',
-  },
-
-  // Tomorrow item blur effect
-  tomorrowItem: {
-    opacity: 0.9,
-  },
-
-  // Tomorrow section blur overlay
-  tomorrowSectionBlur: {
-    position: 'absolute',
-    // backgroundColor: 'rgba(255, 255, 255, 0.5)',
-    backgroundColor: 'transparent', // Slight white overlay for better blur effect
-    borderRadius: responsiveWidth(2),
-  },
-
-  // Android fallback for blur effect
-  tomorrowSectionBlurAndroid: {
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    borderRadius: 0, // Avoid curved edges causing visible borders on Android
-    borderWidth: 0,
-    borderColor: 'transparent',
-    shadowColor: 'transparent', // Remove shadow to prevent border-like halo
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0, // Disable elevation halo
-    // Slightly expand vertically to hide potential subpixel seams
-    marginTop: -1,
-    marginBottom: -1,
   },
 
   // Time-based icon style (matching Figma design)

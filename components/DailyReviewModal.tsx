@@ -1,4 +1,15 @@
-import React, { useState, useCallback, useEffect } from 'react';
+/**
+ * DailyReviewModal - Complete Rewrite
+ * 
+ * A production-grade review modal that:
+ * - Shows all 4 action items as cards simultaneously
+ * - Uses the app's design system (Colors, Fonts)
+ * - Has smooth animations throughout
+ * - Handles all review statuses properly
+ * - Matches the app's visual style perfectly
+ */
+
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,9 +23,19 @@ import {
   View,
   Animated,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import { LinearGradient } from 'expo-linear-gradient';
+
+// Design System Imports
+import { BRAND, BRAND_GRADIENT, TEXT, BACKGROUND, BORDER, UI } from '@/constants/Colors';
+import { FONT_INTER, FONT_SERIF, TYPOGRAPHY } from '@/constants/fonts';
+import PrimaryButton from './PrimaryButton';
 import homeService, {
   DailyReviewItemStatus,
   DailyReviewResponse,
@@ -22,7 +43,7 @@ import homeService, {
   PendingReviewResponse,
 } from '@/services/homeService';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // ============================================================================
 // TYPES
@@ -33,6 +54,8 @@ interface DailyReviewModalProps {
   onClose: () => void;
   reviewData: PendingReviewResponse | null;
   onReviewComplete: (result: DailyReviewResponse) => void;
+  /** If true, user cannot dismiss the modal until review is complete */
+  isMandatory?: boolean;
 }
 
 type ReviewStatus = 'forgot_to_mark' | 'replaced' | 'skipped' | 'was_completed';
@@ -44,44 +67,88 @@ interface ItemReviewState {
   replacement_category: string;
 }
 
+interface ReviewDraft {
+  planId: number;
+  reviewDate: string;
+  currentStep: 1 | 2 | 3 | 4;
+  itemStates: [number, ItemReviewState][];
+  useFreeze: boolean;
+  savedAt: string;
+  version: 1;
+}
+
 // ============================================================================
 // CONSTANTS
 // ============================================================================
 
+const DRAFT_STORAGE_KEY_PREFIX = 'daily_review_draft_';
+const DRAFT_EXPIRY_HOURS = 48;
+const AUTO_SAVE_DELAY_MS = 3000;
+
+const STATUS_OPTIONS = [
+  {
+    id: 'was_completed' as ReviewStatus,
+    emoji: '✅',
+    label: 'Done',
+    sublabel: 'Already marked',
+    color: UI.successGreen,
+  },
+  {
+    id: 'forgot_to_mark' as ReviewStatus,
+    emoji: '💭',
+    label: 'Did it',
+    sublabel: 'Forgot to mark',
+    color: BRAND.warmPurple,
+  },
+  {
+    id: 'replaced' as ReviewStatus,
+    emoji: '🔄',
+    label: 'Swapped',
+    sublabel: 'Did something else',
+    color: BRAND.accent,
+  },
+  {
+    id: 'skipped' as ReviewStatus,
+    emoji: '⏭️',
+    label: 'Skipped',
+    sublabel: "Couldn't do it",
+    color: UI.warningYellow,
+  },
+];
+
 const REPLACEMENT_CATEGORIES = [
-  { id: 'healthier_option', emoji: '🥗', text: 'Healthier option' },
-  { id: 'no_time', emoji: '⏰', text: 'No time' },
-  { id: 'no_ingredients', emoji: '🛒', text: "Didn't have ingredients" },
+  { id: 'healthier_option', emoji: '🥗', text: 'Healthier' },
+  { id: 'no_time', emoji: '⏰', text: 'Time constraint' },
+  { id: 'no_ingredients', emoji: '🛒', text: 'No ingredients' },
   { id: 'different_activity', emoji: '🔄', text: 'Different activity' },
   { id: 'other', emoji: '💬', text: 'Other' },
 ];
 
+const MIN_REPLACEMENT_TEXT_LENGTH = 10;
+const MAX_REPLACEMENT_TEXT_LENGTH = 200;
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
 const getCategoryIcon = (category: string): string => {
   switch (category?.toLowerCase()) {
-    case 'food':
-      return '🍽️';
+    case 'food': return '🍽️';
     case 'movement':
-    case 'exercise':
-      return '🏃';
+    case 'exercise': return '🏃';
     case 'mindfulness':
-    case 'pause':
-      return '🧘';
-    default:
-      return '✨';
+    case 'pause': return '🧘';
+    default: return '✨';
   }
 };
 
 const getTimeSlotIcon = (timeSlot: string): string => {
   switch (timeSlot?.toLowerCase()) {
-    case 'morning':
-      return '🌤️';
-    case 'afternoon':
-      return '☀️';
+    case 'morning': return '🌤️';
+    case 'afternoon': return '☀️';
     case 'evening':
-    case 'night':
-      return '🌙';
-    default:
-      return '⏰';
+    case 'night': return '🌙';
+    default: return '⏰';
   }
 };
 
@@ -94,79 +161,309 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
   onClose,
   reviewData,
   onReviewComplete,
+  isMandatory = true,
 }) => {
-  // Step management: 1=Intro, 2=Review Items, 3=Replacement Details, 4=Streak Result
+  // Step management: 1=Intro, 2=All Cards Review, 3=Replacement Details, 4=Streak Result
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
-  const [currentItemIndex, setCurrentItemIndex] = useState(0);
   const [itemReviewStates, setItemReviewStates] = useState<Map<number, ItemReviewState>>(new Map());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reviewResult, setReviewResult] = useState<DailyReviewResponse | null>(null);
   const [useFreeze, setUseFreeze] = useState(false);
+  const [hasPendingChanges, setHasPendingChanges] = useState(false);
+  const [isDraftLoaded, setIsDraftLoaded] = useState(false);
 
   // Animation values
-  const fadeAnim = useState(new Animated.Value(0))[0];
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const cardAnimations = useRef<Animated.Value[]>([]).current;
+
+  // Refs
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedStateRef = useRef<string>('');
+
+  // Initialize card animations
+  useEffect(() => {
+    if (reviewData?.items) {
+      reviewData.items.forEach((_, index) => {
+        if (!cardAnimations[index]) {
+          cardAnimations[index] = new Animated.Value(0);
+        }
+      });
+    }
+  }, [reviewData?.items]);
+
+  // ============================================================================
+  // DRAFT PERSISTENCE
+  // ============================================================================
+
+  const getDraftKey = useCallback((): string | null => {
+    if (!reviewData?.plan_id) return null;
+    return `${DRAFT_STORAGE_KEY_PREFIX}${reviewData.plan_id}`;
+  }, [reviewData?.plan_id]);
+
+  const isDraftExpired = (savedAt: string): boolean => {
+    const savedTime = new Date(savedAt).getTime();
+    const now = Date.now();
+    const hoursSince = (now - savedTime) / (1000 * 60 * 60);
+    return hoursSince > DRAFT_EXPIRY_HOURS;
+  };
+
+  const saveDraft = useCallback(async () => {
+    const draftKey = getDraftKey();
+    if (!draftKey || !reviewData) return;
+
+    try {
+      const draft: ReviewDraft = {
+        planId: reviewData.plan_id!,
+        reviewDate: reviewData.review_date!,
+        currentStep,
+        itemStates: Array.from(itemReviewStates.entries()),
+        useFreeze,
+        savedAt: new Date().toISOString(),
+        version: 1,
+      };
+
+      const draftJson = JSON.stringify(draft);
+      if (draftJson !== lastSavedStateRef.current) {
+        await AsyncStorage.setItem(draftKey, draftJson);
+        lastSavedStateRef.current = draftJson;
+      }
+    } catch (error) {
+      console.error('Failed to save draft:', error);
+    }
+  }, [getDraftKey, reviewData, currentStep, itemReviewStates, useFreeze]);
+
+  const loadDraft = useCallback(async (): Promise<ReviewDraft | null> => {
+    const draftKey = getDraftKey();
+    if (!draftKey) return null;
+
+    try {
+      const draftJson = await AsyncStorage.getItem(draftKey);
+      if (!draftJson) return null;
+
+      const draft: ReviewDraft = JSON.parse(draftJson);
+      if (isDraftExpired(draft.savedAt)) {
+        await AsyncStorage.removeItem(draftKey);
+        return null;
+      }
+
+      if (draft.planId !== reviewData?.plan_id) {
+        await AsyncStorage.removeItem(draftKey);
+        return null;
+      }
+
+      return draft;
+    } catch (error) {
+      console.error('Failed to load draft:', error);
+      return null;
+    }
+  }, [getDraftKey, reviewData?.plan_id]);
+
+  const clearDraft = useCallback(async () => {
+    const draftKey = getDraftKey();
+    if (!draftKey) return;
+    try {
+      await AsyncStorage.removeItem(draftKey);
+      lastSavedStateRef.current = '';
+    } catch (error) {
+      console.error('Failed to clear draft:', error);
+    }
+  }, [getDraftKey]);
+
+  const restoreDraft = useCallback((draft: ReviewDraft) => {
+    setCurrentStep(draft.currentStep);
+    setItemReviewStates(new Map(draft.itemStates));
+    setUseFreeze(draft.useFreeze);
+    setIsDraftLoaded(true);
+  }, []);
+
+  const promptResumeDraft = useCallback(async (draft: ReviewDraft) => {
+    const savedDate = new Date(draft.savedAt);
+    const timeAgo = Math.round((Date.now() - savedDate.getTime()) / (1000 * 60));
+
+    let timeText = '';
+    if (timeAgo < 1) {
+      timeText = 'just now';
+    } else if (timeAgo < 60) {
+      timeText = `${timeAgo} minute${timeAgo > 1 ? 's' : ''} ago`;
+    } else {
+      const hoursAgo = Math.round(timeAgo / 60);
+      timeText = `${hoursAgo} hour${hoursAgo > 1 ? 's' : ''} ago`;
+    }
+
+    return new Promise<boolean>((resolve) => {
+      Alert.alert(
+        'Resume Previous Review? 💜',
+        `We found your review from ${timeText}. Want to pick up where you left off?`,
+        [
+          {
+            text: 'Start Fresh',
+            style: 'destructive',
+            onPress: async () => {
+              await clearDraft();
+              resolve(false);
+            },
+          },
+          {
+            text: 'Resume',
+            onPress: () => resolve(true),
+          },
+        ],
+        { cancelable: false }
+      );
+    });
+  }, [clearDraft]);
+
+  // ============================================================================
+  // EFFECTS
+  // ============================================================================
 
   // Initialize item states when reviewData changes
   useEffect(() => {
-    if (reviewData?.items) {
-      const initialStates = new Map<number, ItemReviewState>();
-      reviewData.items.forEach((item) => {
-        initialStates.set(item.id, {
-          item_id: item.id,
-          status: item.is_completed ? 'was_completed' : null,
-          replacement_text: '',
-          replacement_category: '',
-        });
-      });
-      setItemReviewStates(initialStates);
-      setCurrentStep(1);
-      setCurrentItemIndex(0);
-      setReviewResult(null);
-      setUseFreeze(false);  // Reset freeze toggle
-    }
-  }, [reviewData]);
+    if (reviewData?.items && !isDraftLoaded) {
+      const initializeReview = async () => {
+        const draft = await loadDraft();
 
-  // Fade in animation
+        if (draft) {
+          const shouldResume = await promptResumeDraft(draft);
+          if (shouldResume) {
+            restoreDraft(draft);
+            return;
+          }
+        }
+
+        // Initialize fresh state
+        const initialStates = new Map<number, ItemReviewState>();
+        reviewData.items.forEach((item) => {
+          initialStates.set(item.id, {
+            item_id: item.id,
+            status: item.is_completed ? 'was_completed' : null,
+            replacement_text: '',
+            replacement_category: '',
+          });
+        });
+        setItemReviewStates(initialStates);
+        setCurrentStep(1);
+        setReviewResult(null);
+        setUseFreeze(false);
+        setIsDraftLoaded(false);
+      };
+
+      initializeReview();
+    }
+  }, [reviewData, isDraftLoaded, loadDraft, promptResumeDraft, restoreDraft]);
+
+  // Auto-save draft on state changes
+  useEffect(() => {
+    if (!reviewData || currentStep === 1 || itemReviewStates.size === 0) return;
+
+    setHasPendingChanges(true);
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = setTimeout(() => {
+      saveDraft();
+      setHasPendingChanges(false);
+    }, AUTO_SAVE_DELAY_MS);
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [reviewData, currentStep, itemReviewStates, useFreeze, saveDraft]);
+
+  // Entrance animation
   useEffect(() => {
     if (visible) {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else {
       fadeAnim.setValue(0);
+      slideAnim.setValue(50);
+
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          tension: 50,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
   }, [visible]);
 
-  // Get only incomplete items that need review
-  const incompleteItems = reviewData?.items.filter((item) => !item.is_completed) || [];
+  // Card stagger animation when entering step 2
+  useEffect(() => {
+    if (currentStep === 2 && reviewData?.items) {
+      reviewData.items.forEach((_, index) => {
+        if (cardAnimations[index]) {
+          cardAnimations[index].setValue(0);
+          Animated.spring(cardAnimations[index], {
+            toValue: 1,
+            delay: index * 100,
+            tension: 50,
+            friction: 7,
+            useNativeDriver: true,
+          }).start();
+        }
+      });
+    }
+  }, [currentStep, reviewData?.items]);
 
-  // Get items that were marked as 'replaced' and need details
-  const itemsNeedingReplacementDetails = Array.from(itemReviewStates.values()).filter(
-    (state) => state.status === 'replaced' && !state.replacement_text
-  );
+  // ============================================================================
+  // COMPUTED VALUES
+  // ============================================================================
 
-  // Calculate completion status after review
+  const allItems = reviewData?.items || [];
+
   const getCompletionCount = () => {
-    let completed = reviewData?.completed_count || 0;
+    let completed = 0;
     itemReviewStates.forEach((state) => {
-      if (state.status === 'forgot_to_mark' || state.status === 'replaced') {
+      if (state.status === 'was_completed' || state.status === 'forgot_to_mark' || state.status === 'replaced') {
         completed++;
       }
     });
     return completed;
   };
 
-  // Check if streak will be maintained
   const willMaintainStreak = () => {
-    const totalItems = reviewData?.total_items || 4;
+    const totalItems = reviewData?.total_items ?? allItems.length ?? 0;
     const completedAfterReview = getCompletionCount();
-    return completedAfterReview >= 3 || completedAfterReview === totalItems;
+    if (totalItems === 0) return true;
+    return completedAfterReview === totalItems;
   };
 
-  // Handle item status selection
+  const allItemsReviewed = () => {
+    return allItems.every((item) => {
+      const state = itemReviewStates.get(item.id);
+      return state?.status !== null;
+    });
+  };
+
+  const replacedItems = () => {
+    return Array.from(itemReviewStates.values()).filter(
+      (state) => state.status === 'replaced'
+    );
+  };
+
+  const allReplacementsComplete = () => {
+    return replacedItems().every(
+      (state) => state.replacement_text.trim().length >= MIN_REPLACEMENT_TEXT_LENGTH
+    );
+  };
+
+  // ============================================================================
+  // HANDLERS
+  // ============================================================================
+
   const handleStatusSelect = (itemId: number, status: ReviewStatus) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     setItemReviewStates((prev) => {
       const newMap = new Map(prev);
       const existing = newMap.get(itemId) || {
@@ -180,7 +477,6 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
     });
   };
 
-  // Handle replacement text update
   const handleReplacementTextChange = (itemId: number, text: string) => {
     setItemReviewStates((prev) => {
       const newMap = new Map(prev);
@@ -192,8 +488,9 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
     });
   };
 
-  // Handle replacement category select
   const handleReplacementCategorySelect = (itemId: number, category: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     setItemReviewStates((prev) => {
       const newMap = new Map(prev);
       const existing = newMap.get(itemId);
@@ -204,29 +501,30 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
     });
   };
 
-  // Move to next incomplete item or next step
-  const handleNextItem = () => {
-    if (currentItemIndex < incompleteItems.length - 1) {
-      setCurrentItemIndex(currentItemIndex + 1);
+  const handleContinueFromCards = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    const hasReplacements = replacedItems().length > 0;
+    if (hasReplacements) {
+      setCurrentStep(3);
     } else {
-      // Check if any items need replacement details
-      const needsDetails = Array.from(itemReviewStates.values()).some(
-        (state) => state.status === 'replaced' && !state.replacement_text
-      );
-      if (needsDetails) {
-        setCurrentStep(3);
-      } else {
-        // Go to streak resolution
-        setCurrentStep(4);
-      }
+      setCurrentStep(4);
     }
   };
 
-  // Submit the review
+  const handleContinueFromReplacements = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setCurrentStep(4);
+  };
+
   const handleSubmitReview = async () => {
     if (!reviewData?.plan_id) return;
 
     setIsSubmitting(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    const MAX_RETRIES = 3;
+    const RETRY_DELAYS = [1000, 2000, 3000];
 
     try {
       const items: DailyReviewItemStatus[] = Array.from(itemReviewStates.values())
@@ -238,24 +536,47 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
           replacement_category: state.status === 'replaced' ? state.replacement_category : undefined,
         }));
 
-      const result = await homeService.submitDailyReview(reviewData.plan_id, items, useFreeze);
+      let result: DailyReviewResponse | null = null;
+      let lastError: any = null;
 
-      if (result?.success) {
-        setReviewResult(result);
-        onReviewComplete(result);
-      } else {
-        console.error('Failed to submit review:', result?.error);
-        Alert.alert(
-          'Oops!',
-          result?.error || 'Failed to submit review. Please try again.',
-          [{ text: 'OK' }]
-        );
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+          result = await homeService.submitDailyReview(reviewData.plan_id, items, useFreeze);
+
+          if (result?.success) {
+            await clearDraft();
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+            setReviewResult(result);
+            onReviewComplete(result);
+            setIsSubmitting(false);
+            return;
+          }
+
+          lastError = new Error(result?.error || 'Unknown error');
+          break;
+        } catch (error) {
+          lastError = error;
+          console.log(`Attempt ${attempt + 1}/${MAX_RETRIES} failed:`, error);
+
+          if (attempt < MAX_RETRIES - 1) {
+            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS[attempt]));
+          }
+        }
       }
-    } catch (error) {
-      console.error('Error submitting review:', error);
+
+      await saveDraft();
+
       Alert.alert(
-        'Connection Error',
-        'Could not connect to server. Please check your internet and try again.',
+        'Saved Locally 💜',
+        "We couldn't submit your review right now, but don't worry - your answers are safe! We'll try again when you're back online.",
+        [{ text: 'Got it' }]
+      );
+    } catch (error) {
+      console.error('Unexpected error in submit handler:', error);
+      Alert.alert(
+        'Oops!',
+        'Something went wrong. Your answers are saved - please try again.',
         [{ text: 'OK' }]
       );
     } finally {
@@ -263,52 +584,80 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
     }
   };
 
-  // Handle going back to previous item
-  const handlePreviousItem = () => {
-    if (currentItemIndex > 0) {
-      setCurrentItemIndex(currentItemIndex - 1);
+  const handleModalClose = () => {
+    if (isMandatory && !reviewResult) {
+      Alert.alert(
+        'Review Required',
+        "Please complete your daily review before continuing. This helps us personalize your next action plan! 💜",
+        [{ text: 'Continue Review', style: 'cancel' }]
+      );
+      return;
     }
+
+    if (hasPendingChanges) {
+      saveDraft();
+    }
+    onClose();
   };
 
   // ============================================================================
   // RENDER FUNCTIONS
   // ============================================================================
 
-  // Step 1: Welcome/Intro Screen
-  const renderIntroStep = () => (
-    <View style={styles.stepContainer}>
-      <View style={styles.introContent}>
-        <Text style={styles.introEmoji}>📋</Text>
-        <Text style={styles.introTitle}>Welcome back!</Text>
+  // Step 1: Welcome/Intro
+  const renderIntroStep = () => {
+    const dayName = reviewData?.review_date
+      ? new Date(reviewData.review_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' })
+      : 'yesterday';
+
+    return (
+      <Animated.View
+        style={[
+          styles.stepContainer,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }
+        ]}
+      >
+        {/* Header Illustration */}
+        <View style={styles.introHeader}>
+          <LinearGradient
+            colors={BRAND_GRADIENT.colors as unknown as string[]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.introGradientCircle}
+          >
+            <Text style={styles.introEmoji}>📋</Text>
+          </LinearGradient>
+        </View>
+
+        <Text style={styles.introTitle}>Let's reflect on {dayName}</Text>
         <Text style={styles.introSubtitle}>
-          Let's review your action plan from{' '}
+          You completed{' '}
           <Text style={styles.highlightText}>
-            {reviewData?.review_date
-              ? new Date(reviewData.review_date + 'T00:00:00').toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'short',
-                  day: 'numeric',
-                })
-              : 'yesterday'}
+            {reviewData?.completed_count || 0} of {reviewData?.total_items || 0}
           </Text>
+          {' '}actions — that's progress! 🎉
         </Text>
 
+        {/* Summary Card */}
         <View style={styles.summaryCard}>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total Actions</Text>
-            <Text style={styles.summaryValue}>{reviewData?.total_items || 0}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Completed</Text>
+            <Text style={styles.summaryLabel}>✅ Completed</Text>
             <Text style={[styles.summaryValue, styles.completedValue]}>
               {reviewData?.completed_count || 0}
             </Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Need Review</Text>
+            <Text style={styles.summaryLabel}>⏳ To Review</Text>
             <Text style={[styles.summaryValue, styles.pendingValue]}>
               {reviewData?.incomplete_count || 0}
             </Text>
+          </View>
+          <View style={[styles.summaryRow, { marginBottom: 0 }]}>
+            <Text style={styles.summaryLabel}>🎯 Total</Text>
+            <Text style={styles.summaryValue}>{reviewData?.total_items || 0}</Text>
           </View>
         </View>
 
@@ -319,162 +668,139 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
         )}
 
         <Text style={styles.introDescription}>
-          Tell us what happened with each action so we can personalize your future plans better.
+          Quick check: What really happened with each action? This helps us make your next plan even better! 💫
         </Text>
-      </View>
 
-      <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={() => {
-          if (incompleteItems.length > 0) {
-            setCurrentStep(2);
-          } else {
-            setCurrentStep(4);
-          }
-        }}
-      >
-        <Text style={styles.primaryButtonText}>
-          {incompleteItems.length > 0 ? "Let's Review" : 'Continue'}
-        </Text>
-      </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+          <PrimaryButton
+            title="Let's Review →"
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              if (allItems.length > 0) {
+                setCurrentStep(2);
+              } else {
+                setCurrentStep(4);
+              }
+            }}
+            style={styles.primaryBtn}
+          />
+        </View>
+      </Animated.View>
+    );
+  };
 
-      <TouchableOpacity style={styles.skipButton} onPress={onClose}>
-        <Text style={styles.skipButtonText}>Remind me later</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  // Step 2: Review Each Item
-  const renderReviewItemStep = () => {
-    const currentItem = incompleteItems[currentItemIndex];
-    if (!currentItem) return null;
-
-    const currentState = itemReviewStates.get(currentItem.id);
-    const selectedStatus = currentState?.status;
-
+  // Step 2: All 4 Cards View
+  const renderAllCardsStep = () => {
     return (
       <View style={styles.stepContainer}>
-        {/* Progress indicator */}
-        <View style={styles.progressContainer}>
-          <Text style={styles.progressText}>
-            Action {currentItemIndex + 1} of {incompleteItems.length}
+        {/* Header */}
+        <View style={styles.cardsHeader}>
+          <Text style={styles.sectionTitle}>What happened?</Text>
+          <Text style={styles.sectionSubtitle}>
+            Tell us about each action from {reviewData?.review_date ? 'yesterday' : 'your last session'}
           </Text>
-          <View style={styles.progressBar}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${((currentItemIndex + 1) / incompleteItems.length) * 100}%` },
-              ]}
-            />
-          </View>
         </View>
 
-        {/* Item Card */}
-        <View style={styles.itemCard}>
-          <View style={styles.itemHeader}>
-            <View style={styles.itemIconContainer}>
-              {currentItem.hero_image_url ? (
-                <Image source={{ uri: currentItem.hero_image_url }} style={styles.itemImage} />
-              ) : (
-                <Text style={styles.itemCategoryIcon}>{getCategoryIcon(currentItem.category)}</Text>
-              )}
-            </View>
-            <View style={styles.itemInfo}>
-              <Text style={styles.itemTitle} numberOfLines={2}>
-                {currentItem.title}
-              </Text>
-              <View style={styles.itemMeta}>
-                <Text style={styles.itemMetaText}>
-                  {getTimeSlotIcon(currentItem.time_slot)} {currentItem.time_slot}
-                </Text>
-                <Text style={styles.itemMetaText}>
-                  {getCategoryIcon(currentItem.category)} {currentItem.category}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
+        {/* All Cards */}
+        <ScrollView
+          style={styles.cardsScrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.cardsScrollContent}
+        >
+          {allItems.map((item, index) => {
+            const state = itemReviewStates.get(item.id);
+            const selectedStatus = state?.status;
+            const cardAnim = cardAnimations[index] || new Animated.Value(1);
 
-        {/* Question */}
-        <Text style={styles.questionText}>What happened with this action?</Text>
+            return (
+              <Animated.View
+                key={item.id}
+                style={[
+                  styles.actionCard,
+                  {
+                    opacity: cardAnim,
+                    transform: [{
+                      translateY: cardAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [30, 0],
+                      }),
+                    }],
+                  },
+                  selectedStatus && styles.actionCardSelected,
+                ]}
+              >
+                {/* Card Header */}
+                <View style={styles.cardHeader}>
+                  {item.hero_image_url ? (
+                    <Image
+                      source={{ uri: item.hero_image_url }}
+                      style={styles.cardImage}
+                    />
+                  ) : (
+                    <View style={styles.cardIconContainer}>
+                      <Text style={styles.cardIcon}>{getCategoryIcon(item.category)}</Text>
+                    </View>
+                  )}
+                  <View style={styles.cardInfo}>
+                    <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
+                    <View style={styles.cardMeta}>
+                      <Text style={styles.cardMetaText}>
+                        {getTimeSlotIcon(item.time_slot)} {item.time_slot}
+                      </Text>
+                      {item.is_completed && (
+                        <View style={styles.completedBadge}>
+                          <Text style={styles.completedBadgeText}>✓ Done</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </View>
 
-        {/* Status Options */}
-        <View style={styles.statusOptions}>
-          <TouchableOpacity
-            style={[
-              styles.statusOption,
-              selectedStatus === 'forgot_to_mark' && styles.statusOptionSelected,
-            ]}
-            onPress={() => handleStatusSelect(currentItem.id, 'forgot_to_mark')}
-          >
-            <Text style={styles.statusEmoji}>✅</Text>
-            <Text
-              style={[
-                styles.statusText,
-                selectedStatus === 'forgot_to_mark' && styles.statusTextSelected,
-              ]}
-            >
-              I did it!
-            </Text>
-            <Text style={styles.statusSubtext}>Forgot to mark</Text>
-          </TouchableOpacity>
+                {/* Status Options */}
+                <View style={styles.statusGrid}>
+                  {STATUS_OPTIONS.map((option) => {
+                    // Skip "was_completed" if item wasn't already completed
+                    if (option.id === 'was_completed' && !item.is_completed) return null;
+                    // Skip other options if item was already completed (only show was_completed)
+                    if (option.id !== 'was_completed' && item.is_completed) return null;
 
-          <TouchableOpacity
-            style={[
-              styles.statusOption,
-              selectedStatus === 'replaced' && styles.statusOptionSelected,
-            ]}
-            onPress={() => handleStatusSelect(currentItem.id, 'replaced')}
-          >
-            <Text style={styles.statusEmoji}>🔄</Text>
-            <Text
-              style={[styles.statusText, selectedStatus === 'replaced' && styles.statusTextSelected]}
-            >
-              Replaced it
-            </Text>
-            <Text style={styles.statusSubtext}>Did something else</Text>
-          </TouchableOpacity>
+                    const isSelected = selectedStatus === option.id;
 
-          <TouchableOpacity
-            style={[
-              styles.statusOption,
-              selectedStatus === 'skipped' && styles.statusOptionSelected,
-            ]}
-            onPress={() => handleStatusSelect(currentItem.id, 'skipped')}
-          >
-            <Text style={styles.statusEmoji}>⏭️</Text>
-            <Text
-              style={[styles.statusText, selectedStatus === 'skipped' && styles.statusTextSelected]}
-            >
-              Skipped it
-            </Text>
-            <Text style={styles.statusSubtext}>Carry to today</Text>
-          </TouchableOpacity>
-        </View>
+                    return (
+                      <TouchableOpacity
+                        key={option.id}
+                        style={[
+                          styles.statusOption,
+                          isSelected && [styles.statusOptionSelected, { borderColor: option.color }],
+                        ]}
+                        onPress={() => handleStatusSelect(item.id, option.id)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.statusEmoji}>{option.emoji}</Text>
+                        <Text style={[
+                          styles.statusLabel,
+                          isSelected && { color: option.color },
+                        ]}>
+                          {option.label}
+                        </Text>
+                        <Text style={styles.statusSublabel}>{option.sublabel}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </Animated.View>
+            );
+          })}
+        </ScrollView>
 
-        {/* Navigation Buttons */}
-        <View style={styles.navigationButtons}>
-          {currentItemIndex > 0 && (
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={handlePreviousItem}
-            >
-              <Text style={styles.backButtonText}>← Back</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={[
-              styles.primaryButton, 
-              !selectedStatus && styles.primaryButtonDisabled,
-              currentItemIndex > 0 && styles.primaryButtonFlex
-            ]}
-            onPress={handleNextItem}
-            disabled={!selectedStatus}
-          >
-            <Text style={styles.primaryButtonText}>
-              {currentItemIndex < incompleteItems.length - 1 ? 'Next Action' : 'Continue'}
-            </Text>
-          </TouchableOpacity>
+        {/* Continue Button */}
+        <View style={styles.buttonContainer}>
+          <PrimaryButton
+            title={allItemsReviewed() ? "Continue →" : `Review ${allItems.length - Array.from(itemReviewStates.values()).filter(s => s.status !== null).length} more`}
+            onPress={handleContinueFromCards}
+            disabled={!allItemsReviewed()}
+            style={styles.primaryBtn}
+          />
         </View>
       </View>
     );
@@ -482,66 +808,89 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
 
   // Step 3: Replacement Details
   const renderReplacementDetailsStep = () => {
-    const replacedItems = Array.from(itemReviewStates.entries())
-      .filter(([_, state]) => state.status === 'replaced')
-      .map(([id, state]) => ({
-        item: reviewData?.items.find((i) => i.id === id),
-        state,
-      }))
-      .filter((x) => x.item);
+    const itemsToDetail = replacedItems();
 
     return (
       <View style={styles.stepContainer}>
         <Text style={styles.sectionTitle}>What did you do instead?</Text>
         <Text style={styles.sectionSubtitle}>
-          This helps us suggest better alternatives next time 💜
+          This helps us understand your preferences better! 💜
         </Text>
 
-        <ScrollView style={styles.replacementList} showsVerticalScrollIndicator={false}>
-          {replacedItems.map(({ item, state }) => (
-            <View key={item!.id} style={styles.replacementCard}>
-              <Text style={styles.replacementItemTitle}>
-                {getCategoryIcon(item!.category)} {item!.title}
-              </Text>
+        <ScrollView
+          style={styles.replacementScrollView}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {itemsToDetail.map((state) => {
+            const item = allItems.find((i) => i.id === state.item_id);
+            if (!item) return null;
 
-              <TextInput
-                style={styles.replacementInput}
-                placeholder="What did you do instead?"
-                placeholderTextColor="#999"
-                value={state.replacement_text}
-                onChangeText={(text) => handleReplacementTextChange(item!.id, text)}
-                multiline
-              />
+            const charCount = state.replacement_text.length;
+            const isValid = charCount >= MIN_REPLACEMENT_TEXT_LENGTH;
 
-              <View style={styles.categoryChips}>
-                {REPLACEMENT_CATEGORIES.map((cat) => (
-                  <TouchableOpacity
-                    key={cat.id}
-                    style={[
-                      styles.categoryChip,
-                      state.replacement_category === cat.id && styles.categoryChipSelected,
-                    ]}
-                    onPress={() => handleReplacementCategorySelect(item!.id, cat.id)}
-                  >
-                    <Text style={styles.categoryChipEmoji}>{cat.emoji}</Text>
-                    <Text
+            return (
+              <View key={state.item_id} style={styles.replacementCard}>
+                <Text style={styles.replacementItemTitle}>
+                  🔄 Instead of: {item.title}
+                </Text>
+
+                <TextInput
+                  style={[
+                    styles.replacementInput,
+                    !isValid && charCount > 0 && styles.replacementInputError,
+                    isValid && styles.replacementInputValid,
+                  ]}
+                  placeholder="What did you do instead?"
+                  placeholderTextColor={TEXT.greyLight}
+                  value={state.replacement_text}
+                  onChangeText={(text) => handleReplacementTextChange(state.item_id, text)}
+                  multiline
+                  maxLength={MAX_REPLACEMENT_TEXT_LENGTH}
+                />
+
+                <View style={styles.inputFooter}>
+                  <Text style={[
+                    styles.charCount,
+                    isValid && styles.charCountValid,
+                  ]}>
+                    {isValid ? '✓ ' : ''}{charCount}/{MIN_REPLACEMENT_TEXT_LENGTH}+ chars
+                  </Text>
+                </View>
+
+                <Text style={styles.categoryLabel}>Why did you swap? 👆</Text>
+                <View style={styles.categoryChips}>
+                  {REPLACEMENT_CATEGORIES.map((cat) => (
+                    <TouchableOpacity
+                      key={cat.id}
                       style={[
+                        styles.categoryChip,
+                        state.replacement_category === cat.id && styles.categoryChipSelected,
+                      ]}
+                      onPress={() => handleReplacementCategorySelect(state.item_id, cat.id)}
+                    >
+                      <Text style={[
                         styles.categoryChipText,
                         state.replacement_category === cat.id && styles.categoryChipTextSelected,
-                      ]}
-                    >
-                      {cat.text}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      ]}>
+                        {cat.emoji} {cat.text}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </ScrollView>
 
-        <TouchableOpacity style={styles.primaryButton} onPress={() => setCurrentStep(4)}>
-          <Text style={styles.primaryButtonText}>Continue</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+          <PrimaryButton
+            title="Continue →"
+            onPress={handleContinueFromReplacements}
+            disabled={!allReplacementsComplete()}
+            style={styles.primaryBtn}
+          />
+        </View>
       </View>
     );
   };
@@ -549,7 +898,7 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
   // Step 4: Streak Resolution
   const renderStreakResolutionStep = () => {
     const completedAfterReview = getCompletionCount();
-    const totalItems = reviewData?.total_items || 4;
+    const totalItems = reviewData?.total_items ?? allItems.length ?? 0;
     const streakMaintained = willMaintainStreak();
     const canUseFreeze = !streakMaintained && (reviewData?.freezes_available || 0) > 0;
 
@@ -588,9 +937,13 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
             )}
           </View>
 
-          <TouchableOpacity style={styles.primaryButton} onPress={onClose}>
-            <Text style={styles.primaryButtonText}>Let's Go! 🚀</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonContainer}>
+            <PrimaryButton
+              title="Let's Go! 🚀"
+              onPress={onClose}
+              style={styles.primaryBtn}
+            />
+          </View>
         </View>
       );
     }
@@ -602,42 +955,48 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
         <View style={styles.summaryCard}>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Actions Completed</Text>
-            <Text style={styles.summaryValue}>
+            <Text style={[
+              styles.summaryValue,
+              completedAfterReview === totalItems ? styles.completedValue : styles.pendingValue,
+            ]}>
               {completedAfterReview}/{totalItems}
             </Text>
           </View>
         </View>
 
         {reviewData?.was_frozen ? (
-          <View style={styles.streakStatusCard}>
-            <Text style={styles.streakStatusEmoji}>🧊</Text>
-            <Text style={styles.streakStatusTitle}>Day Was Frozen</Text>
-            <Text style={styles.streakStatusSubtitle}>
+          <View style={styles.streakCard}>
+            <Text style={styles.streakEmoji}>🧊</Text>
+            <Text style={styles.streakTitle}>Day Was Frozen</Text>
+            <Text style={styles.streakSubtitle}>
               Your streak is safe! Thanks for letting us know what you did.
             </Text>
           </View>
         ) : streakMaintained ? (
-          <View style={styles.streakStatusCard}>
-            <Text style={styles.streakStatusEmoji}>🔥</Text>
-            <Text style={styles.streakStatusTitle}>Streak Maintained!</Text>
-            <Text style={styles.streakStatusSubtitle}>
-              Great job completing {completedAfterReview} actions!
+          <View style={styles.streakCard}>
+            <Text style={styles.streakEmoji}>🔥</Text>
+            <Text style={styles.streakTitle}>Streak Maintained!</Text>
+            <Text style={styles.streakSubtitle}>
+              Amazing! All actions complete — your streak continues!
             </Text>
           </View>
         ) : (
-          <View style={[styles.streakStatusCard, styles.streakAtRiskCard]}>
-            <Text style={styles.streakStatusEmoji}>⚠️</Text>
-            <Text style={styles.streakStatusTitle}>Streak at Risk</Text>
-            <Text style={styles.streakStatusSubtitle}>
-              You completed {completedAfterReview}/{totalItems} actions. Need 3+ to maintain streak.
+          <View style={[styles.streakCard, styles.streakAtRiskCard]}>
+            <Text style={styles.streakEmoji}>⚠️</Text>
+            <Text style={styles.streakTitle}>Streak at Risk</Text>
+            <Text style={styles.streakSubtitle}>
+              You completed {completedAfterReview}/{totalItems} actions. Some items need attention.
             </Text>
 
             {canUseFreeze && (
               <TouchableOpacity
                 style={[styles.freezeOption, useFreeze && styles.freezeOptionSelected]}
-                onPress={() => setUseFreeze(!useFreeze)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setUseFreeze(!useFreeze);
+                }}
               >
-                <View style={styles.freezeCheckbox}>
+                <View style={[styles.freezeCheckbox, useFreeze && styles.freezeCheckboxSelected]}>
                   {useFreeze && <Text style={styles.freezeCheckmark}>✓</Text>}
                 </View>
                 <Text style={styles.freezeOptionText}>
@@ -648,17 +1007,20 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
           </View>
         )}
 
-        <TouchableOpacity
-          style={[styles.primaryButton, isSubmitting && styles.primaryButtonDisabled]}
-          onPress={handleSubmitReview}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text style={styles.primaryButtonText}>Submit Review</Text>
+        <View style={styles.buttonContainer}>
+          <PrimaryButton
+            title={isSubmitting ? "Submitting..." : "Complete Review ✨"}
+            onPress={handleSubmitReview}
+            disabled={isSubmitting}
+            style={styles.primaryBtn}
+          />
+          {isSubmitting && (
+            <ActivityIndicator
+              color={BRAND.warmPurple}
+              style={{ marginTop: responsiveHeight(2) }}
+            />
           )}
-        </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -666,64 +1028,105 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
   // Render current step
   const renderCurrentStep = () => {
     switch (currentStep) {
-      case 1:
-        return renderIntroStep();
-      case 2:
-        return renderReviewItemStep();
-      case 3:
-        return renderReplacementDetailsStep();
-      case 4:
-        return renderStreakResolutionStep();
-      default:
-        return null;
+      case 1: return renderIntroStep();
+      case 2: return renderAllCardsStep();
+      case 3: return renderReplacementDetailsStep();
+      case 4: return renderStreakResolutionStep();
+      default: return renderIntroStep();
     }
   };
 
-  if (!visible || !reviewData) return null;
+  // ============================================================================
+  // MAIN RENDER
+  // ============================================================================
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={handleModalClose}
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.overlay}
+      >
         <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
           {/* Header */}
-          <View style={styles.header}>
+          <LinearGradient
+            colors={[BACKGROUND.purpleTint, BACKGROUND.white]}
+            style={styles.header}
+          >
             <Text style={styles.headerTitle}>Daily Review</Text>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose} disabled={isSubmitting}>
-              <Text style={styles.closeButtonText}>×</Text>
-            </TouchableOpacity>
-          </View>
+            {(!isMandatory || reviewResult) ? (
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={handleModalClose}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.closeButtonText}>×</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.mandatoryBadge}>
+                <Text style={styles.mandatoryBadgeText}>Required</Text>
+              </View>
+            )}
+          </LinearGradient>
+
+          {/* Progress Indicator */}
+          {currentStep < 4 && (
+            <View style={styles.progressContainer}>
+              {[1, 2, 3, 4].map((step) => (
+                <View
+                  key={step}
+                  style={[
+                    styles.progressDot,
+                    currentStep >= step && styles.progressDotActive,
+                    currentStep === step && styles.progressDotCurrent,
+                  ]}
+                />
+              ))}
+            </View>
+          )}
 
           {/* Content */}
           <ScrollView
             style={styles.content}
             contentContainerStyle={styles.contentContainer}
             showsVerticalScrollIndicator={false}
+            bounces={false}
+            keyboardShouldPersistTaps="handled"
           >
             {renderCurrentStep()}
           </ScrollView>
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
 
 // ============================================================================
-// STYLES
+// STYLES - Using Design System
 // ============================================================================
 
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: UI.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   container: {
-    width: SCREEN_WIDTH * 0.92,
-    maxHeight: responsiveHeight(85),
-    backgroundColor: '#FFEDF7',
-    borderRadius: 20,
+    width: SCREEN_WIDTH * 0.94,
+    maxHeight: SCREEN_HEIGHT * 0.88,
+    backgroundColor: BACKGROUND.white,
+    borderRadius: moderateScale(24),
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
   },
   header: {
     flexDirection: 'row',
@@ -731,326 +1134,341 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: responsiveWidth(5),
     paddingVertical: responsiveHeight(2),
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+    paddingTop: responsiveHeight(2.5),
   },
   headerTitle: {
-    fontSize: moderateScale(16),
-    fontFamily: 'Inter600',
-    color: '#4A3D5C',
+    fontSize: moderateScale(18),
+    fontFamily: FONT_SERIF.medium,
+    color: TEXT.secondary,
   },
   closeButton: {
     width: responsiveWidth(8),
     height: responsiveWidth(8),
     borderRadius: responsiveWidth(4),
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    backgroundColor: 'rgba(0, 0, 0, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   closeButtonText: {
-    fontSize: responsiveFontSize(3),
-    color: '#666666',
-    fontFamily: 'Inter600',
+    fontSize: moderateScale(22),
+    color: TEXT.grey,
+    fontFamily: FONT_INTER.semiBold,
     marginTop: -2,
+  },
+  mandatoryBadge: {
+    backgroundColor: BRAND.warmPurple,
+    paddingHorizontal: responsiveWidth(3),
+    paddingVertical: responsiveHeight(0.5),
+    borderRadius: moderateScale(12),
+  },
+  mandatoryBadgeText: {
+    fontSize: moderateScale(10),
+    fontFamily: FONT_INTER.semiBold,
+    color: TEXT.white,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: responsiveWidth(2),
+    paddingBottom: responsiveHeight(1.5),
+  },
+  progressDot: {
+    width: responsiveWidth(2.5),
+    height: responsiveWidth(2.5),
+    borderRadius: responsiveWidth(1.25),
+    backgroundColor: BORDER.grey,
+  },
+  progressDotActive: {
+    backgroundColor: BRAND.gradPurple,
+  },
+  progressDotCurrent: {
+    width: responsiveWidth(6),
+    borderRadius: responsiveWidth(1.25),
+    backgroundColor: BRAND.warmPurple,
   },
   content: {
     flex: 1,
   },
   contentContainer: {
     padding: responsiveWidth(5),
+    paddingBottom: responsiveHeight(4),
+    flexGrow: 1,
   },
   stepContainer: {
     flex: 1,
+    minHeight: responsiveHeight(45),
   },
 
-  // Intro Step
-  introContent: {
+  // ============ INTRO STEP ============
+  introHeader: {
     alignItems: 'center',
-    marginBottom: responsiveHeight(3),
+    marginBottom: responsiveHeight(2),
+  },
+  introGradientCircle: {
+    width: responsiveWidth(20),
+    height: responsiveWidth(20),
+    borderRadius: responsiveWidth(10),
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   introEmoji: {
-    fontSize: moderateScale(48),
-    marginBottom: responsiveHeight(1.5),
+    fontSize: moderateScale(36),
   },
   introTitle: {
     fontSize: moderateScale(22),
-    fontFamily: 'Inter600',
-    color: '#4A3D5C',
-    marginBottom: responsiveHeight(0.5),
+    fontFamily: FONT_SERIF.medium,
+    color: TEXT.secondary,
+    textAlign: 'center',
+    marginBottom: responsiveHeight(1),
   },
   introSubtitle: {
     fontSize: moderateScale(14),
-    fontFamily: 'Inter400',
-    color: '#6B5B7A',
+    fontFamily: FONT_INTER.regular,
+    color: TEXT.muted,
     textAlign: 'center',
-    marginBottom: responsiveHeight(2),
+    marginBottom: responsiveHeight(2.5),
+    lineHeight: moderateScale(20),
   },
   highlightText: {
-    fontFamily: 'Inter600',
-    color: '#683AF4',
+    fontFamily: FONT_INTER.semiBold,
+    color: BRAND.warmPurple,
   },
+  introDescription: {
+    fontSize: moderateScale(13),
+    fontFamily: FONT_INTER.regular,
+    color: TEXT.muted,
+    textAlign: 'center',
+    marginBottom: responsiveHeight(2),
+    lineHeight: moderateScale(19),
+  },
+
+  // ============ SUMMARY CARD ============
   summaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: BACKGROUND.purpleTint,
+    borderRadius: moderateScale(16),
     padding: responsiveWidth(4),
-    width: '100%',
     marginBottom: responsiveHeight(2),
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: responsiveHeight(0.8),
+    marginBottom: responsiveHeight(1),
   },
   summaryLabel: {
     fontSize: moderateScale(13),
-    fontFamily: 'Inter400',
-    color: '#6B5B7A',
+    fontFamily: FONT_INTER.regular,
+    color: TEXT.muted,
   },
   summaryValue: {
-    fontSize: moderateScale(14),
-    fontFamily: 'Inter600',
-    color: '#4A3D5C',
+    fontSize: moderateScale(15),
+    fontFamily: FONT_INTER.semiBold,
+    color: TEXT.secondary,
   },
   completedValue: {
-    color: '#22C55E',
+    color: UI.successGreen,
   },
   pendingValue: {
-    color: '#F59E0B',
+    color: UI.warningYellow,
   },
   frozenBadge: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: BACKGROUND.lightBlue,
     paddingHorizontal: responsiveWidth(4),
     paddingVertical: responsiveHeight(1),
-    borderRadius: 20,
+    borderRadius: moderateScale(20),
     marginBottom: responsiveHeight(2),
+    alignSelf: 'center',
   },
   frozenText: {
     fontSize: moderateScale(12),
-    fontFamily: 'Inter500',
+    fontFamily: FONT_INTER.medium,
     color: '#0369A1',
   },
-  introDescription: {
-    fontSize: moderateScale(13),
-    fontFamily: 'Inter400',
-    color: '#6B5B7A',
-    textAlign: 'center',
-    lineHeight: moderateScale(20),
-  },
 
-  // Progress
-  progressContainer: {
+  // ============ ALL CARDS STEP ============
+  cardsHeader: {
     marginBottom: responsiveHeight(2),
   },
-  progressText: {
-    fontSize: moderateScale(12),
-    fontFamily: 'Inter500',
-    color: '#6B5B7A',
-    marginBottom: responsiveHeight(0.5),
-  },
-  progressBar: {
-    height: 6,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#683AF4',
-    borderRadius: 3,
-  },
-
-  // Item Card
-  itemCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: responsiveWidth(4),
-    marginBottom: responsiveHeight(2),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  itemHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  itemIconContainer: {
-    width: responsiveWidth(16),
-    height: responsiveWidth(16),
-    borderRadius: responsiveWidth(8),
-    backgroundColor: '#F5F0FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: responsiveWidth(3),
-    overflow: 'hidden',
-  },
-  itemImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  itemCategoryIcon: {
-    fontSize: moderateScale(24),
-  },
-  itemInfo: {
-    flex: 1,
-  },
-  itemTitle: {
-    fontSize: moderateScale(15),
-    fontFamily: 'Inter600',
-    color: '#4A3D5C',
-    marginBottom: responsiveHeight(0.5),
-  },
-  itemMeta: {
-    flexDirection: 'row',
-    gap: responsiveWidth(3),
-  },
-  itemMetaText: {
-    fontSize: moderateScale(11),
-    fontFamily: 'Inter400',
-    color: '#6B5B7A',
-  },
-
-  // Question
-  questionText: {
-    fontSize: moderateScale(16),
-    fontFamily: 'Inter600',
-    color: '#4A3D5C',
-    textAlign: 'center',
-    marginBottom: responsiveHeight(2),
-  },
-
-  // Status Options
-  statusOptions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: responsiveWidth(2),
-    marginBottom: responsiveHeight(3),
-  },
-  statusOption: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: responsiveWidth(3),
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-  },
-  statusOptionSelected: {
-    borderColor: '#683AF4',
-    backgroundColor: '#F5F0FF',
-  },
-  statusEmoji: {
-    fontSize: moderateScale(24),
-    marginBottom: responsiveHeight(0.5),
-  },
-  statusText: {
-    fontSize: moderateScale(12),
-    fontFamily: 'Inter600',
-    color: '#4A3D5C',
-    textAlign: 'center',
-  },
-  statusTextSelected: {
-    color: '#683AF4',
-  },
-  statusSubtext: {
-    fontSize: moderateScale(9),
-    fontFamily: 'Inter400',
-    color: '#999',
-    textAlign: 'center',
-    marginTop: 2,
-  },
-
-  // Buttons
-  navigationButtons: {
-    flexDirection: 'row',
-    gap: responsiveWidth(2),
-    marginTop: responsiveHeight(1),
-  },
-  backButton: {
-    flex: 0.4,
-    backgroundColor: '#F5F5F5',
-    paddingVertical: responsiveHeight(1.8),
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  backButtonText: {
-    fontSize: moderateScale(14),
-    fontFamily: 'Inter500',
-    color: '#6B5B7A',
-  },
-  primaryButton: {
-    backgroundColor: '#683AF4',
-    paddingVertical: responsiveHeight(1.8),
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: responsiveHeight(1),
-  },
-  primaryButtonFlex: {
-    flex: 0.6,
-    marginTop: 0,
-  },
-  primaryButtonDisabled: {
-    backgroundColor: '#B0B0B0',
-  },
-  primaryButtonText: {
-    fontSize: moderateScale(15),
-    fontFamily: 'Inter600',
-    color: '#FFFFFF',
-  },
-  skipButton: {
-    paddingVertical: responsiveHeight(1.5),
-    alignItems: 'center',
-  },
-  skipButtonText: {
-    fontSize: moderateScale(13),
-    fontFamily: 'Inter500',
-    color: '#6B5B7A',
-  },
-
-  // Replacement Details
   sectionTitle: {
-    fontSize: moderateScale(18),
-    fontFamily: 'Inter600',
-    color: '#4A3D5C',
+    fontSize: moderateScale(20),
+    fontFamily: FONT_SERIF.medium,
+    color: TEXT.secondary,
     marginBottom: responsiveHeight(0.5),
   },
   sectionSubtitle: {
     fontSize: moderateScale(13),
-    fontFamily: 'Inter400',
-    color: '#6B5B7A',
+    fontFamily: FONT_INTER.regular,
+    color: TEXT.muted,
+  },
+  cardsScrollView: {
+    flex: 1,
     marginBottom: responsiveHeight(2),
   },
-  replacementList: {
-    maxHeight: responsiveHeight(40),
+  cardsScrollContent: {
+    paddingBottom: responsiveHeight(2),
+  },
+  actionCard: {
+    backgroundColor: BACKGROUND.white,
+    borderRadius: moderateScale(16),
+    padding: responsiveWidth(4),
+    marginBottom: responsiveHeight(2),
+    borderWidth: 2,
+    borderColor: BORDER.light,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  actionCardSelected: {
+    borderColor: BRAND.gradPurple,
+    backgroundColor: BACKGROUND.purpleTint,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    marginBottom: responsiveHeight(1.5),
+  },
+  cardImage: {
+    width: responsiveWidth(14),
+    height: responsiveWidth(14),
+    borderRadius: moderateScale(12),
+    marginRight: responsiveWidth(3),
+  },
+  cardIconContainer: {
+    width: responsiveWidth(14),
+    height: responsiveWidth(14),
+    borderRadius: moderateScale(12),
+    backgroundColor: BACKGROUND.lightViolet,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: responsiveWidth(3),
+  },
+  cardIcon: {
+    fontSize: moderateScale(24),
+  },
+  cardInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  cardTitle: {
+    fontSize: moderateScale(14),
+    fontFamily: FONT_INTER.semiBold,
+    color: TEXT.secondary,
+    marginBottom: responsiveHeight(0.5),
+  },
+  cardMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: responsiveWidth(2),
+  },
+  cardMetaText: {
+    fontSize: moderateScale(11),
+    fontFamily: FONT_INTER.regular,
+    color: TEXT.muted,
+  },
+  completedBadge: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: responsiveWidth(2),
+    paddingVertical: responsiveHeight(0.3),
+    borderRadius: moderateScale(8),
+  },
+  completedBadgeText: {
+    fontSize: moderateScale(10),
+    fontFamily: FONT_INTER.medium,
+    color: '#166534',
+  },
+  statusGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: responsiveWidth(2),
+  },
+  statusOption: {
+    flex: 1,
+    minWidth: responsiveWidth(26),
+    backgroundColor: BACKGROUND.white,
+    borderRadius: moderateScale(12),
+    padding: responsiveWidth(2.5),
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: BORDER.grey,
+  },
+  statusOptionSelected: {
+    backgroundColor: BACKGROUND.purpleTint,
+  },
+  statusEmoji: {
+    fontSize: moderateScale(20),
+    marginBottom: responsiveHeight(0.3),
+  },
+  statusLabel: {
+    fontSize: moderateScale(11),
+    fontFamily: FONT_INTER.semiBold,
+    color: TEXT.secondary,
+    textAlign: 'center',
+  },
+  statusSublabel: {
+    fontSize: moderateScale(8),
+    fontFamily: FONT_INTER.regular,
+    color: TEXT.greyLight,
+    textAlign: 'center',
+    marginTop: 1,
+  },
+
+  // ============ REPLACEMENT DETAILS ============
+  replacementScrollView: {
+    flex: 1,
     marginBottom: responsiveHeight(2),
   },
   replacementCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: BACKGROUND.purpleTint,
+    borderRadius: moderateScale(16),
     padding: responsiveWidth(4),
-    marginBottom: responsiveHeight(1.5),
+    marginBottom: responsiveHeight(2),
   },
   replacementItemTitle: {
     fontSize: moderateScale(14),
-    fontFamily: 'Inter600',
-    color: '#4A3D5C',
-    marginBottom: responsiveHeight(1),
+    fontFamily: FONT_INTER.semiBold,
+    color: TEXT.secondary,
+    marginBottom: responsiveHeight(1.5),
   },
   replacementInput: {
-    backgroundColor: '#F9F9F9',
-    borderRadius: 10,
-    padding: responsiveWidth(3),
-    fontSize: moderateScale(13),
-    fontFamily: 'Inter400',
-    color: '#4A3D5C',
-    minHeight: responsiveHeight(8),
+    backgroundColor: BACKGROUND.white,
+    borderRadius: moderateScale(12),
+    padding: responsiveWidth(4),
+    fontSize: moderateScale(14),
+    fontFamily: FONT_INTER.regular,
+    color: TEXT.secondary,
+    minHeight: responsiveHeight(10),
     textAlignVertical: 'top',
-    marginBottom: responsiveHeight(1.5),
+    borderWidth: 2,
+    borderColor: BORDER.light,
+  },
+  replacementInputError: {
+    borderColor: UI.dangerRed,
+    backgroundColor: BACKGROUND.danger,
+  },
+  replacementInputValid: {
+    borderColor: UI.successGreen,
+  },
+  inputFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: responsiveHeight(0.5),
+  },
+  charCount: {
+    fontSize: moderateScale(10),
+    fontFamily: FONT_INTER.regular,
+    color: TEXT.greyLight,
+  },
+  charCountValid: {
+    color: UI.successGreen,
+    fontFamily: FONT_INTER.medium,
+  },
+  categoryLabel: {
+    fontSize: moderateScale(12),
+    fontFamily: FONT_INTER.medium,
+    color: TEXT.muted,
+    marginBottom: responsiveHeight(1),
+    marginTop: responsiveHeight(1.5),
   },
   categoryChips: {
     flexDirection: 'row',
@@ -1060,147 +1478,158 @@ const styles = StyleSheet.create({
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: BACKGROUND.white,
     paddingHorizontal: responsiveWidth(3),
     paddingVertical: responsiveHeight(0.8),
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderRadius: moderateScale(20),
+    borderWidth: 1.5,
+    borderColor: BORDER.light,
   },
   categoryChipSelected: {
-    backgroundColor: '#F5F0FF',
-    borderColor: '#683AF4',
-  },
-  categoryChipEmoji: {
-    fontSize: moderateScale(12),
-    marginRight: responsiveWidth(1),
+    backgroundColor: BRAND.gradPink + '30',
+    borderColor: BRAND.warmPurple,
   },
   categoryChipText: {
     fontSize: moderateScale(11),
-    fontFamily: 'Inter400',
-    color: '#666',
+    fontFamily: FONT_INTER.regular,
+    color: TEXT.grey,
   },
   categoryChipTextSelected: {
-    color: '#683AF4',
-    fontFamily: 'Inter500',
+    color: BRAND.warmPurple,
+    fontFamily: FONT_INTER.medium,
   },
 
-  // Streak Resolution
-  streakStatusCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+  // ============ STREAK RESOLUTION ============
+  streakCard: {
+    backgroundColor: BACKGROUND.purpleTint,
+    borderRadius: moderateScale(16),
     padding: responsiveWidth(5),
     alignItems: 'center',
     marginBottom: responsiveHeight(2),
   },
   streakAtRiskCard: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#FEF9C3',
     borderWidth: 1,
-    borderColor: '#F59E0B',
+    borderColor: UI.warningYellow,
   },
-  streakStatusEmoji: {
-    fontSize: moderateScale(40),
+  streakEmoji: {
+    fontSize: moderateScale(44),
     marginBottom: responsiveHeight(1),
   },
-  streakStatusTitle: {
+  streakTitle: {
     fontSize: moderateScale(18),
-    fontFamily: 'Inter600',
-    color: '#4A3D5C',
+    fontFamily: FONT_SERIF.medium,
+    color: TEXT.secondary,
     marginBottom: responsiveHeight(0.5),
   },
-  streakStatusSubtitle: {
+  streakSubtitle: {
     fontSize: moderateScale(13),
-    fontFamily: 'Inter400',
-    color: '#6B5B7A',
+    fontFamily: FONT_INTER.regular,
+    color: TEXT.muted,
     textAlign: 'center',
+    lineHeight: moderateScale(18),
   },
   freezeOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BACKGROUND.white,
     paddingHorizontal: responsiveWidth(4),
     paddingVertical: responsiveHeight(1.5),
-    borderRadius: 10,
+    borderRadius: moderateScale(12),
     marginTop: responsiveHeight(2),
     borderWidth: 2,
-    borderColor: '#E0E0E0',
+    borderColor: BORDER.grey,
   },
   freezeOptionSelected: {
     borderColor: '#0EA5E9',
-    backgroundColor: '#F0F9FF',
+    backgroundColor: BACKGROUND.lightBlue,
   },
   freezeCheckbox: {
     width: responsiveWidth(5),
     height: responsiveWidth(5),
-    borderRadius: 4,
+    borderRadius: moderateScale(4),
     borderWidth: 2,
     borderColor: '#0EA5E9',
     marginRight: responsiveWidth(2),
     justifyContent: 'center',
     alignItems: 'center',
   },
+  freezeCheckboxSelected: {
+    backgroundColor: '#0EA5E9',
+  },
   freezeCheckmark: {
     fontSize: moderateScale(10),
-    color: '#0EA5E9',
-    fontFamily: 'Inter600',
+    color: TEXT.white,
+    fontFamily: FONT_INTER.semiBold,
   },
   freezeOptionText: {
     fontSize: moderateScale(13),
-    fontFamily: 'Inter500',
-    color: '#4A3D5C',
+    fontFamily: FONT_INTER.medium,
+    color: TEXT.secondary,
   },
 
-  // Result
+  // ============ RESULT ============
   resultContent: {
     alignItems: 'center',
     marginBottom: responsiveHeight(3),
+    paddingTop: responsiveHeight(2),
   },
   resultEmoji: {
-    fontSize: moderateScale(56),
+    fontSize: moderateScale(60),
     marginBottom: responsiveHeight(1.5),
   },
   resultTitle: {
-    fontSize: moderateScale(24),
-    fontFamily: 'Inter600',
-    color: '#4A3D5C',
+    fontSize: moderateScale(26),
+    fontFamily: FONT_SERIF.medium,
+    color: TEXT.secondary,
     marginBottom: responsiveHeight(0.5),
   },
   resultSubtitle: {
     fontSize: moderateScale(14),
-    fontFamily: 'Inter400',
-    color: '#6B5B7A',
+    fontFamily: FONT_INTER.regular,
+    color: TEXT.muted,
     textAlign: 'center',
     marginBottom: responsiveHeight(1.5),
+    paddingHorizontal: responsiveWidth(4),
   },
   freezeUsedBadge: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: BACKGROUND.lightBlue,
     paddingHorizontal: responsiveWidth(4),
     paddingVertical: responsiveHeight(0.8),
-    borderRadius: 20,
+    borderRadius: moderateScale(20),
     marginBottom: responsiveHeight(1.5),
   },
   freezeUsedText: {
     fontSize: moderateScale(12),
-    fontFamily: 'Inter500',
+    fontFamily: FONT_INTER.medium,
     color: '#0369A1',
   },
   streakBadge: {
-    backgroundColor: '#683AF4',
+    backgroundColor: BRAND.warmPurple,
     paddingHorizontal: responsiveWidth(5),
     paddingVertical: responsiveHeight(1),
-    borderRadius: 25,
+    borderRadius: moderateScale(25),
   },
   streakBadgeText: {
     fontSize: moderateScale(14),
-    fontFamily: 'Inter600',
-    color: '#FFFFFF',
+    fontFamily: FONT_INTER.semiBold,
+    color: TEXT.white,
   },
   encouragementText: {
     fontSize: moderateScale(13),
-    fontFamily: 'Inter400',
-    color: '#6B5B7A',
+    fontFamily: FONT_INTER.regular,
+    color: TEXT.muted,
     textAlign: 'center',
     marginTop: responsiveHeight(1),
+  },
+
+  // ============ BUTTONS ============
+  buttonContainer: {
+    marginTop: 'auto',
+    paddingTop: responsiveHeight(1),
+  },
+  primaryBtn: {
+    width: '100%',
   },
 });
 
