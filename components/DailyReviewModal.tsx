@@ -932,18 +932,6 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
       <View style={styles.stepContainer}>
         <Text style={styles.sectionTitle}>Review Summary</Text>
 
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Actions Completed</Text>
-            <Text style={[
-              styles.summaryValue,
-              completedAfterReview === totalItems ? styles.completedValue : styles.pendingValue,
-            ]}>
-              {completedAfterReview}/{totalItems}
-            </Text>
-          </View>
-        </View>
-
         {reviewData?.was_frozen ? (
           <View style={styles.streakCard}>
             <Text style={styles.streakEmoji}>🧊</Text>
@@ -1304,34 +1292,6 @@ const styles = StyleSheet.create({
   },
 
   // ============ SUMMARY CARD ============
-  summaryCard: {
-    backgroundColor: BACKGROUND.purpleTint,
-    borderRadius: moderateScale(16),
-    padding: responsiveWidth(4),
-    marginBottom: responsiveHeight(2),
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: responsiveHeight(1),
-  },
-  summaryLabel: {
-    fontSize: moderateScale(13),
-    fontFamily: FONT_INTER.regular,
-    color: TEXT.muted,
-  },
-  summaryValue: {
-    fontSize: moderateScale(15),
-    fontFamily: FONT_INTER.semiBold,
-    color: TEXT.secondary,
-  },
-  completedValue: {
-    color: UI.successGreen,
-  },
-  pendingValue: {
-    color: UI.warningYellow,
-  },
   frozenBadge: {
     backgroundColor: BACKGROUND.lightBlue,
     paddingHorizontal: responsiveWidth(4),
