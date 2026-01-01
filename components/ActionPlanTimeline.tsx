@@ -183,7 +183,7 @@ export default function ActionPlanTimeline({
     // Process ALL keys from assignments object (including 'completed' if present)
     // This ensures we don't miss any items regardless of what keys the backend returns
     const allKeys = Object.keys(assignments);
-    console.log('🔍 Processing assignment keys:', allKeys);
+    // Debug disabled for performance: console.log('🔍 Processing assignment keys:', allKeys);
 
     allKeys.forEach((slot) => {
       const group = assignments[slot];
@@ -210,13 +210,8 @@ export default function ActionPlanTimeline({
     const completedCount = arr.filter(a => a.is_completed).length;
     arr.splice(completedCount, 0, weeklyCheckIn);
 
-    console.log('🔍 Today Assignments processing (SORTED):', {
-      originalAssignments: assignments,
-      allKeys,
-      processedTodayAssignments: arr.map(a => ({ id: a.id, title: a.title, completed: a.is_completed, time_slot: (a as any).time_slot })),
-      totalItems: arr.length,
-      completedCount
-    });
+    // Debug disabled for performance:
+    // console.log('🔍 Today Assignments processing (SORTED):', {...});
 
     return arr;
   }, [assignments]);
@@ -348,15 +343,8 @@ export default function ActionPlanTimeline({
       slot => timeSlotGroups[slot] && timeSlotGroups[slot].length > 0
     );
 
-    console.log('🔍 Time slot grouping:', {
-      pendingItemsCount: pendingItems.length,
-      groups: Object.entries(timeSlotGroups).map(([slot, items]) => ({
-        slot,
-        itemIds: items.map(i => i.id),
-        itemTitles: items.map(i => i.title),
-      })),
-      orderedSlots,
-    });
+    // Debug disabled for performance:
+    // console.log('🔍 Time slot grouping:', {...});
 
     // Add icon for EACH time section (morning, afternoon, evening, anytime)
     orderedSlots.forEach((timeSlot, slotIndex) => {
@@ -369,13 +357,8 @@ export default function ActionPlanTimeline({
         const anchorForItem = todayNext.find(a => a.id === itemIdStr) ||
           todayNext.find(a => String(a.id) === itemIdStr);
 
-        console.log(`🔍 Looking for anchor for ${timeSlot}:`, {
-          itemId: firstItemOfSlot.id,
-          itemIdStr,
-          itemTitle: firstItemOfSlot.title,
-          foundAnchor: !!anchorForItem,
-          availableAnchorIds: todayNext.map(a => a.id),
-        });
+        // Debug disabled for performance:
+        // console.log(`🔍 Looking for anchor for ${timeSlot}:`, {...});
 
         if (anchorForItem) {
           // Position icon at the TOP of this section
@@ -389,12 +372,8 @@ export default function ActionPlanTimeline({
       }
     });
 
-    console.log('🔍 Time slot icons (ALL sections):', {
-      completedCount: completedItems.length,
-      pendingCount: pendingItems.length,
-      orderedSlots,
-      positions: positions.map(p => ({ slot: p.timeSlot, y: Math.round(p.iconY) })),
-    });
+    // Debug disabled for performance:
+    // console.log('🔍 Time slot icons (ALL sections):', {...});
 
     setTimeSlotPositions(positions);
   }, [todayAssignments, assignments, geom]);
@@ -475,10 +454,8 @@ export default function ActionPlanTimeline({
   // helper
   const getActionAmount = (assignment: Assignment): string => {
     let amount = '';
-    // Debug logging to see why amounts aren't showing
-    if (assignment.food_amounts?.length || assignment.exercise_durations?.length || assignment.mindfulness_durations?.length) {
-      console.log(`[HomeDebug] Item: ${assignment.title}, food: ${JSON.stringify(assignment.food_amounts)}, move: ${JSON.stringify(assignment.exercise_durations)}`);
-    }
+    // Debug disabled for performance:
+    // if (assignment.food_amounts?.length || ...) { console.log(...); }
 
     if (assignment.food_amounts?.length) amount = assignment.food_amounts[0];
     else if (assignment.exercise_durations?.length) amount = assignment.exercise_durations[0];
@@ -550,10 +527,8 @@ export default function ActionPlanTimeline({
   const getFirstHormoneIcon = (assignment: Assignment, isLeft: boolean): string | any => {
     const hormoneName = assignment.hormones?.[0];
 
-    // Debug log to trace hormone icon selection
-    if (assignment.id !== -1) { // Skip for Weekly Check-in
-      console.log(`🔍 Hormone icon for "${assignment.title}": hormones=${JSON.stringify(assignment.hormones)}, using="${hormoneName}", isLeft=${isLeft}`);
-    }
+    // Debug disabled for performance:
+    // console.log(`🔍 Hormone icon for"${assignment.title}":...`);
 
     if (hormoneName && hormoneName.trim() !== '') {
       return getHormoneIcon(hormoneName, isLeft);
@@ -718,16 +693,8 @@ export default function ActionPlanTimeline({
               ? xCenter + CIRCLE_RADIUS + responsiveWidth(3)
               : xCenter - CIRCLE_RADIUS - responsiveWidth(35) - responsiveWidth(3);
 
-            // Detailed debug: Today item rendering info
-            console.log(`🎯 Today item rendering ${idx}:`, {
-              id: a.id,
-              title: a.title,
-              category: a.category,
-              isCompleted: a.is_completed,
-              anchor: { x: xCenter, y: yCenter },
-              position: { xImage, yImage, textLeft },
-              isLeft: isLeft
-            });
+            // Debug disabled for performance:
+            // console.log(`🎯 Today item rendering ${idx}:`, {...});
 
 
 
@@ -943,12 +910,19 @@ export default function ActionPlanTimeline({
                     }}
                     style={{ flexDirection: 'row', alignItems: 'center', justifyContent: isLeft ? 'flex-start' : 'flex-end' }}
                   >
+                    {/* Show carried forward indicator if title starts with [Carried Forward] */}
+                    {a.title?.startsWith('[Carried Forward]') && (
+                      <View style={styles.carriedBadge}>
+                        <Text style={styles.carriedBadgeText}>↩️</Text>
+                      </View>
+                    )}
                     <Text
                       style={[styles.itemTitle, { textAlign: isLeft ? 'left' : 'right' }]}
                       numberOfLines={1}
                       ellipsizeMode="tail"
                     >
-                      {a.title}
+                      {/* Remove the [Carried Forward] prefix from display */}
+                      {a.title?.replace('[Carried Forward] ', '')}
                     </Text>
                     <Text style={styles.itemArrow} allowFontScaling={false}>
                       {'>'}
@@ -977,16 +951,8 @@ export default function ActionPlanTimeline({
             // Use the smart time slot from position calculation
             const smartTimeSlot = position.timeSlot;
 
-            console.log(`🎯 ActionPlanTimeline Icon rendering ${index}:`, {
-              originalTimeSlot: position.timeSlot,
-              smartTimeSlot,
-              icon: TIME_ICONS[smartTimeSlot] || TIME_ICONS.anytime,
-              position: { iconLeft, iconTop },
-              isCapCenter: position.isCapCenter,
-              foundInMapping: !!TIME_ICONS[smartTimeSlot],
-              fallbackUsed: !TIME_ICONS[smartTimeSlot],
-              allAvailableKeys: Object.keys(TIME_ICONS)
-            });
+            // Debug disabled for performance:
+            // console.log(`🎯 ActionPlanTimeline Icon rendering ${index}:`, {...});
 
             return (
               <View
@@ -1356,6 +1322,12 @@ const styles = StyleSheet.create({
     color: '#6F6F6F',
     fontSize: responsiveFontSize(1.1),
     fontFamily: 'Inter600',
+  },
+  carriedBadge: {
+    marginRight: responsiveWidth(1),
+  },
+  carriedBadgeText: {
+    fontSize: responsiveFontSize(1.5),
   },
   textBox: {
     position: 'absolute',

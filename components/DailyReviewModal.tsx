@@ -124,7 +124,7 @@ const REPLACEMENT_CATEGORIES = [
   { id: 'other', emoji: '💬', text: 'Other' },
 ];
 
-const MIN_REPLACEMENT_TEXT_LENGTH = 10;
+const MIN_REPLACEMENT_TEXT_LENGTH = 3;
 const MAX_REPLACEMENT_TEXT_LENGTH = 200;
 
 // ============================================================================
@@ -606,9 +606,39 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
 
   // Step 1: Welcome/Intro
   const renderIntroStep = () => {
-    const dayName = reviewData?.review_date
-      ? new Date(reviewData.review_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' })
-      : 'yesterday';
+    // Format the date nicely - show "Yesterday" prominently with full date
+    const getFormattedDateInfo = () => {
+      if (!reviewData?.review_date) {
+        return { label: 'Yesterday', fullDate: '' };
+      }
+      
+      const reviewDate = new Date(reviewData.review_date + 'T12:00:00');
+      const today = new Date();
+      today.setHours(12, 0, 0, 0);
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      const daysDiff = Math.floor((today.getTime() - reviewDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      let label = '';
+      if (daysDiff === 1) {
+        label = 'Yesterday';
+      } else if (daysDiff === 2) {
+        label = '2 Days Ago';
+      } else {
+        label = reviewDate.toLocaleDateString('en-US', { weekday: 'long' });
+      }
+      
+      const fullDate = reviewDate.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+      });
+      
+      return { label, fullDate };
+    };
+    
+    const dateInfo = getFormattedDateInfo();
 
     return (
       <Animated.View
@@ -623,7 +653,7 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
         {/* Header Illustration */}
         <View style={styles.introHeader}>
           <LinearGradient
-            colors={BRAND_GRADIENT.colors as unknown as string[]}
+            colors={[BRAND.gradPurple, BRAND.warmPurple, BRAND.gradPink]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.introGradientCircle}
@@ -632,7 +662,15 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
           </LinearGradient>
         </View>
 
-        <Text style={styles.introTitle}>Let's reflect on {dayName}</Text>
+        {/* Yesterday Badge - Clear indicator of which day we're reviewing */}
+        <View style={styles.yesterdayBadge}>
+          <Text style={styles.yesterdayLabel}>{dateInfo.label}</Text>
+          {dateInfo.fullDate && (
+            <Text style={styles.yesterdayDate}>{dateInfo.fullDate}</Text>
+          )}
+        </View>
+
+        <Text style={styles.introTitle}>Let's reflect on your actions</Text>
         <Text style={styles.introSubtitle}>
           You completed{' '}
           <Text style={styles.highlightText}>
@@ -983,26 +1021,51 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
         ) : (
           <View style={[styles.streakCard, styles.streakAtRiskCard]}>
             <Text style={styles.streakEmoji}>⚠️</Text>
-            <Text style={styles.streakTitle}>Streak at Risk</Text>
+            <Text style={styles.streakTitle}>Streak at Risk!</Text>
             <Text style={styles.streakSubtitle}>
-              You completed {completedAfterReview}/{totalItems} actions. Some items need attention.
+              You completed {completedAfterReview}/{totalItems} actions.
             </Text>
 
-            {canUseFreeze && (
-              <TouchableOpacity
-                style={[styles.freezeOption, useFreeze && styles.freezeOptionSelected]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setUseFreeze(!useFreeze);
-                }}
-              >
-                <View style={[styles.freezeCheckbox, useFreeze && styles.freezeCheckboxSelected]}>
-                  {useFreeze && <Text style={styles.freezeCheckmark}>✓</Text>}
-                </View>
-                <Text style={styles.freezeOptionText}>
-                  Use 1 freeze token 🧊 ({reviewData?.freezes_available} available)
+            {canUseFreeze ? (
+              <>
+                {/* Clear warning if not using freeze */}
+                {!useFreeze && (
+                  <View style={styles.warningBox}>
+                    <Text style={styles.warningText}>
+                      ⚡ Your streak will reset to 0 if you don't use a freeze
+                    </Text>
+                  </View>
+                )}
+                
+                <TouchableOpacity
+                  style={[styles.freezeOption, useFreeze && styles.freezeOptionSelected]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setUseFreeze(!useFreeze);
+                  }}
+                >
+                  <View style={[styles.freezeCheckbox, useFreeze && styles.freezeCheckboxSelected]}>
+                    {useFreeze && <Text style={styles.freezeCheckmark}>✓</Text>}
+                  </View>
+                  <View style={styles.freezeOptionContent}>
+                    <Text style={styles.freezeOptionText}>
+                      Use 1 freeze token 🧊
+                    </Text>
+                    <Text style={styles.freezeAvailableText}>
+                      {reviewData?.freezes_available} available
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View style={styles.noFreezeWarning}>
+                <Text style={styles.noFreezeText}>
+                  😔 No freeze tokens available
                 </Text>
-              </TouchableOpacity>
+                <Text style={styles.noFreezeSubtext}>
+                  Your streak will reset to 0, but don't worry — today is a fresh start!
+                </Text>
+              </View>
             )}
           </View>
         )}
@@ -1040,6 +1103,12 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
   // MAIN RENDER
   // ============================================================================
 
+  // Don't render if not visible
+  if (!visible) return null;
+
+  // Show loading state if reviewData is not yet loaded
+  const isLoading = !reviewData || !reviewData.items;
+
   return (
     <Modal
       visible={visible}
@@ -1073,11 +1142,19 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
             )}
           </LinearGradient>
 
-          {/* Progress Indicator */}
-          {currentStep < 4 && (
-            <View style={styles.progressContainer}>
-              {[1, 2, 3, 4].map((step) => (
-                <View
+          {/* Loading State */}
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={BRAND.warmPurple} />
+              <Text style={styles.loadingText}>Loading your review...</Text>
+            </View>
+          ) : (
+            <>
+              {/* Progress Indicator */}
+              {currentStep < 4 && (
+                <View style={styles.progressContainer}>
+                  {[1, 2, 3, 4].map((step) => (
+                    <View
                   key={step}
                   style={[
                     styles.progressDot,
@@ -1099,6 +1176,8 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
           >
             {renderCurrentStep()}
           </ScrollView>
+            </>
+          )}
         </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
@@ -1127,6 +1206,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 20,
     elevation: 10,
+  },
+  // Loading state
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: responsiveHeight(10),
+    minHeight: responsiveHeight(30),
+  },
+  loadingText: {
+    marginTop: responsiveHeight(2),
+    fontSize: moderateScale(14),
+    fontFamily: FONT_INTER.medium,
+    color: TEXT.muted,
   },
   header: {
     flexDirection: 'row',
@@ -1202,7 +1295,7 @@ const styles = StyleSheet.create({
   // ============ INTRO STEP ============
   introHeader: {
     alignItems: 'center',
-    marginBottom: responsiveHeight(2),
+    marginBottom: responsiveHeight(1),
   },
   introGradientCircle: {
     width: responsiveWidth(20),
@@ -1213,6 +1306,31 @@ const styles = StyleSheet.create({
   },
   introEmoji: {
     fontSize: moderateScale(36),
+  },
+  // Yesterday Badge - Prominent indicator of which day
+  yesterdayBadge: {
+    alignItems: 'center',
+    marginBottom: responsiveHeight(1.5),
+    backgroundColor: BACKGROUND.purpleTint,
+    paddingHorizontal: responsiveWidth(5),
+    paddingVertical: responsiveHeight(1),
+    borderRadius: moderateScale(20),
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: BRAND.gradPurple + '40',
+  },
+  yesterdayLabel: {
+    fontSize: moderateScale(16),
+    fontFamily: FONT_INTER.semiBold,
+    color: BRAND.warmPurple,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  yesterdayDate: {
+    fontSize: moderateScale(11),
+    fontFamily: FONT_INTER.regular,
+    color: TEXT.muted,
+    marginTop: responsiveHeight(0.3),
   },
   introTitle: {
     fontSize: moderateScale(22),
@@ -1562,10 +1680,53 @@ const styles = StyleSheet.create({
     color: TEXT.white,
     fontFamily: FONT_INTER.semiBold,
   },
+  freezeOptionContent: {
+    flex: 1,
+  },
   freezeOptionText: {
     fontSize: moderateScale(13),
     fontFamily: FONT_INTER.medium,
     color: TEXT.secondary,
+  },
+  freezeAvailableText: {
+    fontSize: moderateScale(11),
+    fontFamily: FONT_INTER.regular,
+    color: TEXT.muted,
+    marginTop: responsiveHeight(0.2),
+  },
+  // Warning styles for streak at risk
+  warningBox: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: UI.dangerRed,
+    borderRadius: moderateScale(10),
+    paddingHorizontal: responsiveWidth(3),
+    paddingVertical: responsiveHeight(1),
+    marginTop: responsiveHeight(1.5),
+    marginBottom: responsiveHeight(0.5),
+  },
+  warningText: {
+    fontSize: moderateScale(12),
+    fontFamily: FONT_INTER.medium,
+    color: UI.dangerRed,
+    textAlign: 'center',
+  },
+  noFreezeWarning: {
+    marginTop: responsiveHeight(2),
+    alignItems: 'center',
+  },
+  noFreezeText: {
+    fontSize: moderateScale(14),
+    fontFamily: FONT_INTER.medium,
+    color: TEXT.muted,
+    marginBottom: responsiveHeight(0.5),
+  },
+  noFreezeSubtext: {
+    fontSize: moderateScale(12),
+    fontFamily: FONT_INTER.regular,
+    color: TEXT.greyLight,
+    textAlign: 'center',
+    lineHeight: moderateScale(18),
   },
 
   // ============ RESULT ============
