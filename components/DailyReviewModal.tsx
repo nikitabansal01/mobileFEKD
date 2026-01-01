@@ -173,8 +173,8 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
 
   // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
   const cardAnimations = useRef<Animated.Value[]>([]).current;
 
   // Refs
@@ -378,22 +378,9 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
   // Entrance animation
   useEffect(() => {
     if (visible) {
-      fadeAnim.setValue(0);
-      slideAnim.setValue(50);
-
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          tension: 50,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      // Ensure visible
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
     }
   }, [visible]);
 
@@ -641,15 +628,7 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
     const dateInfo = getFormattedDateInfo();
 
     return (
-      <Animated.View
-        style={[
-          styles.stepContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }
-        ]}
-      >
+      <View style={styles.stepContainer}>
         {/* Header Illustration */}
         <View style={styles.introHeader}>
           <LinearGradient
@@ -723,7 +702,7 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
             style={styles.primaryBtn}
           />
         </View>
-      </Animated.View>
+      </View>
     );
   };
 
@@ -740,30 +719,17 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
         </View>
 
         {/* All Cards */}
-        <ScrollView
-          style={styles.cardsScrollView}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.cardsScrollContent}
-        >
+        <View style={styles.cardsScrollView}>
           {allItems.map((item, index) => {
             const state = itemReviewStates.get(item.id);
             const selectedStatus = state?.status;
             const cardAnim = cardAnimations[index] || new Animated.Value(1);
 
             return (
-              <Animated.View
+              <View
                 key={item.id}
                 style={[
                   styles.actionCard,
-                  {
-                    opacity: cardAnim,
-                    transform: [{
-                      translateY: cardAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [30, 0],
-                      }),
-                    }],
-                  },
                   selectedStatus && styles.actionCardSelected,
                 ]}
               >
@@ -826,10 +792,10 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
                     );
                   })}
                 </View>
-              </Animated.View>
+              </View>
             );
           })}
-        </ScrollView>
+        </View>
 
         {/* Continue Button */}
         <View style={styles.buttonContainer}>
@@ -855,11 +821,7 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
           This helps us understand your preferences better! 💜
         </Text>
 
-        <ScrollView
-          style={styles.replacementScrollView}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
+        <View style={styles.replacementScrollView}>
           {itemsToDetail.map((state) => {
             const item = allItems.find((i) => i.id === state.item_id);
             if (!item) return null;
@@ -919,7 +881,7 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
               </View>
             );
           })}
-        </ScrollView>
+        </View>
 
         <View style={styles.buttonContainer}>
           <PrimaryButton
@@ -1197,6 +1159,7 @@ const styles = StyleSheet.create({
   },
   container: {
     width: SCREEN_WIDTH * 0.94,
+    minHeight: SCREEN_HEIGHT * 0.6, // Ensure minimum height
     maxHeight: SCREEN_HEIGHT * 0.88,
     backgroundColor: BACKGROUND.white,
     borderRadius: moderateScale(24),
@@ -1288,7 +1251,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   stepContainer: {
-    flex: 1,
+    width: '100%',
     minHeight: responsiveHeight(45),
   },
 
@@ -1419,7 +1382,7 @@ const styles = StyleSheet.create({
     color: TEXT.muted,
   },
   cardsScrollView: {
-    flex: 1,
+    width: '100%',
     marginBottom: responsiveHeight(2),
   },
   cardsScrollContent: {
@@ -1533,7 +1496,7 @@ const styles = StyleSheet.create({
 
   // ============ REPLACEMENT DETAILS ============
   replacementScrollView: {
-    flex: 1,
+    width: '100%',
     marginBottom: responsiveHeight(2),
   },
   replacementCard: {
