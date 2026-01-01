@@ -655,28 +655,8 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
           <Text style={styles.highlightText}>
             {reviewData?.completed_count || 0} of {reviewData?.total_items || 0}
           </Text>
-          {' '}actions — that's progress! 🎉
+          {' '}actions
         </Text>
-
-        {/* Summary Card */}
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>✅ Completed</Text>
-            <Text style={[styles.summaryValue, styles.completedValue]}>
-              {reviewData?.completed_count || 0}
-            </Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>⏳ To Review</Text>
-            <Text style={[styles.summaryValue, styles.pendingValue]}>
-              {reviewData?.incomplete_count || 0}
-            </Text>
-          </View>
-          <View style={[styles.summaryRow, { marginBottom: 0 }]}>
-            <Text style={styles.summaryLabel}>🎯 Total</Text>
-            <Text style={styles.summaryValue}>{reviewData?.total_items || 0}</Text>
-          </View>
-        </View>
 
         {reviewData?.was_frozen && (
           <View style={styles.frozenBadge}>
