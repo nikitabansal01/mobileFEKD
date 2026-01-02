@@ -228,6 +228,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const [checkinId, setCheckinId] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<QuestionResponse | null>(null);
   const [dynamicTapOptions, setDynamicTapOptions] = useState<TapOption[]>([]);
+  
+  // Show continue button after check-in completion
+  const [showContinueButton, setShowContinueButton] = useState(false);
   const [isLoadingCheckin, setIsLoadingCheckin] = useState(false);
   
   // Handle conversation context from different chats
@@ -369,16 +372,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         
         // Update mode based on next question type
         if (result.question.is_complete) {
-          // Check-in complete
+          // Check-in complete - show continue button instead of auto-navigation
           setMode("idle");
           setShowSlider(false);
-          // Navigate back to home with refresh flag after showing completion message
-          setTimeout(() => {
-            navigation.navigate('MainScreenTabs', { 
-              screen: 'HomeScreen',
-              params: { shouldRefresh: true }
-            });
-          }, 3000);
+          setShowContinueButton(true);
         } else if (result.question.question_type === "slider") {
           setShowSlider(true);
           setSliderValue(0);
@@ -1083,7 +1080,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         style={styles.gradientFade}
       />
 
-      {mode === "idle" && (
+      {mode === "idle" && !showContinueButton && (
         <FooterCTA 
           setMode={(newMode) => {
             // If showing slider and user clicks tap, stay in idle (slider view)
@@ -1100,6 +1097,24 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           onStopRecording={stopRecording}
           onSendRecording={sendRecording}
         />
+      )}
+      
+      {/* Continue button after check-in completion */}
+      {showContinueButton && (
+        <View style={styles.continueButtonContainer}>
+          <TouchableOpacity 
+            style={styles.continueButton}
+            onPress={() => {
+              setShowContinueButton(false);
+              navigation.navigate('MainScreenTabs', {
+                screen: 'HomeScreen',
+                params: { shouldRefresh: true }
+              });
+            }}
+          >
+            <Text style={styles.continueButtonText}>Continue to Home</Text>
+          </TouchableOpacity>
+        </View>
       )}
 </View>
   );
@@ -1676,6 +1691,34 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILIES['Inter-Regular'],
     color: COLORS.warmPurple,
     marginTop: moderateScale(5),
+    includeFontPadding: isAndroid ? false : undefined,
+    textAlignVertical: isAndroid ? 'center' : undefined,
+  },
+  continueButtonContainer: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? verticalScale(40) : verticalScale(20),
+    left: 0,
+    right: 0,
+    paddingHorizontal: scale(20),
+    alignItems: 'center',
+  },
+  continueButton: {
+    backgroundColor: COLORS.warmPurple,
+    paddingHorizontal: scale(40),
+    paddingVertical: verticalScale(15),
+    borderRadius: scale(30),
+    minWidth: '80%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  continueButtonText: {
+    fontSize: FONT_SIZES.button,
+    fontFamily: 'Inter600',
+    color: '#FFFFFF',
     includeFontPadding: isAndroid ? false : undefined,
     textAlignVertical: isAndroid ? 'center' : undefined,
   },
