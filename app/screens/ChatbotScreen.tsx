@@ -276,7 +276,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     } else {
       // Default: Weekly check-in content (fallback)
       setMessages([
-        { id: "1", text: "How was your bloating this week?", isBot: true },
+        { id: "1", text: "How are you feeling this week?", isBot: true },
         { id: "3", text: "Were there any big changes in your week? related to food, lifestyle, stress, etc", isBot: true },
       ]);
     }
@@ -375,10 +375,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           // Check-in complete
           setMode("idle");
           setShowSlider(false);
-          // Reset for next time
+          // Navigate back to home with refresh flag after showing completion message
           setTimeout(() => {
-            navigation.goBack();
-          }, 2000);
+            navigation.navigate('Home', { shouldRefresh: true });
+          }, 3000);
         } else if (result.question.question_type === "slider") {
           setShowSlider(true);
           setSliderValue(0);
@@ -481,9 +481,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       case "care_plan_modal":
         return "Care Plan Check-in";
       case "weekly_checkin":
-        return currentQuestion?.current_index !== undefined 
-          ? `Weekly Check-in (${currentQuestion.current_index + 1}/${currentQuestion.total_questions})`
-          : "Weekly Check-in";
+        return "Weekly Check-in";
       case "symptom_checkin":
         return "Symptom Check-in";
       case "personalise":
@@ -695,7 +693,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getBloatingLabel = (value: number) => {
+  const getSeverityLabel = (value: number) => {
     // Use API-provided slider labels if available
     if (currentQuestion?.slider_labels) {
       const labels = currentQuestion.slider_labels;
@@ -733,7 +731,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
     // Use API for weekly check-in slider questions
     if (contextFromRoute?.context === "weekly_checkin" && checkinId && currentQuestion) {
-      submitCheckinResponse(value, `${value} = ${getBloatingLabel(value)} bloating`);
+      submitCheckinResponse(value, `${getSeverityLabel(value)} (${value}/9)`);
     }
 
     // Show selected value for 1 second, then show conversation in idle mode

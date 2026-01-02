@@ -769,11 +769,6 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
                     🔥 {reviewResult.new_streak_count} Day Streak
                   </Text>
                 </View>
-                {reviewResult.items_carried_forward && reviewResult.items_carried_forward.length > 0 && (
-                  <Text style={styles.carryForwardText}>
-                    📦 {reviewResult.items_carried_forward.length} action(s) moved to today's plan
-                  </Text>
-                )}
               </>
             ) : (
               <>
@@ -803,7 +798,7 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
             <Text style={styles.summaryValue}>{completedAfterReview}</Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>⏭️ Skipped (carry forward)</Text>
+            <Text style={styles.summaryLabel}>⏭️ Skipped</Text>
             <Text style={[styles.summaryValue, skippedCount > 0 && styles.summaryValueWarning]}>{skippedCount}</Text>
           </View>
         </View>
@@ -1088,7 +1083,6 @@ const styles = StyleSheet.create({
   freezeUsedText: { fontSize: moderateScale(12), fontFamily: FONT_INTER.medium, color: '#0369A1' },
   streakBadgeFinal: { backgroundColor: BRAND.warmPurple, paddingHorizontal: responsiveWidth(5), paddingVertical: responsiveHeight(1), borderRadius: moderateScale(25), marginBottom: responsiveHeight(1) },
   streakBadgeFinalText: { fontSize: moderateScale(14), fontFamily: FONT_INTER.semiBold, color: TEXT.white },
-  carryForwardText: { fontSize: moderateScale(12), fontFamily: FONT_INTER.regular, color: TEXT.muted, marginTop: responsiveHeight(1) },
   encouragementText: { fontSize: moderateScale(13), fontFamily: FONT_INTER.regular, color: TEXT.muted, textAlign: 'center', marginTop: responsiveHeight(1) },
 });
 

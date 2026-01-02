@@ -102,7 +102,7 @@ export default function AvatarChatbot({ showMessage = true, message }: { showMes
 
       {showMessage && (
         <View style={styles.introTextContainer}>
-          <GradientText style={styles.introText}>{message || "How was your bloating this week?"}</GradientText>
+          <GradientText style={styles.introText}>{message || "How are you feeling this week?"}</GradientText>
         </View>
       )}
 

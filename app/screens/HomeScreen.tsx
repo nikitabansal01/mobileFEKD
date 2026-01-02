@@ -114,6 +114,32 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }
   }, [isRefreshingAll]);
 
+  // Handle shouldRefresh param from navigation (e.g., after weekly check-in completion)
+  useEffect(() => {
+    if (route?.params?.shouldRefresh) {
+      console.log('🔄 shouldRefresh param detected - forcing data reload');
+      // Reset the deduplication timer to allow immediate refetch
+      lastFocusTimeRef.current = 0;
+      dataLoadingRef.current = false;
+      // Reload assignments
+      const reloadData = async () => {
+        try {
+          const assignmentsData = await homeService.getTodayAssignments();
+          if (assignmentsData) {
+            setAssignments(assignmentsData);
+            if (assignmentsData?.hormone_stats) {
+              setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
+            }
+            wireUpActionPlan(assignmentsData);
+          }
+        } catch (error) {
+          console.error('Failed to reload after refresh:', error);
+        }
+      };
+      reloadData();
+    }
+  }, [route?.params?.shouldRefresh]);
+
   // Auvra chat modal state
   const [showAuvraChat, setShowAuvraChat] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -441,7 +467,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   };
 
   // Handle Daily Review modal close - animate plan entrance
-  const handleDailyReviewClose = () => {
+  const handleDailyReviewClose = async () => {
     // Clear review data FIRST, then hide modal - prevents loops
     setPendingReviewData(null);
     setShowDailyReview(false);
@@ -450,7 +476,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     reviewSubmissionInProgressRef.current = false;
 
     // Only trigger unlock animation if today's data is ready
-    // Otherwise keep showing locked yesterday's plan
+    // Otherwise force a refresh to get the data
     if (showPlanAnimation && isTodayDataReady) {
       // Trigger Lock Break Animation
       setIsUnlocking(true);
@@ -488,9 +514,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         });
       });
     } else if (!isTodayDataReady) {
-      // Today's data not ready yet - keep showing locked state
-      // Don't change isReviewBlocking - it stays true
-      console.log('📋 Modal closed but today data not ready - keeping lock');
+      // Today's data not ready - unblock and force refresh
+      console.log('📋 Modal closed but today data not ready - forcing refresh');
+      setIsReviewBlocking(false);
+      setShowPlanAnimation(false);
+      
+      // Force refresh home data
+      try {
+        setLoading(true);
+        const assignmentsData = await homeService.getTodayAssignments();
+        if (assignmentsData) {
+          setAssignments(assignmentsData);
+          if (assignmentsData.hormone_stats) {
+            setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
+          }
+          wireUpActionPlan(assignmentsData);
+        }
+      } catch (err) {
+        console.error('❌ Failed to load assignments after review close:', err);
+      } finally {
+        setLoading(false);
+      }
     } else {
       setIsReviewBlocking(false);
     }
@@ -518,11 +562,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
     // Load today's assignments in background while user views result
     // Modal stays open so user can see their streak result and click "Let's Go"
-    // NOTE: Small delay ensures backend has time to generate today's plan with carry-forward items
+    // NOTE: Small delay ensures backend has time to generate today's plan
     try {
       console.log('🔄 Loading today action plan in background...');
       
-      // Wait briefly for backend to finish generating plan with carry-forward items
+      // Wait briefly for backend to finish generating plan
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Check if review is still pending (backend consistency check)
@@ -537,7 +581,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       }
 
       if (reviewStatus?.needs_review) {
-        console.warn('⚠️ Backend still reports pending review after retries. Skipping assignment fetch to avoid error.');
+        console.warn('⚠️ Backend still reports pending review after retries. Will force refresh on close.');
+        // Don't return - let handleDailyReviewClose handle the refresh
         return;
       }
 
@@ -556,6 +601,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         // Mark that today's data is ready - this enables the unlock animation
         setIsTodayDataReady(true);
         console.log('✅ Today data ready - unlock animation will trigger on modal close');
+      } else {
+        console.warn('⚠️ No assignments data returned, will force refresh on close');
       }
 
       if (rewardsData) {

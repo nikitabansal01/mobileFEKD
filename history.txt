@@ -9,7 +9,7 @@ Date:   Fri Jan 2 00:27:42 2026 +0530
     - Add Yesterday badge with date formatting (Yesterday/2 Days Ago/Weekday)
     - Improve streak resolution warnings (orange warning when not using freeze, red when no freezes)
     - Reduce replacement text minimum from 10 to 3 characters
-    - Add Carried Forward badge indicator in ActionPlanTimeline
+    - Add badge indicator in ActionPlanTimeline
     - Replace locked placeholder with blur overlay for better UX
     - Disable debug console.logs for performance
 
@@ -711,7 +711,7 @@ index 1399247..2388678 100644
 -    console.log('✅ Daily review completed:', result);
 +    console.log('✅ Daily review submitted:', result);
      
--    // If items were carried forward or streak was affected, refresh home data
+-    // If plan was updated or streak was affected, refresh home data
 -    if (result.today_plan_updated || result.items_carried_forward.length > 0) {
 -      try {
 -        console.log('🔄 Refreshing home data after review...');
@@ -991,7 +991,7 @@ index 852893a..1399247 100644
 +  const handleDailyReviewComplete = async (result: DailyReviewResponse) => {
 +    console.log('✅ Daily review completed:', result);
 +    
-+    // If items were carried forward or streak was affected, refresh home data
++    // If plan was updated or streak was affected, refresh home data
 +    if (result.today_plan_updated || result.items_carried_forward.length > 0) {
 +      try {
 +        console.log('🔄 Refreshing home data after review...');

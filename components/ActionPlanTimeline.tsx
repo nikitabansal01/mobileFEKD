@@ -970,19 +970,12 @@ export default function ActionPlanTimeline({
                     }}
                     style={{ flexDirection: 'row', alignItems: 'center', justifyContent: isLeft ? 'flex-start' : 'flex-end' }}
                   >
-                    {/* Show carried forward indicator if title starts with [Carried Forward] */}
-                    {a.title?.startsWith('[Carried Forward]') && (
-                      <View style={styles.carriedBadge}>
-                        <Text style={styles.carriedBadgeText}>↩️</Text>
-                      </View>
-                    )}
                     <Text
                       style={[styles.itemTitle, { textAlign: isLeft ? 'left' : 'right' }]}
                       numberOfLines={1}
                       ellipsizeMode="tail"
                     >
-                      {/* Remove the [Carried Forward] prefix from display */}
-                      {a.title?.replace('[Carried Forward] ', '')}
+                      {a.title?.replace(/^\[[^\]]+\]\s*/, '')}
                     </Text>
                     <Text style={styles.itemArrow} allowFontScaling={false}>
                       {'>'}
@@ -1605,12 +1598,6 @@ const styles = StyleSheet.create({
     color: '#6F6F6F',
     fontSize: responsiveFontSize(1.1),
     fontFamily: 'Inter600',
-  },
-  carriedBadge: {
-    marginRight: responsiveWidth(1),
-  },
-  carriedBadgeText: {
-    fontSize: responsiveFontSize(1.5),
   },
   textBox: {
     position: 'absolute',
