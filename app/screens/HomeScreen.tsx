@@ -18,10 +18,13 @@ import {
   Dimensions,
   Easing,
   Image,
+  LayoutAnimation,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  UIManager,
   View
 } from 'react-native';
 import { BlurView } from 'expo-blur';
@@ -90,6 +93,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const planSlideAnim = useRef(new Animated.Value(0)).current; // For plan reveal animation (0 = hidden, 1 = visible)
   const planScaleAnim = useRef(new Animated.Value(0.95)).current; // Slight scale for lock-break effect
   const [showPlanAnimation, setShowPlanAnimation] = useState(false); // Track if we should animate plan entrance
+  
+  // ScrollView ref for scrolling to top
+  const scrollViewRef = useRef<ScrollView>(null);
 
   // Start/stop rotation animation when refreshing
   useEffect(() => {
@@ -141,13 +147,47 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
   // State to track if review is blocking data load
   const [isReviewBlocking, setIsReviewBlocking] = useState(false);
+  const [isUnlocking, setIsUnlocking] = useState(false); // For lock break animation
+  const lockOpacity = useRef(new Animated.Value(1)).current;
+  const lockScale = useRef(new Animated.Value(1)).current;
+  const contentSlide = useRef(new Animated.Value(0)).current; // 0 = hidden/down, 1 = visible/up
+  
+  // Track if we've already loaded data for this focus event to prevent duplicates
+  const dataLoadingRef = useRef<boolean>(false);
+  const lastFocusTimeRef = useRef<number>(0);
+  
+  // Refs to track state for useFocusEffect (avoids stale closure and dependency issues)
+  const showDailyReviewRef = useRef(showDailyReview);
+  const isReviewBlockingRef = useRef(isReviewBlocking);
+  
+  // Keep refs in sync with state
+  useEffect(() => {
+    showDailyReviewRef.current = showDailyReview;
+    isReviewBlockingRef.current = isReviewBlocking;
+    
+    // CRITICAL: If review becomes active, immediately hide AuvraChatModal and clear timer
+    if (isReviewBlocking || showDailyReview) {
+      setShowAuvraChat(false);
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
+      }
+    }
+  }, [isReviewBlocking, showDailyReview]);
 
   // Always refetch data when screen gains focus (e.g., after action replacement, completion, etc.)
   // IMPORTANT: Check for pending review FIRST - if review is pending, don't load assignments yet
   useFocusEffect(
     React.useCallback(() => {
+      // Prevent duplicate calls within 2 seconds
+      const now = Date.now();
+      if (now - lastFocusTimeRef.current < 2000 && dataLoadingRef.current) {
+        console.log('🔄 HomeScreen focused - deduplicating call (too soon)');
+        return;
+      }
+      
       // Skip if daily review modal is already showing - prevents loops and duplicate checks
-      if (showDailyReview) {
+      if (showDailyReviewRef.current) {
         console.log('🔄 HomeScreen focused - modal already showing, skipping data load');
         return;
       }
@@ -157,8 +197,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         console.log('🔄 HomeScreen focused - review submission in progress, skipping');
         return;
       }
+      
+      // Skip if already loading
+      if (dataLoadingRef.current) {
+        console.log('🔄 HomeScreen focused - already loading, skipping');
+        return;
+      }
 
       console.log('🔄 HomeScreen focused - checking review then loading data');
+      lastFocusTimeRef.current = now;
+      dataLoadingRef.current = true;
 
       const loadDataAfterReviewCheck = async () => {
         try {
@@ -188,6 +236,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             }
 
             setLoading(false);
+            dataLoadingRef.current = false; // Reset after review path completes
             return; // Don't load assignments yet - wait for review completion
           }
 
@@ -258,31 +307,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         } catch (error) {
           console.error('❌ Failed to load data:', error);
           setLoading(false);
+        } finally {
+          // Reset loading flag after completion
+          dataLoadingRef.current = false;
         }
       };
 
       loadDataAfterReviewCheck();
-    }, [showDailyReview])
+    }, []) // Empty dependency - focus is the trigger, not state changes
   );
-
-  // Refs to track blocking state for timer callback (avoids stale closure)
-  const isReviewBlockingRef = useRef(isReviewBlocking);
-  const showDailyReviewRef = useRef(showDailyReview);
-  
-  // Keep refs in sync with state
-  useEffect(() => {
-    isReviewBlockingRef.current = isReviewBlocking;
-    showDailyReviewRef.current = showDailyReview;
-    
-    // CRITICAL: If review becomes active, immediately hide AuvraChatModal and clear timer
-    if (isReviewBlocking || showDailyReview) {
-      setShowAuvraChat(false);
-      if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-        inactivityTimerRef.current = null;
-      }
-    }
-  }, [isReviewBlocking, showDailyReview]);
 
   // Reset inactivity timer - Shows Auvra modal after configured seconds from backend
   // IMPORTANT: Don't show during review - user must complete review first
@@ -415,23 +448,42 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
     // If we're animating (coming from review completion), trigger the "lock break" animation
     if (showPlanAnimation) {
-      // Candy Crush style: slide up from bottom + scale up slightly
+      // Trigger Lock Break Animation
+      setIsUnlocking(true);
+      setIsReviewBlocking(false); // Hand off to unlocking state
+
+      // 1. Animate Lock Breaking (Scale up and fade out)
       Animated.parallel([
-        Animated.spring(planSlideAnim, {
-          toValue: 1,
-          friction: 7,
-          tension: 40,
+        Animated.timing(lockScale, {
+          toValue: 2,
+          duration: 500,
           useNativeDriver: true,
+          easing: Easing.bezier(0.25, 0.1, 0.25, 1), // Ease out cubic
         }),
-        Animated.spring(planScaleAnim, {
-          toValue: 1,
-          friction: 6,
-          tension: 50,
+        Animated.timing(lockOpacity, {
+          toValue: 0,
+          duration: 400,
+          delay: 100,
           useNativeDriver: true,
         }),
       ]).start(() => {
-        setShowPlanAnimation(false);
+        // 2. Animate Content Sliding Up (Candy Crush style)
+        setIsUnlocking(false);
+        lockScale.setValue(1);
+        lockOpacity.setValue(1);
+        
+        // Slide up animation for the plan
+        Animated.spring(planSlideAnim, {
+          toValue: 1,
+          friction: 6,
+          tension: 40,
+          useNativeDriver: true,
+        }).start(() => {
+          setShowPlanAnimation(false);
+        });
       });
+    } else {
+        setIsReviewBlocking(false);
     }
   };
 
@@ -439,13 +491,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const handleDailyReviewComplete = async (result: DailyReviewResponse) => {
     console.log('✅ Daily review submitted:', result);
 
+    // Scroll to top immediately so user sees the animation at the top
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ y: 0, animated: true });
+    }
+
     // Mark submission in progress to prevent useFocusEffect from re-checking
     reviewSubmissionInProgressRef.current = true;
 
-    // Clear the blocking state - but keep pendingReviewData until modal closes!
-    // This prevents the modal from showing "visible=true, reviewData=null" which causes loops
-    setIsReviewBlocking(false);
-    // NOTE: Don't setPendingReviewData(null) here - wait until handleDailyReviewClose
+    // Keep blocking state true until close animation starts
+    // setIsReviewBlocking(false); // REMOVED: Handled in handleDailyReviewClose
 
     // Prepare animation - reset to starting position
     planSlideAnim.setValue(0);
@@ -454,8 +509,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
     // Load today's assignments in background while user views result
     // Modal stays open so user can see their streak result and click "Let's Go"
+    // NOTE: Small delay ensures backend has time to generate today's plan with carry-forward items
     try {
       console.log('🔄 Loading today action plan in background...');
+      
+      // Wait briefly for backend to finish generating plan with carry-forward items
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       const [assignmentsData, rewardsData] = await Promise.all([
         homeService.getTodayAssignments(),
@@ -632,12 +691,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
   /**
    * Load home data with loading state
+   * IMPORTANT: This should only be called when no review is pending
    */
   const loadHomeData = async () => {
     // Prevent duplicate fetches
     if (initialDataLoadedRef.current) {
       return;
     }
+    
+    // Skip if review is blocking - let useFocusEffect handle that case
+    if (isReviewBlockingRef.current || showDailyReviewRef.current) {
+      console.log('⏭️ loadHomeData skipped - review is blocking');
+      return;
+    }
+    
     initialDataLoadedRef.current = true;
 
     try {
@@ -802,8 +869,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
   /**
    * Load home data without changing loading state
+   * IMPORTANT: This should only be called when no review is pending
    */
   const loadHomeDataWithoutLoading = async () => {
+    // Skip if review is blocking
+    if (isReviewBlockingRef.current || showDailyReviewRef.current) {
+      console.log('⏭️ loadHomeDataWithoutLoading skipped - review is blocking');
+      return;
+    }
+    
     try {
       // Call APIs in parallel
       const [cycleData, assignmentsData] = await Promise.all([
@@ -1098,6 +1172,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   return (
     <View style={styles.container}>
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -1365,18 +1440,29 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
               )}
             </Animated.View>
 
-            {/* Blur overlay when review is pending - lock icon on top of blurred content */}
-            {isReviewBlocking && (
-              <View style={styles.lockOverlayContainer}>
+            {/* Blur overlay when review is pending OR unlocking - lock icon on top of blurred content */}
+            {(isReviewBlocking || isUnlocking) && (
+              <Animated.View 
+                style={[
+                  styles.lockOverlayContainer,
+                  isUnlocking && { opacity: lockOpacity }
+                ]}
+              >
                 <BlurView intensity={25} tint="light" style={styles.blurOverlay} />
-                <View style={styles.lockIconContainer}>
+                <Animated.View 
+                  style={[
+                    styles.lockIconContainer,
+                    isUnlocking && { transform: [{ scale: lockScale }] }
+                  ]}
+                >
                   <Text style={styles.lockIcon}>🔒</Text>
                   <Text style={styles.lockText}>Complete review to unlock</Text>
-                </View>
-              </View>
+                </Animated.View>
+              </Animated.View>
             )}
           </View>
         </View>
+
       </ScrollView>
 
       {/* Auvra Chat Modal - NEVER show when review is pending
@@ -1863,6 +1949,19 @@ const styles = StyleSheet.create({
   tomorrowActionDetails: {
     flex: 1,
     gap: responsiveHeight(0.5),
+  },
+  tomorrowActionTitleBar: {
+    height: responsiveHeight(2),
+    width: '60%',
+    backgroundColor: '#E5E5EA',
+    borderRadius: 4,
+  },
+  tomorrowActionSubtitleBar: {
+    height: responsiveHeight(1.5),
+    width: '40%',
+    backgroundColor: '#F2F2F7',
+    borderRadius: 4,
+    marginTop: responsiveHeight(0.5),
   },
   tomorrowActionMeta: {
     flexDirection: 'row',
