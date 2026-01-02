@@ -852,17 +852,20 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
   return (
     <Modal 
       visible={visible} 
-      transparent={false}
-      animationType="slide"
+      transparent={true}
+      animationType="fade"
       statusBarTranslucent
       onRequestClose={handleModalClose}
-      presentationStyle="fullScreen"
     >
-      <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND.purpleTint} />
-      <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
-          style={styles.keyboardView}
+      <View style={styles.overlay}>
+        <Animated.View 
+          style={[
+            styles.container, 
+            { 
+              opacity: fadeAnim, 
+              transform: [{ translateY: slideAnim }] 
+            }
+          ]}
         >
           {/* Header */}
           <LinearGradient colors={[BACKGROUND.purpleTint, BACKGROUND.white]} style={styles.header}>
@@ -914,8 +917,8 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
               {currentStep === 4 && renderStreakResolutionStep()}
             </ScrollView>
           )}
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+        </Animated.View>
+      </View>
     </Modal>
   );
 };

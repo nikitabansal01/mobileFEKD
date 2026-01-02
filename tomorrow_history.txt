@@ -1,0 +1,329 @@
+    fix: Simplify rate limit messages - just 'Limit Reached' + 'Try again tomorrow'
+
+diff --git a/app/screens/HomeScreen.tsx b/app/screens/HomeScreen.tsx
+index 0db75e3..9323d96 100644
+--- a/app/screens/HomeScreen.tsx
++++ b/app/screens/HomeScreen.tsx
+@@ -279,9 +279,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
+       } else if (result?.error === 'rate_limit') {
+         // Show friendly message for daily limit
+         Alert.alert(
+-          '🌙 Come Back Tomorrow!',
+-          result.message || 'You\'ve reached your daily limit for changes.',
+-          [{ text: 'Got it!' }]
++          'Limit Reached',
++          result.message || 'No changes left. Try again tomorrow!',
++          [{ text: 'OK' }]
+         );
+       } else {
+         Alert.alert('Oops!', result?.message || 'Could not replace actions. Try again.');
+@@ -1067,9 +1067,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
+                     } else if (result?.error === 'rate_limit') {
+                       // Show friendly no-refresh message
+                       Alert.alert(
+-                        '🌙 Come Back Tomorrow!',
+-                        result.message || 'No more refreshes available today.',
+-                        [{ text: 'Got it!' }]
++                        'Limit Reached',
++                        result.message || 'No refreshes left. Try again tomorrow!',
++                        [{ text: 'OK' }]
+                       );
+                     } else {
+                       Alert.alert('Oops!', result?.message || 'Could not refresh actions. Try again.');
+
+commit f37d865b2a4b4fb9ff56e2132fc4d3a878153f2b
+Author: Mohan Ganesh <mohanganesh3@users.noreply.github.com>
+Date:   Fri Dec 26 23:18:34 2025 +0530
+
+    feat: Add friendly 429 handling for plan-satisfaction endpoint
+    
+    - PlanSatisfactionResponse now includes error field
+    - Shows '🌙 Come Back Tomorrow!' alert when daily limit reached
+    - Consistent error handling with refresh-all-incomplete
+
+diff --git a/app/screens/HomeScreen.tsx b/app/screens/HomeScreen.tsx
+index 457a8e4..0db75e3 100644
+--- a/app/screens/HomeScreen.tsx
++++ b/app/screens/HomeScreen.tsx
+@@ -276,9 +276,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
+             setProgressStats({ hormone_stats: convertHormoneStats(updatedAssignments.hormone_stats) });
+           }
+         }
++      } else if (result?.error === 'rate_limit') {
++        // Show friendly message for daily limit
++        Alert.alert(
++          '🌙 Come Back Tomorrow!',
++          result.message || 'You\'ve reached your daily limit for changes.',
++          [{ text: 'Got it!' }]
++        );
++      } else {
++        Alert.alert('Oops!', result?.message || 'Could not replace actions. Try again.');
+       }
+ 
+-      // Close the modal after successful replacement
++      // Close the modal after replacement attempt
+       setShowAuvraChat(false);
+     } catch (error) {
+       console.error('❌ Error replacing items:', error);
+
+commit 8aed11d00c15449bb28ae52bbe5c4f9aedaed749
+Author: Mohan Ganesh <mohanganesh3@users.noreply.github.com>
+Date:   Fri Dec 26 23:14:22 2025 +0530
+
+    feat: Improve refresh error handling with friendly messages
+    
+    - 429 rate limit now shows '🌙 Come Back Tomorrow!' instead of error
+    - Handle undefined refresh_status from API response
+    - Return structured error objects from homeService
+
+diff --git a/app/screens/HomeScreen.tsx b/app/screens/HomeScreen.tsx
+index 8f758db..457a8e4 100644
+--- a/app/screens/HomeScreen.tsx
++++ b/app/screens/HomeScreen.tsx
+@@ -1048,13 +1048,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
+                         result.message,
+                         [{ text: 'OK' }]
+--
++                      if (result.refresh_status) {
++                        setRefreshStatus(result.refresh_status);
++                      }
+                       // Reload assignments
+                       const newAssignments = await homeService.getTodayAssignments();
+                       setAssignments(newAssignments);
+                       if (newAssignments) wireUpActionPlan(newAssignments);
++                    } else if (result?.error === 'rate_limit') {
++                      // Show friendly no-refresh message
++                      Alert.alert(
++                        '🌙 Come Back Tomorrow!',
++                        result.message || 'No more refreshes available today.',
++                        [{ text: 'Got it!' }]
++                      );
+                     } else {
+-                      Alert.alert('Error', 'Could not refresh actions. Try again.');
++                      Alert.alert('Oops!', result?.message || 'Could not refresh actions. Try again.');
+                     }
+                   } catch (error: any) {
+                     Alert.alert('Error', error?.message || 'Could not refresh actions');
+
+--
+             <View style={styles.sortContainer}>
+               <TouchableOpacity 
+                 style={[
+@@ -569,13 +593,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
+             </View>
+           </View>
+         </View>
+-
+-
+-
+-        {/* 하단 여백 - Tomorrow 앵커 절반까지만 스크롤되도록 제거 */}
+       </ScrollView>
+ 
+-      {/* 하단 네비게이션 바 */}
++      {/* Bottom Navigation Bar */}
+       <BottomNavigationBar activeTab="home" />
+     </SafeAreaView>
+   );
+@@ -590,8 +610,8 @@ const styles = StyleSheet.create({
+     flex: 1,
+   },
+--
+-            <View style={styles.noAssignmentsContainer}>
+-              <Text style={styles.noAssignmentsText}>No assignments for today</Text>
+-            </View>
+-          )}
+-        </View>
+-
+-        {/* 내일 미리보기 - type 모드에서만 표시 */}
+-        {sortBy === 'type' && (
+-          <View style={styles.tomorrowSection}>
+-            <View style={styles.tomorrowHeader}>
+-              <Text style={styles.sectionTitle}>Tomorrow</Text>
+-              <Text style={styles.dateText}>16th July, 2025</Text>
+-            </View>
++              <View style={styles.noAssignmentsContainer}>
++                <Text style={styles.noAssignmentsText}>No assignments for today</Text>
++              </View>
++            )}
+ 
+-            {/* Lock 아이콘 - 날짜와 구분선 사이 */}
+-            <View style={styles.tomorrowLockContainer}>
+-              <Text style={styles.tomorrowLockIcon}>🔒</Text>
+--
++              >
++                <Text style={[
++                  styles.sortButtonText,
++                  sortBy === 'time' && styles.sortButtonTextActive
++                ]}>Time</Text>
++              </TouchableOpacity>
+             </View>
++          </View>
++        </View>
+ 
+-            {/* Tomorrow 액션 플랜 (첫 번째만, blur 처리) */}
+-            <View style={styles.tomorrowPreview}>
+-              {/* 전체 blur 처리된 컨텐츠 */}
+-              <View style={styles.tomorrowBlurredContent}>
+-                {/* 카테고리 헤더 */}
+-                <View style={styles.tomorrowCategoryHeader}>
+-                  <View style={styles.dividerLeft} />
+-                  <Text style={styles.tomorrowCategoryTitle}>
+-                    🥗 Eat
+-                  </Text>
+-                  <View style={styles.dividerRight} />
+--
+-                <View style={styles.noiseOverlay} />
+-                <View style={styles.pixelOverlay} />
+-                <View style={styles.staticOverlay} />
+-              </View>
+-            </View>
+-          </View>
+-        )}
+-
+-        {/* 하단 여백 */}
+-        <View style={styles.bottomSpacing} />
++        {/* 하단 여백 - Tomorrow 앵커 절반까지만 스크롤되도록 제거 */}
+       </ScrollView>
+ 
+       {/* 하단 네비게이션 바 */}
+@@ -422,7 +364,8 @@ const styles = StyleSheet.create({
+     flex: 1,
+   },
+   scrollContent: {
+-    paddingBottom: responsiveHeight(15), // 네비게이션 바 높이만큼 여백
++    paddingBottom: responsiveHeight(5), // 네비게이션 바가 앵커 절반 정도 가리도록
++    minHeight: responsiveHeight(120), // 최소 높이 보장으로 즉시 스크롤 가능
+--
+index 2a84e95..1f8c6d1 100644
+--- a/app/screens/HomeScreen.tsx
++++ b/app/screens/HomeScreen.tsx
+@@ -336,70 +336,72 @@ const HomeScreen: React.FC = () => {
+           )}
+         </View>
+ 
+-        {/* 내일 미리보기 */}
+-        <View style={styles.tomorrowSection}>
+-          <View style={styles.tomorrowHeader}>
+-            <Text style={styles.sectionTitle}>Tomorrow</Text>
+-            <Text style={styles.dateText}>16th July, 2025</Text>
+-          </View>
+-
+-          {/* Lock 아이콘 - 날짜와 구분선 사이 */}
+-          <View style={styles.tomorrowLockContainer}>
+-            <Text style={styles.tomorrowLockIcon}>🔒</Text>
+-          </View>
++        {/* 내일 미리보기 - type 모드에서만 표시 */}
++        {sortBy === 'type' && (
++          <View style={styles.tomorrowSection}>
++            <View style={styles.tomorrowHeader}>
++              <Text style={styles.sectionTitle}>Tomorrow</Text>
++              <Text style={styles.dateText}>16th July, 2025</Text>
++            </View>
+ 
+-          {/* Tomorrow 액션 플랜 (첫 번째만, blur 처리) */}
+-          <View style={styles.tomorrowPreview}>
+-            {/* 전체 blur 처리된 컨텐츠 */}
+-            <View style={styles.tomorrowBlurredContent}>
+-              {/* 카테고리 헤더 */}
+-              <View style={styles.tomorrowCategoryHeader}>
+-                <View style={styles.dividerLeft} />
+-                <Text style={styles.tomorrowCategoryTitle}>
+-                  🥗 Eat
+-                </Text>
+-                <View style={styles.dividerRight} />
+-              </View>
++            {/* Lock 아이콘 - 날짜와 구분선 사이 */}
++            <View style={styles.tomorrowLockContainer}>
++              <Text style={styles.tomorrowLockIcon}>🔒</Text>
++            </View>
+ 
+-              {/* 첫 번째 액션 아이템 미리보기 */}
+-              <View style={styles.tomorrowActionPreview}>
+-                <View style={styles.tomorrowImageContainer}>
+-                  <Text style={styles.tomorrowActionImage}>📋</Text>
++            {/* Tomorrow 액션 플랜 (첫 번째만, blur 처리) */}
++            <View style={styles.tomorrowPreview}>
++              {/* 전체 blur 처리된 컨텐츠 */}
++              <View style={styles.tomorrowBlurredContent}>
++                {/* 카테고리 헤더 */}
++                <View style={styles.tomorrowCategoryHeader}>
++                  <View style={styles.dividerLeft} />
++                  <Text style={styles.tomorrowCategoryTitle}>
++                    🥗 Eat
++                  </Text>
++                  <View style={styles.dividerRight} />
+--
+-                    source={{ uri: TEMP_IMAGES.briskWalk }}
+-                    style={styles.actionImage}
+-                  />
+-                  <View style={styles.hormoneBadge}>
+-                    <Text style={styles.hormoneBadgeText}>+1</Text>
+-                  </View>
+-                </View>
++        {/* 내일 미리보기 */}
++        <View style={styles.tomorrowSection}>
++          <View style={styles.tomorrowHeader}>
++            <Text style={styles.sectionTitle}>Tomorrow</Text>
++            <Text style={styles.dateText}>16th July, 2025</Text>
++          </View>
++
++          {/* Lock 아이콘 - 날짜와 구분선 사이 */}
++          <View style={styles.tomorrowLockContainer}>
++            <Text style={styles.tomorrowLockIcon}>🔒</Text>
++          </View>
++
++          {/* Tomorrow 액션 플랜 (첫 번째만, blur 처리) */}
++          <View style={styles.tomorrowPreview}>
++            {/* 전체 blur 처리된 컨텐츠 */}
++            <View style={styles.tomorrowBlurredContent}>
++              {/* 카테고리 헤더 */}
++              <View style={styles.tomorrowCategoryHeader}>
++                <View style={styles.dividerLeft} />
++                <Text style={styles.tomorrowCategoryTitle}>
++                  🥗 Eat
++                </Text>
++                <View style={styles.dividerRight} />
+--
+-                  </View>
+-                </View>
+-              </View>
+-            </View>
+-          </View>
+-        </View>
+-
+-        {/* 내일 미리보기 */}
+-        <View style={styles.tomorrowSection}>
+-          <View style={styles.tomorrowHeader}>
+-            <Text style={styles.sectionTitle}>Tomorrow</Text>
+-            <Text style={styles.dateText}>16th July, 2025</Text>
+-          </View>
+-          
+-          <View style={styles.tomorrowPreview}>
+-            <View style={styles.lockIconContainer}>
+-              <Text style={styles.lockIcon}>🔒</Text>
+-            </View>
+-            <View style={styles.blurredContent}>
+-              <Text style={styles.blurredText}>내일의 액션 플랜이 여기에 표시됩니다</Text>
++              {/* 추가 노이즈/해상도 저하 효과 - 다중 레이어 */}
+--
++                  </View>
++                </View>
++              </View>
++            </View>
++          </View>
++        </View>
++
++        {/* 내일 미리보기 */}
++        <View style={styles.tomorrowSection}>
++          <View style={styles.tomorrowHeader}>
++            <Text style={styles.sectionTitle}>Tomorrow</Text>
++            <Text style={styles.dateText}>16th July, 2025</Text>
++          </View>
++          
++          <View style={styles.tomorrowPreview}>
++            <View style={styles.lockIconContainer}>
++              <Text style={styles.lockIcon}>🔒</Text>
++            </View>
++            <View style={styles.blurredContent}>
++              <Text style={styles.blurredText}>내일의 액션 플랜이 여기에 표시됩니다</Text>
++            </View>
