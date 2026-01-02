@@ -121,6 +121,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   // Daily Review modal state (next-day review system)
   const [showDailyReview, setShowDailyReview] = useState(false);
   const [pendingReviewData, setPendingReviewData] = useState<PendingReviewResponse | null>(null);
+  const [isTodayDataReady, setIsTodayDataReady] = useState(false); // Track if today's data is loaded after review
   const dailyReviewCheckedRef = useRef<boolean>(false); // Prevent duplicate checks per session
   const reviewSubmissionInProgressRef = useRef<boolean>(false); // Prevent re-fetch during submission
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -175,6 +176,46 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }
   }, [isReviewBlocking, showDailyReview]);
 
+  // Auto-trigger unlock animation when today's data becomes ready (modal already closed)
+  useEffect(() => {
+    if (isTodayDataReady && isReviewBlocking && !showDailyReview) {
+      console.log('🔓 Today data ready and modal closed - triggering unlock animation');
+      
+      // Trigger Lock Break Animation
+      setIsUnlocking(true);
+      setIsReviewBlocking(false);
+
+      Animated.parallel([
+        Animated.timing(lockScale, {
+          toValue: 2.5,
+          duration: 1200,
+          useNativeDriver: true,
+          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+        }),
+        Animated.timing(lockOpacity, {
+          toValue: 0,
+          duration: 1000,
+          delay: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setIsUnlocking(false);
+        lockScale.setValue(1);
+        lockOpacity.setValue(1);
+        
+        Animated.spring(planSlideAnim, {
+          toValue: 1,
+          friction: 4,
+          tension: 20,
+          useNativeDriver: true,
+        }).start(() => {
+          setShowPlanAnimation(false);
+          setIsTodayDataReady(false);
+        });
+      });
+    }
+  }, [isTodayDataReady, isReviewBlocking, showDailyReview]);
+
   // Always refetch data when screen gains focus (e.g., after action replacement, completion, etc.)
   // IMPORTANT: Check for pending review FIRST - if review is pending, don't load assignments yet
   useFocusEffect(
@@ -215,100 +256,62 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           const reviewResponse = await homeService.getPendingReview();
 
           if (reviewResponse?.needs_review && reviewResponse?.plan_id) {
-            console.log('📋 Found pending review - BLOCKING data load until review complete');
-            console.log('📋 Review data items count:', reviewResponse.items?.length);
+            console.log('📋 Found pending review - showing modal');
             setPendingReviewData(reviewResponse);
             setIsReviewBlocking(true);
-
-            // Show review modal immediately - user MUST complete before seeing today's plan
             setShowDailyReview(true);
-
-            // Still load cycle data and rewards (but NOT assignments)
-            const [cycleData, rewardsData] = await Promise.all([
-              homeService.getCyclePhase(),
-              rewardService.getRewardsStatus().catch(() => null),
-            ]);
-
-            setCycleInfo(cycleData?.cycle_info || null);
-            setRewardsData(rewardsData || null);
-            if (rewardsData?.refresh_status) {
-              setRefreshStatus(rewardsData.refresh_status);
-            }
-
-            setLoading(false);
-            dataLoadingRef.current = false; // Reset after review path completes
-            return; // Don't load assignments yet - wait for review completion
           }
 
-          console.log('📋 No pending review - loading all data normally');
-          setIsReviewBlocking(false);
-
-          // STEP 2: No pending review - load everything normally
+          // Always load data (cycle, assignments, rewards)
+          console.log('📋 Loading all data...');
+          const isReviewPending = !!(reviewResponse?.needs_review && reviewResponse?.plan_id);
           const [cycleData, assignmentsData, rewardsData] = await Promise.all([
             homeService.getCyclePhase(),
-            homeService.getTodayAssignments(),
+            isReviewPending ? Promise.resolve(null) : homeService.getTodayAssignments().catch(() => null),
             rewardService.getRewardsStatus().catch(() => null),
           ]);
 
           setCycleInfo(cycleData?.cycle_info || null);
-          setAssignments(assignmentsData);
+          
+          // If we got assignments, use them; otherwise use pending review items if available
+          if (assignmentsData) {
+            setAssignments(assignmentsData);
+            if (assignmentsData?.hormone_stats) {
+              setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
+            }
+            if (assignmentsData) {
+              wireUpActionPlan(assignmentsData);
+            }
+          } else if (reviewResponse?.items && reviewResponse.items.length > 0) {
+            // Use pending review items as display data when assignments blocked
+            console.log('📋 Using pending review items for display:', reviewResponse.items.length);
+            const reviewItems = reviewResponse.items.map((item, index) => ({
+              slot: index + 1,
+              title: item.title,
+              time_of_day: item.time_slot || 'Morning',
+              completed: item.is_completed || false,
+              replaced: false,
+              skipped: false,
+              category: item.category || 'exercise',
+            }));
+            setAssignments({
+              plan_id: reviewResponse.plan_id,
+              date: reviewResponse.review_date,
+              items: reviewItems,
+            } as any);
+          }
 
+          setRewardsData(rewardsData || null);
           if (rewardsData?.refresh_status) {
             setRefreshStatus(rewardsData.refresh_status);
           }
 
-          setRewardsData(rewardsData || null);
-
-          // Show popup if streak is at risk (only if no review was pending)
-          if (rewardsData?.streak_at_risk && rewardsData?.can_freeze && rewardsData?.missed_days_count > 0) {
-            const missedDays = rewardsData.missed_days_count;
-            const freezesNeeded = rewardsData.freezes_needed || missedDays;
-            const freezeCount = rewardsData.freeze_count || 0;
-            const dayText = missedDays === 1 ? 'day' : 'days';
-            const tokenText = freezesNeeded === 1 ? 'token' : 'tokens';
-
-            Alert.alert(
-              '⚠️ Your Streak is at Risk!',
-              `You missed ${missedDays} ${dayText}. Use ${freezesNeeded} freeze ${tokenText} to protect your streak?\n\nYou have ${freezeCount} ${freezeCount === 1 ? 'token' : 'tokens'} available.`,
-              [
-                { text: 'Later', style: 'cancel' },
-                {
-                  text: `Use ${freezesNeeded} 🧊`,
-                  style: 'default',
-                  onPress: async () => {
-                    try {
-                      const result = await rewardService.useFreezeReactive();
-                      if (result.success) {
-                        Alert.alert('✅ Streak Saved!', result.message || `${result.days_frozen} day(s) frozen. Your streak is safe!`);
-                        const updatedRewards = await rewardService.getRewardsStatus().catch(() => null);
-                        if (updatedRewards) setRewardsData(updatedRewards);
-                      } else {
-                        Alert.alert('Error', result.error || 'Could not freeze streak');
-                      }
-                    } catch (error) {
-                      Alert.alert('Error', 'Failed to freeze streak. Please try again.');
-                    }
-                  },
-                },
-              ]
-            );
-          }
-
-          if (assignmentsData?.hormone_stats) {
-            setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
-          }
-
-          if (assignmentsData) {
-            wireUpActionPlan(assignmentsData);
-          }
-
           setLoading(false);
-          console.log('✅ Data loaded successfully');
+          dataLoadingRef.current = false;
+          console.log('✅ Data loaded');
         } catch (error) {
           console.error('❌ Failed to load data:', error);
           setLoading(false);
-        } finally {
-          // Reset loading flag after completion
           dataLoadingRef.current = false;
         }
       };
@@ -446,8 +449,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     // Reset the submission in progress ref so next focus can check for reviews
     reviewSubmissionInProgressRef.current = false;
 
-    // If we're animating (coming from review completion), trigger the "lock break" animation
-    if (showPlanAnimation) {
+    // Only trigger unlock animation if today's data is ready
+    // Otherwise keep showing locked yesterday's plan
+    if (showPlanAnimation && isTodayDataReady) {
       // Trigger Lock Break Animation
       setIsUnlocking(true);
       setIsReviewBlocking(false); // Hand off to unlocking state
@@ -480,10 +484,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           useNativeDriver: true,
         }).start(() => {
           setShowPlanAnimation(false);
+          setIsTodayDataReady(false); // Reset for next time
         });
       });
+    } else if (!isTodayDataReady) {
+      // Today's data not ready yet - keep showing locked state
+      // Don't change isReviewBlocking - it stays true
+      console.log('📋 Modal closed but today data not ready - keeping lock');
     } else {
-        setIsReviewBlocking(false);
+      setIsReviewBlocking(false);
     }
   };
 
@@ -516,6 +525,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       // Wait briefly for backend to finish generating plan with carry-forward items
       await new Promise(resolve => setTimeout(resolve, 1000));
 
+      // Check if review is still pending (backend consistency check)
+      // This prevents 428 errors if backend hasn't updated yet
+      let reviewStatus = await homeService.getPendingReview();
+      let attempts = 0;
+      while (reviewStatus?.needs_review && attempts < 3) {
+        console.log('⏳ Backend still reports pending review, waiting...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        reviewStatus = await homeService.getPendingReview();
+        attempts++;
+      }
+
+      if (reviewStatus?.needs_review) {
+        console.warn('⚠️ Backend still reports pending review after retries. Skipping assignment fetch to avoid error.');
+        return;
+      }
+
       const [assignmentsData, rewardsData] = await Promise.all([
         homeService.getTodayAssignments(),
         rewardService.getRewardsStatus().catch(() => null),
@@ -527,6 +552,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
         }
         wireUpActionPlan(assignmentsData);
+        
+        // Mark that today's data is ready - this enables the unlock animation
+        setIsTodayDataReady(true);
+        console.log('✅ Today data ready - unlock animation will trigger on modal close');
       }
 
       if (rewardsData) {
@@ -691,7 +720,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
   /**
    * Load home data with loading state
-   * IMPORTANT: This should only be called when no review is pending
    */
   const loadHomeData = async () => {
     // Prevent duplicate fetches
@@ -710,119 +738,54 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     try {
       setLoading(true);
 
-      // Call APIs in parallel
+      // Check for pending review
+      const reviewResponse = await homeService.getPendingReview();
+
+      if (reviewResponse?.needs_review && reviewResponse?.plan_id) {
+        console.log('📋 Found pending review in loadHomeData');
+        setPendingReviewData(reviewResponse);
+        setIsReviewBlocking(true);
+        setShowDailyReview(true);
+      }
+
+      const isReviewPending = !!(reviewResponse?.needs_review && reviewResponse?.plan_id);
+
+      // Load cycle info always; only fetch today's assignments if not blocked by pending review
       const [cycleData, assignmentsData] = await Promise.all([
         homeService.getCyclePhase(),
-        homeService.getTodayAssignments(),
+        isReviewPending ? Promise.resolve(null) : homeService.getTodayAssignments().catch(() => null),
       ]);
 
       setCycleInfo(cycleData?.cycle_info || null);
-      setAssignments(assignmentsData);
-
-      if (assignmentsData?.hormone_stats) {
-        setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
-      } else {
-        setProgressStats(null);
+      
+      if (assignmentsData) {
+        setAssignments(assignmentsData);
+        if (assignmentsData?.hormone_stats) {
+          setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
+        }
+        wireUpActionPlan(assignmentsData);
+      } else if (reviewResponse?.items && reviewResponse.items.length > 0) {
+        // Use pending review items as display data when assignments are blocked
+        console.log('📋 Using pending review items for display (loadHomeData):', reviewResponse.items.length);
+        const reviewItems = reviewResponse.items.map((item, index) => ({
+          slot: index + 1,
+          title: item.title,
+          time_of_day: item.time_slot || 'Morning',
+          completed: item.is_completed || false,
+          replaced: false,
+          skipped: false,
+          category: item.category || 'exercise',
+        }));
+        setAssignments({
+          plan_id: reviewResponse.plan_id,
+          date: reviewResponse.review_date,
+          items: reviewItems,
+        } as any);
       }
-
-      // Wire up actionPlan state for feedback system
-      if (assignmentsData?.plan_id) {
-        const allActions = [
-          ...(assignmentsData.assignments?.morning || []),
-          ...(assignmentsData.assignments?.afternoon || []),
-          ...(assignmentsData.assignments?.evening || []),
-        ];
-        setActionPlan({
-          plan_id: assignmentsData.plan_id,
-          user_id: '', // Not needed for feedback
-          date: assignmentsData.date || '',
-          phase: assignmentsData.cycle_phase || '',
-          phase_day: 0,
-          actions: allActions.map((action, index) => ({
-            id: action.id || index,
-            slot: index + 1,
-            time_slot: action.time_slot || 'morning',
-            category: action.category || '',
-            title: action.title || '',
-            specific_action: action.specific_action || '',
-            purpose: action.purpose || '',
-            target_hormone: action.hormones?.[0] || '',
-            hormone_persona_intro: action.hormone_persona_intro || '',
-            hero_image_url: action.hero_image_url || '',
-            research_studies: action.research_studies || [],
-            is_completed: action.is_completed || false,
-            is_replaced: false,
-            variants: action.variants || [],
-          })),
-          total_actions: assignmentsData.total_assignments || 0,
-          completed_actions: assignmentsData.completed_assignments || 0,
-          show_feedback_prompt_after_seconds: assignmentsData.show_feedback_prompt_after_seconds || 30,
-        });
-        console.log('✅ ActionPlan wired up with plan_id:', assignmentsData.plan_id);
-      }
-
-      // Auto-retry if we got empty assignments (session link might still be completing)
-      if (assignmentsData?.total_assignments === 0 && !hasRetried) {
-        console.log('📭 Got empty assignments, will auto-retry in 3 seconds...');
-        setHasRetried(true);
-        initialDataLoadedRef.current = false; // Allow retry
-
-        setTimeout(async () => {
-          console.log('🔄 Auto-retrying to fetch assignments...');
-          try {
-            const retryData = await homeService.getTodayAssignments();
-            if (retryData && retryData.total_assignments > 0) {
-              console.log('✅ Auto-retry successful, got', retryData.total_assignments, 'assignments');
-              setAssignments(retryData);
-              if (retryData.hormone_stats) {
-                setProgressStats({ hormone_stats: convertHormoneStats(retryData.hormone_stats) });
-              }
-              // Wire up actionPlan state for feedback system on retry
-              if (retryData.plan_id) {
-                const allActions = [
-                  ...(retryData.assignments?.morning || []),
-                  ...(retryData.assignments?.afternoon || []),
-                  ...(retryData.assignments?.evening || []),
-                ];
-                setActionPlan({
-                  plan_id: retryData.plan_id,
-                  user_id: '',
-                  date: retryData.date || '',
-                  phase: retryData.cycle_phase || '',
-                  phase_day: 0,
-                  actions: allActions.map((action, index) => ({
-                    id: action.id || index,
-                    slot: index + 1,
-                    time_slot: action.time_slot || 'morning',
-                    category: action.category || '',
-                    title: action.title || '',
-                    specific_action: action.specific_action || '',
-                    purpose: action.purpose || '',
-                    target_hormone: action.hormones?.[0] || '',
-                    hormone_persona_intro: action.hormone_persona_intro || '',
-                    hero_image_url: action.hero_image_url || '',
-                    research_studies: action.research_studies || [],
-                    is_completed: action.is_completed || false,
-                    is_replaced: false,
-                    variants: action.variants || [],
-                  })),
-                  total_actions: retryData.total_assignments || 0,
-                  completed_actions: retryData.completed_assignments || 0,
-                  show_feedback_prompt_after_seconds: retryData.show_feedback_prompt_after_seconds || 30,
-                });
-              }
-            } else {
-              console.log('📭 Auto-retry still got empty assignments');
-            }
-          } catch (retryError) {
-            console.log('❌ Auto-retry failed:', retryError);
-          }
-        }, 3000);
-      }
+        
+      setLoading(false);
     } catch (error) {
-      // Handle error silently
-      initialDataLoadedRef.current = false; // Allow retry on error
-    } finally {
+      console.error('❌ Failed to load home data:', error);
       setLoading(false);
     }
   };
@@ -869,7 +832,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
   /**
    * Load home data without changing loading state
-   * IMPORTANT: This should only be called when no review is pending
    */
   const loadHomeDataWithoutLoading = async () => {
     // Skip if review is blocking
@@ -879,24 +841,48 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }
     
     try {
-      // Call APIs in parallel
+      // Check pending review first
+      const reviewResponse = await homeService.getPendingReview();
+      if (reviewResponse?.needs_review && reviewResponse?.plan_id) {
+        console.log('📋 Found pending review in loadHomeDataWithoutLoading');
+        setPendingReviewData(reviewResponse);
+        setIsReviewBlocking(true);
+        setShowDailyReview(true);
+      }
+
+      const isReviewPending = !!(reviewResponse?.needs_review && reviewResponse?.plan_id);
+
+      // Load cycle info always; only fetch today's assignments if not blocked by pending review
       const [cycleData, assignmentsData] = await Promise.all([
         homeService.getCyclePhase(),
-        homeService.getTodayAssignments(),
+        isReviewPending ? Promise.resolve(null) : homeService.getTodayAssignments().catch(() => null),
       ]);
 
       setCycleInfo(cycleData?.cycle_info || null);
-      setAssignments(assignmentsData);
-
-      if (assignmentsData?.hormone_stats) {
-        setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
-      } else {
-        setProgressStats(null);
-      }
-
-      // Wire up actionPlan for feedback system
+      
       if (assignmentsData) {
+        setAssignments(assignmentsData);
+        if (assignmentsData?.hormone_stats) {
+          setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
+        }
         wireUpActionPlan(assignmentsData);
+      } else if (reviewResponse?.items && reviewResponse.items.length > 0) {
+        // Use pending review items as display data when assignments are blocked
+        console.log('📋 Using pending review items for display (no-loading):', reviewResponse.items.length);
+        const reviewItems = reviewResponse.items.map((item, index) => ({
+          slot: index + 1,
+          title: item.title,
+          time_of_day: item.time_slot || 'Morning',
+          completed: item.is_completed || false,
+          replaced: false,
+          skipped: false,
+          category: item.category || 'exercise',
+        }));
+        setAssignments({
+          plan_id: reviewResponse.plan_id,
+          date: reviewResponse.review_date,
+          items: reviewItems,
+        } as any);
       }
     } catch (error) {
       // Handle error silently
@@ -1367,8 +1353,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             )}
           </View>
 
-          {/* Timeline and sort buttons container - Always show content, blur when review pending */}
-          <View style={styles.actionPlanWrapper}>
+          {/* Timeline and sort buttons container */}
+          <View>
             <Animated.View
               style={[
                 styles.timelineContainer,
@@ -1439,27 +1425,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                 </View>
               )}
             </Animated.View>
-
-            {/* Blur overlay when review is pending OR unlocking - lock icon on top of blurred content */}
-            {(isReviewBlocking || isUnlocking) && (
-              <Animated.View 
-                style={[
-                  styles.lockOverlayContainer,
-                  isUnlocking && { opacity: lockOpacity }
-                ]}
-              >
-                <BlurView intensity={25} tint="light" style={styles.blurOverlay} />
-                <Animated.View 
-                  style={[
-                    styles.lockIconContainer,
-                    isUnlocking && { transform: [{ scale: lockScale }] }
-                  ]}
-                >
-                  <Text style={styles.lockIcon}>🔒</Text>
-                  <Text style={styles.lockText}>Complete review to unlock</Text>
-                </Animated.View>
-              </Animated.View>
-            )}
           </View>
         </View>
 
@@ -2041,45 +2006,6 @@ const styles = StyleSheet.create({
   },
   refreshHourglass: {
     fontSize: responsiveFontSize(1.6),
-  },
-
-  // Blur overlay lock state (during review)
-  actionPlanWrapper: {
-    position: 'relative',
-  },
-  lockOverlayContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  // Note: blurOverlay style is defined above in tomorrowPreview section
-  lockIconContainer: {
-    zIndex: 2,
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
-    paddingHorizontal: responsiveWidth(6),
-    paddingVertical: responsiveHeight(2),
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  lockIcon: {
-    fontSize: responsiveFontSize(3.5),
-    marginBottom: responsiveHeight(0.5),
-  },
-  lockText: {
-    fontSize: responsiveFontSize(1.6),
-    fontFamily: 'Inter500',
-    color: '#4A3D5C',
-    textAlign: 'center',
   },
 });
 

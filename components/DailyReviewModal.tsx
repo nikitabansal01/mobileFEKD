@@ -76,6 +76,7 @@ interface ItemReviewState {
   status: ReviewStatus | null;
   replacement_text: string;
   replacement_category: string;
+  other_reason: string;
 }
 
 interface ReviewDraft {
@@ -244,12 +245,14 @@ const ReplacementCard = React.memo(({
   item,
   state,
   onTextChange,
-  onCategorySelect
+  onCategorySelect,
+  onOtherReasonChange
 }: {
   item: PendingReviewItemInfo,
   state: ItemReviewState,
   onTextChange: (itemId: number, text: string) => void,
-  onCategorySelect: (itemId: number, category: string) => void
+  onCategorySelect: (itemId: number, category: string) => void,
+  onOtherReasonChange: (itemId: number, text: string) => void
 }) => {
   const charCount = state.replacement_text.length;
   const isValid = charCount >= MIN_REPLACEMENT_TEXT_LENGTH;
@@ -300,6 +303,20 @@ const ReplacementCard = React.memo(({
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* Show text input when 'Other' is selected */}
+      {state.replacement_category === 'other' && (
+        <View style={styles.otherReasonContainer}>
+          <TextInput
+            style={styles.otherReasonInput}
+            placeholder="Please specify your reason..."
+            placeholderTextColor={TEXT.greyLight}
+            value={state.other_reason}
+            onChangeText={(text) => onOtherReasonChange(item.id, text)}
+            maxLength={100}
+          />
+        </View>
+      )}
     </View>
   );
 });
@@ -323,6 +340,19 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
   const [useFreeze, setUseFreeze] = useState(false);
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+  const lastPlanIdRef = useRef<number | null>(null);
+
+  // Reset state when plan changes or modal reopens with new data
+  useEffect(() => {
+    if (visible && reviewData?.plan_id && reviewData.plan_id !== lastPlanIdRef.current) {
+      console.log('📋 New review data detected, resetting state');
+      lastPlanIdRef.current = reviewData.plan_id;
+      setIsDraftLoaded(false);
+      setCurrentStep(1);
+      setReviewResult(null);
+      setItemReviewStates(new Map());
+    }
+  }, [visible, reviewData?.plan_id]);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -416,6 +446,7 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
             status: item.is_completed ? 'was_completed' : null,
             replacement_text: '',
             replacement_category: '',
+            other_reason: '',
           });
         });
         setItemReviewStates(initialStates);
@@ -463,6 +494,7 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
         status: null,
         replacement_text: '',
         replacement_category: '',
+        other_reason: '',
       };
       newMap.set(itemId, { ...existing, status });
       return newMap;
@@ -487,6 +519,17 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
       const existing = newMap.get(itemId);
       if (existing) {
         newMap.set(itemId, { ...existing, replacement_category: category });
+      }
+      return newMap;
+    });
+  }, []);
+
+  const handleOtherReasonChange = useCallback((itemId: number, text: string) => {
+    setItemReviewStates((prev) => {
+      const newMap = new Map(prev);
+      const existing = newMap.get(itemId);
+      if (existing) {
+        newMap.set(itemId, { ...existing, other_reason: text });
       }
       return newMap;
     });
@@ -664,6 +707,7 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
                 state={state}
                 onTextChange={handleReplacementTextChange}
                 onCategorySelect={handleReplacementCategorySelect}
+                onOtherReasonChange={handleOtherReasonChange}
               />
             );
           })}
@@ -932,7 +976,7 @@ const styles = StyleSheet.create({
     flex: 1 
   },
   overlay: { flex: 1, backgroundColor: UI.overlay, justifyContent: 'center', alignItems: 'center' },
-  container: { width: SCREEN_WIDTH * 0.94, maxHeight: SCREEN_HEIGHT * 0.88, backgroundColor: BACKGROUND.white, borderRadius: moderateScale(24), overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.25, shadowRadius: 20, elevation: 10 },
+  container: { width: SCREEN_WIDTH * 0.94, minHeight: responsiveHeight(50), maxHeight: SCREEN_HEIGHT * 0.88, backgroundColor: BACKGROUND.white, borderRadius: moderateScale(24), overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.25, shadowRadius: 20, elevation: 10 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: responsiveWidth(5), paddingVertical: responsiveHeight(2), paddingTop: responsiveHeight(2.5) },
   headerTitle: { fontSize: moderateScale(18), fontFamily: FONT_SERIF.medium, color: TEXT.secondary },
   closeButton: { width: responsiveWidth(8), height: responsiveWidth(8), borderRadius: responsiveWidth(4), backgroundColor: 'rgba(0, 0, 0, 0.08)', justifyContent: 'center', alignItems: 'center' },
@@ -945,8 +989,8 @@ const styles = StyleSheet.create({
   progressDotCurrent: { width: responsiveWidth(6), borderRadius: responsiveWidth(1.25), backgroundColor: BRAND.warmPurple },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: responsiveHeight(10), minHeight: responsiveHeight(30) },
   loadingText: { marginTop: responsiveHeight(2), fontSize: moderateScale(14), fontFamily: FONT_INTER.medium, color: TEXT.muted },
-  content: { flex: 1 },
-  contentContainer: { padding: responsiveWidth(5), paddingBottom: responsiveHeight(4), flexGrow: 1 },
+  content: { width: '100%' },
+  contentContainer: { padding: responsiveWidth(5), paddingBottom: responsiveHeight(4) },
   stepContainer: { width: '100%', minHeight: responsiveHeight(40) },
   
   // Intro Step
@@ -1007,6 +1051,8 @@ const styles = StyleSheet.create({
   categoryChipSelected: { backgroundColor: BRAND.gradPink + '30', borderColor: BRAND.warmPurple },
   categoryChipText: { fontSize: moderateScale(11), fontFamily: FONT_INTER.regular, color: TEXT.grey },
   categoryChipTextSelected: { color: BRAND.warmPurple, fontFamily: FONT_INTER.medium },
+  otherReasonContainer: { marginTop: responsiveHeight(1.5) },
+  otherReasonInput: { backgroundColor: BACKGROUND.white, borderRadius: moderateScale(12), padding: responsiveWidth(3.5), fontSize: moderateScale(13), fontFamily: FONT_INTER.regular, color: TEXT.secondary, borderWidth: 1.5, borderColor: BORDER.light },
   
   // Streak Resolution Step
   summaryCard: { backgroundColor: BACKGROUND.purpleTint, borderRadius: moderateScale(16), padding: responsiveWidth(4), marginBottom: responsiveHeight(2) },

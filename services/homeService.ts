@@ -262,6 +262,7 @@ export interface PendingReviewItemInfo {
   time_slot: string;
   target_hormone: string;
   is_completed: boolean;
+  is_replaced?: boolean;
   hero_image_url?: string;
 }
 
@@ -775,7 +776,7 @@ class HomeService {
       }
 
       const result = await response.json();
-      console.log('✅ Pending review check result:', result);
+      console.log('✅ Pending review check result:', JSON.stringify(result));
       return result;
     } catch (error) {
       console.error('❌ Error checking pending review:', error);
