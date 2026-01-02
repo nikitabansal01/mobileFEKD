@@ -274,11 +274,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       // Weekly check-in flow - start or resume from API
       initializeWeeklyCheckin();
     } else {
-      // Default: Weekly check-in content (fallback)
-      setMessages([
-        { id: "1", text: "How are you feeling this week?", isBot: true },
-        { id: "3", text: "Were there any big changes in your week? related to food, lifestyle, stress, etc", isBot: true },
-      ]);
+      // Default: Initialize weekly check-in from API
+      initializeWeeklyCheckin();
     }
   }, [route?.params?.conversationContext]);
   
@@ -377,7 +374,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           setShowSlider(false);
           // Navigate back to home with refresh flag after showing completion message
           setTimeout(() => {
-            navigation.navigate('Home', { shouldRefresh: true });
+            navigation.navigate('MainScreenTabs', { 
+              screen: 'HomeScreen',
+              params: { shouldRefresh: true }
+            });
           }, 3000);
         } else if (result.question.question_type === "slider") {
           setShowSlider(true);
