@@ -1,6 +1,7 @@
 import Avatar from "@/components/customComponent/AvatarChatbot";
 import Header from "@/components/customComponent/ChatbotHeader";
 import FooterCTA from "@/components/customComponent/FooterChatbotCTA";
+import PrimaryButton from "@/components/PrimaryButton";
 import weeklyCheckinService, { QuestionResponse, TapOption } from "@/services/weeklyCheckinService";
 import { Ionicons } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
@@ -296,6 +297,14 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         // Set messages from history if available, otherwise use current message
         if (result.question.history && result.question.history.length > 0) {
           setMessages(result.question.history);
+        } else if (result.question.messages && result.question.messages.length > 0) {
+          // Use messages array for multi-bubble display
+          const bubbleMessages: Message[] = result.question.messages.map((text: string, index: number) => ({
+            id: `${Date.now()}_${index}`,
+            text: text,
+            isBot: true,
+          }));
+          setMessages(bubbleMessages);
         } else {
           setMessages([
             { id: "1", text: result.question.message, isBot: true },
@@ -359,6 +368,14 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         // Update messages from history if available
         if (result.question.history && result.question.history.length > 0) {
           setMessages(result.question.history);
+        } else if (result.question.messages && result.question.messages.length > 0) {
+          // Use messages array for multi-bubble display
+          const botMessages: Message[] = result.question.messages.map((text: string, index: number) => ({
+            id: `${Date.now()}_${index}_bot`,
+            text: text,
+            isBot: true,
+          }));
+          setMessages(prev => [...prev, ...botMessages]);
         } else {
           // Fallback: Add bot response manually
           const botMessage: Message = {
@@ -823,7 +840,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               ref={idleScrollRef}
               style={styles.messagesContainer}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.scrollContent}
+              contentContainerStyle={[
+                styles.scrollContent,
+                showContinueButton && { paddingBottom: verticalScale(100) }
+              ]}
             >
               <Avatar showMessage={false} />
               <View style={styles.messagesWrapper}>
@@ -1102,8 +1122,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       {/* Continue button after check-in completion */}
       {showContinueButton && (
         <View style={styles.continueButtonContainer}>
-          <TouchableOpacity 
-            style={styles.continueButton}
+          <PrimaryButton
+            title="Continue to Home"
             onPress={() => {
               setShowContinueButton(false);
               navigation.navigate('MainScreenTabs', {
@@ -1111,12 +1131,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                 params: { shouldRefresh: true }
               });
             }}
-          >
-            <Text style={styles.continueButtonText}>Continue to Home</Text>
-          </TouchableOpacity>
+          />
         </View>
       )}
-</View>
+    </View>
   );
 
   if (!fontsLoaded) {
@@ -1696,30 +1714,12 @@ const styles = StyleSheet.create({
   },
   continueButtonContainer: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? verticalScale(40) : verticalScale(20),
+    bottom: Platform.OS === 'ios' ? verticalScale(50) : verticalScale(30),
     left: 0,
     right: 0,
     paddingHorizontal: scale(20),
+    paddingBottom: Platform.OS === 'ios' ? verticalScale(10) : 0,
     alignItems: 'center',
-  },
-  continueButton: {
-    backgroundColor: COLORS.warmPurple,
-    paddingHorizontal: scale(40),
-    paddingVertical: verticalScale(15),
-    borderRadius: scale(30),
-    minWidth: '80%',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  continueButtonText: {
-    fontSize: FONT_SIZES.button,
-    fontFamily: 'Inter600',
-    color: '#FFFFFF',
-    includeFontPadding: isAndroid ? false : undefined,
-    textAlignVertical: isAndroid ? 'center' : undefined,
+    backgroundColor: 'transparent',
   },
 });

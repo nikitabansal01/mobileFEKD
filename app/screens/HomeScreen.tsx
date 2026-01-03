@@ -1425,6 +1425,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                   <ActionPlanTimeline
                     dateLabel={assignments?.date ? formatDate(assignments.date) : '15th July, 2025'}
                     assignments={assignments.assignments}
+                    weeklyCheckinStatus={assignments.weekly_checkin}
                   />
                 ) : (
                   <TypeActionPlan

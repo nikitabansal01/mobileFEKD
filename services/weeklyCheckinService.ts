@@ -54,7 +54,8 @@ export interface QuestionResponse {
   is_complete: boolean;
   question_key: string | null;
   question_type: string | null; // "slider", "tap_choice", "multi_select", "free_text", "confirmation"
-  message: string;
+  message: string;  // Combined message for backward compatibility
+  messages?: string[];  // Array of short messages for multi-bubble display
   tap_options: TapOption[];
   is_required: boolean;
   current_index: number;

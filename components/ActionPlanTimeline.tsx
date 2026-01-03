@@ -89,6 +89,12 @@ type Props = {
   dateLabel?: string;
   /** Time-based action assignments */
   assignments?: AssignmentsMap;
+  /** Weekly check-in status from API */
+  weeklyCheckinStatus?: {
+    is_available: boolean;
+    is_due: boolean;
+    incomplete_id: string | null;
+  } | null;
 };
 
 /**
@@ -104,6 +110,7 @@ type Props = {
 export default function ActionPlanTimeline({
   dateLabel = formatToday(new Date()),
   assignments = {},
+  weeklyCheckinStatus = null,
 }: Props) {
   const navigation = useNavigation<any>();
 
@@ -182,29 +189,33 @@ export default function ActionPlanTimeline({
   const todayAssignments: Assignment[] = useMemo(() => {
     const arr: Assignment[] = [];
 
-    // Add static "Weekly Check-in" assignment at the beginning
-    const weeklyCheckIn: Assignment = {
-      id: -1, // Special ID for static assignment
-      recommendation_id: -1,
-      title: 'Weekly Check-in',
-      purpose: 'Vent your concerns & progress | Acne | 🌤️',
-      category: 'mindfulness',
-      conditions: [],
-      symptoms: [],
-      hormones: [],
-      is_completed: false,
-      completed_at: '',
-      advices: [],
-      food_amounts: [],
-      food_items: [],
-      exercise_durations: [],
-      exercise_types: [],
-      exercise_intensities: [],
-      mindfulness_durations: [],
-      mindfulness_techniques: [],
-      time_slot: 'morning', // Add time_slot for sorting
-      hero_image_url: require('../assets/images/logo.png'), // Weekly check-in logo
-    };
+    // Add Weekly Check-in assignment ONLY if available AND due (from API)
+    let weeklyCheckIn: Assignment | null = null;
+    if (weeklyCheckinStatus?.is_available && weeklyCheckinStatus?.is_due) {
+      const isResume = !!weeklyCheckinStatus.incomplete_id;
+      weeklyCheckIn = {
+        id: -1, // Special ID for weekly check-in
+        recommendation_id: -1,
+        title: isResume ? 'Continue Check-in' : 'Weekly Check-in',
+        purpose: isResume ? 'Continue your weekly check-in' : 'Track your progress & concerns',
+        category: 'mindfulness',
+        conditions: [],
+        symptoms: [],
+        hormones: [],
+        is_completed: false,
+        completed_at: '',
+        advices: [],
+        food_amounts: [],
+        food_items: [],
+        exercise_durations: [],
+        exercise_types: [],
+        exercise_intensities: [],
+        mindfulness_durations: [],
+        mindfulness_techniques: [],
+        time_slot: 'morning', // Add time_slot for sorting
+        hero_image_url: require('../assets/images/logo.png'), // Weekly check-in logo
+      };
+    }
 
     // Process ALL keys from assignments object (including 'completed' if present)
     // This ensures we don't miss any items regardless of what keys the backend returns
@@ -233,14 +244,17 @@ export default function ActionPlanTimeline({
     });
 
     // Add Weekly Check-in after completed items (so it's first among pending items)
-    const completedCount = arr.filter(a => a.is_completed).length;
-    arr.splice(completedCount, 0, weeklyCheckIn);
+    // Only if it's available and due
+    if (weeklyCheckIn) {
+      const completedCount = arr.filter(a => a.is_completed).length;
+      arr.splice(completedCount, 0, weeklyCheckIn);
+    }
 
     // Debug disabled for performance:
     // console.log('🔍 Today Assignments processing (SORTED):', {...});
 
     return arr;
-  }, [assignments]);
+  }, [assignments, weeklyCheckinStatus]);
 
   const tomorrowAssignments: Assignment[] = DUMMY_TOMORROW_DATA;
 
@@ -366,7 +380,8 @@ export default function ActionPlanTimeline({
 
     // Calculate time slot icon positions
     // RULE: Show icon for EACH distinct time section (morning/afternoon/evening/anytime)
-    // NO icons for completed section - only for pending items
+    // First icon: at cap center (BASE_TOP + CAP_TOP / 2)
+    // Next icons: centered between previous anchor and current anchor
     const positions: TimeSlotPosition[] = [];
 
     // Find completed and pending items
@@ -388,25 +403,57 @@ export default function ActionPlanTimeline({
       slot => timeSlotGroups[slot] && timeSlotGroups[slot].length > 0
     );
 
+    // Track previous Y coordinate for calculating icon positions
+    let previousY = BASE_TOP;
+
     // Add icon for EACH time section (morning, afternoon, evening, anytime)
     orderedSlots.forEach((timeSlot, slotIndex) => {
       const slotItems = timeSlotGroups[timeSlot];
       if (slotItems && slotItems.length > 0) {
         // Find the first item of this time slot
         const firstItemOfSlot = slotItems[0];
-        // Fix: Compare as strings to handle both number and string id types
         const itemIdStr = String(firstItemOfSlot.id);
-        const anchorForItem = todayNext.find(a => a.id === itemIdStr) ||
-          todayNext.find(a => String(a.id) === itemIdStr);
-
-        if (anchorForItem) {
-          // Position icon at the TOP of this section
-          const iconY = anchorForItem.y - ITEM_BLOCK_H / 2;
+        
+        if (slotIndex === 0) {
+          // First time slot: place icon at cap center
+          const iconY = BASE_TOP + CAP_TOP / 2;
           positions.push({
             timeSlot: timeSlot,
             iconY: iconY,
-            isCapCenter: slotIndex === 0, // First slot icon is at cap center
+            isCapCenter: true,
           });
+          
+          // Calculate this time slot's last anchor Y coordinate
+          const slotStartIdx = todayNext.findIndex(a => 
+            slotItems.some(item => String(item.id) === a.id || String(item.id) === String(a.id))
+          );
+          if (slotStartIdx >= 0) {
+            const slotEndIdx = slotStartIdx + slotItems.length - 1;
+            previousY = todayNext[slotEndIdx]?.y ?? previousY;
+          }
+        } else {
+          // Next time slots: center of horizontal line between previous and next anchor
+          const slotStartIdx = todayNext.findIndex(a => 
+            slotItems.some(item => String(item.id) === a.id || String(item.id) === String(a.id))
+          );
+          
+          if (slotStartIdx > 0) {
+            const prevAnchorY = todayNext[slotStartIdx - 1]?.y ?? previousY;
+            const currentAnchorY = todayNext[slotStartIdx]?.y ?? (prevAnchorY + ITEM_BLOCK_H);
+            const iconY = (prevAnchorY + currentAnchorY) / 2;
+            
+            positions.push({
+              timeSlot: timeSlot,
+              iconY: iconY,
+              isCapCenter: false,
+            });
+            
+            // Update this time slot's last anchor Y coordinate
+            if (slotItems.length > 0) {
+              const slotEndIdx = slotStartIdx + slotItems.length - 1;
+              previousY = todayNext[slotEndIdx]?.y ?? previousY;
+            }
+          }
         }
       }
     });
