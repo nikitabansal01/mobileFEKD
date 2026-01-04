@@ -105,21 +105,32 @@ const ResearchingScreen = () => {
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [showLogin, setShowLogin] = useState(false);
   const [recommendationStatus, setRecommendationStatus] = useState<string>('pending');
-  const [statusCheckInterval, setStatusCheckInterval] = useState<NodeJS.Timeout | null>(null);
   const [canProceedToFinal, setCanProceedToFinal] = useState(false); // API completion status
-  const [isPolling, setIsPolling] = useState(false); // Polling status
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false); // User login status
   const [hasStartedRecommendation, setHasStartedRecommendation] = useState(false); // Recommendation generation start status
   const [authChecked, setAuthChecked] = useState(false); // Auth state check status
+  
+  // Use refs for interval to avoid state update loops
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isPollingRef = useRef<boolean>(false);
 
   // Firebase login state detection
   useEffect(() => {
+    console.log('🔐 [ResearchingScreen] Setting up auth listener');
     const unsubscribe = auth.onAuthStateChanged((user: any) => {
       setAuthChecked(true);
       
       if (user) {
+        console.log('✅ [ResearchingScreen] User logged in, navigating to MainScreenTabs');
         setIsUserLoggedIn(true);
         setShowLogin(false); // Close bottom sheet when logged in
+        
+        // Stop polling if still running
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+          isPollingRef.current = false;
+        }
         
         // If user is already logged in, navigate directly to home
         navigation.navigate('MainScreenTabs');
@@ -145,23 +156,28 @@ const ResearchingScreen = () => {
 
     const startRecommendation = async () => {
       try {
+        console.log('🚀 [ResearchingScreen] Starting recommendation generation');
         setHasStartedRecommendation(true); // Prevent duplicate execution
         const success = await sessionService.startRecommendationGeneration();
         if (success) {
+          console.log('✅ [ResearchingScreen] Recommendation started, beginning polling');
           setRecommendationStatus('in_progress');
-          setIsPolling(true); // Start polling
+          startPolling(); // Start polling with ref-based approach
         } else {
+          console.error('❌ [ResearchingScreen] Failed to start recommendation');
           setRecommendationStatus('error');
         }
       } catch (error: any) {
         // If session expired, user may already be logged in
         if (error.message && error.message.includes('Session not found')) {
+          console.log('⚠️ [ResearchingScreen] Session not found - may be logged in user');
           // Skip recommendation generation and set as completed
           setCanProceedToFinal(true);
           setRecommendationStatus('completed');
           return;
         }
         
+        console.error('❌ [ResearchingScreen] Recommendation start error:', error);
         setRecommendationStatus('error');
       }
     };
@@ -169,54 +185,58 @@ const ResearchingScreen = () => {
     // Start recommendation generation on component mount
     startRecommendation();
   }, [isUserLoggedIn, hasStartedRecommendation]);
-
-  // Track recommendation generation status - continue polling until completion
-  useEffect(() => {
-    if (isPolling) {
-      const interval = setInterval(async () => {
-        try {
-          const status = await sessionService.getRecommendationStatus();
-          if (status) {
-            setRecommendationStatus(status.status);
-            
-            // Stop status checking when completed
-            if (status.status === 'completed') {
-              setCanProceedToFinal(true); // Allow progression to final step after API completion
-              setIsPolling(false); // Stop polling
-              if (statusCheckInterval) {
-                clearInterval(statusCheckInterval);
-              }
-            } else if (status.status === 'error') {
-              setCanProceedToFinal(true); // Allow progression even on error
-              setIsPolling(false); // Stop polling
-              if (statusCheckInterval) {
-                clearInterval(statusCheckInterval);
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error checking recommendation status:', error);
-        }
-      }, 2000); // Check status every 2 seconds
-
-      setStatusCheckInterval(interval);
-
-      return () => {
-        if (interval) {
-          clearInterval(interval);
-        }
-      };
+  
+  // Start polling function (uses refs to avoid re-render loops)
+  const startPolling = () => {
+    // Prevent double polling
+    if (isPollingRef.current || pollingIntervalRef.current) {
+      console.log('⏭️ [ResearchingScreen] Polling already active, skipping');
+      return;
     }
-  }, [isPolling]);
+    
+    isPollingRef.current = true;
+    console.log('🔄 [ResearchingScreen] Starting status polling (every 2.5s)');
+    
+    pollingIntervalRef.current = setInterval(async () => {
+      try {
+        const status = await sessionService.getRecommendationStatus();
+        if (status) {
+          setRecommendationStatus(status.status);
+          
+          // Stop status checking when completed
+          if (status.status === 'completed') {
+            console.log('✅ [ResearchingScreen] Recommendations completed!');
+            setCanProceedToFinal(true);
+            stopPolling();
+          } else if (status.status === 'error') {
+            console.log('⚠️ [ResearchingScreen] Recommendations error, allowing progression');
+            setCanProceedToFinal(true);
+            stopPolling();
+          }
+        }
+      } catch (error) {
+        console.error('❌ [ResearchingScreen] Error checking status:', error);
+      }
+    }, 2500); // Check every 2.5 seconds (slightly longer to reduce load)
+  };
+  
+  // Stop polling function
+  const stopPolling = () => {
+    if (pollingIntervalRef.current) {
+      console.log('🛑 [ResearchingScreen] Stopping status polling');
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    isPollingRef.current = false;
+  };
 
   // Clean up interval on component unmount
   useEffect(() => {
     return () => {
-      if (statusCheckInterval) {
-        clearInterval(statusCheckInterval);
-      }
+      console.log('🧹 [ResearchingScreen] Cleanup - stopping polling');
+      stopPolling();
     };
-  }, [statusCheckInterval]);
+  }, []);
 
   // Automatic step transition (slower pace)
   useEffect(() => {

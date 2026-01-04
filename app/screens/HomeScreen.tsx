@@ -116,16 +116,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
   // Handle shouldRefresh param from navigation (e.g., after weekly check-in completion)
   useEffect(() => {
+    const instanceId = componentIdRef.current;
     if (route?.params?.shouldRefresh) {
-      console.log('🔄 shouldRefresh param detected - forcing data reload');
+      console.log(`🔄 [HomeScreen:${instanceId}] shouldRefresh param detected - forcing data reload`);
       // Reset the deduplication timer to allow immediate refetch
       lastFocusTimeRef.current = 0;
       dataLoadingRef.current = false;
       // Reload assignments
       const reloadData = async () => {
         try {
+          console.log(`📋 [HomeScreen:${instanceId}] Reloading assignments after shouldRefresh...`);
           const assignmentsData = await homeService.getTodayAssignments();
           if (assignmentsData) {
+            console.log(`✅ [HomeScreen:${instanceId}] Reloaded ${assignmentsData.total_assignments} assignments`);
             setAssignments(assignmentsData);
             if (assignmentsData?.hormone_stats) {
               setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
@@ -133,7 +136,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             wireUpActionPlan(assignmentsData);
           }
         } catch (error) {
-          console.error('Failed to reload after refresh:', error);
+          console.error(`❌ [HomeScreen:${instanceId}] Failed to reload after refresh:`, error);
         }
       };
       reloadData();
@@ -183,6 +186,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const dataLoadingRef = useRef<boolean>(false);
   const lastFocusTimeRef = useRef<number>(0);
   const loadCallIdRef = useRef<number>(0); // Unique ID for each load call to detect stale calls
+  const componentIdRef = useRef<string>(Math.random().toString(36).substring(7)); // Unique ID for this component instance
   
   // Refs to track state for useFocusEffect (avoids stale closure and dependency issues)
   const showDailyReviewRef = useRef(showDailyReview);
@@ -205,8 +209,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
   // Auto-trigger unlock animation when today's data becomes ready (modal already closed)
   useEffect(() => {
+    const instanceId = componentIdRef.current;
     if (isTodayDataReady && isReviewBlocking && !showDailyReview) {
-      console.log('🔓 Today data ready and modal closed - triggering unlock animation');
+      console.log(`🔓 [HomeScreen:${instanceId}] Today data ready and modal closed - triggering unlock animation`);
       
       // Trigger Lock Break Animation
       setIsUnlocking(true);
@@ -250,35 +255,36 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     React.useCallback(() => {
       // SYNCHRONOUS GUARD: Check and set flag immediately to prevent race conditions
       const now = Date.now();
+      const instanceId = componentIdRef.current;
       
       // STRICT DEDUPLICATION: If last call was within 500ms, always skip
       // This handles React's potential double-invocation
       if (now - lastFocusTimeRef.current < 500) {
-        console.log('🔄 HomeScreen focused - strict dedup (within 500ms)');
+        console.log(`🔄 [HomeScreen:${instanceId}] Skipped - within 500ms dedup window`);
         return;
       }
       
       // Skip if already loading (check FIRST, before any async operations)
       if (dataLoadingRef.current) {
-        console.log('🔄 HomeScreen focused - already loading, skipping');
+        console.log(`🔄 [HomeScreen:${instanceId}] Skipped - already loading`);
         return;
       }
       
       // Prevent duplicate calls within 2 seconds (after the initial load)
       if (initialDataLoadedRef.current && now - lastFocusTimeRef.current < 2000) {
-        console.log('🔄 HomeScreen focused - deduplicating call (too soon after last load)');
+        console.log(`🔄 [HomeScreen:${instanceId}] Skipped - within 2s dedup window`);
         return;
       }
       
       // Skip if daily review modal is already showing - prevents loops and duplicate checks
       if (showDailyReviewRef.current) {
-        console.log('🔄 HomeScreen focused - modal already showing, skipping data load');
+        console.log(`🔄 [HomeScreen:${instanceId}] Skipped - review modal showing`);
         return;
       }
 
       // Skip if a review submission is in progress
       if (reviewSubmissionInProgressRef.current) {
-        console.log('🔄 HomeScreen focused - review submission in progress, skipping');
+        console.log(`🔄 [HomeScreen:${instanceId}] Skipped - review submission in progress`);
         return;
       }
 
@@ -286,38 +292,56 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       dataLoadingRef.current = true;
       lastFocusTimeRef.current = now;
       const thisCallId = ++loadCallIdRef.current; // Increment to get unique ID for this call
-      console.log('🔄 HomeScreen focused - checking review then loading data (callId:', thisCallId, ')');
+      console.log(`🔄 [HomeScreen:${instanceId}] Loading data (callId: ${thisCallId}, time: ${new Date(now).toISOString().substr(11, 12)})`);
 
       const loadDataAfterReviewCheck = async () => {
+        // CROSS-INSTANCE DEDUPLICATION: Check if another instance loaded very recently
+        try {
+          const lastGlobalLoad = await AsyncStorage.getItem('homescreen_last_load');
+          if (lastGlobalLoad) {
+            const lastLoadTime = parseInt(lastGlobalLoad, 10);
+            if (now - lastLoadTime < 1000) {
+              console.log(`⏭️ [HomeScreen:${instanceId}] Skipped - another instance loaded ${now - lastLoadTime}ms ago`);
+              dataLoadingRef.current = false;
+              return;
+            }
+          }
+          // Mark this load globally
+          await AsyncStorage.setItem('homescreen_last_load', now.toString());
+        } catch (e) {
+          // AsyncStorage error - continue anyway
+        }
+        
         // Check if this call has been superseded by a newer one
         if (loadCallIdRef.current !== thisCallId) {
-          console.log('⏭️ Stale call detected (callId:', thisCallId, '), skipping');
+          console.log(`⏭️ [HomeScreen:${instanceId}] Stale call (callId: ${thisCallId}), skipping`);
           return;
         }
         
         try {
           // STEP 1: Check for pending review FIRST
-          console.log('📋 Checking for pending daily review...');
+          console.log(`📋 [HomeScreen:${instanceId}] Checking pending review...`);
           const reviewResponse = await homeService.getPendingReview();
 
           // Double-check we're still the active call after await
           if (loadCallIdRef.current !== thisCallId) {
-            console.log('⏭️ Call superseded after getPendingReview (callId:', thisCallId, ')');
+            console.log(`⏭️ [HomeScreen:${instanceId}] Stale after getPendingReview (callId: ${thisCallId})`);
             return;
           }
 
-          console.log('✅ Pending review check result:', JSON.stringify(reviewResponse));
+          const hasReview = reviewResponse?.needs_review && reviewResponse?.plan_id;
+          console.log(`✅ [HomeScreen:${instanceId}] Review check: ${hasReview ? 'PENDING' : 'none'}`);
 
-          if (reviewResponse?.needs_review && reviewResponse?.plan_id) {
-            console.log('📋 Found pending review - showing modal');
+          if (hasReview) {
+            console.log(`📋 [HomeScreen:${instanceId}] Showing review modal for plan ${reviewResponse.plan_id}`);
             setPendingReviewData(reviewResponse);
             setIsReviewBlocking(true);
             setShowDailyReview(true);
           }
 
           // Always load data (cycle, assignments, rewards)
-          console.log('📋 Loading all data...');
-          const isReviewPending = !!(reviewResponse?.needs_review && reviewResponse?.plan_id);
+          console.log(`📋 [HomeScreen:${instanceId}] Loading cycle + assignments + rewards...`);
+          const isReviewPending = !!hasReview;
           const [cycleData, assignmentsData, rewardsData] = await Promise.all([
             homeService.getCyclePhase(),
             isReviewPending ? Promise.resolve(null) : homeService.getTodayAssignments().catch(() => null),
@@ -326,7 +350,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
           // Final check that we're still the active call
           if (loadCallIdRef.current !== thisCallId) {
-            console.log('⏭️ Call superseded after data load (callId:', thisCallId, ')');
+            console.log(`⏭️ [HomeScreen:${instanceId}] Stale after data load (callId: ${thisCallId})`);
             return;
           }
 
@@ -334,6 +358,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           
           // If we got assignments, use them; otherwise use pending review items if available
           if (assignmentsData) {
+            console.log(`✅ [HomeScreen:${instanceId}] Got ${assignmentsData.total_assignments} assignments`);
             setAssignments(assignmentsData);
             if (assignmentsData?.hormone_stats) {
               setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
@@ -343,7 +368,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             }
           } else if (reviewResponse?.items && reviewResponse.items.length > 0) {
             // Use pending review items as display data when assignments blocked
-            console.log('📋 Using pending review items for display:', reviewResponse.items.length);
+            console.log(`📋 [HomeScreen:${instanceId}] Using ${reviewResponse.items.length} review items for display`);
             const reviewItems = reviewResponse.items.map((item, index) => ({
               slot: index + 1,
               title: item.title,
@@ -367,15 +392,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
           setLoading(false);
           initialDataLoadedRef.current = true;
-          console.log('✅ Data loaded (callId:', thisCallId, ')');
+          console.log(`✅ [HomeScreen:${instanceId}] All data loaded successfully (callId: ${thisCallId})`);
         } catch (error) {
-          console.error('❌ Failed to load data:', error);
+          console.error(`❌ [HomeScreen:${instanceId}] Failed to load data:`, error);
           setLoading(false);
         } finally {
           // ALWAYS reset the loading flag when done (success or error)
           // But only if this is still the active call
           if (loadCallIdRef.current === thisCallId) {
             dataLoadingRef.current = false;
+            console.log(`🔓 [HomeScreen:${instanceId}] Unlocked dataLoadingRef (callId: ${thisCallId})`);
           }
         }
       };
@@ -422,6 +448,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
     setShowAuvraChat(false);
 
+    const instanceId = componentIdRef.current;
+
     // If we have an action plan, call the satisfaction API
     if (actionPlan?.plan_id) {
       setIsSubmittingFeedback(true);
@@ -434,10 +462,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         );
 
         if (result?.success) {
-          console.log('✅ Plan marked as satisfactory:', result.message);
+          console.log(`✅ [HomeScreen:${instanceId}] Plan marked as satisfactory: ${result.message}`);
         }
       } catch (error) {
-        console.error('❌ Error submitting plan satisfaction:', error);
+        console.error(`❌ [HomeScreen:${instanceId}] Error submitting plan satisfaction:`, error);
       } finally {
         setIsSubmittingFeedback(false);
       }
@@ -446,12 +474,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
   // Handle in-modal replacement of selected items
   const handleReplaceItems = async (itemIds: number[]) => {
+    const instanceId = componentIdRef.current;
     if (!actionPlan?.plan_id || itemIds.length === 0) return;
 
     setIsSubmittingFeedback(true);
 
     try {
-      console.log('🔄 Replacing items:', itemIds);
+      console.log(`🔄 [HomeScreen:${instanceId}] Replacing items: ${itemIds.join(', ')}`);
 
       // Call plan-satisfaction API with items to replace
       const result = await homeService.submitPlanSatisfaction(
@@ -461,7 +490,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       );
 
       if (result?.success) {
-        console.log('✅ Items replaced successfully:', result.message);
+        console.log(`✅ [HomeScreen:${instanceId}] Items replaced successfully: ${result.message}`);
 
         // Refresh assignments to get updated data
         const updatedAssignments = await homeService.getTodayAssignments();
@@ -487,7 +516,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       // Close the modal after replacement attempt
       setShowAuvraChat(false);
     } catch (error) {
-      console.error('❌ Error replacing items:', error);
+      console.error(`❌ [HomeScreen:${instanceId}] Error replacing items:`, error);
     } finally {
       setIsSubmittingFeedback(false);
     }
@@ -553,7 +582,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       });
     } else if (!isTodayDataReady) {
       // Today's data not ready - unblock and force refresh
-      console.log('📋 Modal closed but today data not ready - forcing refresh');
+      const instanceId = componentIdRef.current;
+      console.log(`📋 [HomeScreen:${instanceId}] Modal closed but today data not ready - forcing refresh`);
       setIsReviewBlocking(false);
       setShowPlanAnimation(false);
       
@@ -569,7 +599,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           wireUpActionPlan(assignmentsData);
         }
       } catch (err) {
-        console.error('❌ Failed to load assignments after review close:', err);
+        console.error(`❌ [HomeScreen:${instanceId}] Failed to load assignments after review close:`, err);
       } finally {
         setLoading(false);
       }
@@ -580,7 +610,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
   // Handle Daily Review complete - load today's assignments in background while result shows
   const handleDailyReviewComplete = async (result: DailyReviewResponse) => {
-    console.log('✅ Daily review submitted:', result);
+    const instanceId = componentIdRef.current;
+    console.log(`✅ [HomeScreen:${instanceId}] Daily review submitted:`, result);
 
     // Scroll to top immediately so user sees the animation at the top
     if (scrollViewRef.current) {
@@ -602,7 +633,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     // Modal stays open so user can see their streak result and click "Let's Go"
     // NOTE: Small delay ensures backend has time to generate today's plan
     try {
-      console.log('🔄 Loading today action plan in background...');
+      console.log(`🔄 [HomeScreen:${instanceId}] Loading today action plan in background...`);
       
       // Wait briefly for backend to finish generating plan
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -612,14 +643,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       let reviewStatus = await homeService.getPendingReview();
       let attempts = 0;
       while (reviewStatus?.needs_review && attempts < 3) {
-        console.log('⏳ Backend still reports pending review, waiting...');
+        console.log(`⏳ [HomeScreen:${instanceId}] Backend still reports pending review, waiting... (attempt ${attempts + 1})`);
         await new Promise(resolve => setTimeout(resolve, 1000));
         reviewStatus = await homeService.getPendingReview();
         attempts++;
       }
 
       if (reviewStatus?.needs_review) {
-        console.warn('⚠️ Backend still reports pending review after retries. Will force refresh on close.');
+        console.warn(`⚠️ [HomeScreen:${instanceId}] Backend still reports pending review after retries. Will force refresh on close.`);
         // Don't return - let handleDailyReviewClose handle the refresh
         return;
       }
@@ -638,9 +669,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         
         // Mark that today's data is ready - this enables the unlock animation
         setIsTodayDataReady(true);
-        console.log('✅ Today data ready - unlock animation will trigger on modal close');
+        console.log(`✅ [HomeScreen:${instanceId}] Today data ready - unlock animation will trigger on modal close`);
       } else {
-        console.warn('⚠️ No assignments data returned, will force refresh on close');
+        console.warn(`⚠️ [HomeScreen:${instanceId}] No assignments data returned, will force refresh on close`);
       }
 
       if (rewardsData) {
@@ -650,9 +681,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         }
       }
 
-      console.log('✅ Today action plan ready (modal still showing result)');
+      console.log(`✅ [HomeScreen:${instanceId}] Today action plan ready (modal still showing result)`);
     } catch (error) {
-      console.error('❌ Failed to load plan after review:', error);
+      console.error(`❌ [HomeScreen:${instanceId}] Failed to load plan after review:`, error);
     }
 
     // NOTE: Do NOT close modal here! User clicks "Let's Go" button which calls onClose
@@ -711,12 +742,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       }
     });
 
-    console.log('🧬 convertHormoneStats result:', { input: hormoneStatsData, output: hormoneStats });
+    // Remove verbose debug log - only log if needed for debugging
+    // console.log('🧬 convertHormoneStats result:', { input: hormoneStatsData, output: hormoneStats });
     return hormoneStats;
   };
 
 
   useEffect(() => {
+    const instanceId = componentIdRef.current;
     // Check for refreshed data from ActionCompletedScreen
     const refreshedData = route?.params?.refreshedData;
     const cyclePhaseData = route?.params?.cyclePhaseData;
@@ -757,13 +790,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       // 1. We have an activePromise from ActionCompletedScreen, OR
       // 2. hasRetried is true (retry after empty assignments)
       if (initialDataLoadedRef.current && !hasRetried) {
-        console.log('⏭️ route params useEffect - data already loaded by useFocusEffect');
+        console.log(`⏭️ [HomeScreen:${instanceId}] route params useEffect - data already loaded by useFocusEffect`);
         return;
       }
       
       // Skip if useFocusEffect is currently loading data
       if (dataLoadingRef.current) {
-        console.log('⏭️ route params useEffect - useFocusEffect is loading, skipping');
+        console.log(`⏭️ [HomeScreen:${instanceId}] route params useEffect - useFocusEffect is loading, skipping`);
         return;
       }
 
@@ -810,10 +843,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         // Normal data load - but only if useFocusEffect hasn't started loading
         // This should rarely happen since useFocusEffect runs first on mount
         if (!dataLoadingRef.current && !initialDataLoadedRef.current) {
-          console.log('📋 route params useEffect - triggering loadHomeData');
+          console.log(`📋 [HomeScreen:${instanceId}] route params useEffect - triggering loadHomeData`);
           loadHomeData();
         } else {
-          console.log('⏭️ route params useEffect - skipping, data load already in progress or complete');
+          console.log(`⏭️ [HomeScreen:${instanceId}] route params useEffect - skipping, data load already in progress or complete`);
         }
       }
     }
@@ -823,15 +856,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
    * Load home data with loading state
    */
   const loadHomeData = async () => {
+    const instanceId = componentIdRef.current;
     // Prevent duplicate fetches - check both flags
     if (initialDataLoadedRef.current || dataLoadingRef.current) {
-      console.log('⏭️ loadHomeData skipped - already loaded or loading');
+      console.log(`⏭️ [HomeScreen:${instanceId}] loadHomeData skipped - already loaded or loading`);
       return;
     }
     
     // Skip if review is blocking - let useFocusEffect handle that case
     if (isReviewBlockingRef.current || showDailyReviewRef.current) {
-      console.log('⏭️ loadHomeData skipped - review is blocking');
+      console.log(`⏭️ [HomeScreen:${instanceId}] loadHomeData skipped - review is blocking`);
       return;
     }
     
@@ -846,7 +880,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       const reviewResponse = await homeService.getPendingReview();
 
       if (reviewResponse?.needs_review && reviewResponse?.plan_id) {
-        console.log('📋 Found pending review in loadHomeData');
+        console.log(`📋 [HomeScreen:${instanceId}] Found pending review in loadHomeData`);
         setPendingReviewData(reviewResponse);
         setIsReviewBlocking(true);
         setShowDailyReview(true);
@@ -870,7 +904,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         wireUpActionPlan(assignmentsData);
       } else if (reviewResponse?.items && reviewResponse.items.length > 0) {
         // Use pending review items as display data when assignments are blocked
-        console.log('📋 Using pending review items for display (loadHomeData):', reviewResponse.items.length);
+        console.log(`📋 [HomeScreen:${instanceId}] Using ${reviewResponse.items.length} pending review items for display (loadHomeData)`);
         const reviewItems = reviewResponse.items.map((item, index) => ({
           slot: index + 1,
           title: item.title,
@@ -888,8 +922,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       }
         
       setLoading(false);
+      console.log(`✅ [HomeScreen:${instanceId}] loadHomeData complete`);
     } catch (error) {
-      console.error('❌ Failed to load home data:', error);
+      console.error(`❌ [HomeScreen:${instanceId}] Failed to load home data:`, error);
       setLoading(false);
     } finally {
       // Reset loading flag (initialDataLoadedRef stays true)
@@ -934,16 +969,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       completed_actions: assignmentsData.completed_assignments || 0,
       show_feedback_prompt_after_seconds: assignmentsData.show_feedback_prompt_after_seconds || 30,
     });
-    console.log('✅ ActionPlan wired up with plan_id:', assignmentsData.plan_id);
   };
 
   /**
    * Load home data without changing loading state
    */
   const loadHomeDataWithoutLoading = async () => {
+    const instanceId = componentIdRef.current;
     // Skip if review is blocking
     if (isReviewBlockingRef.current || showDailyReviewRef.current) {
-      console.log('⏭️ loadHomeDataWithoutLoading skipped - review is blocking');
+      console.log(`⏭️ [HomeScreen:${instanceId}] loadHomeDataWithoutLoading skipped - review is blocking`);
       return;
     }
     
@@ -951,7 +986,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       // Check pending review first
       const reviewResponse = await homeService.getPendingReview();
       if (reviewResponse?.needs_review && reviewResponse?.plan_id) {
-        console.log('📋 Found pending review in loadHomeDataWithoutLoading');
+        console.log(`📋 [HomeScreen:${instanceId}] Found pending review in loadHomeDataWithoutLoading`);
         setPendingReviewData(reviewResponse);
         setIsReviewBlocking(true);
         setShowDailyReview(true);
@@ -975,7 +1010,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         wireUpActionPlan(assignmentsData);
       } else if (reviewResponse?.items && reviewResponse.items.length > 0) {
         // Use pending review items as display data when assignments are blocked
-        console.log('📋 Using pending review items for display (no-loading):', reviewResponse.items.length);
+        console.log(`📋 [HomeScreen:${instanceId}] Using ${reviewResponse.items.length} pending review items for display (no-loading)`);
         const reviewItems = reviewResponse.items.map((item, index) => ({
           slot: index + 1,
           title: item.title,
