@@ -151,57 +151,40 @@ const ResearchingScreen = () => {
     return () => unsubscribe();
   }, [navigation]);
 
-  // OPTIMIZATION: Start recommendation generation IMMEDIATELY on mount
-  // Backend works during the 8-second animation (Step 0-1) instead of sitting idle
-  // User selects lifestyle_focus at Step 2, which gets applied to filter/finalize recommendations
-  useEffect(() => {
-    // Skip if already logged in or recommendation already started
-    if (isUserLoggedIn || hasStartedRecommendation) {
-      return;
-    }
-
-    // Start recommendation generation immediately when component mounts
-    // This maximizes backend utilization during frontend animation
-    const startRecommendationImmediately = async () => {
-      if (hasStartedRecommendation) return;
+  // Helper function to start recommendation generation
+  const startRecommendationGeneration = async () => {
+    if (hasStartedRecommendation) return;
+    
+    try {
+      console.log('🚀 [ResearchingScreen] Starting recommendation generation NOW');
       
-      try {
-        console.log('⚡ [ResearchingScreen] Starting recommendation generation IMMEDIATELY (backend optimization)');
-        console.log('📊 [ResearchingScreen] Backend will work during Step 0-1 animation instead of idling');
-        
-        setHasStartedRecommendation(true); // Prevent duplicate execution
-        const success = await sessionService.startRecommendationGeneration();
-        if (success) {
-          console.log('✅ [ResearchingScreen] Recommendation started, beginning polling');
-          setRecommendationStatus('in_progress');
-          startPolling(); // Start polling with ref-based approach
-        } else {
-          console.error('❌ [ResearchingScreen] Failed to start recommendation');
-          setRecommendationStatus('error');
-          setCanProceedToFinal(true); // Allow proceeding even on error
-        }
-      } catch (error: any) {
-        // If session expired, user may already be logged in
-        if (error.message && error.message.includes('Session not found')) {
-          console.log('⚠️ [ResearchingScreen] Session not found - may be logged in user');
-          setCanProceedToFinal(true);
-          setRecommendationStatus('completed');
-          return;
-        }
-        
-        console.error('❌ [ResearchingScreen] Recommendation start error:', error);
+      setHasStartedRecommendation(true);
+      const success = await sessionService.startRecommendationGeneration();
+      if (success) {
+        console.log('✅ [ResearchingScreen] Recommendation started, beginning polling');
+        setRecommendationStatus('in_progress');
+        startPolling();
+      } else {
+        console.error('❌ [ResearchingScreen] Failed to start recommendation');
         setRecommendationStatus('error');
         setCanProceedToFinal(true);
       }
-    };
+    } catch (error: any) {
+      if (error.message && error.message.includes('Session not found')) {
+        console.log('⚠️ [ResearchingScreen] Session not found - may be logged in user');
+        setCanProceedToFinal(true);
+        setRecommendationStatus('completed');
+        return;
+      }
+      
+      console.error('❌ [ResearchingScreen] Recommendation start error:', error);
+      setRecommendationStatus('error');
+      setCanProceedToFinal(true);
+    }
+  };
 
-    // Start immediately - don't wait for user selection
-    startRecommendationImmediately();
-  }, [isUserLoggedIn, hasStartedRecommendation]);
-
-  // PERSONALIZATION: Update lifestyle_focus when user selects options
-  // This updates the session data so backend can use it for filtering/finalization
-  // Debounced by 1.5 seconds to allow user to select multiple options
+  // SAVE lifestyle_focus AND START recommendations AFTER user selects
+  // This eliminates 10s wait - backend starts immediately with correct data
   useEffect(() => {
     // Skip if no selections or already logged in
     if (selectedOptions.length === 0 || isUserLoggedIn) {
@@ -212,24 +195,27 @@ const ResearchingScreen = () => {
     const debounceTimer = setTimeout(async () => {
       try {
         console.log('🎯 [ResearchingScreen] User selected options:', selectedOptions);
-        console.log('📝 [ResearchingScreen] Updating session with lifestyle_focus for recommendation filtering...');
         
-        // Update session with lifestyle_focus
-        // Backend can use this to filter/prioritize recommendations
+        // Step 1: Save lifestyle_focus to session FIRST
         const updateSuccess = await sessionService.updateSessionLifestyleFocus(selectedOptions);
         if (updateSuccess) {
           console.log('✅ [ResearchingScreen] Session updated with lifestyle_focus');
         } else {
           console.warn('⚠️ [ResearchingScreen] Failed to update lifestyle_focus');
         }
+        
+        // Step 2: NOW start recommendation generation (lifestyle_focus is already saved!)
+        if (!hasStartedRecommendation) {
+          console.log('🚀 [ResearchingScreen] Starting recommendations with lifestyle_focus already saved');
+          await startRecommendationGeneration();
+        }
       } catch (error: any) {
         console.error('❌ [ResearchingScreen] Lifestyle focus update error:', error);
       }
-    }, 1000); // 1 second debounce (optimized: faster response)
+    }, 1000); // 1 second debounce
 
-    // Cleanup timer if selections change before debounce completes
     return () => clearTimeout(debounceTimer);
-  }, [selectedOptions, isUserLoggedIn]);
+  }, [selectedOptions, isUserLoggedIn, hasStartedRecommendation]);
   
   // Start polling function (uses refs to avoid re-render loops)
   const startPolling = () => {
