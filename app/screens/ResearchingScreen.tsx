@@ -151,7 +151,9 @@ const ResearchingScreen = () => {
     return () => unsubscribe();
   }, [navigation]);
 
-  // Start recommendation generation - only execute once when not logged in
+  // Start recommendation generation ONLY after user selects lifestyle_focus options
+  // This ensures recommendations are personalized to eat/move/pause preference
+  // Debounced by 1.5 seconds to allow user to select multiple options
   useEffect(() => {
     // Skip if already logged in
     if (isUserLoggedIn) {
@@ -163,9 +165,32 @@ const ResearchingScreen = () => {
       return;
     }
 
-    const startRecommendation = async () => {
+    // CRITICAL: Wait until user has selected at least one option
+    // User sees eat/move/pause question at step 2
+    if (selectedOptions.length === 0) {
+      console.log('⏳ [ResearchingScreen] Waiting for user to select lifestyle options...');
+      return;
+    }
+
+    // Debounce: Wait 1.5 seconds after selection to allow user to select multiple options
+    const debounceTimer = setTimeout(async () => {
+      // Double-check we haven't started yet (race condition protection)
+      if (hasStartedRecommendation) {
+        return;
+      }
+
       try {
-        console.log('🚀 [ResearchingScreen] Starting recommendation generation');
+        console.log('🎯 [ResearchingScreen] User selected options:', selectedOptions);
+        
+        // STEP 1: Update session with lifestyle_focus BEFORE generating recommendations
+        console.log('📝 [ResearchingScreen] Updating session with lifestyle_focus...');
+        const updateSuccess = await sessionService.updateSessionLifestyleFocus(selectedOptions);
+        if (!updateSuccess) {
+          console.warn('⚠️ [ResearchingScreen] Failed to update lifestyle_focus, continuing anyway');
+        }
+        
+        // STEP 2: Now start recommendation generation (will use the lifestyle_focus)
+        console.log('🚀 [ResearchingScreen] Starting recommendation generation with lifestyle_focus');
         setHasStartedRecommendation(true); // Prevent duplicate execution
         const success = await sessionService.startRecommendationGeneration();
         if (success) {
@@ -189,11 +214,11 @@ const ResearchingScreen = () => {
         console.error('❌ [ResearchingScreen] Recommendation start error:', error);
         setRecommendationStatus('error');
       }
-    };
+    }, 1500); // 1.5 second debounce for multiple selections
 
-    // Start recommendation generation on component mount
-    startRecommendation();
-  }, [isUserLoggedIn, hasStartedRecommendation]);
+    // Cleanup timer if selections change before debounce completes
+    return () => clearTimeout(debounceTimer);
+  }, [isUserLoggedIn, hasStartedRecommendation, selectedOptions]);
   
   // Start polling function (uses refs to avoid re-render loops)
   const startPolling = () => {

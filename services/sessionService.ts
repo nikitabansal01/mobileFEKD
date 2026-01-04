@@ -448,6 +448,56 @@ class SessionService {
   }
 
   /**
+   * Updates session with lifestyle_focus (eat/move/pause preference)
+   * Must be called BEFORE starting recommendation generation
+   * 
+   * @param lifestyleFocus - Array of selected options: ['eat', 'move', 'pause']
+   * @returns Promise resolving to success status
+   */
+  async updateSessionLifestyleFocus(lifestyleFocus: string[]): Promise<boolean> {
+    try {
+      const sessionId = await this.getSessionId();
+      if (!sessionId) {
+        console.error('❌ No session ID available for lifestyle_focus update.');
+        return false;
+      }
+
+      console.log('🎯 Updating session with lifestyle_focus:', lifestyleFocus);
+
+      // Auto-detect user timezone
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+      const requestBody = {
+        session_id: sessionId,
+        data: {
+          lifestyle_focus: lifestyleFocus,
+          survey_timezone: userTimezone
+        }
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/data`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Lifestyle focus update failed:', errorText);
+        return false;
+      }
+
+      console.log('✅ Session lifestyle_focus updated successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Lifestyle focus update error:', error);
+      return false;
+    }
+  }
+
+  /**
    * Starts recommendation generation process
    * 
    * @returns Promise resolving to success status
