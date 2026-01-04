@@ -182,6 +182,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   // Track if we've already loaded data for this focus event to prevent duplicates
   const dataLoadingRef = useRef<boolean>(false);
   const lastFocusTimeRef = useRef<number>(0);
+  const loadCallIdRef = useRef<number>(0); // Unique ID for each load call to detect stale calls
   
   // Refs to track state for useFocusEffect (avoids stale closure and dependency issues)
   const showDailyReviewRef = useRef(showDailyReview);
@@ -244,12 +245,28 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
   // Always refetch data when screen gains focus (e.g., after action replacement, completion, etc.)
   // IMPORTANT: Check for pending review FIRST - if review is pending, don't load assignments yet
+  // CRITICAL: Use synchronous flag check BEFORE any async operations to prevent duplicate calls
   useFocusEffect(
     React.useCallback(() => {
-      // Prevent duplicate calls within 2 seconds
+      // SYNCHRONOUS GUARD: Check and set flag immediately to prevent race conditions
       const now = Date.now();
-      if (now - lastFocusTimeRef.current < 2000 && dataLoadingRef.current) {
-        console.log('🔄 HomeScreen focused - deduplicating call (too soon)');
+      
+      // STRICT DEDUPLICATION: If last call was within 500ms, always skip
+      // This handles React's potential double-invocation
+      if (now - lastFocusTimeRef.current < 500) {
+        console.log('🔄 HomeScreen focused - strict dedup (within 500ms)');
+        return;
+      }
+      
+      // Skip if already loading (check FIRST, before any async operations)
+      if (dataLoadingRef.current) {
+        console.log('🔄 HomeScreen focused - already loading, skipping');
+        return;
+      }
+      
+      // Prevent duplicate calls within 2 seconds (after the initial load)
+      if (initialDataLoadedRef.current && now - lastFocusTimeRef.current < 2000) {
+        console.log('🔄 HomeScreen focused - deduplicating call (too soon after last load)');
         return;
       }
       
@@ -264,22 +281,32 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         console.log('🔄 HomeScreen focused - review submission in progress, skipping');
         return;
       }
-      
-      // Skip if already loading
-      if (dataLoadingRef.current) {
-        console.log('🔄 HomeScreen focused - already loading, skipping');
-        return;
-      }
 
-      console.log('🔄 HomeScreen focused - checking review then loading data');
-      lastFocusTimeRef.current = now;
+      // SET FLAGS IMMEDIATELY (synchronously) before any async work
       dataLoadingRef.current = true;
+      lastFocusTimeRef.current = now;
+      const thisCallId = ++loadCallIdRef.current; // Increment to get unique ID for this call
+      console.log('🔄 HomeScreen focused - checking review then loading data (callId:', thisCallId, ')');
 
       const loadDataAfterReviewCheck = async () => {
+        // Check if this call has been superseded by a newer one
+        if (loadCallIdRef.current !== thisCallId) {
+          console.log('⏭️ Stale call detected (callId:', thisCallId, '), skipping');
+          return;
+        }
+        
         try {
           // STEP 1: Check for pending review FIRST
           console.log('📋 Checking for pending daily review...');
           const reviewResponse = await homeService.getPendingReview();
+
+          // Double-check we're still the active call after await
+          if (loadCallIdRef.current !== thisCallId) {
+            console.log('⏭️ Call superseded after getPendingReview (callId:', thisCallId, ')');
+            return;
+          }
+
+          console.log('✅ Pending review check result:', JSON.stringify(reviewResponse));
 
           if (reviewResponse?.needs_review && reviewResponse?.plan_id) {
             console.log('📋 Found pending review - showing modal');
@@ -296,6 +323,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             isReviewPending ? Promise.resolve(null) : homeService.getTodayAssignments().catch(() => null),
             rewardService.getRewardsStatus().catch(() => null),
           ]);
+
+          // Final check that we're still the active call
+          if (loadCallIdRef.current !== thisCallId) {
+            console.log('⏭️ Call superseded after data load (callId:', thisCallId, ')');
+            return;
+          }
 
           setCycleInfo(cycleData?.cycle_info || null);
           
@@ -333,12 +366,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           }
 
           setLoading(false);
-          dataLoadingRef.current = false;
-          console.log('✅ Data loaded');
+          initialDataLoadedRef.current = true;
+          console.log('✅ Data loaded (callId:', thisCallId, ')');
         } catch (error) {
           console.error('❌ Failed to load data:', error);
           setLoading(false);
-          dataLoadingRef.current = false;
+        } finally {
+          // ALWAYS reset the loading flag when done (success or error)
+          // But only if this is still the active call
+          if (loadCallIdRef.current === thisCallId) {
+            dataLoadingRef.current = false;
+          }
         }
       };
 
@@ -714,8 +752,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         initialDataLoadedRef.current = true;
       });
     } else {
-      // Prevent duplicate initial fetches
+      // Prevent duplicate initial fetches - useFocusEffect handles normal loading
+      // Only proceed here if:
+      // 1. We have an activePromise from ActionCompletedScreen, OR
+      // 2. hasRetried is true (retry after empty assignments)
       if (initialDataLoadedRef.current && !hasRetried) {
+        console.log('⏭️ route params useEffect - data already loaded by useFocusEffect');
+        return;
+      }
+      
+      // Skip if useFocusEffect is currently loading data
+      if (dataLoadingRef.current) {
+        console.log('⏭️ route params useEffect - useFocusEffect is loading, skipping');
         return;
       }
 
@@ -759,8 +807,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             initialDataLoadedRef.current = true;
           });
       } else {
-        // Normal data load
-        loadHomeData();
+        // Normal data load - but only if useFocusEffect hasn't started loading
+        // This should rarely happen since useFocusEffect runs first on mount
+        if (!dataLoadingRef.current && !initialDataLoadedRef.current) {
+          console.log('📋 route params useEffect - triggering loadHomeData');
+          loadHomeData();
+        } else {
+          console.log('⏭️ route params useEffect - skipping, data load already in progress or complete');
+        }
       }
     }
   }, [route?.params, hasRetried]);
@@ -769,8 +823,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
    * Load home data with loading state
    */
   const loadHomeData = async () => {
-    // Prevent duplicate fetches
-    if (initialDataLoadedRef.current) {
+    // Prevent duplicate fetches - check both flags
+    if (initialDataLoadedRef.current || dataLoadingRef.current) {
+      console.log('⏭️ loadHomeData skipped - already loaded or loading');
       return;
     }
     
@@ -780,6 +835,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       return;
     }
     
+    // Set both flags to prevent concurrent calls
+    dataLoadingRef.current = true;
     initialDataLoadedRef.current = true;
 
     try {
@@ -834,6 +891,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     } catch (error) {
       console.error('❌ Failed to load home data:', error);
       setLoading(false);
+    } finally {
+      // Reset loading flag (initialDataLoadedRef stays true)
+      dataLoadingRef.current = false;
     }
   };
 
