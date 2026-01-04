@@ -1,5 +1,4 @@
 import Images from "@/assets/images";
-import OptionButtonsContainer from "@/components/customComponent/OptionButtonsContainer";
 import FixedBottomContainer from "@/components/FixedBottomContainer";
 import LoginBottomSheet from "@/components/LoginBottomSheet";
 import PrimaryButton from "@/components/PrimaryButton";
@@ -10,24 +9,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { auth } from "@/config/firebase";
 import sessionService from "@/services/sessionService";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Image, Platform, Text, View } from "react-native";
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+// Route params type
+type ResearchingScreenParams = {
+  lifestyleFocus?: string[];
+};
+
 const firstTitle = "🔍 Researching 25000\nresearch papers...";
 const secondTitle = "🎁 Personalizing based\non your needs";
 const subText = "Crafting your unique action plan,\npersonalized to the whole you";
-
-const questionTitle = "Tell us what feels easiest\nto do better this week?";
-const questionSub = "Choose one or more options";
-const options = [
-  { id: "1", text: "🥗 Eat", value: "eat" },
-  { id: "2", text: "🚶‍♀️Move", value: "move" },
-  { id: "3", text: "🧘 Pause", value: "pause" },
-];
 
 const finalTitle = "Perfect!\nYour personalized\naction plan is ready!";
 
@@ -101,8 +97,14 @@ const CustomLoadingSpinner = () => {
  */
 const ResearchingScreen = () => {
   const navigation = useNavigation<StackNavigationProp<any>>();
-  const [step, setStep] = useState(0); // 0: first text, 1: second text, 2: question, 3: completion screen
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const route = useRoute<RouteProp<{ params: ResearchingScreenParams }, 'params'>>();
+  
+  // Get lifestyle focus from route params (set by ResultLoadingScreen)
+  const lifestyleFocus = route.params?.lifestyleFocus || [];
+  
+  // Steps: 0: first animation, 1: second animation, 2: completion screen
+  // (Question step removed - now handled by ResultLoadingScreen)
+  const [step, setStep] = useState(0);
   const [showLogin, setShowLogin] = useState(false);
   const [recommendationStatus, setRecommendationStatus] = useState<string>('pending');
   const [canProceedToFinal, setCanProceedToFinal] = useState(false); // API completion status
@@ -113,6 +115,11 @@ const ResearchingScreen = () => {
   // Use refs for interval to avoid state update loops
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isPollingRef = useRef<boolean>(false);
+
+  // Log the lifestyle focus received
+  useEffect(() => {
+    console.log('🎯 [ResearchingScreen] Received lifestyle focus from ResultLoadingScreen:', lifestyleFocus);
+  }, []);
 
   // Firebase login state detection
   useEffect(() => {
@@ -156,7 +163,7 @@ const ResearchingScreen = () => {
     if (hasStartedRecommendation) return;
     
     try {
-      console.log('🚀 [ResearchingScreen] Starting recommendation generation');
+      console.log('🚀 [ResearchingScreen] Starting recommendation generation with lifestyle_focus:', lifestyleFocus);
       
       setHasStartedRecommendation(true);
       const success = await sessionService.startRecommendationGeneration();
@@ -184,33 +191,15 @@ const ResearchingScreen = () => {
   };
 
   // START recommendations IMMEDIATELY on mount
-  // Backend generates 4 recommendations with default distribution
-  // If user selects lifestyle_focus, it will be used for NEXT time (daily action plans)
+  // Backend already has lifestyle_focus saved by ResultLoadingScreen
+  // So it will generate with correct distribution!
   useEffect(() => {
     if (isUserLoggedIn || hasStartedRecommendation) return;
     
-    // Start immediately - don't wait for user selection
-    console.log('⚡ [ResearchingScreen] Starting recommendations immediately (default distribution)');
+    // Start immediately - lifestyle_focus was already saved by ResultLoadingScreen
+    console.log('⚡ [ResearchingScreen] Starting recommendations immediately with lifestyle_focus:', lifestyleFocus);
     startRecommendationGeneration();
   }, [isUserLoggedIn, hasStartedRecommendation]);
-
-  // Save lifestyle_focus for FUTURE use (daily action plans)
-  // This doesn't affect current signup recommendations
-  useEffect(() => {
-    if (selectedOptions.length === 0 || isUserLoggedIn) return;
-
-    const debounceTimer = setTimeout(async () => {
-      try {
-        console.log('🎯 [ResearchingScreen] Saving lifestyle_focus for future use:', selectedOptions);
-        await sessionService.updateSessionLifestyleFocus(selectedOptions);
-        console.log('✅ [ResearchingScreen] Lifestyle focus saved');
-      } catch (error: any) {
-        console.error('❌ [ResearchingScreen] Failed to save lifestyle_focus:', error);
-      }
-    }, 1000);
-
-    return () => clearTimeout(debounceTimer);
-  }, [selectedOptions, isUserLoggedIn]);
   
   // Start polling function (uses refs to avoid re-render loops)
   const startPolling = () => {
@@ -264,57 +253,20 @@ const ResearchingScreen = () => {
     };
   }, []);
 
-  // Automatic step transition (slower pace)
+  // Automatic step transition: 0 (animation 1) -> 1 (animation 2) -> 2 (completion)
+  // Steps are now: 0, 1, 2 (removed question step since it's in ResultLoadingScreen)
   useEffect(() => {
     if (step < 2) {
       const timer = setTimeout(() => {
         setStep(step + 1);
-      }, 4000); // Changed from 2 seconds to 4 seconds
+      }, 4000); // 4 seconds per animation
       return () => clearTimeout(timer);
     }
   }, [step]);
 
-  /**
-   * Handle option selection for multiple choice
-   */
-  const handleOptionSelect = async (key: string) => {
-    const newOptions = selectedOptions.includes(key)
-      ? selectedOptions.filter(option => option !== key)
-      : [...selectedOptions, key];
-    
-    setSelectedOptions(newOptions);
-    
-    // Save lifestyle focus to AsyncStorage for session linking
-    try {
-      await AsyncStorage.setItem('lifestyle_focus', JSON.stringify(newOptions));
-      console.log('💾 Lifestyle focus saved:', newOptions);
-    } catch (error) {
-      console.error('❌ Failed to save lifestyle focus:', error);
-    }
-  };
-
-  /**
-   * Handle continue button press
-   */
-  const handleContinue = () => {
-    if (canProceedToFinal && !isUserLoggedIn) {
-      // Show bottom sheet only when API completed and not logged in
-      setStep(3); // Switch to "Perfect!"
-      setTimeout(() => setShowLogin(true), 1500); // Show bottom sheet after 1.5 seconds
-    } else if (canProceedToFinal && isUserLoggedIn) {
-      // Navigate to home screen if already logged in
-      setStep(3);
-      setTimeout(() => navigation.navigate('HomeScreen'), 1500);
-    } else {
-      // Show waiting message if API not completed
-      setStep(3); // Move to final step anyway
-      // Don't show login bottom sheet until API completion
-    }
-  };
-
-  // Show login bottom sheet after API completion (only if not logged in)
+  // Auto-show login when animations complete AND API is done
   useEffect(() => {
-    if (step === 3 && canProceedToFinal && !showLogin && !isUserLoggedIn) {
+    if (step === 2 && canProceedToFinal && !showLogin && !isUserLoggedIn) {
       const timer = setTimeout(() => {
         setShowLogin(true);
       }, 1500);
@@ -490,75 +442,8 @@ const ResearchingScreen = () => {
             <CustomLoadingSpinner />
           </>
         )}
+        {/* Step 2: Completion screen (was step 3, question step removed) */}
         {step === 2 && (
-          <View style={{ 
-            width: '100%', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            paddingHorizontal: responsiveWidth(5)
-          }}>
-            <View style={{ marginBottom: responsiveHeight(2) }}>
-              <View style={{
-                width: responsiveWidth(85),
-                height: responsiveHeight(10),
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <MaskedView
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                  maskElement={
-                    <Text style={{
-                      fontFamily: 'NotoSerif600',
-                      fontSize: responsiveFontSize(3.4), //24px
-                      textAlign: 'center',
-                      lineHeight: responsiveHeight(3),
-                      backgroundColor: 'transparent'
-                    }}>
-                      {questionTitle}
-                    </Text>
-                  }
-                >
-                  <LinearGradient
-                    colors={['#A29AEA', '#C17EC9', '#E98BAC']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={{ flex: 1, width: '100%', height: '100%' }}
-                  />
-                </MaskedView>
-              </View>
-            </View>
-            
-            <Text
-              style={{
-                color: "#6f6f6f",
-                fontSize: responsiveFontSize(1.7), // 12px
-                fontFamily: "Inter400",
-                textAlign: "center",
-                lineHeight: responsiveFontSize(1.7) * 1.25, // line-height 1.25
-                marginBottom: responsiveHeight(2),
-              }}
-            >
-              {questionSub}
-            </Text>
-            <OptionButtonsContainer
-              options={options}
-              selectedValue={selectedOptions}
-              onSelect={handleOptionSelect}
-              multiple={true}
-              layout="default"
-              buttonWidth={responsiveWidth(80)} // Set button width
-              buttonHeight={responsiveHeight(6)} // Increased height to prevent cropping
-              buttonAlignment={{ justifyContent: 'center', alignItems: 'center' }}
-              containerAlignment="center"
-            />
-          </View>
-        )}
-        {step === 3 && (
           <View style={{ width: '100%', alignItems: 'center', justifyContent: 'center', marginTop: 24 }}>
             <View style={{ marginBottom: 8, width: responsiveWidth(85), height: responsiveHeight(15) }}>
               <MaskedView
@@ -659,37 +544,7 @@ const ResearchingScreen = () => {
         </View>
       </View>
       
-      {/* Bottom button - only show in step 2 */}
-      {step === 2 && (
-        <FixedBottomContainer>
-          <PrimaryButton
-            title="Continue"
-            onPress={handleContinue}
-            disabled={selectedOptions.length === 0}
-            style={{
-              ...(Platform.OS === 'web' && {
-                backgroundColor: '#ffffff',
-                borderRadius: 100,
-                width: responsiveWidth(88),
-                paddingVertical: responsiveHeight(1.5),
-                paddingHorizontal: responsiveHeight(4),
-                alignItems: 'center',
-                justifyContent: 'center',
-                shadowColor: '#000000',
-                shadowOffset: {
-                  width: 0,
-                  height: 4,
-                },
-                shadowOpacity: 0.1,
-                shadowRadius: 10,
-                elevation: 5,
-                zIndex: 1000,
-                position: 'relative',
-              })
-            }}
-          />
-        </FixedBottomContainer>
-      )}
+      {/* No bottom button needed - login sheet shows automatically after animations + API completion */}
       
       <LoginBottomSheet visible={showLogin} onClose={() => setShowLogin(false)} />
     </SafeAreaView>
