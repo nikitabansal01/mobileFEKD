@@ -156,7 +156,7 @@ const ResearchingScreen = () => {
     if (hasStartedRecommendation) return;
     
     try {
-      console.log('🚀 [ResearchingScreen] Starting recommendation generation NOW');
+      console.log('🚀 [ResearchingScreen] Starting recommendation generation');
       
       setHasStartedRecommendation(true);
       const success = await sessionService.startRecommendationGeneration();
@@ -183,39 +183,34 @@ const ResearchingScreen = () => {
     }
   };
 
-  // SAVE lifestyle_focus AND START recommendations AFTER user selects
-  // This eliminates 10s wait - backend starts immediately with correct data
+  // START recommendations IMMEDIATELY on mount
+  // Backend generates 4 recommendations with default distribution
+  // If user selects lifestyle_focus, it will be used for NEXT time (daily action plans)
   useEffect(() => {
-    // Skip if no selections or already logged in
-    if (selectedOptions.length === 0 || isUserLoggedIn) {
-      return;
-    }
+    if (isUserLoggedIn || hasStartedRecommendation) return;
+    
+    // Start immediately - don't wait for user selection
+    console.log('⚡ [ResearchingScreen] Starting recommendations immediately (default distribution)');
+    startRecommendationGeneration();
+  }, [isUserLoggedIn, hasStartedRecommendation]);
 
-    // Debounce: Wait 1 second after selection to allow user to select multiple options
+  // Save lifestyle_focus for FUTURE use (daily action plans)
+  // This doesn't affect current signup recommendations
+  useEffect(() => {
+    if (selectedOptions.length === 0 || isUserLoggedIn) return;
+
     const debounceTimer = setTimeout(async () => {
       try {
-        console.log('🎯 [ResearchingScreen] User selected options:', selectedOptions);
-        
-        // Step 1: Save lifestyle_focus to session FIRST
-        const updateSuccess = await sessionService.updateSessionLifestyleFocus(selectedOptions);
-        if (updateSuccess) {
-          console.log('✅ [ResearchingScreen] Session updated with lifestyle_focus');
-        } else {
-          console.warn('⚠️ [ResearchingScreen] Failed to update lifestyle_focus');
-        }
-        
-        // Step 2: NOW start recommendation generation (lifestyle_focus is already saved!)
-        if (!hasStartedRecommendation) {
-          console.log('🚀 [ResearchingScreen] Starting recommendations with lifestyle_focus already saved');
-          await startRecommendationGeneration();
-        }
+        console.log('🎯 [ResearchingScreen] Saving lifestyle_focus for future use:', selectedOptions);
+        await sessionService.updateSessionLifestyleFocus(selectedOptions);
+        console.log('✅ [ResearchingScreen] Lifestyle focus saved');
       } catch (error: any) {
-        console.error('❌ [ResearchingScreen] Lifestyle focus update error:', error);
+        console.error('❌ [ResearchingScreen] Failed to save lifestyle_focus:', error);
       }
-    }, 1000); // 1 second debounce
+    }, 1000);
 
     return () => clearTimeout(debounceTimer);
-  }, [selectedOptions, isUserLoggedIn, hasStartedRecommendation]);
+  }, [selectedOptions, isUserLoggedIn]);
   
   // Start polling function (uses refs to avoid re-render loops)
   const startPolling = () => {
