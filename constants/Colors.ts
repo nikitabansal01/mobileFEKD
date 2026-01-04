@@ -116,6 +116,14 @@ export const COLORS = {
   white: BACKGROUND.white,
   black: TEXT.primary,
 
+  // Material-ish surface tokens (used by chat/check-in UI)
+  surface: '#FEF7FF',
+  onSurface: '#1D1B20',
+  surfaceDivider: '#E6E0E9',
+  outlineVariant: BORDER.outline,
+  primaryContainer: '#EADDFF',
+  onPrimaryContainer: '#4F378A',
+
   // Brand
   warmPurple: BRAND.warmPurple,
   gradPurple: BRAND.gradPurple,
@@ -142,6 +150,9 @@ export const COLORS = {
   shadowDark: UI.shadowDark,
   shadowPurple: UI.shadowPurple,
   danger: UI.dangerRed,
+
+  // States
+  disabledGradient: '#E3B2C5',
 } as const;
 
 // =============================================================================

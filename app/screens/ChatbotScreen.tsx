@@ -16,6 +16,7 @@ import { Dimensions, Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { FONT_FAMILIES, useAppFonts } from '../../constants/fonts';
+import { BRAND, BRAND_GRADIENT, COLORS } from '../../constants/Colors';
 
 
 // Responsive dimensions
@@ -60,22 +61,6 @@ const LINE_HEIGHTS = {
   relaxed: moderateScale(20, 1.5),
 };
 
-// Constants
-const COLORS = {
-  surface: "#FEF7FF",
-  onSurface: "#1D1B20",
-  surfaceDivider: "#E6E0E9",
-  outlineVariant: "#D7D5DE",
-  primaryContainer: "#EADDFF",
-  onPrimaryContainer: "#4F378A",
-  greyMedium: "#6F6F6F",
-  greyLight: "#949494",
-  white: "#FFFFFF",
-  gradPurple: "#A78BFA",
-  gradPink: "#F0A3C2",
-  warmPurple: "#C17EC9",
-};
-
 // Types
 type Mode = "idle" | "tap" | "yap" | "type";
 
@@ -116,7 +101,7 @@ function GradientText({ children, style }: { children: string; style?: any }) {
       ]}
     >
       <LinearGradient 
-        colors={[COLORS.gradPurple, COLORS.gradPink]} 
+        colors={[BRAND.gradPurple, BRAND.gradPink]} 
         start={{ x: 0, y: 0 }} 
         end={{ x: 1, y: 0 }}
         style={{ 
@@ -229,9 +214,9 @@ function ChoiceButton({
       onPress={onPress}
       activeOpacity={0.8}
     >
-      {isSelected ? (
-        <LinearGradient
-          colors={[COLORS.gradPurple, COLORS.gradPink]}
+            {isSelected ? (
+              <LinearGradient
+                colors={[COLORS.gradPurple, COLORS.gradPink]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.choiceButtonGradient}
@@ -1191,7 +1176,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               disabled={selectedOptions.length === 0}
             >
               <LinearGradient
-                colors={selectedOptions.length > 0 ? [COLORS.gradPurple, COLORS.gradPink] : ['#E3B2C5', '#E3B2C5']}
+                colors={selectedOptions.length > 0 ? [COLORS.gradPurple, COLORS.gradPink] : [COLORS.disabledGradient, COLORS.disabledGradient]}
                 style={styles.sendButtonGradient}
               >
                 <Ionicons name="send" size={20} color={COLORS.white} />
@@ -1229,15 +1214,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
       {/* Background Gradients */}
       <LinearGradient
-        colors={[
-          "#A29AEA",   // lavender
-          "#C17EC9",   // purple-pink
-          "#D482B9",
-          "#E98BAC",
-          "#FDC6D1",
-          // "#ffffff"  // soft pink
-        ]}
-        locations={[0, 0.3, 0.55, 0.75, 1]}
+        colors={[...BRAND_GRADIENT.colors]}
+        locations={[...BRAND_GRADIENT.locations]}
         start={{ x: 0, y: 1 }}
         end={{ x: 1, y: 0 }}
         style={styles.gradientBase}
@@ -1631,7 +1609,6 @@ const styles = StyleSheet.create({
   choiceButtonText: {
     fontSize: FONT_SIZES.message,
     fontFamily: FONT_FAMILIES['Inter-Regular'],
-    fontFamily: 'Inter400',
     color: COLORS.white,
     textAlign: 'center',
     lineHeight: LINE_HEIGHTS.normal,
@@ -1641,7 +1618,6 @@ const styles = StyleSheet.create({
   choiceButtonTextUnselected: {
     fontSize: FONT_SIZES.message,
     fontFamily: FONT_FAMILIES['Inter-Regular'],
-    fontFamily: 'Inter400',
     color: COLORS.onSurface,
     textAlign: 'center',
     paddingHorizontal: scale(15),
@@ -1852,9 +1828,8 @@ const styles = StyleSheet.create({
   },
   selectedValueNumber: {
     fontSize: FONT_SIZES.large,
-    fontFamily: FONT_FAMILIES['Inter-Regular'],
     color: COLORS.warmPurple,
-    fontFamily: 'Inter600',
+    fontFamily: FONT_FAMILIES['Inter-SemiBold'],
     includeFontPadding: isAndroid ? false : undefined,
     textAlignVertical: isAndroid ? 'center' : undefined,
   },

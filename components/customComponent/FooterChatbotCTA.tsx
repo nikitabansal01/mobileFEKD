@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Dimensions, Image, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { FONT_FAMILIES } from '../../constants/fonts';
+import { BRAND, COLORS } from '../../constants/Colors';
 
 // Responsive dimensions
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -20,22 +21,6 @@ const FONT_SIZES = {
   // Additional sizes for UI elements
   caption: moderateScale(10, 1.5),
   small: moderateScale(11, 1.5),
-};
-
-const COLORS = {
-    // Figma Light theme tokens sampled from variables
-    surface: "#FEF7FF",
-    onSurface: "#1D1B20",
-    surfaceDivider: "#E6E0E9",
-    outlineVariant: "#D7D5DE",   //make it more light
-    primaryContainer: "#EADDFF",
-    onPrimaryContainer: "#4F378A",
-    greyMedium: "#6F6F6F",
-    greyLight: "#949494",
-    white: "#FFFFFF",
-    // Custom gradient colors sampled from screenshot (purple→pink)
-    gradPurple: "#A78BFA",
-    gradPink: "#F0A3C2",
 };
 
 type Mode = "idle" | "tap" | "yap" | "type";
@@ -74,7 +59,7 @@ export default function FooterChatbotCTA({
                     {!disabled && recordingComplete ? (
                         <TouchableOpacity style={styles.btn80} onPress={onSendRecording}>
                             <LinearGradient
-                                colors={[COLORS.gradPurple, COLORS.gradPink]}
+                                colors={[BRAND.gradPurple, BRAND.gradPink]}
                                 style={styles.btn80Gradient}
                             >
                                 <Ionicons name="send" size={30} color={COLORS.white} />
@@ -89,7 +74,7 @@ export default function FooterChatbotCTA({
                         >
                             {isRecording ? (
                                 <LinearGradient
-                                    colors={[COLORS.gradPurple, COLORS.gradPink]}
+                                    colors={[BRAND.gradPurple, BRAND.gradPink]}
                                     style={styles.btn80Gradient}
                                 >
                                     <Image
