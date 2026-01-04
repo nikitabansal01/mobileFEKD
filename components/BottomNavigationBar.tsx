@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import AuvraCharacterNoShadow from './AuvraCharacterNoShadow';
 import { rewardService } from '../services/rewardService';
 
@@ -38,24 +39,47 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
   const [canFreeze, setCanFreeze] = useState(false);
 
   // Fetch streak risk status to show badge
+  // OPTIMIZED: Only fetch after user profile exists (not during signup flow)
   useEffect(() => {
+    let isMounted = true;
+    let interval: ReturnType<typeof setInterval> | null = null;
+
     const fetchStreakStatus = async () => {
+      if (!isMounted) return;
+      
       try {
+        // Skip if still in signup flow (session link not yet complete)
+        // This prevents wasteful API calls before user profile exists
+        const sessionLinkPending = await AsyncStorage.getItem('session_link_complete');
+        const freshSignupPending = await AsyncStorage.getItem('fresh_signup_pending_refresh');
+        
+        if (sessionLinkPending === 'pending' || freshSignupPending === 'true') {
+          console.log('⏳ Skipping streak fetch - signup in progress');
+          return;
+        }
+        
         const data = await rewardService.getRewardsStatus();
-        if (data) {
+        if (data && isMounted) {
           setStreakAtRisk(data.streak_at_risk || false);
           setCanFreeze(data.can_freeze || false);
         }
       } catch (error) {
+        // Silent fail - streak badge is not critical
         console.log('Error fetching streak status for nav badge:', error);
       }
     };
 
-    fetchStreakStatus();
+    // Initial fetch with small delay to let app stabilize
+    const initialTimeout = setTimeout(fetchStreakStatus, 500);
 
     // Refresh every 60 seconds
-    const interval = setInterval(fetchStreakStatus, 60000);
-    return () => clearInterval(interval);
+    interval = setInterval(fetchStreakStatus, 60000);
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(initialTimeout);
+      if (interval) clearInterval(interval);
+    };
   }, []);
 
   const tabs = [

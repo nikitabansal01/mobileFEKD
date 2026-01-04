@@ -294,6 +294,10 @@ class SessionService {
    */
   async linkSessionToUser(firebaseUser: any): Promise<boolean> {
     try {
+      // Set "in progress" flag to prevent premature API calls
+      // BottomNavigationBar checks this before fetching streak data
+      await AsyncStorage.setItem('session_link_complete', 'pending');
+      
       const sessionId = await this.getSessionId();
       if (!sessionId) {
         console.error('No session ID available.');
