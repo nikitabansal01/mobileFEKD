@@ -139,11 +139,42 @@ function GradientText({ children, style }: { children: string; style?: any }) {
   );
 }
 
-function BotMessage({ text }: { text: string }) {
+function TypewriterText({ text, style, onComplete }: { text: string; style?: any; onComplete?: () => void }) {
+  const [displayedText, setDisplayedText] = useState("");
+  const [isComplete, setIsComplete] = useState(false);
+  
+  useEffect(() => {
+    // Reset if text changes
+    setDisplayedText("");
+    setIsComplete(false);
+    
+    let index = 0;
+    const timer = setInterval(() => {
+      if (index < text.length) {
+        setDisplayedText((prev) => prev + text.charAt(index));
+        index++;
+      } else {
+        clearInterval(timer);
+        setIsComplete(true);
+        if (onComplete) onComplete();
+      }
+    }, 15); // Speed of typing (faster for fluidity)
+    
+    return () => clearInterval(timer);
+  }, [text]);
+
+  return <GradientText style={style}>{displayedText}</GradientText>;
+}
+
+function BotMessage({ text, animate = false }: { text: string; animate?: boolean }) {
   return (
     <View style={styles.botMessageContainer}>
       <View style={styles.botMessageBubble}>
-        <GradientText style={styles.botMessageText}>{text}</GradientText>
+        {animate ? (
+          <TypewriterText style={styles.botMessageText} text={text} />
+        ) : (
+          <GradientText style={styles.botMessageText}>{text}</GradientText>
+        )}
       </View>
     </View>
   );
@@ -695,8 +726,12 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
   const sendRecording = () => {
     const duration = formatTime(recordingTime);
-    const voiceMessage = `Voice message (${duration})`;
-    handleSend(voiceMessage);
+    // Simulate transcription by putting text in input and switching to type mode
+    const voiceMessage = `[Transcribed] I'm feeling a bit overwhelmed this week...`; 
+    // In a real app, this would come from STT API
+    
+    setValue(voiceMessage);
+    setMode("type");
     setRecordingComplete(false);
     setRecordingTime(0);
   };
@@ -798,7 +833,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               {messages.map((message, index) => (
                 <View key={message.id}>
                   {message.isBot ? (
-                    <BotMessage text={message.text} />
+                    <BotMessage text={message.text} animate={index === messages.length - 1} animate={index === messages.length - 1} />
                   ) : (
                     <UserMessage text={message.text} />
                   )}
@@ -920,7 +955,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           {messages.map((message, index) => (
             <View key={message.id}>
               {message.isBot ? (
-                <BotMessage text={message.text} />
+                <BotMessage text={message.text} animate={index === messages.length - 1} />
               ) : (
                 <UserMessage text={message.text} />
               )}
@@ -985,7 +1020,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           {messages.map((message, index) => (
             <View key={message.id}>
               {message.isBot ? (
-                <BotMessage text={message.text} />
+                <BotMessage text={message.text} animate={index === messages.length - 1} />
               ) : (
                 <UserMessage text={message.text} />
               )}
@@ -1110,7 +1145,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               setMode(newMode);
             }
           }} 
-          disabled={false}
+          disabled={showSlider}
           isRecording={isRecording}
           recordingComplete={recordingComplete}
           onStartRecording={startRecording}
