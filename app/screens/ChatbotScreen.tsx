@@ -7,6 +7,8 @@ import { Ionicons } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import * as Haptics from "expo-haptics";
+import { Audio } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
@@ -175,6 +177,25 @@ function BotMessage({ text, animate = false }: { text: string; animate?: boolean
         ) : (
           <GradientText style={styles.botMessageText}>{text}</GradientText>
         )}
+      </View>
+    </View>
+  );
+}
+
+function BotTypingIndicator() {
+  const [dots, setDots] = useState(".");
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots((prev) => (prev.length >= 3 ? "." : prev + "."));
+    }, 350);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <View style={styles.botMessageContainer}>
+      <View style={styles.botMessageBubble}>
+        <Text style={[styles.userMessageText, { color: COLORS.greyMedium }]}>{`Typing${dots}`}</Text>
       </View>
     </View>
   );
@@ -446,6 +467,11 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [recordingComplete, setRecordingComplete] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [recordingUri, setRecordingUri] = useState<string | null>(null);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isStartingRecordingRef = useRef(false);
   const [sliderValue, setSliderValue] = useState(0);
   const [sliderHoverValue, setSliderHoverValue] = useState<number | null>(null);
   const [showSlider, setShowSlider] = useState(false);  // Start false - only show when question type is slider
@@ -703,37 +729,116 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     }
   };
 
-  const startRecording = () => {
-    setIsRecording(true);
-    setRecordingTime(0);
-    setRecordingComplete(false);
-    // Start timer
-    const interval = setInterval(() => {
-      setRecordingTime(prev => prev + 1);
-    }, 1000);
-    // Store interval ID for cleanup
-    (window as any).recordingInterval = interval;
-  };
+  const startRecording = async () => {
+    // Rating gate: until 1–9 is selected, lock Yap/Type/Tap.
+    if (showSlider) return;
+    if (isRecording || isStartingRecordingRef.current) return;
 
-  const stopRecording = () => {
-    setIsRecording(false);
-    setRecordingComplete(true);
-    // Clear timer
-    if ((window as any).recordingInterval) {
-      clearInterval((window as any).recordingInterval);
+    try {
+      isStartingRecordingRef.current = true;
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      const perm = await Audio.requestPermissionsAsync();
+      if (!perm.granted) {
+        console.warn("Microphone permission not granted");
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+        staysActiveInBackground: false,
+      });
+
+      // Reset state
+      setRecordingUri(null);
+      setRecordingTime(0);
+      setRecordingComplete(false);
+
+      // Start timer
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+
+      const recording = new Audio.Recording();
+      recordingRef.current = recording;
+      await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      await recording.startAsync();
+
+      setIsRecording(true);
+    } catch (e) {
+      console.error("Failed to start recording", e);
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+      recordingRef.current = null;
+      setIsRecording(false);
+    } finally {
+      isStartingRecordingRef.current = false;
     }
   };
 
-  const sendRecording = () => {
-    const duration = formatTime(recordingTime);
-    // Simulate transcription by putting text in input and switching to type mode
-    const voiceMessage = `[Transcribed] I'm feeling a bit overwhelmed this week...`; 
-    // In a real app, this would come from STT API
-    
-    setValue(voiceMessage);
-    setMode("type");
-    setRecordingComplete(false);
-    setRecordingTime(0);
+  const stopRecording = async () => {
+    if (!isRecording) return;
+
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      setIsRecording(false);
+
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+
+      const recording = recordingRef.current;
+      if (!recording) {
+        setRecordingComplete(false);
+        return;
+      }
+
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      recordingRef.current = null;
+
+      if (!uri) {
+        setRecordingComplete(false);
+        return;
+      }
+
+      setRecordingUri(uri);
+      setRecordingComplete(true);
+    } catch (e) {
+      console.error("Failed to stop recording", e);
+      recordingRef.current = null;
+      setRecordingComplete(false);
+    }
+  };
+
+  const sendRecording = async () => {
+    if (showSlider) return;
+    if (!recordingUri || isTranscribing) return;
+
+    setIsTranscribing(true);
+    try {
+      const result = await weeklyCheckinService.transcribeAudio(recordingUri);
+      const transcript = (result?.text || "").trim();
+
+      // Always land in editable Type mode (user can correct transcript like Copilot).
+      setValue(transcript);
+      setMode("type");
+    } catch (e) {
+      console.error("Transcription failed", e);
+      setMode("type");
+    } finally {
+      setIsTranscribing(false);
+      setRecordingComplete(false);
+      setRecordingTime(0);
+      setRecordingUri(null);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -833,7 +938,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               {messages.map((message, index) => (
                 <View key={message.id}>
                   {message.isBot ? (
-                    <BotMessage text={message.text} animate={index === messages.length - 1} animate={index === messages.length - 1} />
+                    <BotMessage text={message.text} animate={index === messages.length - 1} />
                   ) : (
                     <UserMessage text={message.text} />
                   )}
@@ -844,13 +949,13 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           </ScrollView>
 
           {/* Recording status display */}
-          {(isRecording || recordingComplete) && (
+          {(isRecording || recordingComplete || isTranscribing) && (
             <View style={styles.recordingStatusContainer}>
-              {isRecording ? (
+              {isTranscribing ? (
+                <Text style={styles.recordingStatusText}>Transcribing…</Text>
+              ) : (
                 <Text style={styles.recordingStatusText}>{formatTime(recordingTime)}</Text>
-              ) : recordingComplete ? (
-                <Text style={styles.recordingStatusText}>{formatTime(recordingTime)}</Text>
-              ) : null}
+              )}
             </View>
           )}
         </View>
@@ -883,15 +988,28 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               <Avatar showMessage={false} />
               <View style={styles.messagesWrapper}>
                 {/* Show all messages from the messages array */}
-                {messages.map((message, index) => (
-                  <View key={message.id}>
-                    {message.isBot ? (
-                      <BotMessage text={message.text} />
-                    ) : (
-                      <UserMessage text={message.text} />
-                    )}
-                  </View>
-                ))}
+                {(() => {
+                  let lastBotIndex = -1;
+                  for (let i = messages.length - 1; i >= 0; i--) {
+                    if (messages[i].isBot) {
+                      lastBotIndex = i;
+                      break;
+                    }
+                  }
+
+                  return messages.map((message, index) => (
+                    <View key={message.id}>
+                      {message.isBot ? (
+                        <BotMessage text={message.text} animate={index === lastBotIndex} />
+                      ) : (
+                        <UserMessage text={message.text} />
+                      )}
+                    </View>
+                  ));
+                })()}
+
+                {/* Bot typing indicator while waiting for API */}
+                {isLoadingCheckin && messages.length > 0 && <BotTypingIndicator />}
               </View>
               
               {/* Render Slider INLINE if active */}
@@ -926,13 +1044,13 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             </ScrollView>
 
             {/* Recording status display */}
-            {(isRecording || recordingComplete) && (
+            {(isRecording || recordingComplete || isTranscribing) && (
               <View style={styles.recordingStatusContainer}>
-                {isRecording ? (
+                {isTranscribing ? (
+                  <Text style={styles.recordingStatusText}>Transcribing…</Text>
+                ) : (
                   <Text style={styles.recordingStatusText}>{formatTime(recordingTime)}</Text>
-                ) : recordingComplete ? (
-                  <Text style={styles.recordingStatusText}>{formatTime(recordingTime)}</Text>
-                ) : null}
+                )}
               </View>
             )}
           </>
@@ -1138,14 +1256,15 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       {mode === "idle" && !showContinueButton && (
         <FooterCTA 
           setMode={(newMode) => {
-            // If showing slider and user clicks tap, stay in idle (slider view)
-            if (showSlider && newMode === "tap") {
+            // Rating gate: until the user selects 1–9, they cannot Tap/Yap/Type.
+            if (showSlider) {
               setMode("idle");
-            } else {
-              setMode(newMode);
+              return;
             }
+
+            setMode(newMode);
           }} 
-          disabled={showSlider}
+          disabled={showSlider || isTranscribing}
           isRecording={isRecording}
           recordingComplete={recordingComplete}
           onStartRecording={startRecording}

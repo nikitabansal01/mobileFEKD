@@ -96,6 +96,10 @@ export interface SubmitResponseResult {
   question: QuestionResponse;
 }
 
+export interface TranscribeResponse {
+  text: string;
+}
+
 class WeeklyCheckinService {
   /**
    * Get current check-in status
@@ -292,6 +296,50 @@ class WeeklyCheckinService {
       return await response.json();
     } catch (error) {
       console.error('❌ Error fetching correlations:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Transcribe a locally recorded audio file (Yap) into text.
+   *
+   * The backend returns { text }, and the UI places it into the text input so the
+   * user can edit before sending.
+   */
+  async transcribeAudio(uri: string): Promise<TranscribeResponse | null> {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        console.error('❌ No auth token available');
+        return null;
+      }
+
+      const formData = new FormData();
+      // NOTE: RN FormData file typing is loosely defined; cast to any.
+      formData.append('file', {
+        uri,
+        name: 'yap.m4a',
+        type: 'audio/m4a',
+      } as any);
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/weekly-checkin/transcribe`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          // Do NOT set Content-Type; let fetch set multipart boundaries.
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('❌ Failed to transcribe audio:', response.status, text);
+        return null;
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('❌ Error transcribing audio:', error);
       return null;
     }
   }

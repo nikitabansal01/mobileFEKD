@@ -71,25 +71,7 @@ export default function FooterChatbotCTA({
 
                 {/* Center 80 */}
                 <View style={styles.btn80Container}>
-                    {!disabled && isRecording ? (
-                        <Pressable
-                            style={styles.btn80}
-                            onPressIn={onStartRecording}
-                            onPressOut={onStopRecording}
-                        >
-                            <LinearGradient
-                                colors={[COLORS.gradPurple, COLORS.gradPink]}
-                                style={styles.btn80Gradient}
-                            >
-                                <Image
-                                source={require("../../assets/images/yap-icon-white.png")} // local image
-                                style={{ width: scale(50), height: scale(50) }}
-                                resizeMode="contain"
-                            />
-                                {/* <Ionicons name="mic" size={30} color={COLORS.white} /> */}
-                            </LinearGradient>
-                        </Pressable>
-                    ) : !disabled && recordingComplete ? (
+                    {!disabled && recordingComplete ? (
                         <TouchableOpacity style={styles.btn80} onPress={onSendRecording}>
                             <LinearGradient
                                 colors={[COLORS.gradPurple, COLORS.gradPink]}
@@ -98,26 +80,32 @@ export default function FooterChatbotCTA({
                                 <Ionicons name="send" size={30} color={COLORS.white} />
                             </LinearGradient>
                         </TouchableOpacity>
-                    ) : !disabled ? (
-                        <Pressable
-                            style={styles.btn80}
-                            onPressIn={onStartRecording}
-                            onPressOut={onStopRecording}
-                        >
-                            <Image
-                                source={require("../../assets/images/yap-icon.png")} // local image
-                                style={{ width: scale(50), height: scale(50) }}
-                                resizeMode="contain"
-                            />
-                        </Pressable>
                     ) : (
-                        <TouchableOpacity style={[styles.btn80, disabled && styles.btnDisabled]} disabled={disabled} onPress={() => setMode("idle")}>
-                            <Image
-                                source={require("../../assets/images/yap-icon.png")} // local image
-                                style={{ width: scale(40), height: verticalScale(40) }}
-                                resizeMode="contain"
-                            />
-                        </TouchableOpacity>
+                        <Pressable
+                            style={[styles.btn80, disabled && styles.btnDisabled]}
+                            disabled={disabled}
+                            onPressIn={disabled ? undefined : onStartRecording}
+                            onPressOut={disabled ? undefined : onStopRecording}
+                        >
+                            {isRecording ? (
+                                <LinearGradient
+                                    colors={[COLORS.gradPurple, COLORS.gradPink]}
+                                    style={styles.btn80Gradient}
+                                >
+                                    <Image
+                                        source={require("../../assets/images/yap-icon-white.png")}
+                                        style={{ width: scale(50), height: scale(50) }}
+                                        resizeMode="contain"
+                                    />
+                                </LinearGradient>
+                            ) : (
+                                <Image
+                                    source={require("../../assets/images/yap-icon.png")}
+                                    style={{ width: scale(50), height: scale(50) }}
+                                    resizeMode="contain"
+                                />
+                            )}
+                        </Pressable>
                     )}
                     <Text style={styles.btnLabelCenter}>
                         {!disabled && isRecording ? "recording" : 
