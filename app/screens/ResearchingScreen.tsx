@@ -151,6 +151,43 @@ const ResearchingScreen = () => {
     return () => unsubscribe();
   }, [navigation]);
 
+  // FALLBACK: Start recommendation without lifestyle_focus if user doesn't select after reaching step 3
+  // This ensures recommendations are generated even if user skips eat/move/pause selection
+  useEffect(() => {
+    // Skip if already logged in or recommendation already started
+    if (isUserLoggedIn || hasStartedRecommendation) {
+      return;
+    }
+
+    // Only trigger fallback when user reaches final step (3) without selecting options
+    if (step === 3 && selectedOptions.length === 0) {
+      console.log('⚠️ [ResearchingScreen] User reached final step without selecting options - starting without lifestyle_focus');
+      
+      const startWithoutLifestyleFocus = async () => {
+        if (hasStartedRecommendation) return;
+        
+        try {
+          setHasStartedRecommendation(true);
+          const success = await sessionService.startRecommendationGeneration();
+          if (success) {
+            console.log('✅ [ResearchingScreen] Recommendation started (no lifestyle_focus)');
+            setRecommendationStatus('in_progress');
+            startPolling();
+          } else {
+            setRecommendationStatus('error');
+            setCanProceedToFinal(true); // Allow proceeding even on error
+          }
+        } catch (error: any) {
+          console.error('❌ [ResearchingScreen] Fallback recommendation start error:', error);
+          setRecommendationStatus('error');
+          setCanProceedToFinal(true);
+        }
+      };
+      
+      startWithoutLifestyleFocus();
+    }
+  }, [step, isUserLoggedIn, hasStartedRecommendation, selectedOptions.length]);
+
   // Start recommendation generation ONLY after user selects lifestyle_focus options
   // This ensures recommendations are personalized to eat/move/pause preference
   // Debounced by 1.5 seconds to allow user to select multiple options
@@ -200,6 +237,7 @@ const ResearchingScreen = () => {
         } else {
           console.error('❌ [ResearchingScreen] Failed to start recommendation');
           setRecommendationStatus('error');
+          setCanProceedToFinal(true); // Allow proceeding even on error
         }
       } catch (error: any) {
         // If session expired, user may already be logged in
@@ -213,6 +251,7 @@ const ResearchingScreen = () => {
         
         console.error('❌ [ResearchingScreen] Recommendation start error:', error);
         setRecommendationStatus('error');
+        setCanProceedToFinal(true); // Allow proceeding even on error
       }
     }, 1500); // 1.5 second debounce for multiple selections
 
