@@ -106,7 +106,9 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       setLoading(true);
       setLoadingMessage('Signing in with Google...');
       
-      signInWithCredential(auth, credential)
+      // Set pending flag BEFORE auth to prevent ResearchingScreen from navigating early
+      AsyncStorage.setItem('session_link_complete', 'pending')
+        .then(() => signInWithCredential(auth, credential))
         .then(async (result) => {
           // Save login state using authService (Google doesn't store passwords)
           await authService.setLoggedIn(result.user.uid);
@@ -175,6 +177,8 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
     setLoading(true);
     setLoadingMessage('Creating your account...');
     try {
+      // Set pending flag BEFORE auth to prevent ResearchingScreen from navigating early
+      await AsyncStorage.setItem('session_link_complete', 'pending');
       const result = await signUpWithEmail(email, password);
       
       if (result.success) {
@@ -236,6 +240,9 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       const firebaseCredential = provider.credential({
         idToken: credential.identityToken!,
       });
+      
+      // Set pending flag BEFORE auth to prevent ResearchingScreen from navigating early
+      await AsyncStorage.setItem('session_link_complete', 'pending');
       
       const result = await signInWithCredential(auth, firebaseCredential);
       
