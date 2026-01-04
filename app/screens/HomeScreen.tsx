@@ -1532,7 +1532,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                 )
               ) : (
                 <View style={styles.noAssignmentsContainer}>
-                  <Text style={styles.noAssignmentsText}>No assignments for today</Text>
+                  <Text style={styles.noAssignmentsText}>
+                    {loading ? "Generating your plan..." : "Unable to load plan"}
+                  </Text>
+                  {!loading && (
+                    <TouchableOpacity 
+                      style={styles.retryButton} 
+                      onPress={() => {
+                        setLoading(true);
+                        loadHomeData();
+                      }}
+                    >
+                      <Text style={styles.retryButtonText}>Retry</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
 
@@ -2112,6 +2125,18 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(1.7),
     fontFamily: 'Inter400',
     color: '#6F6F6F',
+    marginBottom: responsiveHeight(2),
+  },
+  retryButton: {
+    backgroundColor: '#C17EC9',
+    paddingHorizontal: responsiveWidth(5),
+    paddingVertical: responsiveHeight(1),
+    borderRadius: 20,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontFamily: 'Inter600',
+    fontSize: responsiveFontSize(1.6),
   },
   // Refresh count badge for 2x plan refresh reward
   refreshBadge: {
