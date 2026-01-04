@@ -117,11 +117,10 @@ const ResearchingScreen = () => {
   // Firebase login state detection
   useEffect(() => {
     console.log('🔐 [ResearchingScreen] Setting up auth listener');
-    const unsubscribe = auth.onAuthStateChanged((user: any) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user: any) => {
       setAuthChecked(true);
       
       if (user) {
-        console.log('✅ [ResearchingScreen] User logged in, navigating to MainScreenTabs');
         setIsUserLoggedIn(true);
         setShowLogin(false); // Close bottom sheet when logged in
         
@@ -132,7 +131,17 @@ const ResearchingScreen = () => {
           isPollingRef.current = false;
         }
         
-        // If user is already logged in, navigate directly to home
+        // Check if LoginBottomSheet is handling navigation via SignupLoadingScreen
+        // If session_link_complete is 'pending', LoginBottomSheet started the session link
+        // and SignupLoadingScreen will handle navigation - DON'T double-navigate
+        const sessionLinkStatus = await AsyncStorage.getItem('session_link_complete');
+        if (sessionLinkStatus === 'pending') {
+          console.log('⏳ [ResearchingScreen] Session link in progress, SignupLoadingScreen will handle navigation');
+          return; // Let SignupLoadingScreen handle navigation
+        }
+        
+        console.log('✅ [ResearchingScreen] User logged in, navigating to MainScreenTabs');
+        // If user is already logged in (returning user), navigate directly to home
         navigation.navigate('MainScreenTabs');
       } else {
         setIsUserLoggedIn(false);
