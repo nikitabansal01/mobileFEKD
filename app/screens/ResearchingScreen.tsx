@@ -208,7 +208,7 @@ const ResearchingScreen = () => {
       return;
     }
 
-    // Debounce: Wait 1.5 seconds after selection to allow user to select multiple options
+    // Debounce: Wait 1 second after selection to allow user to select multiple options
     const debounceTimer = setTimeout(async () => {
       try {
         console.log('🎯 [ResearchingScreen] User selected options:', selectedOptions);
@@ -225,7 +225,7 @@ const ResearchingScreen = () => {
       } catch (error: any) {
         console.error('❌ [ResearchingScreen] Lifestyle focus update error:', error);
       }
-    }, 1500); // 1.5 second debounce for multiple selections
+    }, 1000); // 1 second debounce (optimized: faster response)
 
     // Cleanup timer if selections change before debounce completes
     return () => clearTimeout(debounceTimer);
@@ -262,7 +262,7 @@ const ResearchingScreen = () => {
       } catch (error) {
         console.error('❌ [ResearchingScreen] Error checking status:', error);
       }
-    }, 2500); // Check every 2.5 seconds (slightly longer to reduce load)
+    }, 3500); // Check every 3.5 seconds (optimized: less API load, still responsive)
   };
   
   // Stop polling function
