@@ -151,83 +151,24 @@ const ResearchingScreen = () => {
     return () => unsubscribe();
   }, [navigation]);
 
-  // FALLBACK: Start recommendation without lifestyle_focus if user doesn't select after reaching step 3
-  // This ensures recommendations are generated even if user skips eat/move/pause selection
+  // OPTIMIZATION: Start recommendation generation IMMEDIATELY on mount
+  // Backend works during the 8-second animation (Step 0-1) instead of sitting idle
+  // User selects lifestyle_focus at Step 2, which gets applied to filter/finalize recommendations
   useEffect(() => {
     // Skip if already logged in or recommendation already started
     if (isUserLoggedIn || hasStartedRecommendation) {
       return;
     }
 
-    // Only trigger fallback when user reaches final step (3) without selecting options
-    if (step === 3 && selectedOptions.length === 0) {
-      console.log('⚠️ [ResearchingScreen] User reached final step without selecting options - starting without lifestyle_focus');
+    // Start recommendation generation immediately when component mounts
+    // This maximizes backend utilization during frontend animation
+    const startRecommendationImmediately = async () => {
+      if (hasStartedRecommendation) return;
       
-      const startWithoutLifestyleFocus = async () => {
-        if (hasStartedRecommendation) return;
-        
-        try {
-          setHasStartedRecommendation(true);
-          const success = await sessionService.startRecommendationGeneration();
-          if (success) {
-            console.log('✅ [ResearchingScreen] Recommendation started (no lifestyle_focus)');
-            setRecommendationStatus('in_progress');
-            startPolling();
-          } else {
-            setRecommendationStatus('error');
-            setCanProceedToFinal(true); // Allow proceeding even on error
-          }
-        } catch (error: any) {
-          console.error('❌ [ResearchingScreen] Fallback recommendation start error:', error);
-          setRecommendationStatus('error');
-          setCanProceedToFinal(true);
-        }
-      };
-      
-      startWithoutLifestyleFocus();
-    }
-  }, [step, isUserLoggedIn, hasStartedRecommendation, selectedOptions.length]);
-
-  // Start recommendation generation ONLY after user selects lifestyle_focus options
-  // This ensures recommendations are personalized to eat/move/pause preference
-  // Debounced by 1.5 seconds to allow user to select multiple options
-  useEffect(() => {
-    // Skip if already logged in
-    if (isUserLoggedIn) {
-      return;
-    }
-    
-    // Skip if recommendation generation already started
-    if (hasStartedRecommendation) {
-      return;
-    }
-
-    // CRITICAL: Wait until user has selected at least one option
-    // User sees eat/move/pause question at step 2
-    if (selectedOptions.length === 0) {
-      console.log('⏳ [ResearchingScreen] Waiting for user to select lifestyle options...');
-      return;
-    }
-
-    // Debounce: Wait 1.5 seconds after selection to allow user to select multiple options
-    const debounceTimer = setTimeout(async () => {
-      // Double-check we haven't started yet (race condition protection)
-      if (hasStartedRecommendation) {
-        return;
-      }
-
       try {
-        console.log('🎯 [ResearchingScreen] User selected options:', selectedOptions);
+        console.log('⚡ [ResearchingScreen] Starting recommendation generation IMMEDIATELY (backend optimization)');
+        console.log('📊 [ResearchingScreen] Backend will work during Step 0-1 animation instead of idling');
         
-        // STEP 1: Update session with lifestyle_focus BEFORE generating recommendations
-        console.log('📝 [ResearchingScreen] Updating session with lifestyle_focus...');
-        const updateSuccess = await sessionService.updateSessionLifestyleFocus(selectedOptions);
-        if (!updateSuccess) {
-          console.warn('⚠️ [ResearchingScreen] Failed to update lifestyle_focus, continuing anyway');
-        }
-        
-        // STEP 2: Now start recommendation generation (will use the lifestyle_focus)
-        console.log('🚀 [ResearchingScreen] Starting recommendation generation with lifestyle_focus');
         setHasStartedRecommendation(true); // Prevent duplicate execution
         const success = await sessionService.startRecommendationGeneration();
         if (success) {
@@ -243,7 +184,6 @@ const ResearchingScreen = () => {
         // If session expired, user may already be logged in
         if (error.message && error.message.includes('Session not found')) {
           console.log('⚠️ [ResearchingScreen] Session not found - may be logged in user');
-          // Skip recommendation generation and set as completed
           setCanProceedToFinal(true);
           setRecommendationStatus('completed');
           return;
@@ -251,13 +191,45 @@ const ResearchingScreen = () => {
         
         console.error('❌ [ResearchingScreen] Recommendation start error:', error);
         setRecommendationStatus('error');
-        setCanProceedToFinal(true); // Allow proceeding even on error
+        setCanProceedToFinal(true);
+      }
+    };
+
+    // Start immediately - don't wait for user selection
+    startRecommendationImmediately();
+  }, [isUserLoggedIn, hasStartedRecommendation]);
+
+  // PERSONALIZATION: Update lifestyle_focus when user selects options
+  // This updates the session data so backend can use it for filtering/finalization
+  // Debounced by 1.5 seconds to allow user to select multiple options
+  useEffect(() => {
+    // Skip if no selections or already logged in
+    if (selectedOptions.length === 0 || isUserLoggedIn) {
+      return;
+    }
+
+    // Debounce: Wait 1.5 seconds after selection to allow user to select multiple options
+    const debounceTimer = setTimeout(async () => {
+      try {
+        console.log('🎯 [ResearchingScreen] User selected options:', selectedOptions);
+        console.log('📝 [ResearchingScreen] Updating session with lifestyle_focus for recommendation filtering...');
+        
+        // Update session with lifestyle_focus
+        // Backend can use this to filter/prioritize recommendations
+        const updateSuccess = await sessionService.updateSessionLifestyleFocus(selectedOptions);
+        if (updateSuccess) {
+          console.log('✅ [ResearchingScreen] Session updated with lifestyle_focus');
+        } else {
+          console.warn('⚠️ [ResearchingScreen] Failed to update lifestyle_focus');
+        }
+      } catch (error: any) {
+        console.error('❌ [ResearchingScreen] Lifestyle focus update error:', error);
       }
     }, 1500); // 1.5 second debounce for multiple selections
 
     // Cleanup timer if selections change before debounce completes
     return () => clearTimeout(debounceTimer);
-  }, [isUserLoggedIn, hasStartedRecommendation, selectedOptions]);
+  }, [selectedOptions, isUserLoggedIn]);
   
   // Start polling function (uses refs to avoid re-render loops)
   const startPolling = () => {
