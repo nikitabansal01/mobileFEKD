@@ -191,7 +191,7 @@ const ReviewCard = React.memo(({
           </View>
         )}
         <View style={styles.cardInfo}>
-          <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
+          <Text style={styles.cardTitle} numberOfLines={2}>{item.title.replace('[Carried Forward] ', '')}</Text>
           <View style={styles.cardMeta}>
             <Text style={styles.cardMetaText}>
               {getTimeSlotIcon(item.time_slot)} {item.time_slot}
@@ -260,7 +260,7 @@ const ReplacementCard = React.memo(({
   return (
     <View style={styles.replacementCard}>
       <Text style={styles.replacementItemTitle}>
-        🔄 Instead of: {item.title}
+        🔄 Instead of: {item.title.replace('[Carried Forward] ', '')}
       </Text>
 
       <TextInput

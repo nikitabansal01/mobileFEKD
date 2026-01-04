@@ -585,7 +585,7 @@ export default function TypeActionPlan({
             onPress={handleActionPress}
             style={styles.actionTitleContainer}
           >
-            <Text style={styles.actionTitle}>{assignment.title}</Text>
+            <Text style={styles.actionTitle}>{assignment.title.replace('[Carried Forward] ', '')}</Text>
             <Text style={styles.actionArrow}>{'>'}</Text>
           </TouchableOpacity>
           <View style={styles.actionMeta}>
