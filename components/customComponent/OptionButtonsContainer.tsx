@@ -22,6 +22,14 @@ interface OptionButton {
  */
 type OptionInput = string | OptionButton;
 
+const formatOptionText = (text: string) => {
+  if (typeof text !== 'string') return text;
+  if (text.startsWith('Others:')) {
+    return text.replace(/^Others:\s*/u, '').trim();
+  }
+  return text;
+};
+
 /**
  * Props for the OptionButtonsContainer component
  */
@@ -201,7 +209,7 @@ const OptionButtonsContainer: React.FC<OptionButtonsContainerProps> = ({
       {options.map((option) => {
         // Convert string options to objects for consistent handling
         const optionObj = typeof option === 'string' 
-          ? { id: option, text: option, value: option }
+          ? { id: option, text: formatOptionText(option), value: option }
           : option;
           
         const isSelected = multiple 

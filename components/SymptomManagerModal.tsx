@@ -1,0 +1,385 @@
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import Svg, { Polyline } from 'react-native-svg';
+
+import { BRAND, COLORS } from '@/constants/Colors';
+import symptomTrackingService, {
+  SymptomOverviewResponse,
+  SymptomTypeAggregate,
+} from '@/services/symptomTrackingService';
+
+type Props = {
+  visible: boolean;
+  onClose: () => void;
+  overview: SymptomOverviewResponse | null;
+  onOverviewChange: (next: SymptomOverviewResponse) => void;
+  onRequestRefreshOverview: () => Promise<void>;
+};
+
+const COMMON_SYMPTOMS: Array<{ key: string; label: string }> = [
+  { key: 'cramps', label: 'Cramps' },
+  { key: 'bloating', label: 'Bloating' },
+  { key: 'headache', label: 'Headache' },
+  { key: 'acne', label: 'Acne' },
+  { key: 'fatigue', label: 'Fatigue' },
+  { key: 'mood', label: 'Mood' },
+  { key: 'sleep', label: 'Sleep' },
+];
+
+const COMMON_FACTORS: Array<{ key: string; label: string }> = [
+  { key: 'more_stress', label: 'More stress' },
+  { key: 'less_sleep', label: 'Less sleep' },
+  { key: 'ate_out', label: 'Ate out' },
+  { key: 'more_sugar', label: 'More sugar' },
+  { key: 'more_caffeine', label: 'More caffeine' },
+  { key: 'dehydrated', label: 'Dehydrated' },
+  { key: 'worked_out', label: 'Worked out' },
+];
+
+function Sparkline({ values }: { values: number[] }) {
+  const points = useMemo(() => {
+    if (!values.length) return '';
+    const w = 120;
+    const h = 28;
+    const minV = Math.min(...values);
+    const maxV = Math.max(...values);
+    const range = Math.max(1, maxV - minV);
+
+    return values
+      .map((v, i) => {
+        const x = (i / Math.max(1, values.length - 1)) * w;
+        const y = h - ((v - minV) / range) * h;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(' ');
+  }, [values]);
+
+  return (
+    <Svg width={120} height={28}>
+      <Polyline
+        points={points}
+        fill="none"
+        stroke={BRAND.gradPurple}
+        strokeWidth={2}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+export default function SymptomManagerModal({
+  visible,
+  onClose,
+  overview,
+  onOverviewChange,
+  onRequestRefreshOverview,
+}: Props) {
+  const [busy, setBusy] = useState(false);
+  const [selectedFactors, setSelectedFactors] = useState<string[]>([]);
+
+  const aggregates = overview?.aggregates ?? [];
+
+  const toggleFactor = (key: string) => {
+    setSelectedFactors((prev) => (prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]));
+  };
+
+  const last7ValuesFor = useCallback(
+    (symptomType: string) => {
+      const logs = (overview?.logs ?? [])
+        .filter((l) => l.symptom_type === symptomType)
+        .slice(0, 7)
+        .reverse();
+      return logs.map((l) => l.severity);
+    },
+    [overview?.logs]
+  );
+
+  const logSymptom = useCallback(
+    async (symptomType: string, severity: number) => {
+      if (busy) return;
+
+      try {
+        setBusy(true);
+        await symptomTrackingService.logSymptom({
+          symptom_type: symptomType,
+          severity,
+          factors: selectedFactors,
+        });
+
+        await onRequestRefreshOverview();
+
+        Alert.alert('Saved', `${symptomType} logged at ${severity}/9.`);
+      } catch (e: any) {
+        Alert.alert('Error', e?.message || 'Failed to log symptom.');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [busy, onRequestRefreshOverview, selectedFactors]
+  );
+
+  const openSeverityPicker = useCallback(
+    (symptomType: string) => {
+      Alert.alert(
+        `Log ${symptomType}`,
+        'Pick severity (1–9).',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({
+            text: `${n}`,
+            onPress: () => logSymptom(symptomType, n),
+          })),
+        ]
+      );
+    },
+    [logSymptom]
+  );
+
+  const refresh = useCallback(async () => {
+    if (busy) return;
+    try {
+      setBusy(true);
+      await onRequestRefreshOverview();
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, onRequestRefreshOverview]);
+
+  const topCards = useMemo(() => {
+    const top = (overview?.top_symptoms ?? []).slice(0, 3);
+    const map = new Map(aggregates.map((a) => [a.symptom_type, a] as const));
+    return top.map((t) => map.get(t)).filter(Boolean) as SymptomTypeAggregate[];
+  }, [aggregates, overview?.top_symptoms]);
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={styles.backdrop}>
+        <View style={styles.sheet}>
+          <View style={styles.header}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>Symptom manager</Text>
+              <Text style={styles.subTitle}>Quick log + trends • {overview ? `${overview.period_days} days` : '—'}</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+              <Text style={styles.closeText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.row}>
+            <TouchableOpacity style={[styles.primaryAction, busy && { opacity: 0.6 }]} disabled={busy} onPress={refresh}>
+              <Text style={styles.primaryActionText}>Refresh</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView contentContainerStyle={styles.content}>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Quick log</Text>
+              <Text style={styles.sectionHint}>Tap a symptom, pick severity (1–9). Add factors first if you want.</Text>
+              <View style={styles.chipGrid}>
+                {COMMON_SYMPTOMS.map((s) => (
+                  <TouchableOpacity
+                    key={s.key}
+                    style={[styles.chip, busy && { opacity: 0.6 }]}
+                    disabled={busy}
+                    onPress={() => openSeverityPicker(s.key)}
+                  >
+                    <Text style={styles.chipText}>{s.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Factors (optional)</Text>
+              <View style={styles.chipGrid}>
+                {COMMON_FACTORS.map((f) => {
+                  const selected = selectedFactors.includes(f.key);
+                  return (
+                    <TouchableOpacity
+                      key={f.key}
+                      style={[styles.factorChip, selected && styles.factorChipSelected]}
+                      onPress={() => toggleFactor(f.key)}
+                    >
+                      <Text style={[styles.factorChipText, selected && styles.factorChipTextSelected]}>{f.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Trends</Text>
+              {topCards.length === 0 ? (
+                <Text style={styles.emptyText}>No symptom logs yet. Log one above to start seeing trends.</Text>
+              ) : (
+                <View style={{ gap: moderateScale(10) }}>
+                  {topCards.map((a) => (
+                    <View key={a.symptom_type} style={styles.trendCard}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.trendTitle}>{a.symptom_type}</Text>
+                        <Text style={styles.trendMeta}>
+                          last {a.last_severity ?? '—'}/9 • avg {a.avg_severity.toFixed(1)}/9 • {a.trend}
+                        </Text>
+                      </View>
+                      <Sparkline values={last7ValuesFor(a.symptom_type)} />
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: moderateScale(18),
+    borderTopRightRadius: moderateScale(18),
+    maxHeight: '92%',
+    paddingBottom: moderateScale(18),
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: moderateScale(16),
+    paddingTop: moderateScale(14),
+    paddingBottom: moderateScale(10),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#EEE',
+  },
+  title: {
+    fontSize: moderateScale(16),
+    fontWeight: '700',
+    color: '#111',
+  },
+  subTitle: {
+    marginTop: moderateScale(3),
+    fontSize: moderateScale(12),
+    color: '#6B7280',
+  },
+  closeBtn: {
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: moderateScale(8),
+  },
+  closeText: {
+    color: BRAND.gradPurple,
+    fontSize: moderateScale(13),
+    fontWeight: '600',
+  },
+  row: {
+    paddingHorizontal: moderateScale(16),
+    paddingTop: moderateScale(10),
+  },
+  primaryAction: {
+    backgroundColor: COLORS.gradPurple,
+    borderRadius: moderateScale(12),
+    paddingVertical: moderateScale(12),
+    alignItems: 'center',
+  },
+  primaryActionText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: moderateScale(13),
+  },
+  content: {
+    padding: moderateScale(16),
+    gap: moderateScale(16),
+    paddingBottom: verticalScale(30),
+  },
+  section: {
+    gap: moderateScale(10),
+  },
+  sectionTitle: {
+    fontSize: moderateScale(14),
+    fontWeight: '700',
+    color: '#111',
+  },
+  sectionHint: {
+    fontSize: moderateScale(12),
+    color: '#6B7280',
+    lineHeight: moderateScale(16),
+  },
+  chipGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: moderateScale(8),
+  },
+  chip: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: moderateScale(999),
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(8),
+    backgroundColor: '#fff',
+  },
+  chipText: {
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+    color: '#111827',
+  },
+  factorChip: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: moderateScale(999),
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(8),
+    backgroundColor: '#F8FAFC',
+  },
+  factorChipSelected: {
+    borderColor: BRAND.gradPurple,
+    backgroundColor: '#F3F0FF',
+  },
+  factorChipText: {
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+    color: '#111827',
+  },
+  factorChipTextSelected: {
+    color: BRAND.gradPurple,
+  },
+  trendCard: {
+    borderWidth: 1,
+    borderColor: '#EEE',
+    borderRadius: moderateScale(14),
+    padding: moderateScale(12),
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(10),
+  },
+  trendTitle: {
+    fontSize: moderateScale(13),
+    fontWeight: '700',
+    color: '#111',
+    textTransform: 'capitalize',
+  },
+  trendMeta: {
+    marginTop: moderateScale(4),
+    fontSize: moderateScale(11),
+    color: '#6B7280',
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontSize: moderateScale(12),
+    lineHeight: moderateScale(16),
+  },
+});

@@ -2,6 +2,13 @@ import Avatar from "@/components/customComponent/AvatarChatbot";
 import Header from "@/components/customComponent/ChatbotHeader";
 import FooterCTA from "@/components/customComponent/FooterChatbotCTA";
 import PrimaryButton from "@/components/PrimaryButton";
+import PlanManagerModal from "@/components/PlanManagerModal";
+import SymptomManagerModal from "@/components/SymptomManagerModal";
+import carePlanCheckinService, { TapOption as CarePlanTapOption } from "@/services/carePlanCheckinService";
+import homeService, { ActionPlanResponse, AssignmentsResponse } from "@/services/homeService";
+import { rewardService, RewardsStatusResponse } from "@/services/rewardService";
+import symptomCheckinService, { TapOption as SymptomTapOption } from "@/services/symptomCheckinService";
+import symptomTrackingService, { SymptomOverviewResponse } from "@/services/symptomTrackingService";
 import weeklyCheckinService, { QuestionResponse, TapOption } from "@/services/weeklyCheckinService";
 import { Ionicons } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
@@ -12,7 +19,7 @@ import { Audio } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
-import { Dimensions, Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Dimensions, Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { FONT_FAMILIES, useAppFonts } from '../../constants/fonts';
@@ -134,66 +141,15 @@ function GradientText({ children, style }: { children: string; style?: any }) {
   );
 }
 
-function TypewriterText({ text, style, onComplete }: { text: string; style?: any; onComplete?: () => void }) {
-  const [displayedText, setDisplayedText] = useState("");
-  
-  useEffect(() => {
-    // Reset if text changes
-    setDisplayedText("");
-    
-    let index = 0;
-    const timer = setInterval(() => {
-      if (index < text.length) {
-        setDisplayedText((prev) => prev + text.charAt(index));
-        index++;
-      } else {
-        clearInterval(timer);
-        if (onComplete) onComplete();
-      }
-    }, 15); // Speed of typing (faster for fluidity)
-    
-    return () => clearInterval(timer);
-  }, [text, onComplete]);
-
-  return <GradientText style={style}>{displayedText}</GradientText>;
-}
-
 function BotMessage({
   text,
-  animate = false,
-  onAnimateComplete,
 }: {
   text: string;
-  animate?: boolean;
-  onAnimateComplete?: () => void;
 }) {
   return (
     <View style={styles.botMessageContainer}>
       <View style={styles.botMessageBubble}>
-        {animate ? (
-          <TypewriterText style={styles.botMessageText} text={text} onComplete={onAnimateComplete} />
-        ) : (
-          <GradientText style={styles.botMessageText}>{text}</GradientText>
-        )}
-      </View>
-    </View>
-  );
-}
-
-function BotTypingIndicator() {
-  const [dots, setDots] = useState(".");
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDots((prev) => (prev.length >= 3 ? "." : prev + "."));
-    }, 350);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <View style={styles.botMessageContainer}>
-      <View style={styles.botMessageBubble}>
-        <Text style={[styles.userMessageText, { color: COLORS.greyMedium }]}>{`Typing${dots}`}</Text>
+        <GradientText style={styles.botMessageText}>{text}</GradientText>
       </View>
     </View>
   );
@@ -279,17 +235,30 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const [value, setValue] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
 
-  // Bot "streaming" (typewriter) should feel great, but must not replay on resume.
-  // We queue newly-arrived bot messages and animate them sequentially.
-  const seenMessageIdsRef = useRef<Set<string>>(new Set());
-  const animatedMessageIdsRef = useRef<Set<string>>(new Set());
-  const botAnimationQueueRef = useRef<string[]>([]);
-  const [animateBotMessageId, setAnimateBotMessageId] = useState<string | null>(null);
+  const isCarePlanContext = route?.params?.conversationContext?.context === 'care_plan_modal';
+  const isSymptomContext = route?.params?.conversationContext?.context === 'symptom_checkin';
   
   // Weekly Check-in state
   const [checkinId, setCheckinId] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<QuestionResponse | null>(null);
   const [dynamicTapOptions, setDynamicTapOptions] = useState<TapOption[]>([]);
+
+  // Care Plan (daily) check-in state
+  const [carePlanThreadId, setCarePlanThreadId] = useState<string | null>(null);
+  const [carePlanTapOptions, setCarePlanTapOptions] = useState<CarePlanTapOption[]>([]);
+
+  // Care Plan Plan Manager state
+  const [planManagerVisible, setPlanManagerVisible] = useState(false);
+  const [carePlanActionPlan, setCarePlanActionPlan] = useState<ActionPlanResponse | null>(null);
+  const [carePlanRewardsStatus, setCarePlanRewardsStatus] = useState<RewardsStatusResponse | null>(null);
+
+  // Symptom Manager state
+  const [symptomManagerVisible, setSymptomManagerVisible] = useState(false);
+  const [symptomOverview, setSymptomOverview] = useState<SymptomOverviewResponse | null>(null);
+
+  // Symptom (daily) check-in state
+  const [symptomThreadId, setSymptomThreadId] = useState<string | null>(null);
+  const [symptomTapOptions, setSymptomTapOptions] = useState<SymptomTapOption[]>([]);
   
   // Show continue button after check-in completion
   const [showContinueButton, setShowContinueButton] = useState(false);
@@ -300,41 +269,14 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     const contextFromRoute = route?.params?.conversationContext;
     
     if (contextFromRoute?.context === "care_plan_modal") {
-      // Care Plan check-in modal content - show the question and user response if available
-      const messages = [
-        { id: "1", text: "How does your care plan look today?", isBot: true },
-      ];
-      
-      // Add user response if available (from HomeScreen modal)
-      if (contextFromRoute.userResponse) {
-        messages.push({
-          id: "2", 
-          text: contextFromRoute.userResponse, 
-          isBot: false
-        });
-        
-        // Add follow-up question based on user response
-        let followUpQuestion = "How does your care plan look today?";
-        
-        if (contextFromRoute.userResponse === "👍 It works for me") {
-          followUpQuestion = "That's great! What's working well for you today?";
-        } else if (contextFromRoute.userResponse === "👎 I want to change it") {
-          followUpQuestion = "I understand. What would you like to change about your plan?";
-        }
-        
-        messages.push({
-          id: "3",
-          text: followUpQuestion,
-          isBot: true
-        });
-      }
-      
-      setMessages(messages);
-      // Set mode to idle so user can use yap button
-      setMode("idle");
-      // Disable slider and selected value for care plan modal
-      setShowSlider(false);
-      setShowSelectedValue(false);
+      // Care Plan check-in (daily thread) - start or resume from API
+      initializeCarePlanCheckin(contextFromRoute?.userResponse);
+      // Also preload plan + token counts for Plan Manager UI
+      refreshCarePlanPlanManagerData();
+    } else if (contextFromRoute?.context === "symptom_checkin") {
+      // Symptom check-in (daily thread)
+      initializeSymptomCheckin();
+      refreshSymptomOverview();
     } else if (contextFromRoute?.context === "weekly_checkin") {
       // Weekly check-in flow - start or resume from API
       initializeWeeklyCheckin();
@@ -343,6 +285,297 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       initializeWeeklyCheckin();
     }
   }, [route?.params?.conversationContext]);
+
+  const refreshSymptomOverview = async () => {
+    if (!isSymptomContext) return;
+    try {
+      const data = await symptomTrackingService.getOverview(14);
+      setSymptomOverview(data);
+    } catch (e) {
+      // Soft-fail; symptom check-in chat should still work.
+      console.warn('Failed to load symptom overview:', e);
+    }
+  };
+
+  const buildActionPlanFromAssignments = (assignmentsData: AssignmentsResponse): ActionPlanResponse | null => {
+    if (!assignmentsData?.plan_id) return null;
+
+    const allActions = [
+      ...(assignmentsData.assignments?.morning || []),
+      ...(assignmentsData.assignments?.afternoon || []),
+      ...(assignmentsData.assignments?.evening || []),
+    ];
+
+    return {
+      plan_id: assignmentsData.plan_id,
+      user_id: '',
+      date: assignmentsData.date || '',
+      phase: assignmentsData.cycle_phase || '',
+      phase_day: 0,
+      actions: allActions.map((action, index) => ({
+        id: action.id || index,
+        slot: index + 1,
+        time_slot: action.time_slot || 'morning',
+        category: action.category || '',
+        title: action.title || '',
+        specific_action: action.specific_action || '',
+        purpose: action.purpose || '',
+        target_hormone: action.hormones?.[0] || '',
+        hormone_persona_intro: action.hormone_persona_intro || '',
+        hero_image_url: action.hero_image_url || '',
+        research_studies: action.research_studies || [],
+        is_completed: action.is_completed || false,
+        is_replaced: false,
+        variants: action.variants || [],
+      })),
+      total_actions: assignmentsData.total_assignments || allActions.length,
+      completed_actions: assignmentsData.completed_assignments || 0,
+      show_feedback_prompt_after_seconds: assignmentsData.show_feedback_prompt_after_seconds || 30,
+    };
+  };
+
+  const refreshCarePlanPlanManagerData = async () => {
+    if (!isCarePlanContext) return;
+
+    try {
+      const [assignmentsResult, rewardsResult] = await Promise.allSettled([
+        homeService.getTodayAssignments(),
+        rewardService.getRewardsStatus(),
+      ]);
+
+      if (assignmentsResult.status === 'fulfilled' && assignmentsResult.value) {
+        const plan = buildActionPlanFromAssignments(assignmentsResult.value);
+        setCarePlanActionPlan(plan);
+      }
+
+      if (rewardsResult.status === 'fulfilled' && rewardsResult.value) {
+        setCarePlanRewardsStatus(rewardsResult.value);
+      }
+    } catch (e) {
+      console.warn('Failed to preload plan manager data:', e);
+    }
+  };
+
+  const refreshCarePlanPlanOnly = async () => {
+    if (!isCarePlanContext) return;
+    const assignmentsData = await homeService.getTodayAssignments();
+    if (assignmentsData) {
+      setCarePlanActionPlan(buildActionPlanFromAssignments(assignmentsData));
+    }
+  };
+
+  const detectFreezeIntent = (text: string) => {
+    const t = text.trim().toLowerCase();
+    if (!t) return false;
+    return (
+      /\bfreeze\b/.test(t) &&
+      (/(streak|today|my streak|use a freeze|protect)/.test(t) || t.length <= 40)
+    );
+  };
+
+  const handleCarePlanFreezeIntent = (threadId: string, messageText: string) => {
+    (async () => {
+      let currentStatus = carePlanRewardsStatus;
+
+      if (!currentStatus) {
+        try {
+          setIsLoadingCheckin(true);
+          currentStatus = await rewardService.getRewardsStatus();
+          setCarePlanRewardsStatus(currentStatus);
+        } catch {
+          // If we can't load status, fall back to sending as a chat message.
+          submitCarePlanMessage(threadId, messageText);
+          return;
+        } finally {
+          setIsLoadingCheckin(false);
+        }
+      }
+
+      const freezeCount = currentStatus?.freeze_count ?? 0;
+      const missedDays = currentStatus?.missed_days_count ?? 0;
+      const freezesNeeded = currentStatus?.freezes_needed ?? 1;
+
+      Alert.alert(
+        'Protect your streak?',
+        freezeCount <= 0
+          ? "You don't have any freeze tokens available right now. Want to send this as a message instead?"
+          : missedDays > 0
+            ? `You missed ${missedDays} day(s). This will use ${Math.min(freezeCount, freezesNeeded)} freeze token(s).`
+            : 'This will use 1 freeze token to protect today.',
+        [
+          {
+            text: 'Send as message',
+            style: 'cancel',
+            onPress: () => submitCarePlanMessage(threadId, messageText),
+          },
+          {
+            text: freezeCount > 0 ? 'Use freeze' : 'OK',
+            style: 'destructive',
+            onPress: async () => {
+              if (freezeCount <= 0) return;
+              setIsLoadingCheckin(true);
+              try {
+                // Show the user's intent in chat
+                setMessages((prev) => [
+                  ...prev,
+                  { id: Date.now().toString(), text: messageText, isBot: false },
+                ]);
+                scrollToBottom();
+
+                const result = missedDays > 0 ? await rewardService.useFreezeReactive() : await rewardService.useFreezeProactive();
+                const nextStatus = await rewardService.getRewardsStatus();
+                setCarePlanRewardsStatus(nextStatus);
+
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: Date.now().toString() + '_bot',
+                    text: result.message || 'Done — your streak is protected.',
+                    isBot: true,
+                  },
+                ]);
+                scrollToBottom();
+              } catch (e: any) {
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: Date.now().toString() + '_bot',
+                    text: e?.message || 'Sorry — I could not apply a freeze right now.',
+                    isBot: true,
+                  },
+                ]);
+                scrollToBottom();
+              } finally {
+                setIsLoadingCheckin(false);
+              }
+            },
+          },
+        ]
+      );
+    })();
+  };
+
+  const initializeSymptomCheckin = async () => {
+    setIsLoadingCheckin(true);
+    try {
+      const result = await symptomCheckinService.startToday();
+      if (result) {
+        setSymptomThreadId(result.thread_id);
+        setSymptomTapOptions(result.tap_options || []);
+
+        const historyMessages = result.history || [];
+        setMessages(historyMessages);
+
+        setMode("idle");
+        setShowSlider(false);
+        setShowSelectedValue(false);
+      } else {
+        setMessages([{ id: "symptom_fallback_1", text: "See any progress with your symptoms today? Track progress, wins, and difficulties.", isBot: true }]);
+        setMode("idle");
+        setShowSlider(false);
+        setShowSelectedValue(false);
+      }
+    } catch (error) {
+      console.error("Failed to initialize symptom check-in:", error);
+      setMessages([{ id: "symptom_error_1", text: "See any progress with your symptoms today? Track progress, wins, and difficulties.", isBot: true }]);
+      setMode("idle");
+      setShowSlider(false);
+      setShowSelectedValue(false);
+    }
+    setIsLoadingCheckin(false);
+  };
+
+  const submitSymptomMessage = async (threadId: string, messageText: string) => {
+    if (!threadId) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: messageText,
+      isBot: false,
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    scrollToBottom();
+
+    setIsLoadingCheckin(true);
+    try {
+      const result = await symptomCheckinService.sendMessage(threadId, messageText);
+      if (result) {
+        setSymptomTapOptions(result.tap_options || []);
+        if (result.history && result.history.length > 0) {
+          setMessages(result.history);
+        }
+        scrollToBottom();
+      }
+    } catch (error) {
+      console.error("Failed to send symptom message:", error);
+    }
+    setIsLoadingCheckin(false);
+  };
+
+  // Initialize care plan check-in from API (daily thread)
+  const initializeCarePlanCheckin = async (initialUserMessage?: string) => {
+    setIsLoadingCheckin(true);
+    try {
+      const result = await carePlanCheckinService.startToday();
+
+      if (result) {
+        setCarePlanThreadId(result.thread_id);
+        setCarePlanTapOptions(result.tap_options || []);
+
+        const historyMessages = result.history || [];
+        setMessages(historyMessages);
+
+        setMode("idle");
+        setShowSlider(false);
+        setShowSelectedValue(false);
+
+        // Optional: seed the thread with a modal-provided quick response.
+        if (initialUserMessage && initialUserMessage !== "Continue conversation") {
+          await submitCarePlanMessage(result.thread_id, initialUserMessage);
+        }
+      } else {
+        setMessages([{ id: "care_plan_fallback_1", text: "Quick care plan check-in — how are today’s actions going?", isBot: true }]);
+        setMode("idle");
+        setShowSlider(false);
+        setShowSelectedValue(false);
+      }
+    } catch (error) {
+      console.error("Failed to initialize care plan check-in:", error);
+      setMessages([{ id: "care_plan_error_1", text: "Quick care plan check-in — how are today’s actions going?", isBot: true }]);
+      setMode("idle");
+      setShowSlider(false);
+      setShowSelectedValue(false);
+    }
+    setIsLoadingCheckin(false);
+  };
+
+  const submitCarePlanMessage = async (threadId: string, messageText: string) => {
+    if (!threadId) return;
+
+    // Optimistically add user message
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: messageText,
+      isBot: false,
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    scrollToBottom();
+
+    setIsLoadingCheckin(true);
+    try {
+      const result = await carePlanCheckinService.sendMessage(threadId, messageText);
+      if (result) {
+        setCarePlanTapOptions(result.tap_options || []);
+        if (result.history && result.history.length > 0) {
+          setMessages(result.history);
+        }
+        scrollToBottom();
+      }
+    } catch (error) {
+      console.error("Failed to send care plan message:", error);
+    }
+    setIsLoadingCheckin(false);
+  };
   
   // Initialize weekly check-in from API
   const initializeWeeklyCheckin = async () => {
@@ -359,15 +592,6 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         if (result.question.history && result.question.history.length > 0) {
           const historyMessages = result.question.history;
           setMessages(historyMessages);
-
-          // If resuming mid-checkin (history > 1), do NOT replay typewriter for existing messages.
-          if (historyMessages.length > 1) {
-            const ids = new Set(historyMessages.map((m) => m.id));
-            seenMessageIdsRef.current = ids;
-            animatedMessageIdsRef.current = new Set(ids);
-            botAnimationQueueRef.current = [];
-            setAnimateBotMessageId(null);
-          }
         } else if (result.question.messages && result.question.messages.length > 0) {
           // Use messages array for multi-bubble display
           const bubbleMessages: Message[] = result.question.messages.map((text: string, index: number) => ({
@@ -482,46 +706,6 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     setIsLoadingCheckin(false);
   };
 
-  // Bot animation queue: enqueue any new bot message IDs and animate sequentially.
-  useEffect(() => {
-    const newBotIds: string[] = [];
-
-    for (const m of messages) {
-      if (!seenMessageIdsRef.current.has(m.id)) {
-        seenMessageIdsRef.current.add(m.id);
-        if (m.isBot) newBotIds.push(m.id);
-      }
-    }
-
-    for (const id of newBotIds) {
-      if (!animatedMessageIdsRef.current.has(id)) {
-        botAnimationQueueRef.current.push(id);
-      }
-    }
-
-    // Start animating if we're idle.
-    if (!animateBotMessageId && botAnimationQueueRef.current.length > 0) {
-      const next = botAnimationQueueRef.current.shift() || null;
-      if (next) {
-        animatedMessageIdsRef.current.add(next);
-        setAnimateBotMessageId(next);
-      }
-    }
-  }, [messages, animateBotMessageId]);
-
-  const handleBotAnimateComplete = (messageId: string) => {
-    if (messageId !== animateBotMessageId) return;
-
-    const next = botAnimationQueueRef.current.shift() || null;
-    if (next) {
-      animatedMessageIdsRef.current.add(next);
-      setAnimateBotMessageId(next);
-      return;
-    }
-
-    setAnimateBotMessageId(null);
-  };
-  
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [recordingComplete, setRecordingComplete] = useState(false);
@@ -530,8 +714,6 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const recordingRef = useRef<Audio.Recording | null>(null);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isStartingRecordingRef = useRef(false);
-  const transcriptFillTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [isFillingTranscript, setIsFillingTranscript] = useState(false);
   const [sliderHoverValue, setSliderHoverValue] = useState<number | null>(null);
   const [showSlider, setShowSlider] = useState(false);  // Start false - only show when question type is slider
   const [showSelectedValue, setShowSelectedValue] = useState(false);
@@ -542,10 +724,6 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
         recordingTimerRef.current = null;
-      }
-      if (transcriptFillTimerRef.current) {
-        clearInterval(transcriptFillTimerRef.current);
-        transcriptFillTimerRef.current = null;
       }
     };
   }, []);
@@ -561,6 +739,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     
     switch (contextFromRoute?.context) {
       case "care_plan_modal":
+        if (carePlanTapOptions.length > 0) return carePlanTapOptions;
         return [
           { id: "want-to-change", text: "👎 I want to change it" },
           { id: "skip-actions", text: "⏩ I want to skip some actions for today" },
@@ -577,16 +756,14 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           { id: "headaches", text: "Headaches" },
         ];
       case "symptom_checkin":
+        if (symptomTapOptions.length > 0) return symptomTapOptions;
         return [
-          { id: "ate-out-more", text: "Ate out more" },
-          { id: "ate-more-carbs", text: "Ate more carbs" },
-          { id: "ate-more-dairy", text: "Ate more dairy" },
-          { id: "skipped-meals", text: "Skipped meals" },
-          { id: "untimely-eating", text: "Untimely eating" },
-          { id: "less-sleep", text: "Less sleep" },
-          { id: "more-stress", text: "More stress/workload" },
-          { id: "more-caffeine", text: "More caffeine" },
-          { id: "more-alcohol", text: "More alcohol" },
+          { id: "improving", text: "😊 Feeling better" },
+          { id: "stable", text: "😕 About the same" },
+          { id: "worsening", text: "😣 Feeling worse" },
+          { id: "wins", text: "🏆 Share a win" },
+          { id: "track_symptom", text: "📊 Track a symptom" },
+          { id: "show_patterns", text: "🔍 Show my patterns" },
         ];
       case "personalise":
         return [
@@ -701,6 +878,35 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const handleSend = (text?: string) => {
     const messageText = text || value.trim();
     if (messageText) {
+      const contextFromRoute = route?.params?.conversationContext;
+
+      if (contextFromRoute?.context === "care_plan_modal") {
+        if (!carePlanThreadId) {
+          console.warn("Care plan thread not initialized yet");
+          return;
+        }
+
+        if (detectFreezeIntent(messageText)) {
+          if (!text) setValue("");
+          handleCarePlanFreezeIntent(carePlanThreadId, messageText);
+          return;
+        }
+
+        if (!text) setValue("");
+        submitCarePlanMessage(carePlanThreadId, messageText);
+        return;
+      }
+
+      if (contextFromRoute?.context === "symptom_checkin") {
+        if (!symptomThreadId) {
+          console.warn("Symptom thread not initialized yet");
+          return;
+        }
+        if (!text) setValue("");
+        submitSymptomMessage(symptomThreadId, messageText);
+        return;
+      }
+
       const newMessage: Message = {
         id: Date.now().toString(),
         text: messageText,
@@ -712,33 +918,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
       // Add bot response after a short delay
       setTimeout(() => {
-        const contextFromRoute = route?.params?.conversationContext;
         let botResponse: Message;
-        
-        if (contextFromRoute?.context === "care_plan_modal") {
-          // Care Plan modal - ask a follow-up question based on user response
-          const userResponse = contextFromRoute.userResponse;
-          let followUpQuestion = "How does your care plan look today?";
-          
-          if (userResponse === "👍 It works for me") {
-            followUpQuestion = "That's great! What's working well for you today?";
-          } else if (userResponse === "👎 I want to change it") {
-            followUpQuestion = "I understand. What would you like to change about your plan?";
-          }
-          
-          botResponse = {
-            id: Date.now().toString() + "_bot",
-            text: followUpQuestion,
-            isBot: true,
-          };
-        } else if (contextFromRoute?.context === "symptom_checkin") {
-          // Symptom checkin - ask the question again
-          botResponse = {
-            id: Date.now().toString() + "_bot",
-            text: "See any progress with your symptoms? Track progress, wins, difficulties...",
-            isBot: true,
-          };
-        } else if (contextFromRoute?.context === "personalise") {
+
+        if (contextFromRoute?.context === "personalise") {
           // Personalise - ask the question again
           botResponse = {
             id: Date.now().toString() + "_bot",
@@ -788,6 +970,23 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       
       // Use API for weekly check-in
       const contextFromRoute = route?.params?.conversationContext;
+
+      // Symptom check-in: treat some tap options as UI actions (open modal)
+      if (contextFromRoute?.context === "symptom_checkin") {
+        const lowered = (messageText || "").toLowerCase();
+        const wantsManager =
+          lowered.includes("track a symptom") ||
+          lowered.includes("show my patterns") ||
+          lowered.includes("manage symptoms");
+
+        if (wantsManager) {
+          refreshSymptomOverview();
+          setSymptomManagerVisible(true);
+          setSelectedOptions([]);
+          return;
+        }
+      }
+
       if (contextFromRoute?.context === "weekly_checkin" && checkinId && currentQuestion) {
         // For multi_select, send array; for tap_choice, send single value
         const response = currentQuestion.question_type === "multi_select" 
@@ -891,44 +1090,25 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     }
   };
 
-  const startTranscriptFill = (transcript: string) => {
-    if (transcriptFillTimerRef.current) {
-      clearInterval(transcriptFillTimerRef.current);
-      transcriptFillTimerRef.current = null;
-    }
-
-    // Move to editable mode immediately, then "stream" the transcript into the input.
-    setMode('type');
-    setValue('');
-    setIsFillingTranscript(true);
-
-    const tokens = transcript.split(/(\s+)/); // keep whitespace tokens
-    let i = 0;
-    transcriptFillTimerRef.current = setInterval(() => {
-      setValue((prev) => prev + (tokens[i] ?? ''));
-      i++;
-      if (i >= tokens.length) {
-        if (transcriptFillTimerRef.current) {
-          clearInterval(transcriptFillTimerRef.current);
-          transcriptFillTimerRef.current = null;
-        }
-        setIsFillingTranscript(false);
-      }
-    }, 28);
-  };
-
   const sendRecording = async () => {
     if (showSlider) return;
     if (!recordingUri || isTranscribing) return;
 
     setIsTranscribing(true);
     try {
-      const result = await weeklyCheckinService.transcribeAudio(recordingUri);
+      const contextFromRoute = route?.params?.conversationContext;
+      const isCarePlanModal = contextFromRoute?.context === "care_plan_modal";
+      const isSymptomCheckin = contextFromRoute?.context === "symptom_checkin";
+      const result = isCarePlanModal
+        ? await carePlanCheckinService.transcribeAudio(recordingUri)
+        : isSymptomCheckin
+          ? await symptomCheckinService.transcribeAudio(recordingUri)
+        : await weeklyCheckinService.transcribeAudio(recordingUri);
       const transcript = (result?.text || "").trim();
 
-      // 2026-level feel (without native STT): enter Type mode and progressively fill
-      // the transcript so it *looks* live and stays editable.
-      startTranscriptFill(transcript);
+      // No streaming: drop transcript into the input instantly (still editable).
+      setMode("type");
+      setValue(transcript);
     } catch (e) {
       console.error("Transcription failed", e);
       setMode("type");
@@ -941,14 +1121,6 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   };
 
   const handleTextChange = (text: string) => {
-    // If user starts editing while we are filling, stop the fill and let them type.
-    if (isFillingTranscript) {
-      if (transcriptFillTimerRef.current) {
-        clearInterval(transcriptFillTimerRef.current);
-        transcriptFillTimerRef.current = null;
-      }
-      setIsFillingTranscript(false);
-    }
     setValue(text);
   };
 
@@ -1033,6 +1205,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     
     // Force Care Plan modal to work - early return
     if (isCarePlanModal) {
+      const refreshStatus = carePlanRewardsStatus?.refresh_status;
+      const freezeCount = carePlanRewardsStatus?.freeze_count ?? 0;
       return (
         <View style={styles.idleModeContainer}>
           <ScrollView
@@ -1048,11 +1222,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               {messages.map((message, index) => (
                 <View key={message.id}>
                   {message.isBot ? (
-                    <BotMessage
-                      text={message.text}
-                      animate={message.id === animateBotMessageId}
-                      onAnimateComplete={() => handleBotAnimateComplete(message.id)}
-                    />
+                    <BotMessage text={message.text} />
                   ) : (
                     <UserMessage text={message.text} />
                   )}
@@ -1062,7 +1232,73 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             </View>
           </ScrollView>
 
+          <View style={styles.managePlanBar}>
+            <TouchableOpacity
+              style={styles.managePlanButton}
+              onPress={() => {
+                refreshCarePlanPlanManagerData();
+                setPlanManagerVisible(true);
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.managePlanTitle}>Manage plan</Text>
+              <Text style={styles.managePlanMeta}>
+                Refreshes: {refreshStatus ? `${refreshStatus.remaining}/${refreshStatus.limit}` : '—'} • Freezes: {freezeCount}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Recording status display */}
+          {(isRecording || recordingComplete || isTranscribing) && (
+            <View style={styles.recordingStatusContainer}>
+              {isTranscribing ? (
+                <Text style={styles.recordingStatusText}>Transcribing…</Text>
+              ) : (
+                <Text style={styles.recordingStatusText}>{formatTime(recordingTime)}</Text>
+              )}
+            </View>
+          )}
+        </View>
+      );
+    }
+
+    if (contextFromRoute?.context === "symptom_checkin") {
+      return (
+        <View style={styles.idleModeContainer}>
+          <ScrollView
+            ref={idleScrollRef}
+            style={styles.messagesContainer}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            <Avatar showMessage={false} />
+            <View style={{ marginTop: verticalScale(20) }}>
+              <View style={styles.messagesWrapper}>
+                {messages.map((message) => (
+                  <View key={message.id}>
+                    {message.isBot ? <BotMessage text={message.text} /> : <UserMessage text={message.text} />}
+                  </View>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+
+          <View style={styles.managePlanBar}>
+            <TouchableOpacity
+              style={styles.managePlanButton}
+              onPress={() => {
+                refreshSymptomOverview();
+                setSymptomManagerVisible(true);
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.managePlanTitle}>Manage symptoms</Text>
+              <Text style={styles.managePlanMeta}>
+                {symptomOverview ? `${symptomOverview.period_days} days • ${symptomOverview.logs.length} logs` : 'Loading…'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           {(isRecording || recordingComplete || isTranscribing) && (
             <View style={styles.recordingStatusContainer}>
               {isTranscribing ? (
@@ -1105,19 +1341,12 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                 {messages.map((message) => (
                   <View key={message.id}>
                     {message.isBot ? (
-                      <BotMessage
-                        text={message.text}
-                        animate={message.id === animateBotMessageId}
-                        onAnimateComplete={() => handleBotAnimateComplete(message.id)}
-                      />
+                      <BotMessage text={message.text} />
                     ) : (
                       <UserMessage text={message.text} />
                     )}
                   </View>
                 ))}
-
-                {/* Bot typing indicator while waiting for API */}
-                {isLoadingCheckin && messages.length > 0 && <BotTypingIndicator />}
               </View>
               
               {/* Render Slider INLINE if active */}
@@ -1181,11 +1410,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           {messages.map((message, index) => (
             <View key={message.id}>
               {message.isBot ? (
-                <BotMessage
-                  text={message.text}
-                  animate={message.id === animateBotMessageId}
-                  onAnimateComplete={() => handleBotAnimateComplete(message.id)}
-                />
+                <BotMessage text={message.text} />
               ) : (
                 <UserMessage text={message.text} />
               )}
@@ -1194,6 +1419,24 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         </View>
         </View>
       </ScrollView>
+
+      {isCarePlanContext && (
+        <View style={styles.managePlanBar}>
+          <TouchableOpacity
+            style={styles.managePlanButton}
+            onPress={() => {
+              refreshCarePlanPlanManagerData();
+              setPlanManagerVisible(true);
+            }}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.managePlanTitle}>Manage plan</Text>
+            <Text style={styles.managePlanMeta}>
+              Refreshes: {carePlanRewardsStatus?.refresh_status ? `${carePlanRewardsStatus.refresh_status.remaining}/${carePlanRewardsStatus.refresh_status.limit}` : '—'} • Freezes: {carePlanRewardsStatus?.freeze_count ?? 0}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.inputContainer}>
         <View style={styles.inputField}>
@@ -1250,11 +1493,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           {messages.map((message, index) => (
             <View key={message.id}>
               {message.isBot ? (
-                <BotMessage
-                  text={message.text}
-                  animate={message.id === animateBotMessageId}
-                  onAnimateComplete={() => handleBotAnimateComplete(message.id)}
-                />
+                <BotMessage text={message.text} />
               ) : (
                 <UserMessage text={message.text} />
               )}
@@ -1276,6 +1515,24 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         </View>
         <View style={{ flex: 1 }} />
       </ScrollView>
+
+      {isCarePlanContext && (
+        <View style={styles.managePlanBar}>
+          <TouchableOpacity
+            style={styles.managePlanButton}
+            onPress={() => {
+              refreshCarePlanPlanManagerData();
+              setPlanManagerVisible(true);
+            }}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.managePlanTitle}>Manage plan</Text>
+            <Text style={styles.managePlanMeta}>
+              Refreshes: {carePlanRewardsStatus?.refresh_status ? `${carePlanRewardsStatus.refresh_status.remaining}/${carePlanRewardsStatus.refresh_status.limit}` : '—'} • Freezes: {carePlanRewardsStatus?.freeze_count ?? 0}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.CTAWrapper}>
         <View style={styles.CTAGroup1}>
@@ -1381,6 +1638,24 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           onSendRecording={sendRecording}
         />
       )}
+
+      <PlanManagerModal
+        visible={planManagerVisible}
+        onClose={() => setPlanManagerVisible(false)}
+        actionPlan={carePlanActionPlan}
+        rewardsStatus={carePlanRewardsStatus}
+        onRequestRefreshPlan={refreshCarePlanPlanOnly}
+        onActionPlanChange={(next) => setCarePlanActionPlan(next)}
+        onRewardsStatusChange={(next) => setCarePlanRewardsStatus(next)}
+      />
+
+      <SymptomManagerModal
+        visible={symptomManagerVisible}
+        onClose={() => setSymptomManagerVisible(false)}
+        overview={symptomOverview}
+        onOverviewChange={(next) => setSymptomOverview(next)}
+        onRequestRefreshOverview={refreshSymptomOverview}
+      />
       
       {/* Continue button after check-in completion */}
       {showContinueButton && (
@@ -1492,6 +1767,30 @@ const styles = StyleSheet.create({
   },
   messagesWrapper: {
     // paddingTop: verticalScale(20),
+  },
+
+  managePlanBar: {
+    paddingHorizontal: scale(15),
+    paddingBottom: verticalScale(10),
+  },
+  managePlanButton: {
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    backgroundColor: COLORS.white,
+    borderRadius: scale(14),
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(12),
+  },
+  managePlanTitle: {
+    fontSize: FONT_SIZES.small,
+    fontFamily: FONT_FAMILIES['Inter-SemiBold'],
+    color: COLORS.onSurface,
+  },
+  managePlanMeta: {
+    marginTop: verticalScale(4),
+    fontSize: FONT_SIZES.extraSmall,
+    fontFamily: FONT_FAMILIES['Inter-Regular'],
+    color: COLORS.greyLight,
   },
 
   // Message bubbles
