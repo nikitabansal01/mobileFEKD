@@ -890,16 +890,14 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           { id: "headaches", text: "Headaches" },
         ];
       case "symptom_checkin":
+        // If the backend is driving an inline UI block (e.g., severity 1–9),
+        // don't show unrelated fallback tap options.
+        if (uiBlocks && uiBlocks.length > 0) return [];
+
+        // Prefer API-provided tap options. If none are provided, avoid generic fallbacks
+        // because they often mismatch the current question/state.
         if (symptomTapOptions.length > 0) return symptomTapOptions;
-        return [
-          { id: "improving", text: "😊 Feeling better" },
-          { id: "stable", text: "😕 About the same" },
-          { id: "worsening", text: "😣 Feeling worse" },
-          { id: "wins", text: "🏆 Share a win" },
-          { id: "track_symptom", text: "📊 Track a symptom" },
-          { id: "show_patterns", text: "🔍 Show my patterns" },
-          { id: "manage_symptoms", text: "🧩 Manage symptoms" },
-        ];
+        return [];
       case "personalise":
         return [
           { id: "add-factors", text: "Add personalisation factors" },
@@ -1139,6 +1137,42 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
     // Symptom check-in: some taps are UI actions.
     if (contextFromRoute?.context === "symptom_checkin") {
+      // Symptom selection should go through the structured UI event path so the
+      // backend can return the colorful 1–9 severity UI block.
+      if (option.id?.startsWith("choose_symptom::")) {
+        if (!symptomThreadId) {
+          console.warn("Symptom thread not initialized yet");
+          return;
+        }
+
+        // Show the user's selection immediately (backend will echo it back in history).
+        if ((option.text || "").trim()) {
+          setMessages((prev) => [...prev, { id: Date.now().toString(), text: option.text, isBot: false }]);
+          scrollToBottom();
+        }
+
+        const event: UIEventRequest = {
+          thread_id: symptomThreadId,
+          block_id: "tap_options",
+          event_type: "action",
+          action_id: option.id,
+          metadata: {
+            display_text: option.text,
+          },
+        };
+
+        setIsLoadingCheckin(true);
+        void (async () => {
+          try {
+            const result = await symptomCheckinService.sendEvent(event);
+            applySymptomApiResult(result);
+          } finally {
+            setIsLoadingCheckin(false);
+          }
+        })();
+        return;
+      }
+
       const lowered = (option.text || "").toLowerCase();
       const wantsManager =
         lowered.includes("track a symptom") ||
