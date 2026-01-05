@@ -1116,6 +1116,47 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     }
   };
 
+  const handleChoicePress = (option: ChoiceOption) => {
+    const contextFromRoute = route?.params?.conversationContext;
+
+    // Weekly check-in keeps multi-select behavior.
+    if (contextFromRoute?.context === "weekly_checkin") {
+      toggleOption(option.id);
+      return;
+    }
+
+    // Symptom check-in: some taps are UI actions.
+    if (contextFromRoute?.context === "symptom_checkin") {
+      const lowered = (option.text || "").toLowerCase();
+      const wantsManager =
+        lowered.includes("track a symptom") ||
+        lowered.includes("show my patterns") ||
+        lowered.includes("manage symptoms");
+      if (wantsManager) {
+        refreshSymptomOverview();
+        setSymptomManagerVisible(true);
+        setSelectedOptions([]);
+        return;
+      }
+    }
+
+    // Care plan check-in: manage plan is a UI action.
+    if (contextFromRoute?.context === "care_plan_modal") {
+      const lowered = (option.text || "").toLowerCase();
+      const wantsPlanManager = lowered.includes("manage plan");
+      if (wantsPlanManager) {
+        refreshCarePlanPlanManagerData();
+        setPlanManagerVisible(true);
+        setSelectedOptions([]);
+        return;
+      }
+    }
+
+    // Default: tap-to-send.
+    setSelectedOptions([]);
+    handleSend(option.text);
+  };
+
   const startRecording = async () => {
     // Rating gate: until 1–9 is selected, lock Yap/Type/Tap.
     if (showSlider) return;
@@ -1523,6 +1564,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                 </View>
               ))}
 
+              {isLoadingCheckin && messages.length > 0 ? <BotMessage text="Thinking…" /> : null}
+
               {renderUiBlocksInline()}
             </View>
             </View>
@@ -1559,6 +1602,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                     {message.isBot ? <BotMessage text={message.text} /> : <UserMessage text={message.text} />}
                   </View>
                 ))}
+
+                {isLoadingCheckin && messages.length > 0 ? <BotMessage text="Thinking…" /> : null}
 
                 {renderUiBlocksInline()}
               </View>
@@ -1613,6 +1658,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                     )}
                   </View>
                 ))}
+
+                {isLoadingCheckin && messages.length > 0 && contextFromRoute?.context !== "weekly_checkin" ? (
+                  <BotMessage text="Thinking…" />
+                ) : null}
               </View>
               
               {/* Render Slider INLINE if active */}
@@ -1683,6 +1732,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             </View>
           ))}
 
+          {isLoadingCheckin && messages.length > 0 && route?.params?.conversationContext?.context !== "weekly_checkin" ? (
+            <BotMessage text="Thinking…" />
+          ) : null}
+
           {renderUiBlocksInline()}
         </View>
         </View>
@@ -1750,6 +1803,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             </View>
           ))}
 
+          {isLoadingCheckin && messages.length > 0 && route?.params?.conversationContext?.context !== "weekly_checkin" ? (
+            <BotMessage text="Thinking…" />
+          ) : null}
+
           {renderUiBlocksInline()}
         </View>
         </View>
@@ -1759,8 +1816,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               <ChoiceButton
                 key={option.id}
                 option={option}
-                isSelected={selectedOptions.includes(option.id)}
-                onPress={() => toggleOption(option.id)}
+                isSelected={route?.params?.conversationContext?.context === "weekly_checkin" && selectedOptions.includes(option.id)}
+                onPress={() => handleChoicePress(option)}
               />
             ))}
           </View>
