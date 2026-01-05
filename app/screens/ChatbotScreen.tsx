@@ -157,6 +157,19 @@ function BotMessage({
   );
 }
 
+function BotThinkingMessage() {
+  const [dots, setDots] = useState<'.' | '..' | '...'>('.');
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots((prev) => (prev === '.' ? '..' : prev === '..' ? '...' : '.'));
+    }, 450);
+    return () => clearInterval(interval);
+  }, []);
+
+  return <BotMessage text={`Thinking${dots}`} />;
+}
+
 function UserMessage({ text }: { text: string }) {
   return (
     <View style={styles.userMessageContainer}>
@@ -863,7 +876,6 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         if (carePlanTapOptions.length > 0) return carePlanTapOptions;
         return [
           { id: "want-to-change", text: "👎 I want to change it" },
-          { id: "skip-actions", text: "⏩ I want to skip some actions for today" },
           { id: "alternate-suggestions", text: "🔁 I want alternate suggestions" },
           { id: "manage_plan", text: "🧩 Manage plan" },
         ];
@@ -1564,7 +1576,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                 </View>
               ))}
 
-              {isLoadingCheckin && messages.length > 0 ? <BotMessage text="Thinking…" /> : null}
+              {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
 
               {renderUiBlocksInline()}
             </View>
@@ -1603,7 +1615,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                   </View>
                 ))}
 
-                {isLoadingCheckin && messages.length > 0 ? <BotMessage text="Thinking…" /> : null}
+                {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
 
                 {renderUiBlocksInline()}
               </View>
@@ -1660,7 +1672,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                 ))}
 
                 {isLoadingCheckin && messages.length > 0 && contextFromRoute?.context !== "weekly_checkin" ? (
-                  <BotMessage text="Thinking…" />
+                  <BotThinkingMessage />
                 ) : null}
               </View>
               
@@ -1733,7 +1745,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           ))}
 
           {isLoadingCheckin && messages.length > 0 && route?.params?.conversationContext?.context !== "weekly_checkin" ? (
-            <BotMessage text="Thinking…" />
+            <BotThinkingMessage />
           ) : null}
 
           {renderUiBlocksInline()}
@@ -1804,7 +1816,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           ))}
 
           {isLoadingCheckin && messages.length > 0 && route?.params?.conversationContext?.context !== "weekly_checkin" ? (
-            <BotMessage text="Thinking…" />
+            <BotThinkingMessage />
           ) : null}
 
           {renderUiBlocksInline()}
@@ -1844,28 +1856,30 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             <Text style={styles.btnLabel}>yap</Text>
           </View>
         </View>
-<View>
-          <View style={styles.btn55Container}>
-            <TouchableOpacity
-              style={[
-                styles.sendButtonLg,
-                selectedOptions.length === 0 && styles.sendButtonDisabled
-              ]}
-              onPress={sendSelectedOptions}
-              disabled={selectedOptions.length === 0}
-            >
-              <LinearGradient
-                colors={selectedOptions.length > 0 ? [COLORS.gradPurple, COLORS.gradPink] : [COLORS.disabledGradient, COLORS.disabledGradient]}
-                style={styles.sendButtonGradient}
+        {route?.params?.conversationContext?.context === "weekly_checkin" ? (
+          <View>
+            <View style={styles.btn55Container}>
+              <TouchableOpacity
+                style={[
+                  styles.sendButtonLg,
+                  selectedOptions.length === 0 && styles.sendButtonDisabled
+                ]}
+                onPress={sendSelectedOptions}
+                disabled={selectedOptions.length === 0}
               >
-                <Ionicons name="send" size={20} color={COLORS.white} />
-              </LinearGradient>
-            </TouchableOpacity>
-            <Text style={styles.btnLabel}>
-              {selectedOptions.length > 0 ? `send (${selectedOptions.length})` : 'send'}
-            </Text>
+                <LinearGradient
+                  colors={selectedOptions.length > 0 ? [COLORS.gradPurple, COLORS.gradPink] : [COLORS.disabledGradient, COLORS.disabledGradient]}
+                  style={styles.sendButtonGradient}
+                >
+                  <Ionicons name="send" size={20} color={COLORS.white} />
+                </LinearGradient>
+              </TouchableOpacity>
+              <Text style={styles.btnLabel}>
+                {selectedOptions.length > 0 ? `send (${selectedOptions.length})` : 'send'}
+              </Text>
+            </View>
           </View>
-        </View>
+        ) : null}
       </View>
     </>
   );
