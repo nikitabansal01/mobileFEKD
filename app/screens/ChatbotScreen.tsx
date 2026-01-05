@@ -22,7 +22,6 @@ import { BRAND, BRAND_GRADIENT, COLORS } from '../../constants/Colors';
 // Responsive dimensions
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isAndroid = Platform.OS === 'android';
-const isIOS = Platform.OS === 'ios';
 
 // Font scaling system using react-native-size-matters
 // Using moderateScale with factor 1.5 for aggressive scaling
@@ -68,6 +67,15 @@ type Message = {
   id: string;
   text: string;
   isBot: boolean;
+};
+
+// Stable, lightweight hash to keep message IDs deterministic across refreshes
+const hashText = (text: string) => {
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    hash = (hash * 31 + text.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash).toString(36);
 };
 
 type ChoiceOption = {
@@ -128,12 +136,10 @@ function GradientText({ children, style }: { children: string; style?: any }) {
 
 function TypewriterText({ text, style, onComplete }: { text: string; style?: any; onComplete?: () => void }) {
   const [displayedText, setDisplayedText] = useState("");
-  const [isComplete, setIsComplete] = useState(false);
   
   useEffect(() => {
     // Reset if text changes
     setDisplayedText("");
-    setIsComplete(false);
     
     let index = 0;
     const timer = setInterval(() => {
@@ -142,23 +148,30 @@ function TypewriterText({ text, style, onComplete }: { text: string; style?: any
         index++;
       } else {
         clearInterval(timer);
-        setIsComplete(true);
         if (onComplete) onComplete();
       }
     }, 15); // Speed of typing (faster for fluidity)
     
     return () => clearInterval(timer);
-  }, [text]);
+  }, [text, onComplete]);
 
   return <GradientText style={style}>{displayedText}</GradientText>;
 }
 
-function BotMessage({ text, animate = false }: { text: string; animate?: boolean }) {
+function BotMessage({
+  text,
+  animate = false,
+  onAnimateComplete,
+}: {
+  text: string;
+  animate?: boolean;
+  onAnimateComplete?: () => void;
+}) {
   return (
     <View style={styles.botMessageContainer}>
       <View style={styles.botMessageBubble}>
         {animate ? (
-          <TypewriterText style={styles.botMessageText} text={text} />
+          <TypewriterText style={styles.botMessageText} text={text} onComplete={onAnimateComplete} />
         ) : (
           <GradientText style={styles.botMessageText}>{text}</GradientText>
         )}
@@ -235,6 +248,10 @@ function ChoiceButton({
 // Navigation type
 type RootStackParamList = {
   HomeScreen: undefined;
+  MainScreenTabs: {
+    screen?: string;
+    params?: Record<string, any>;
+  } | undefined;
   ChatbotScreen: {
     conversationContext?: {
       initialMessage: string;
@@ -261,6 +278,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const [mode, setMode] = useState<Mode>("idle");
   const [value, setValue] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
+
+  // Bot "streaming" (typewriter) should only run once per bot message.
+  const animatedBotMessageIdsRef = useRef<Set<string>>(new Set());
+  const [animateBotMessageId, setAnimateBotMessageId] = useState<string | null>(null);
   
   // Weekly Check-in state
   const [checkinId, setCheckinId] = useState<string | null>(null);
@@ -337,7 +358,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         } else if (result.question.messages && result.question.messages.length > 0) {
           // Use messages array for multi-bubble display
           const bubbleMessages: Message[] = result.question.messages.map((text: string, index: number) => ({
-            id: `${Date.now()}_${index}`,
+            id: `msg_${result.checkin_id}_${result.question.question_key || 'q'}_${index}_${hashText(text)}`,
             text: text,
             isBot: true,
           }));
@@ -408,7 +429,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         } else if (result.question.messages && result.question.messages.length > 0) {
           // Use messages array for multi-bubble display
           const botMessages: Message[] = result.question.messages.map((text: string, index: number) => ({
-            id: `${Date.now()}_${index}_bot`,
+            id: `msg_${checkinId || 'checkin'}_${result.question.question_key || 'q'}_${index}_${hashText(text)}`,
             text: text,
             isBot: true,
           }));
@@ -432,7 +453,6 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           setShowContinueButton(true);
         } else if (result.question.question_type === "slider") {
           setShowSlider(true);
-          setSliderValue(0);
           setMode("idle");
         } else if (result.question.question_type === "tap_choice" || result.question.question_type === "multi_select") {
           setShowSlider(false);
@@ -448,6 +468,23 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     }
     setIsLoadingCheckin(false);
   };
+
+  // One-time bot animation: when a new bot message arrives, animate it once.
+  useEffect(() => {
+    let lastBotId: string | null = null;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].isBot) {
+        lastBotId = messages[i].id;
+        break;
+      }
+    }
+
+    if (!lastBotId) return;
+    if (animatedBotMessageIdsRef.current.has(lastBotId)) return;
+
+    animatedBotMessageIdsRef.current.add(lastBotId);
+    setAnimateBotMessageId(lastBotId);
+  }, [messages]);
   
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -457,10 +494,25 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const recordingRef = useRef<Audio.Recording | null>(null);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isStartingRecordingRef = useRef(false);
-  const [sliderValue, setSliderValue] = useState(0);
+  const transcriptFillTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [isFillingTranscript, setIsFillingTranscript] = useState(false);
   const [sliderHoverValue, setSliderHoverValue] = useState<number | null>(null);
   const [showSlider, setShowSlider] = useState(false);  // Start false - only show when question type is slider
   const [showSelectedValue, setShowSelectedValue] = useState(false);
+
+  // Cleanup timers on unmount.
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+      if (transcriptFillTimerRef.current) {
+        clearInterval(transcriptFillTimerRef.current);
+        transcriptFillTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // Get choice options based on context
   const getChoiceOptions = (): ChoiceOption[] => {
@@ -803,6 +855,32 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     }
   };
 
+  const startTranscriptFill = (transcript: string) => {
+    if (transcriptFillTimerRef.current) {
+      clearInterval(transcriptFillTimerRef.current);
+      transcriptFillTimerRef.current = null;
+    }
+
+    // Move to editable mode immediately, then "stream" the transcript into the input.
+    setMode('type');
+    setValue('');
+    setIsFillingTranscript(true);
+
+    const tokens = transcript.split(/(\s+)/); // keep whitespace tokens
+    let i = 0;
+    transcriptFillTimerRef.current = setInterval(() => {
+      setValue((prev) => prev + (tokens[i] ?? ''));
+      i++;
+      if (i >= tokens.length) {
+        if (transcriptFillTimerRef.current) {
+          clearInterval(transcriptFillTimerRef.current);
+          transcriptFillTimerRef.current = null;
+        }
+        setIsFillingTranscript(false);
+      }
+    }, 28);
+  };
+
   const sendRecording = async () => {
     if (showSlider) return;
     if (!recordingUri || isTranscribing) return;
@@ -812,9 +890,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       const result = await weeklyCheckinService.transcribeAudio(recordingUri);
       const transcript = (result?.text || "").trim();
 
-      // Always land in editable Type mode (user can correct transcript like Copilot).
-      setValue(transcript);
-      setMode("type");
+      // 2026-level feel (without native STT): enter Type mode and progressively fill
+      // the transcript so it *looks* live and stays editable.
+      startTranscriptFill(transcript);
     } catch (e) {
       console.error("Transcription failed", e);
       setMode("type");
@@ -824,6 +902,18 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       setRecordingTime(0);
       setRecordingUri(null);
     }
+  };
+
+  const handleTextChange = (text: string) => {
+    // If user starts editing while we are filling, stop the fill and let them type.
+    if (isFillingTranscript) {
+      if (transcriptFillTimerRef.current) {
+        clearInterval(transcriptFillTimerRef.current);
+        transcriptFillTimerRef.current = null;
+      }
+      setIsFillingTranscript(false);
+    }
+    setValue(text);
   };
 
   const formatTime = (seconds: number) => {
@@ -864,7 +954,6 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       }
     }
     
-    setSliderValue(value);
     setShowSlider(false);
     setShowSelectedValue(true);
 
@@ -923,7 +1012,13 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               {messages.map((message, index) => (
                 <View key={message.id}>
                   {message.isBot ? (
-                    <BotMessage text={message.text} animate={index === messages.length - 1} />
+                    <BotMessage
+                      text={message.text}
+                      animate={message.id === animateBotMessageId}
+                      onAnimateComplete={() => {
+                        if (message.id === animateBotMessageId) setAnimateBotMessageId(null);
+                      }}
+                    />
                   ) : (
                     <UserMessage text={message.text} />
                   )}
@@ -973,25 +1068,21 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               <Avatar showMessage={false} />
               <View style={styles.messagesWrapper}>
                 {/* Show all messages from the messages array */}
-                {(() => {
-                  let lastBotIndex = -1;
-                  for (let i = messages.length - 1; i >= 0; i--) {
-                    if (messages[i].isBot) {
-                      lastBotIndex = i;
-                      break;
-                    }
-                  }
-
-                  return messages.map((message, index) => (
-                    <View key={message.id}>
-                      {message.isBot ? (
-                        <BotMessage text={message.text} animate={index === lastBotIndex} />
-                      ) : (
-                        <UserMessage text={message.text} />
-                      )}
-                    </View>
-                  ));
-                })()}
+                {messages.map((message) => (
+                  <View key={message.id}>
+                    {message.isBot ? (
+                      <BotMessage
+                        text={message.text}
+                        animate={message.id === animateBotMessageId}
+                        onAnimateComplete={() => {
+                          if (message.id === animateBotMessageId) setAnimateBotMessageId(null);
+                        }}
+                      />
+                    ) : (
+                      <UserMessage text={message.text} />
+                    )}
+                  </View>
+                ))}
 
                 {/* Bot typing indicator while waiting for API */}
                 {isLoadingCheckin && messages.length > 0 && <BotTypingIndicator />}
@@ -1058,7 +1149,13 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           {messages.map((message, index) => (
             <View key={message.id}>
               {message.isBot ? (
-                <BotMessage text={message.text} animate={index === messages.length - 1} />
+                <BotMessage
+                  text={message.text}
+                  animate={message.id === animateBotMessageId}
+                  onAnimateComplete={() => {
+                    if (message.id === animateBotMessageId) setAnimateBotMessageId(null);
+                  }}
+                />
               ) : (
                 <UserMessage text={message.text} />
               )}
@@ -1076,7 +1173,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             placeholder="I'm here to listen..."
             placeholderTextColor={COLORS.greyLight}
             value={value}
-            onChangeText={setValue}
+            onChangeText={handleTextChange}
             multiline
             returnKeyType="default"
             textBreakStrategy="simple"
@@ -1123,7 +1220,13 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           {messages.map((message, index) => (
             <View key={message.id}>
               {message.isBot ? (
-                <BotMessage text={message.text} animate={index === messages.length - 1} />
+                <BotMessage
+                  text={message.text}
+                  animate={message.id === animateBotMessageId}
+                  onAnimateComplete={() => {
+                    if (message.id === animateBotMessageId) setAnimateBotMessageId(null);
+                  }}
+                />
               ) : (
                 <UserMessage text={message.text} />
               )}
