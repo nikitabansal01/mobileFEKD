@@ -1419,6 +1419,15 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     }
 
     // Default: submit structured event to backend (if supported)
+    // Also show the user's selection immediately (backend will echo it back in history).
+    if (action.action_type === 'submit_event') {
+      const displayText = (action.title || '').toString().trim();
+      if (displayText) {
+        setMessages((prev) => [...prev, { id: Date.now().toString(), text: displayText, isBot: false }]);
+        scrollToBottom();
+      }
+    }
+
     if (contextFromRoute?.context === 'care_plan_modal' && carePlanThreadId) {
       const event: UIEventRequest = {
         thread_id: carePlanThreadId,
@@ -1427,6 +1436,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         action_id: action.id,
         metadata: {
           ...(action.payload || {}),
+          display_text: (action.title || '').toString(),
         },
       };
       setIsLoadingCheckin(true);
@@ -1447,6 +1457,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         action_id: action.id,
         metadata: {
           ...(action.payload || {}),
+          display_text: (action.title || '').toString(),
         },
       };
       setIsLoadingCheckin(true);
@@ -1477,6 +1488,18 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         metadata: {
           ...(block.payload || {}),
         },
+      };
+
+      const symptomType = (block.payload as any)?.symptom_type;
+      const displayText = symptomType ? `${symptomType} ${value}/9` : `${value}/9`;
+
+      // Show the user's selection immediately (backend will echo it back in history).
+      setMessages((prev) => [...prev, { id: Date.now().toString(), text: displayText, isBot: false }]);
+      scrollToBottom();
+
+      event.metadata = {
+        ...(event.metadata || {}),
+        display_text: displayText,
       };
 
       setIsLoadingCheckin(true);
