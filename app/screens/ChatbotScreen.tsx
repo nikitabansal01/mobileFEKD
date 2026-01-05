@@ -279,8 +279,11 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const [value, setValue] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
 
-  // Bot "streaming" (typewriter) should only run once per bot message.
-  const animatedBotMessageIdsRef = useRef<Set<string>>(new Set());
+  // Bot "streaming" (typewriter) should feel great, but must not replay on resume.
+  // We queue newly-arrived bot messages and animate them sequentially.
+  const seenMessageIdsRef = useRef<Set<string>>(new Set());
+  const animatedMessageIdsRef = useRef<Set<string>>(new Set());
+  const botAnimationQueueRef = useRef<string[]>([]);
   const [animateBotMessageId, setAnimateBotMessageId] = useState<string | null>(null);
   
   // Weekly Check-in state
@@ -354,7 +357,17 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         
         // Set messages from history if available, otherwise use current message
         if (result.question.history && result.question.history.length > 0) {
-          setMessages(result.question.history);
+          const historyMessages = result.question.history;
+          setMessages(historyMessages);
+
+          // If resuming mid-checkin (history > 1), do NOT replay typewriter for existing messages.
+          if (historyMessages.length > 1) {
+            const ids = new Set(historyMessages.map((m) => m.id));
+            seenMessageIdsRef.current = ids;
+            animatedMessageIdsRef.current = new Set(ids);
+            botAnimationQueueRef.current = [];
+            setAnimateBotMessageId(null);
+          }
         } else if (result.question.messages && result.question.messages.length > 0) {
           // Use messages array for multi-bubble display
           const bubbleMessages: Message[] = result.question.messages.map((text: string, index: number) => ({
@@ -469,22 +482,45 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     setIsLoadingCheckin(false);
   };
 
-  // One-time bot animation: when a new bot message arrives, animate it once.
+  // Bot animation queue: enqueue any new bot message IDs and animate sequentially.
   useEffect(() => {
-    let lastBotId: string | null = null;
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].isBot) {
-        lastBotId = messages[i].id;
-        break;
+    const newBotIds: string[] = [];
+
+    for (const m of messages) {
+      if (!seenMessageIdsRef.current.has(m.id)) {
+        seenMessageIdsRef.current.add(m.id);
+        if (m.isBot) newBotIds.push(m.id);
       }
     }
 
-    if (!lastBotId) return;
-    if (animatedBotMessageIdsRef.current.has(lastBotId)) return;
+    for (const id of newBotIds) {
+      if (!animatedMessageIdsRef.current.has(id)) {
+        botAnimationQueueRef.current.push(id);
+      }
+    }
 
-    animatedBotMessageIdsRef.current.add(lastBotId);
-    setAnimateBotMessageId(lastBotId);
-  }, [messages]);
+    // Start animating if we're idle.
+    if (!animateBotMessageId && botAnimationQueueRef.current.length > 0) {
+      const next = botAnimationQueueRef.current.shift() || null;
+      if (next) {
+        animatedMessageIdsRef.current.add(next);
+        setAnimateBotMessageId(next);
+      }
+    }
+  }, [messages, animateBotMessageId]);
+
+  const handleBotAnimateComplete = (messageId: string) => {
+    if (messageId !== animateBotMessageId) return;
+
+    const next = botAnimationQueueRef.current.shift() || null;
+    if (next) {
+      animatedMessageIdsRef.current.add(next);
+      setAnimateBotMessageId(next);
+      return;
+    }
+
+    setAnimateBotMessageId(null);
+  };
   
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -1015,9 +1051,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                     <BotMessage
                       text={message.text}
                       animate={message.id === animateBotMessageId}
-                      onAnimateComplete={() => {
-                        if (message.id === animateBotMessageId) setAnimateBotMessageId(null);
-                      }}
+                      onAnimateComplete={() => handleBotAnimateComplete(message.id)}
                     />
                   ) : (
                     <UserMessage text={message.text} />
@@ -1074,9 +1108,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                       <BotMessage
                         text={message.text}
                         animate={message.id === animateBotMessageId}
-                        onAnimateComplete={() => {
-                          if (message.id === animateBotMessageId) setAnimateBotMessageId(null);
-                        }}
+                        onAnimateComplete={() => handleBotAnimateComplete(message.id)}
                       />
                     ) : (
                       <UserMessage text={message.text} />
@@ -1152,9 +1184,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                 <BotMessage
                   text={message.text}
                   animate={message.id === animateBotMessageId}
-                  onAnimateComplete={() => {
-                    if (message.id === animateBotMessageId) setAnimateBotMessageId(null);
-                  }}
+                  onAnimateComplete={() => handleBotAnimateComplete(message.id)}
                 />
               ) : (
                 <UserMessage text={message.text} />
@@ -1223,9 +1253,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                 <BotMessage
                   text={message.text}
                   animate={message.id === animateBotMessageId}
-                  onAnimateComplete={() => {
-                    if (message.id === animateBotMessageId) setAnimateBotMessageId(null);
-                  }}
+                  onAnimateComplete={() => handleBotAnimateComplete(message.id)}
                 />
               ) : (
                 <UserMessage text={message.text} />
