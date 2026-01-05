@@ -35,15 +35,7 @@ const COMMON_SYMPTOMS: Array<{ key: string; label: string }> = [
   { key: 'sleep', label: 'Sleep' },
 ];
 
-const COMMON_FACTORS: Array<{ key: string; label: string }> = [
-  { key: 'more_stress', label: 'More stress' },
-  { key: 'less_sleep', label: 'Less sleep' },
-  { key: 'ate_out', label: 'Ate out' },
-  { key: 'more_sugar', label: 'More sugar' },
-  { key: 'more_caffeine', label: 'More caffeine' },
-  { key: 'dehydrated', label: 'Dehydrated' },
-  { key: 'worked_out', label: 'Worked out' },
-];
+
 
 function Sparkline({ values }: { values: number[] }) {
   const points = useMemo(() => {
@@ -85,14 +77,9 @@ export default function SymptomManagerModal({
   onRequestRefreshOverview,
 }: Props) {
   const [busy, setBusy] = useState(false);
-  const [selectedFactors, setSelectedFactors] = useState<string[]>([]);
   const [severityPickerSymptom, setSeverityPickerSymptom] = useState<string | null>(null);
 
   const aggregates = overview?.aggregates ?? [];
-
-  const toggleFactor = (key: string) => {
-    setSelectedFactors((prev) => (prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]));
-  };
 
   const last7ValuesFor = useCallback(
     (symptomType: string) => {
@@ -114,7 +101,6 @@ export default function SymptomManagerModal({
         await symptomTrackingService.logSymptom({
           symptom_type: symptomType,
           severity,
-          factors: selectedFactors,
         });
 
         await onRequestRefreshOverview();
@@ -126,7 +112,7 @@ export default function SymptomManagerModal({
         setBusy(false);
       }
     },
-    [busy, onRequestRefreshOverview, selectedFactors]
+    [busy, onRequestRefreshOverview]
   );
 
   const openSeverityPicker = useCallback((symptomType: string) => {
@@ -172,7 +158,7 @@ export default function SymptomManagerModal({
           <ScrollView contentContainerStyle={styles.content}>
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Quick log</Text>
-              <Text style={styles.sectionHint}>Tap a symptom, pick severity (1–9). Add factors first if you want.</Text>
+              <Text style={styles.sectionHint}>Tap a symptom, pick severity (1–9)</Text>
               <View style={styles.chipGrid}>
                 {COMMON_SYMPTOMS.map((s) => (
                   <TouchableOpacity
@@ -184,24 +170,6 @@ export default function SymptomManagerModal({
                     <Text style={styles.chipText}>{s.label}</Text>
                   </TouchableOpacity>
                 ))}
-              </View>
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Factors (optional)</Text>
-              <View style={styles.chipGrid}>
-                {COMMON_FACTORS.map((f) => {
-                  const selected = selectedFactors.includes(f.key);
-                  return (
-                    <TouchableOpacity
-                      key={f.key}
-                      style={[styles.factorChip, selected && styles.factorChipSelected]}
-                      onPress={() => toggleFactor(f.key)}
-                    >
-                      <Text style={[styles.factorChipText, selected && styles.factorChipTextSelected]}>{f.label}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
               </View>
             </View>
 
@@ -425,26 +393,6 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(12),
     fontWeight: '600',
     color: '#111827',
-  },
-  factorChip: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: moderateScale(999),
-    paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(8),
-    backgroundColor: '#F8FAFC',
-  },
-  factorChipSelected: {
-    borderColor: BRAND.gradPurple,
-    backgroundColor: '#F3F0FF',
-  },
-  factorChipText: {
-    fontSize: moderateScale(12),
-    fontWeight: '600',
-    color: '#111827',
-  },
-  factorChipTextSelected: {
-    color: BRAND.gradPurple,
   },
   trendCard: {
     borderWidth: 1,
