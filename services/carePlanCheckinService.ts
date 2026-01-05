@@ -1,6 +1,8 @@
 import { getAuth } from 'firebase/auth';
 import { Platform } from 'react-native';
 
+import type { UIBlock, UIEventRequest } from '@/utils/uiBlocks';
+
 /**
  * Care Plan Check-in Service
  * Daily threaded chat (one thread per local date).
@@ -49,6 +51,7 @@ export interface StartCarePlanCheckInResponse {
   local_date: string;
   history: Message[];
   tap_options: TapOption[];
+  ui_blocks?: UIBlock[];
 }
 
 export interface RespondCarePlanCheckInResponse {
@@ -57,6 +60,7 @@ export interface RespondCarePlanCheckInResponse {
   history: Message[];
   tap_options: TapOption[];
   actionable_insights?: Record<string, any>;
+  ui_blocks?: UIBlock[];
 }
 
 export interface TranscribeResponse {
@@ -122,6 +126,36 @@ class CarePlanCheckinService {
       return await response.json();
     } catch (error) {
       console.error('❌ Error sending care plan message:', error);
+      return null;
+    }
+  }
+
+  async sendEvent(event: UIEventRequest): Promise<RespondCarePlanCheckInResponse | null> {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        console.error('❌ No auth token available');
+        return null;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/care-plan-checkin/event`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(event),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('❌ Failed to send care plan UI event:', response.status, text);
+        return null;
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('❌ Error sending care plan UI event:', error);
       return null;
     }
   }

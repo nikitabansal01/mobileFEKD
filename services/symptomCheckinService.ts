@@ -1,6 +1,8 @@
 import { getAuth } from 'firebase/auth';
 import { Platform } from 'react-native';
 
+import type { UIBlock, UIEventRequest } from '@/utils/uiBlocks';
+
 /**
  * Symptom Check-in Service
  * Daily threaded chat for symptom progress.
@@ -46,6 +48,7 @@ export interface StartSymptomCheckInResponse {
   local_date: string;
   history: Message[];
   tap_options: TapOption[];
+  ui_blocks?: UIBlock[];
 }
 
 export interface RespondSymptomCheckInResponse {
@@ -54,6 +57,7 @@ export interface RespondSymptomCheckInResponse {
   history: Message[];
   tap_options: TapOption[];
   actionable_insights?: Record<string, any>;
+  ui_blocks?: UIBlock[];
 }
 
 export interface TranscribeResponse {
@@ -119,6 +123,36 @@ class SymptomCheckinService {
       return await response.json();
     } catch (error) {
       console.error('❌ Error sending symptom message:', error);
+      return null;
+    }
+  }
+
+  async sendEvent(event: UIEventRequest): Promise<RespondSymptomCheckInResponse | null> {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        console.error('❌ No auth token available');
+        return null;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/symptom-checkin/event`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(event),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('❌ Failed to send symptom UI event:', response.status, text);
+        return null;
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('❌ Error sending symptom UI event:', error);
       return null;
     }
   }

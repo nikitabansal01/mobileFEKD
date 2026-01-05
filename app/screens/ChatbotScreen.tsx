@@ -7,9 +7,11 @@ import SymptomManagerModal from "@/components/SymptomManagerModal";
 import carePlanCheckinService, { TapOption as CarePlanTapOption } from "@/services/carePlanCheckinService";
 import homeService, { ActionPlanResponse, AssignmentsResponse } from "@/services/homeService";
 import { rewardService, RewardsStatusResponse } from "@/services/rewardService";
+import chatService from "@/services/chatService";
 import symptomCheckinService, { TapOption as SymptomTapOption } from "@/services/symptomCheckinService";
 import symptomTrackingService, { SymptomOverviewResponse } from "@/services/symptomTrackingService";
 import weeklyCheckinService, { QuestionResponse, TapOption } from "@/services/weeklyCheckinService";
+import type { UIBlock, UIBlockAction, UIEventRequest } from "@/utils/uiBlocks";
 import { Ionicons } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { useNavigation } from '@react-navigation/native';
@@ -208,6 +210,7 @@ type RootStackParamList = {
     screen?: string;
     params?: Record<string, any>;
   } | undefined;
+  PaywallScreen: undefined;
   ChatbotScreen: {
     conversationContext?: {
       initialMessage: string;
@@ -234,6 +237,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const [mode, setMode] = useState<Mode>("idle");
   const [value, setValue] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
+  const [uiBlocks, setUiBlocks] = useState<UIBlock[]>([]);
+
+  // Generic chat session (used for personalise / know_body / general)
+  const [chatSessionId, setChatSessionId] = useState<string | null>(null);
 
   const isCarePlanContext = route?.params?.conversationContext?.context === 'care_plan_modal';
   const isSymptomContext = route?.params?.conversationContext?.context === 'symptom_checkin';
@@ -267,6 +274,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   // Handle conversation context from different chats
   useEffect(() => {
     const contextFromRoute = route?.params?.conversationContext;
+
+    // Prevent UI blocks from leaking between contexts.
+    setUiBlocks([]);
+    setChatSessionId(null);
     
     if (contextFromRoute?.context === "care_plan_modal") {
       // Care Plan check-in (daily thread) - start or resume from API
@@ -280,11 +291,113 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     } else if (contextFromRoute?.context === "weekly_checkin") {
       // Weekly check-in flow - start or resume from API
       initializeWeeklyCheckin();
+    } else if (contextFromRoute?.context === "personalise") {
+      initializePersonaliseChat(contextFromRoute);
     } else {
       // Default: Initialize weekly check-in from API
       initializeWeeklyCheckin();
     }
   }, [route?.params?.conversationContext]);
+
+  const initializePersonaliseChat = async (contextFromRoute?: any) => {
+    setIsLoadingCheckin(true);
+    setChatSessionId(null);
+    try {
+      const seedMessage =
+        (contextFromRoute?.userResponse && contextFromRoute.userResponse !== 'Continue conversation'
+          ? contextFromRoute.userResponse
+          : contextFromRoute?.initialMessage) ||
+        'I want to personalise';
+
+      const result = await chatService.sendMessage({
+        message: seedMessage,
+        conversation_context: 'personalise',
+        input_mode: 'tap',
+        session_id: null,
+      });
+
+      if (result) {
+        setChatSessionId(result.session_id);
+        setMessages([
+          {
+            id: `chat_${result.session_id}_bot_0`,
+            text: result.content || 'Let\'s personalise your plan.',
+            isBot: true,
+          },
+        ]);
+        setUiBlocks(result.ui_blocks || []);
+        setMode('idle');
+        setShowSlider(false);
+        setShowSelectedValue(false);
+        scrollToBottom();
+        return;
+      }
+
+      setMessages([
+        {
+          id: 'personalise_fallback_1',
+          text: 'Want to personalise? I can help you update the factors you\'ve unlocked so far.',
+          isBot: true,
+        },
+      ]);
+      setUiBlocks([]);
+      setMode('idle');
+      setShowSlider(false);
+      setShowSelectedValue(false);
+    } catch (error) {
+      console.error('Failed to initialize personalise chat:', error);
+      setMessages([
+        {
+          id: 'personalise_error_1',
+          text: 'Want to personalise? I can help you update the factors you\'ve unlocked so far.',
+          isBot: true,
+        },
+      ]);
+      setUiBlocks([]);
+      setMode('idle');
+      setShowSlider(false);
+      setShowSelectedValue(false);
+    } finally {
+      setIsLoadingCheckin(false);
+    }
+  };
+
+  const submitChatMessage = async (conversationContext: string, messageText: string) => {
+    // Optimistically add user message
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: messageText,
+      isBot: false,
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    scrollToBottom();
+
+    setIsLoadingCheckin(true);
+    try {
+      const result = await chatService.sendMessage({
+        message: messageText,
+        conversation_context: conversationContext,
+        input_mode: 'type',
+        session_id: chatSessionId,
+      });
+
+      if (result) {
+        if (!chatSessionId) setChatSessionId(result.session_id);
+        setUiBlocks(result.ui_blocks || []);
+
+        const botMessage: Message = {
+          id: Date.now().toString() + '_bot',
+          text: result.content || '',
+          isBot: true,
+        };
+        setMessages((prev) => [...prev, botMessage]);
+        scrollToBottom();
+      }
+    } catch (error) {
+      console.error('Failed to send chat message:', error);
+    }
+    setIsLoadingCheckin(false);
+  };
 
   const refreshSymptomOverview = async () => {
     if (!isSymptomContext) return;
@@ -462,6 +575,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       if (result) {
         setSymptomThreadId(result.thread_id);
         setSymptomTapOptions(result.tap_options || []);
+        setUiBlocks(result.ui_blocks || []);
 
         const historyMessages = result.history || [];
         setMessages(historyMessages);
@@ -471,6 +585,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         setShowSelectedValue(false);
       } else {
         setMessages([{ id: "symptom_fallback_1", text: "See any progress with your symptoms today? Track progress, wins, and difficulties.", isBot: true }]);
+        setUiBlocks([]);
         setMode("idle");
         setShowSlider(false);
         setShowSelectedValue(false);
@@ -478,6 +593,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     } catch (error) {
       console.error("Failed to initialize symptom check-in:", error);
       setMessages([{ id: "symptom_error_1", text: "See any progress with your symptoms today? Track progress, wins, and difficulties.", isBot: true }]);
+      setUiBlocks([]);
       setMode("idle");
       setShowSlider(false);
       setShowSelectedValue(false);
@@ -501,6 +617,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       const result = await symptomCheckinService.sendMessage(threadId, messageText);
       if (result) {
         setSymptomTapOptions(result.tap_options || []);
+        setUiBlocks(result.ui_blocks || []);
         if (result.history && result.history.length > 0) {
           setMessages(result.history);
         }
@@ -521,6 +638,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       if (result) {
         setCarePlanThreadId(result.thread_id);
         setCarePlanTapOptions(result.tap_options || []);
+        setUiBlocks(result.ui_blocks || []);
 
         const historyMessages = result.history || [];
         setMessages(historyMessages);
@@ -535,6 +653,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         }
       } else {
         setMessages([{ id: "care_plan_fallback_1", text: "Quick care plan check-in — how are today’s actions going?", isBot: true }]);
+        setUiBlocks([]);
         setMode("idle");
         setShowSlider(false);
         setShowSelectedValue(false);
@@ -542,6 +661,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     } catch (error) {
       console.error("Failed to initialize care plan check-in:", error);
       setMessages([{ id: "care_plan_error_1", text: "Quick care plan check-in — how are today’s actions going?", isBot: true }]);
+      setUiBlocks([]);
       setMode("idle");
       setShowSlider(false);
       setShowSelectedValue(false);
@@ -566,6 +686,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       const result = await carePlanCheckinService.sendMessage(threadId, messageText);
       if (result) {
         setCarePlanTapOptions(result.tap_options || []);
+        setUiBlocks(result.ui_blocks || []);
         if (result.history && result.history.length > 0) {
           setMessages(result.history);
         }
@@ -744,6 +865,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           { id: "want-to-change", text: "👎 I want to change it" },
           { id: "skip-actions", text: "⏩ I want to skip some actions for today" },
           { id: "alternate-suggestions", text: "🔁 I want alternate suggestions" },
+          { id: "manage_plan", text: "🧩 Manage plan" },
         ];
       case "weekly_checkin":
         // Fallback options if API didn't return any
@@ -764,6 +886,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           { id: "wins", text: "🏆 Share a win" },
           { id: "track_symptom", text: "📊 Track a symptom" },
           { id: "show_patterns", text: "🔍 Show my patterns" },
+          { id: "manage_symptoms", text: "🧩 Manage symptoms" },
         ];
       case "personalise":
         return [
@@ -907,6 +1030,17 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         return;
       }
 
+      // Generic chat contexts (AI-driven)
+      if (
+        contextFromRoute?.context === 'personalise' ||
+        contextFromRoute?.context === 'know_body' ||
+        contextFromRoute?.context === 'general'
+      ) {
+        if (!text) setValue('');
+        submitChatMessage(contextFromRoute.context, messageText);
+        return;
+      }
+
       const newMessage: Message = {
         id: Date.now().toString(),
         text: messageText,
@@ -916,38 +1050,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       console.log("Sent:", messageText);
       if (!text) setValue("");
 
-      // Add bot response after a short delay
-      setTimeout(() => {
-        let botResponse: Message;
-
-        if (contextFromRoute?.context === "personalise") {
-          // Personalise - ask the question again
-          botResponse = {
-            id: Date.now().toString() + "_bot",
-            text: "Want to Personalise? Add 25+ personalisation factors to improve your action plan",
-            isBot: true,
-          };
-        } else if (contextFromRoute?.context === "know_body") {
-          // Know my body - ask the question again
-          botResponse = {
-            id: Date.now().toString() + "_bot",
-            text: "Know my body. Know more about menstrual phase, hormones and how it changes",
-            isBot: true,
-          };
-        } else {
-          // Default response
-          botResponse = {
-            id: Date.now().toString() + "_bot",
-            text: "Were there any big changes in your week? related to food, lifestyle, stress, etc",
-            isBot: true,
-          };
-        }
-        
-        setMessages(prev => [...prev, botResponse]);
-        scrollToBottom();
-      }, 500);
-
-      // Scroll to bottom after adding new message
+      // Legacy local fallback: keep existing behaviour for other contexts.
       scrollToBottom();
     }
   };
@@ -982,6 +1085,18 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         if (wantsManager) {
           refreshSymptomOverview();
           setSymptomManagerVisible(true);
+          setSelectedOptions([]);
+          return;
+        }
+      }
+
+      // Care plan check-in: treat manage plan tap option as UI action (open modal)
+      if (contextFromRoute?.context === "care_plan_modal") {
+        const lowered = (messageText || "").toLowerCase();
+        const wantsPlanManager = lowered.includes("manage plan");
+        if (wantsPlanManager) {
+          refreshCarePlanPlanManagerData();
+          setPlanManagerVisible(true);
           setSelectedOptions([]);
           return;
         }
@@ -1196,6 +1311,187 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     return tints[value] || COLORS.white;
   };
 
+  const applyCarePlanApiResult = (result: any) => {
+    if (!result) return;
+    if (result.tap_options) setCarePlanTapOptions(result.tap_options || []);
+    if (result.history && result.history.length > 0) setMessages(result.history);
+    setUiBlocks(result.ui_blocks || []);
+    scrollToBottom();
+  };
+
+  const applySymptomApiResult = (result: any) => {
+    if (!result) return;
+    if (result.tap_options) setSymptomTapOptions(result.tap_options || []);
+    if (result.history && result.history.length > 0) setMessages(result.history);
+    setUiBlocks(result.ui_blocks || []);
+    scrollToBottom();
+  };
+
+  const handleUiBlockAction = async (block: UIBlock, action: UIBlockAction) => {
+    const contextFromRoute = route?.params?.conversationContext;
+
+    if (action.action_type === 'open_modal') {
+      const modal = action.payload?.modal;
+      if (modal === 'PlanManagerModal') {
+        refreshCarePlanPlanManagerData();
+        setPlanManagerVisible(true);
+        return;
+      }
+      if (modal === 'SymptomManagerModal') {
+        refreshSymptomOverview();
+        setSymptomManagerVisible(true);
+        return;
+      }
+      if (modal === 'PaywallScreen') {
+        navigation.navigate('PaywallScreen');
+        return;
+      }
+      return;
+    }
+
+    if (action.action_type === 'send_text') {
+      const text = (action.payload?.text || action.title || '').toString();
+      if (!text.trim()) return;
+
+      if (contextFromRoute?.context === 'care_plan_modal' && carePlanThreadId) {
+        await submitCarePlanMessage(carePlanThreadId, text);
+        return;
+      }
+      if (contextFromRoute?.context === 'symptom_checkin' && symptomThreadId) {
+        await submitSymptomMessage(symptomThreadId, text);
+        return;
+      }
+      handleSend(text);
+      return;
+    }
+
+    // Default: submit structured event to backend (if supported)
+    if (contextFromRoute?.context === 'care_plan_modal' && carePlanThreadId) {
+      const event: UIEventRequest = {
+        thread_id: carePlanThreadId,
+        block_id: block.id,
+        event_type: 'action',
+        action_id: action.id,
+        metadata: {
+          ...(action.payload || {}),
+        },
+      };
+      setIsLoadingCheckin(true);
+      try {
+        const result = await carePlanCheckinService.sendEvent(event);
+        applyCarePlanApiResult(result);
+      } finally {
+        setIsLoadingCheckin(false);
+      }
+      return;
+    }
+
+    if (contextFromRoute?.context === 'symptom_checkin' && symptomThreadId) {
+      const event: UIEventRequest = {
+        thread_id: symptomThreadId,
+        block_id: block.id,
+        event_type: 'action',
+        action_id: action.id,
+        metadata: {
+          ...(action.payload || {}),
+        },
+      };
+      setIsLoadingCheckin(true);
+      try {
+        const result = await symptomCheckinService.sendEvent(event);
+        applySymptomApiResult(result);
+      } finally {
+        setIsLoadingCheckin(false);
+      }
+      return;
+    }
+  };
+
+  const renderUiBlocksInline = () => {
+    if (!uiBlocks || uiBlocks.length === 0) return null;
+
+    const submitSliderEvent = async (block: UIBlock, value: number) => {
+      const contextFromRoute = route?.params?.conversationContext;
+
+      // Only symptom_checkin currently supports slider_submit events.
+      if (contextFromRoute?.context !== 'symptom_checkin' || !symptomThreadId) return;
+
+      const event: UIEventRequest = {
+        thread_id: symptomThreadId,
+        block_id: block.id,
+        event_type: 'slider_submit',
+        value,
+        metadata: {
+          ...(block.payload || {}),
+        },
+      };
+
+      setIsLoadingCheckin(true);
+      try {
+        const result = await symptomCheckinService.sendEvent(event);
+        applySymptomApiResult(result);
+      } finally {
+        setIsLoadingCheckin(false);
+      }
+    };
+
+    return (
+      <View style={styles.uiBlocksContainer}>
+        {uiBlocks.map((block) => (
+          <View key={block.id} style={styles.uiBlockCard}>
+            {!!block.title && <Text style={styles.uiBlockTitle}>{block.title}</Text>}
+            {!!block.subtitle && <Text style={styles.uiBlockSubtitle}>{block.subtitle}</Text>}
+
+            {block.type === 'slider_1_9' ? (
+              <View style={styles.uiBlockSliderRow}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                  <TouchableOpacity
+                    key={`${block.id}_${n}`}
+                    activeOpacity={0.85}
+                    disabled={isLoadingCheckin}
+                    onPress={() => submitSliderEvent(block, n)}
+                    style={[styles.uiBlockSliderChip, { backgroundColor: getSliderTint(n) }, isLoadingCheckin && { opacity: 0.6 }]}
+                  >
+                    <Text style={styles.uiBlockSliderChipText}>{n}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              !!block.actions?.length && (
+                <View style={styles.uiBlockActionsRow}>
+                  {block.actions.map((action) => {
+                    const isPrimary = action.style === 'primary' || !action.style;
+                    return (
+                      <TouchableOpacity
+                        key={action.id}
+                        activeOpacity={0.85}
+                        onPress={() => handleUiBlockAction(block, action)}
+                        style={[styles.uiBlockActionBtn, !isPrimary && styles.uiBlockActionBtnSecondary]}
+                      >
+                        {isPrimary ? (
+                          <LinearGradient
+                            colors={[COLORS.gradPurple, COLORS.gradPink]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.uiBlockActionBtnGradient}
+                          >
+                            <Text style={styles.uiBlockActionTextPrimary}>{action.title}</Text>
+                          </LinearGradient>
+                        ) : (
+                          <Text style={styles.uiBlockActionTextSecondary}>{action.title}</Text>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )
+            )}
+          </View>
+        ))}
+      </View>
+    );
+  };
+
   const renderIdleMode = () => {
     const contextFromRoute = route?.params?.conversationContext;
     const isCarePlanModal = contextFromRoute?.context === "care_plan_modal";
@@ -1205,8 +1501,6 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     
     // Force Care Plan modal to work - early return
     if (isCarePlanModal) {
-      const refreshStatus = carePlanRewardsStatus?.refresh_status;
-      const freezeCount = carePlanRewardsStatus?.freeze_count ?? 0;
       return (
         <View style={styles.idleModeContainer}>
           <ScrollView
@@ -1228,25 +1522,11 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                   )}
                 </View>
               ))}
+
+              {renderUiBlocksInline()}
             </View>
             </View>
           </ScrollView>
-
-          <View style={styles.managePlanBar}>
-            <TouchableOpacity
-              style={styles.managePlanButton}
-              onPress={() => {
-                refreshCarePlanPlanManagerData();
-                setPlanManagerVisible(true);
-              }}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.managePlanTitle}>Manage plan</Text>
-              <Text style={styles.managePlanMeta}>
-                Refreshes: {refreshStatus ? `${refreshStatus.remaining}/${refreshStatus.limit}` : '—'} • Freezes: {freezeCount}
-              </Text>
-            </TouchableOpacity>
-          </View>
 
           {/* Recording status display */}
           {(isRecording || recordingComplete || isTranscribing) && (
@@ -1279,25 +1559,11 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                     {message.isBot ? <BotMessage text={message.text} /> : <UserMessage text={message.text} />}
                   </View>
                 ))}
+
+                {renderUiBlocksInline()}
               </View>
             </View>
           </ScrollView>
-
-          <View style={styles.managePlanBar}>
-            <TouchableOpacity
-              style={styles.managePlanButton}
-              onPress={() => {
-                refreshSymptomOverview();
-                setSymptomManagerVisible(true);
-              }}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.managePlanTitle}>Manage symptoms</Text>
-              <Text style={styles.managePlanMeta}>
-                {symptomOverview ? `${symptomOverview.period_days} days • ${symptomOverview.logs.length} logs` : 'Loading…'}
-              </Text>
-            </TouchableOpacity>
-          </View>
 
           {(isRecording || recordingComplete || isTranscribing) && (
             <View style={styles.recordingStatusContainer}>
@@ -1416,27 +1682,11 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               )}
             </View>
           ))}
+
+          {renderUiBlocksInline()}
         </View>
         </View>
       </ScrollView>
-
-      {isCarePlanContext && (
-        <View style={styles.managePlanBar}>
-          <TouchableOpacity
-            style={styles.managePlanButton}
-            onPress={() => {
-              refreshCarePlanPlanManagerData();
-              setPlanManagerVisible(true);
-            }}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.managePlanTitle}>Manage plan</Text>
-            <Text style={styles.managePlanMeta}>
-              Refreshes: {carePlanRewardsStatus?.refresh_status ? `${carePlanRewardsStatus.refresh_status.remaining}/${carePlanRewardsStatus.refresh_status.limit}` : '—'} • Freezes: {carePlanRewardsStatus?.freeze_count ?? 0}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
       <View style={styles.inputContainer}>
         <View style={styles.inputField}>
@@ -1499,6 +1749,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               )}
             </View>
           ))}
+
+          {renderUiBlocksInline()}
         </View>
         </View>
         <View style={styles.choiceOptionsContainer}>
@@ -1515,24 +1767,6 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         </View>
         <View style={{ flex: 1 }} />
       </ScrollView>
-
-      {isCarePlanContext && (
-        <View style={styles.managePlanBar}>
-          <TouchableOpacity
-            style={styles.managePlanButton}
-            onPress={() => {
-              refreshCarePlanPlanManagerData();
-              setPlanManagerVisible(true);
-            }}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.managePlanTitle}>Manage plan</Text>
-            <Text style={styles.managePlanMeta}>
-              Refreshes: {carePlanRewardsStatus?.refresh_status ? `${carePlanRewardsStatus.refresh_status.remaining}/${carePlanRewardsStatus.refresh_status.limit}` : '—'} • Freezes: {carePlanRewardsStatus?.freeze_count ?? 0}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
       <View style={styles.CTAWrapper}>
         <View style={styles.CTAGroup1}>
@@ -1791,6 +2025,92 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.extraSmall,
     fontFamily: FONT_FAMILIES['Inter-Regular'],
     color: COLORS.greyLight,
+  },
+
+  // Dynamic UI blocks (Gemini-like)
+  uiBlocksContainer: {
+    marginTop: verticalScale(12),
+    gap: verticalScale(10),
+  },
+  uiBlockCard: {
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    backgroundColor: COLORS.white,
+    borderRadius: scale(14),
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(12),
+    ...(isAndroid
+      ? ({ elevation: 1 } as any)
+      : {
+          shadowColor: '#000',
+          shadowOpacity: 0.06,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 4 },
+        }),
+  },
+  uiBlockTitle: {
+    fontSize: FONT_SIZES.small,
+    fontFamily: FONT_FAMILIES['Inter-SemiBold'],
+    color: COLORS.onSurface,
+  },
+  uiBlockSubtitle: {
+    marginTop: verticalScale(4),
+    fontSize: FONT_SIZES.extraSmall,
+    fontFamily: FONT_FAMILIES['Inter-Regular'],
+    color: COLORS.greyLight,
+  },
+  uiBlockActionsRow: {
+    marginTop: verticalScale(10),
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: scale(8),
+  },
+  uiBlockActionBtn: {
+    borderRadius: scale(12),
+    overflow: 'hidden',
+  },
+  uiBlockActionBtnGradient: {
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(10),
+    borderRadius: scale(12),
+  },
+  uiBlockActionBtnSecondary: {
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(10),
+  },
+  uiBlockActionTextPrimary: {
+    fontSize: FONT_SIZES.button,
+    fontFamily: FONT_FAMILIES['Inter-SemiBold'],
+    color: COLORS.white,
+  },
+  uiBlockActionTextSecondary: {
+    fontSize: FONT_SIZES.button,
+    fontFamily: FONT_FAMILIES['Inter-SemiBold'],
+    color: COLORS.onSurface,
+  },
+
+  uiBlockSliderRow: {
+    marginTop: verticalScale(10),
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: scale(8),
+  },
+  uiBlockSliderChip: {
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(10),
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uiBlockSliderChipText: {
+    fontSize: FONT_SIZES.small,
+    fontFamily: FONT_FAMILIES['Inter-SemiBold'],
+    color: COLORS.onSurface,
   },
 
   // Message bubbles
