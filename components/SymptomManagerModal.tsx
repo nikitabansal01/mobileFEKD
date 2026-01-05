@@ -86,6 +86,7 @@ export default function SymptomManagerModal({
 }: Props) {
   const [busy, setBusy] = useState(false);
   const [selectedFactors, setSelectedFactors] = useState<string[]>([]);
+  const [severityPickerSymptom, setSeverityPickerSymptom] = useState<string | null>(null);
 
   const aggregates = overview?.aggregates ?? [];
 
@@ -128,22 +129,9 @@ export default function SymptomManagerModal({
     [busy, onRequestRefreshOverview, selectedFactors]
   );
 
-  const openSeverityPicker = useCallback(
-    (symptomType: string) => {
-      Alert.alert(
-        `Log ${symptomType}`,
-        'Pick severity (1–9).',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({
-            text: `${n}`,
-            onPress: () => logSymptom(symptomType, n),
-          })),
-        ]
-      );
-    },
-    [logSymptom]
-  );
+  const openSeverityPicker = useCallback((symptomType: string) => {
+    setSeverityPickerSymptom(symptomType);
+  }, []);
 
   const refresh = useCallback(async () => {
     if (busy) return;
@@ -238,6 +226,41 @@ export default function SymptomManagerModal({
               )}
             </View>
           </ScrollView>
+
+          {/* Severity picker overlay (Alert on iOS only shows a few buttons) */}
+          {severityPickerSymptom ? (
+            <View style={styles.severityOverlay}>
+              <View style={styles.severityCard}>
+                <Text style={styles.severityTitle}>Log {severityPickerSymptom}</Text>
+                <Text style={styles.severityHint}>Pick severity (1–9)</Text>
+
+                <View style={styles.severityGrid}>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                    <TouchableOpacity
+                      key={`sev_${n}`}
+                      disabled={busy}
+                      style={[styles.severityChip, busy && { opacity: 0.6 }]}
+                      onPress={async () => {
+                        const symptomType = severityPickerSymptom;
+                        setSeverityPickerSymptom(null);
+                        await logSymptom(symptomType, n);
+                      }}
+                    >
+                      <Text style={styles.severityChipText}>{n}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => setSeverityPickerSymptom(null)}
+                  style={styles.severityCancel}
+                  disabled={busy}
+                >
+                  <Text style={styles.severityCancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null}
         </View>
       </View>
     </Modal>
@@ -256,6 +279,73 @@ const styles = StyleSheet.create({
     borderTopRightRadius: moderateScale(18),
     maxHeight: '92%',
     paddingBottom: moderateScale(18),
+  },
+
+  severityOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: moderateScale(16),
+  },
+  severityCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#fff',
+    borderRadius: moderateScale(16),
+    padding: moderateScale(16),
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+  },
+  severityTitle: {
+    fontSize: moderateScale(16),
+    fontWeight: '600',
+    color: COLORS.onSurface,
+  },
+  severityHint: {
+    marginTop: moderateScale(6),
+    fontSize: moderateScale(12),
+    color: COLORS.greyLight,
+  },
+  severityGrid: {
+    marginTop: moderateScale(12),
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: moderateScale(10),
+  },
+  severityChip: {
+    width: scale(44),
+    height: scale(44),
+    borderRadius: moderateScale(12),
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  severityChipText: {
+    fontSize: moderateScale(14),
+    fontWeight: '700',
+    color: COLORS.onSurface,
+  },
+  severityCancel: {
+    marginTop: moderateScale(14),
+    paddingVertical: moderateScale(10),
+    borderRadius: moderateScale(12),
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  severityCancelText: {
+    fontSize: moderateScale(14),
+    fontWeight: '600',
+    color: COLORS.onSurface,
   },
   header: {
     flexDirection: 'row',
