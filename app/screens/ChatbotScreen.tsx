@@ -882,12 +882,12 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       case "weekly_checkin":
         // Fallback options if API didn't return any
         return [
-          { id: "acne", text: "Acne" },
-          { id: "bloating", text: "Bloating" },
-          { id: "mood_swings", text: "Mood swings" },
-          { id: "fatigue", text: "Fatigue" },
-          { id: "cramps", text: "Cramps" },
-          { id: "headaches", text: "Headaches" },
+          { id: "not_sure", text: "Not sure" },
+          { id: "nothing_changed", text: "Nothing changed" },
+          { id: "a_little", text: "A few small changes" },
+          { id: "a_lot", text: "A big change" },
+          { id: "prefer_type", text: "I'd rather type" },
+          { id: "skip", text: "Prefer not to say" },
         ];
       case "symptom_checkin":
         // If the backend is driving an inline UI block (e.g., severity 1–9),
@@ -1700,7 +1700,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             <View style={styles.sliderTopSpacer} />
             <Avatar showMessage={true} />
             <View style={styles.selectedValueContainer}>
-              <Text style={styles.selectedValueLabel}>Loading check-in...</Text>
+              <BotThinkingMessage />
             </View>
             <View style={styles.sliderBottomSpacer} />
           </View>
@@ -1728,9 +1728,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                   </View>
                 ))}
 
-                {isLoadingCheckin && messages.length > 0 && contextFromRoute?.context !== "weekly_checkin" ? (
-                  <BotThinkingMessage />
-                ) : null}
+                {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
               </View>
               
               {/* Render Slider INLINE if active */}
@@ -1801,9 +1799,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             </View>
           ))}
 
-          {isLoadingCheckin && messages.length > 0 && route?.params?.conversationContext?.context !== "weekly_checkin" ? (
-            <BotThinkingMessage />
-          ) : null}
+          {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
 
           {renderUiBlocksInline()}
         </View>
@@ -1872,9 +1868,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             </View>
           ))}
 
-          {isLoadingCheckin && messages.length > 0 && route?.params?.conversationContext?.context !== "weekly_checkin" ? (
-            <BotThinkingMessage />
-          ) : null}
+          {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
 
           {renderUiBlocksInline()}
         </View>
