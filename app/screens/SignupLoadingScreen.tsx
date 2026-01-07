@@ -26,6 +26,7 @@ const SignupLoadingScreen = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const hasNavigated = useRef(false);
+  const startedAtMsRef = useRef<number>(Date.now());
 
   // Fade in animation
   useEffect(() => {
@@ -66,6 +67,26 @@ const SignupLoadingScreen = () => {
       if (hasNavigated.current || !isMounted) return;
       hasNavigated.current = true;
 
+      // Log timing for post-auth flow (signup/login)
+      try {
+        const postAuthFlow = await AsyncStorage.getItem('post_auth_flow');
+        const postAuthStartedMsStr = await AsyncStorage.getItem('post_auth_started_ms');
+        const linkCompletedMsStr = await AsyncStorage.getItem('session_link_completed_ms');
+        const linkDurationMsStr = await AsyncStorage.getItem('session_link_duration_ms');
+
+        const now = Date.now();
+        const screenMs = now - startedAtMsRef.current;
+        const postAuthMs = postAuthStartedMsStr ? now - parseInt(postAuthStartedMsStr, 10) : null;
+
+        console.log(
+          `⏱️ [SignupLoadingScreen] flow=${postAuthFlow ?? 'unknown'} screen_wait=${screenMs}ms ` +
+            `post_auth_to_now=${postAuthMs ?? 'n/a'}ms session_link_completed_ms=${linkCompletedMsStr ?? 'n/a'} ` +
+            `session_link_duration_ms=${linkDurationMsStr ?? 'n/a'}`
+        );
+      } catch (e) {
+        // ignore
+      }
+
       // Clear all timers
       if (checkInterval) clearInterval(checkInterval);
       if (progressTimer) clearInterval(progressTimer);
@@ -76,17 +97,24 @@ const SignupLoadingScreen = () => {
       setStatusMessage('Your plan is ready! 🎉');
 
       // Clear flags
+      // NOTE: Keep post-auth timestamps for HomeScreen to log end-to-end once plan is fetched.
       await AsyncStorage.multiRemove(['fresh_signup_pending_refresh', 'session_link_complete']);
 
       // Small delay to show success message
       setTimeout(() => {
         if (isMounted) {
-          navigation.dispatch(
-            CommonActions.reset({
-              index: 0,
-              routes: [{ name: 'MainScreenTabs' }],
-            })
-          );
+          // Determine if this flow was a *signup* (new user) vs login
+          // HomeScreen will use this for more specific perf logs.
+          AsyncStorage.getItem('post_auth_flow').then((flow) => {
+            const freshSignup = flow === 'signup';
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{ name: 'MainScreenTabs', params: { freshSignup } }],
+              })
+            );
+          });
+
         }
       }, 500);
     };
@@ -97,7 +125,8 @@ const SignupLoadingScreen = () => {
       
       const isComplete = await AsyncStorage.getItem('session_link_complete');
       if (isComplete === 'true') {
-        console.log('✅ Session link complete, navigating to HomeScreen');
+        const waitedMs = Date.now() - startedAtMsRef.current;
+        console.log(`✅ Session link complete, navigating to HomeScreen (waited ${waitedMs}ms)`);
         navigateToHome();
       }
     };

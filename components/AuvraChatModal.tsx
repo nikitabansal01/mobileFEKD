@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import type { RefreshStatus } from '@/services/rewardService';
 
 // Action item interface (matches ActionPlanItem from homeService)
 interface ActionItem {
@@ -21,6 +22,7 @@ interface AuvraChatModalProps {
   planId?: number;
   onReplaceItems?: (itemIds: number[]) => Promise<void>;
   isLoading?: boolean;
+  refreshStatus?: RefreshStatus | null;
 }
 
 // Get category icon emoji
@@ -41,10 +43,12 @@ const AuvraChatModal: React.FC<AuvraChatModalProps> = ({
   actions = [],
   planId,
   onReplaceItems,
-  isLoading = false
+  isLoading = false,
+  refreshStatus = null
 }) => {
   // Selection mode state
   const [showSelectionMode, setShowSelectionMode] = useState(false);
+  const [showConfirmMode, setShowConfirmMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
 
   // Show ALL actions - completed ones will be grayed out
@@ -92,13 +96,29 @@ const AuvraChatModal: React.FC<AuvraChatModalProps> = ({
   // Handle "Replace Selected" click
   const handleReplaceSelected = async () => {
     if (selectedItems.size === 0 || !onReplaceItems) return;
-    await onReplaceItems(Array.from(selectedItems));
+
+    // If we know refresh status and user has no refreshes left, block immediately.
+    if (refreshStatus && refreshStatus.can_refresh === false) {
+      // Keep them in selection mode so they can cancel; don't hit backend.
+      setShowConfirmMode(false);
+      return;
+    }
+
+    // Ask for confirmation before consuming a refresh
+    setShowConfirmMode(true);
   };
 
   // Handle cancel - go back to initial view
   const handleCancel = () => {
     setShowSelectionMode(false);
+    setShowConfirmMode(false);
     setSelectedItems(new Set());
+  };
+
+  const handleConfirmReplace = async () => {
+    if (selectedItems.size === 0 || !onReplaceItems) return;
+    await onReplaceItems(Array.from(selectedItems));
+    // Parent will close modal on completion; keep state as-is.
   };
 
   // Render initial question view
@@ -222,8 +242,56 @@ const AuvraChatModal: React.FC<AuvraChatModalProps> = ({
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Daily refresh limit message (if known) */}
+      {refreshStatus && refreshStatus.can_refresh === false && (
+        <View style={styles.limitBanner}>
+          <Text style={styles.limitBannerText}>
+            Daily refresh limit reached ({refreshStatus.limit}/day). Try again tomorrow.
+          </Text>
+        </View>
+      )}
     </>
   );
+
+  const renderConfirmView = () => {
+    const count = selectedItems.size;
+    const remaining = refreshStatus?.remaining;
+
+    return (
+      <>
+        <View style={styles.selectionHeader}>
+          <Text style={styles.selectionTitle}>Confirm replacement</Text>
+          <Text style={styles.selectionSubtitle}>
+            This will use {count > 0 ? '1' : '0'} refresh token to replace {count} action{count === 1 ? '' : 's'}.
+            {typeof remaining === 'number' ? ` (${remaining} left today)` : ''}
+          </Text>
+        </View>
+
+        <View style={styles.selectionButtons}>
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => setShowConfirmMode(false)}
+            disabled={isLoading}
+          >
+            <Text style={styles.cancelButtonText}>Back</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.replaceButton, isLoading && styles.replaceButtonDisabled]}
+            onPress={handleConfirmReplace}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.replaceButtonText}>Yes, replace</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -236,7 +304,7 @@ const AuvraChatModal: React.FC<AuvraChatModalProps> = ({
         <Text style={styles.closeButtonText}>×</Text>
       </TouchableOpacity>
 
-      {showSelectionMode ? renderSelectionView() : renderInitialView()}
+      {showSelectionMode ? (showConfirmMode ? renderConfirmView() : renderSelectionView()) : renderInitialView()}
 
       {/* Loading overlay */}
       {isLoading && (
@@ -300,6 +368,19 @@ const styles = StyleSheet.create({
     paddingVertical: responsiveHeight(1.2),
     borderRadius: 10,
     maxWidth: responsiveWidth(50),
+  },
+  limitBanner: {
+    marginTop: responsiveHeight(1.5),
+    paddingVertical: responsiveHeight(1),
+    paddingHorizontal: responsiveWidth(4),
+    backgroundColor: 'rgba(193, 126, 201, 0.12)',
+    borderRadius: 10,
+  },
+  limitBannerText: {
+    fontSize: responsiveFontSize(1.5),
+    fontFamily: 'Inter500',
+    color: '#6F6F6F',
+    textAlign: 'center',
   },
   responseText: {
     fontSize: moderateScale(12, 1.5),

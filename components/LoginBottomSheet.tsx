@@ -110,6 +110,15 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       AsyncStorage.setItem('session_link_complete', 'pending')
         .then(() => signInWithCredential(auth, credential))
         .then(async (result) => {
+          // Track post-auth flow timing for debugging performance (signup vs login)
+          try {
+            const isNewUser = !!result?.additionalUserInfo?.isNewUser;
+            await AsyncStorage.setItem('post_auth_flow', isNewUser ? 'signup' : 'login');
+            await AsyncStorage.setItem('post_auth_started_ms', Date.now().toString());
+          } catch (e) {
+            // ignore
+          }
+
           // Save login state using authService (Google doesn't store passwords)
           await authService.setLoggedIn(result.user.uid);
           if (rememberMe && result.user.email) {
@@ -179,6 +188,13 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
     try {
       // Set pending flag BEFORE auth to prevent ResearchingScreen from navigating early
       await AsyncStorage.setItem('session_link_complete', 'pending');
+      // Track post-auth flow timing for debugging performance
+      try {
+        await AsyncStorage.setItem('post_auth_flow', 'signup');
+        await AsyncStorage.setItem('post_auth_started_ms', Date.now().toString());
+      } catch (e) {
+        // ignore
+      }
       const result = await signUpWithEmail(email, password);
       
       if (result.success) {

@@ -5,7 +5,7 @@ import type { UIBlock } from '@/utils/uiBlocks';
 
 /**
  * Generic Chat service (FastAPI /api/v1/chat).
- * Used for contexts like: personalise, know_body, general.
+ * Used for contexts like: personalise ("personalize" UI), know_body, general.
  */
 
 const getApiBaseUrl = () => {

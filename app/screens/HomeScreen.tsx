@@ -292,9 +292,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       dataLoadingRef.current = true;
       lastFocusTimeRef.current = now;
       const thisCallId = ++loadCallIdRef.current; // Increment to get unique ID for this call
+      const focusLoadStartMs = now;
       console.log(`🔄 [HomeScreen:${instanceId}] Loading data (callId: ${thisCallId}, time: ${new Date(now).toISOString().substr(11, 12)})`);
 
       const loadDataAfterReviewCheck = async () => {
+        const stepTimings: Record<string, number> = {};
         // CROSS-INSTANCE DEDUPLICATION: Check if another instance loaded very recently
         try {
           const lastGlobalLoad = await AsyncStorage.getItem('homescreen_last_load');
@@ -321,7 +323,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         try {
           // STEP 1: Check for pending review FIRST
           console.log(`📋 [HomeScreen:${instanceId}] Checking pending review...`);
+          const tReviewStart = Date.now();
           const reviewResponse = await homeService.getPendingReview();
+          stepTimings.pendingReviewMs = Date.now() - tReviewStart;
 
           // Double-check we're still the active call after await
           if (loadCallIdRef.current !== thisCallId) {
@@ -342,11 +346,38 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           // Always load data (cycle, assignments, rewards)
           console.log(`📋 [HomeScreen:${instanceId}] Loading cycle + assignments + rewards...`);
           const isReviewPending = !!hasReview;
+
+          let cycleMs = 0;
+          let assignmentsMs = 0;
+          let rewardsMs = 0;
+
+          const cycleStart = Date.now();
+          const cyclePromise = homeService.getCyclePhase().finally(() => {
+            cycleMs = Date.now() - cycleStart;
+          });
+
+          const assignmentsStart = Date.now();
+          const assignmentsPromise = (isReviewPending
+            ? Promise.resolve(null)
+            : homeService.getTodayAssignments().catch(() => null)
+          ).finally(() => {
+            assignmentsMs = Date.now() - assignmentsStart;
+          });
+
+          const rewardsStart = Date.now();
+          const rewardsPromise = rewardService.getRewardsStatus().catch(() => null).finally(() => {
+            rewardsMs = Date.now() - rewardsStart;
+          });
+
           const [cycleData, assignmentsData, rewardsData] = await Promise.all([
-            homeService.getCyclePhase(),
-            isReviewPending ? Promise.resolve(null) : homeService.getTodayAssignments().catch(() => null),
-            rewardService.getRewardsStatus().catch(() => null),
+            cyclePromise,
+            assignmentsPromise,
+            rewardsPromise,
           ]);
+
+          stepTimings.cycleMs = cycleMs;
+          stepTimings.assignmentsMs = assignmentsMs;
+          stepTimings.rewardsMs = rewardsMs;
 
           // Final check that we're still the active call
           if (loadCallIdRef.current !== thisCallId) {
@@ -359,6 +390,37 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           // If we got assignments, use them; otherwise use pending review items if available
           if (assignmentsData) {
             console.log(`✅ [HomeScreen:${instanceId}] Got ${assignmentsData.total_assignments} assignments`);
+
+            // Post-auth (signup/login) end-to-end timing: from auth completion to plan fetch
+            try {
+              const postAuthFlow = await AsyncStorage.getItem('post_auth_flow');
+              const postAuthStartedMsStr = await AsyncStorage.getItem('post_auth_started_ms');
+              if (postAuthStartedMsStr) {
+                const nowMs = Date.now();
+                const postAuthToAssignmentsMs = nowMs - parseInt(postAuthStartedMsStr, 10);
+                const planSource = (assignmentsData as any)?.plan_source ?? (assignmentsData as any)?.timings_ms?.plan_source;
+                const serverTotalMs = (assignmentsData as any)?.timings_ms?.server_total_ms;
+                const serverGeneratorMs = (assignmentsData as any)?.timings_ms?.server_generator_call_ms;
+                const planGenMs = (assignmentsData as any)?.plan_generation_time_ms ?? (assignmentsData as any)?.timings_ms?.plan_generation_time_ms;
+
+                console.log(
+                  `⏱️ [HomeScreen:${instanceId}] post_auth_to_assignments=${postAuthToAssignmentsMs}ms flow=${postAuthFlow ?? 'unknown'} ` +
+                    `plan_source=${planSource ?? 'n/a'} server_total=${serverTotalMs ?? 'n/a'}ms server_generator=${serverGeneratorMs ?? 'n/a'}ms plan_generation=${planGenMs ?? 'n/a'}ms`
+                );
+
+                // Clear after first successful plan fetch to avoid noisy logs on later opens
+                await AsyncStorage.multiRemove(['post_auth_flow', 'post_auth_started_ms', 'session_link_completed_ms', 'session_link_duration_ms']);
+              }
+            } catch (e) {
+              // ignore
+            }
+
+            // Log backend-provided timings when available (helps differentiate fetch vs generate)
+            const serverTiming = (assignmentsData as any)?.timings_ms;
+            if (serverTiming) {
+              console.log(`⏱️ [HomeScreen:${instanceId}] Backend timings_ms:`, serverTiming);
+            }
+
             setAssignments(assignmentsData);
             if (assignmentsData?.hormone_stats) {
               setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
@@ -392,6 +454,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
           setLoading(false);
           initialDataLoadedRef.current = true;
+
+          const totalLoadMs = Date.now() - focusLoadStartMs;
+          console.log(
+            `⏱️ [HomeScreen:${instanceId}] Home load timings (callId: ${thisCallId}): total=${totalLoadMs}ms ` +
+              `(pendingReview=${stepTimings.pendingReviewMs ?? 'n/a'}ms, cycle=${stepTimings.cycleMs ?? 'n/a'}ms, ` +
+              `assignments=${stepTimings.assignmentsMs ?? 'n/a'}ms, rewards=${stepTimings.rewardsMs ?? 'n/a'}ms)`
+          );
+
+          // Best-effort approximation for "time to plan rendered" after state updates
+          requestAnimationFrame(() => {
+            const approxRenderMs = Date.now() - focusLoadStartMs;
+            console.log(`🖼️ [HomeScreen:${instanceId}] Approx time-to-render=${approxRenderMs}ms (callId: ${thisCallId})`);
+          });
+
           console.log(`✅ [HomeScreen:${instanceId}] All data loaded successfully (callId: ${thisCallId})`);
         } catch (error) {
           console.error(`❌ [HomeScreen:${instanceId}] Failed to load data:`, error);
@@ -505,8 +581,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       } else if (result?.error === 'rate_limit') {
         // Show friendly message for daily limit
         Alert.alert(
-          'Limit Reached',
-          result.message || 'You have reached your daily limit.',
+          'Daily refresh limit reached',
+          result.message || 'Daily refresh limit reached. Try again tomorrow.',
           [{ text: 'OK' }]
         );
       } else {
@@ -1454,8 +1530,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                     } else if (result?.error === 'rate_limit') {
                       // Show friendly no-refresh message
                       Alert.alert(
-                        'Limit Reached',
-                        result.message || 'You have reached your daily limit.',
+                        'Daily refresh limit reached',
+                        result.message || 'Daily refresh limit reached. Try again tomorrow.',
                         [{ text: 'OK' }]
                       );
                     } else {
@@ -1599,6 +1675,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           planId={actionPlan?.plan_id}
           onReplaceItems={handleReplaceItems}
           isLoading={isSubmittingFeedback}
+          refreshStatus={refreshStatus}
         />
       )}
 

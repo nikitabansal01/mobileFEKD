@@ -294,6 +294,7 @@ class SessionService {
    */
   async linkSessionToUser(firebaseUser: any): Promise<boolean> {
     try {
+      const linkStartMs = Date.now();
       // Set "in progress" flag to prevent premature API calls
       // BottomNavigationBar checks this before fetching streak data
       await AsyncStorage.setItem('session_link_complete', 'pending');
@@ -355,6 +356,12 @@ class SessionService {
 
       // Signal that session link is complete - SignupLoadingScreen checks this
       await AsyncStorage.setItem('session_link_complete', 'true');
+      try {
+        await AsyncStorage.setItem('session_link_completed_ms', Date.now().toString());
+        await AsyncStorage.setItem('session_link_duration_ms', (Date.now() - linkStartMs).toString());
+      } catch (e) {
+        // ignore
+      }
       console.log('✅ Session link complete flag set');
 
       return true;
@@ -362,6 +369,12 @@ class SessionService {
       console.error('Session link error:', error);
       // Still set flag so SignupLoadingScreen can proceed (with empty data initially)
       await AsyncStorage.setItem('session_link_complete', 'true');
+      try {
+        await AsyncStorage.setItem('session_link_completed_ms', Date.now().toString());
+        await AsyncStorage.setItem('session_link_duration_ms', 'error');
+      } catch (e) {
+        // ignore
+      }
       return false;
     }
   }

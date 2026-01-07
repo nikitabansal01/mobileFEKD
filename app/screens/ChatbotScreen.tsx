@@ -78,6 +78,30 @@ type Message = {
   isBot: boolean;
 };
 
+// Ensure recorded Yap audio is in a Whisper-friendly format.
+// Expo's HIGH_QUALITY preset often records .caf on iOS, which can yield garbage transcripts.
+const YAP_RECORDING_OPTIONS: Audio.RecordingOptions = {
+  ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+  android: {
+    ...Audio.RecordingOptionsPresets.HIGH_QUALITY.android,
+    extension: ".m4a",
+    outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+    audioEncoder: Audio.AndroidAudioEncoder.AAC,
+    sampleRate: 44100,
+    numberOfChannels: 1,
+    bitRate: 128000,
+  },
+  ios: {
+    ...Audio.RecordingOptionsPresets.HIGH_QUALITY.ios,
+    extension: ".m4a",
+    outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+    audioQuality: Audio.IOSAudioQuality.HIGH,
+    sampleRate: 44100,
+    numberOfChannels: 1,
+    bitRate: 128000,
+  },
+};
+
 // Stable, lightweight hash to keep message IDs deterministic across refreshes
 const hashText = (text: string) => {
   let hash = 0;
@@ -252,7 +276,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const [messages, setMessages] = useState<Message[]>([]);
   const [uiBlocks, setUiBlocks] = useState<UIBlock[]>([]);
 
-  // Generic chat session (used for personalise / know_body / general)
+  // Generic chat session (used for personalize-style flows / know_body / general)
   const [chatSessionId, setChatSessionId] = useState<string | null>(null);
 
   const isCarePlanContext = route?.params?.conversationContext?.context === 'care_plan_modal';
@@ -320,7 +344,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         (contextFromRoute?.userResponse && contextFromRoute.userResponse !== 'Continue conversation'
           ? contextFromRoute.userResponse
           : contextFromRoute?.initialMessage) ||
-        'I want to personalise';
+        'I want to personalize';
 
       const result = await chatService.sendMessage({
         message: seedMessage,
@@ -334,7 +358,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         setMessages([
           {
             id: `chat_${result.session_id}_bot_0`,
-            text: result.content || 'Let\'s personalise your plan.',
+            text: result.content || 'Let\'s personalize your plan.',
             isBot: true,
           },
         ]);
@@ -349,7 +373,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       setMessages([
         {
           id: 'personalise_fallback_1',
-          text: 'Want to personalise? I can help you update the factors you\'ve unlocked so far.',
+          text: 'Want to personalize? I can help you update the factors you\'ve unlocked so far.',
           isBot: true,
         },
       ]);
@@ -362,7 +386,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       setMessages([
         {
           id: 'personalise_error_1',
-          text: 'Want to personalise? I can help you update the factors you\'ve unlocked so far.',
+          text: 'Want to personalize? I can help you update the factors you\'ve unlocked so far.',
           isBot: true,
         },
       ]);
@@ -900,7 +924,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         return [];
       case "personalise":
         return [
-          { id: "add-factors", text: "Add personalisation factors" },
+          { id: "add-factors", text: "Add personalization factors" },
           { id: "update-preferences", text: "Update my preferences" },
           { id: "customise-plan", text: "Customise my action plan" },
         ];
@@ -939,7 +963,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       case "symptom_checkin":
         return "Symptom Check-in";
       case "personalise":
-        return "Want to Personalise?";
+        return "Want to Personalize?";
       case "know_body":
         return "Know my body";
       default:
@@ -1238,7 +1262,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
       const recording = new Audio.Recording();
       recordingRef.current = recording;
-      await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      await recording.prepareToRecordAsync(YAP_RECORDING_OPTIONS);
       await recording.startAsync();
 
       setIsRecording(true);
@@ -1307,6 +1331,15 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           ? await symptomCheckinService.transcribeAudio(recordingUri)
         : await weeklyCheckinService.transcribeAudio(recordingUri);
       const transcript = (result?.text || "").trim();
+
+      if (!transcript) {
+        Alert.alert(
+          "Couldn't hear that",
+          "I didn't catch your voice clearly. Please try again in a quieter place or speak a little closer to the mic.",
+          [{ text: "OK" }]
+        );
+        return;
+      }
 
       // No streaming: drop transcript into the input instantly (still editable).
       setMode("type");

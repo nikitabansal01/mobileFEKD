@@ -144,6 +144,13 @@ export interface AssignmentsResponse {
   cycle_phase?: string;
   show_feedback_prompt_after_seconds?: number;
   weekly_checkin?: WeeklyCheckinStatus | null;
+
+  // Optional performance instrumentation (returned by backend)
+  plan_generation_time_ms?: number | null;
+  plan_source?: string | null;
+  timings_ms?: {
+    [key: string]: any;
+  };
 }
 
 /**
@@ -364,9 +371,12 @@ class HomeService {
    */
   async getTodayAssignments(): Promise<AssignmentsResponse | null> {
     try {
+      const t0 = Date.now();
       console.log('🔄 Fetching today\'s assignments:', `${API_BASE_URL}/api/v1/new-scheduling/assignments/today`);
 
+      const tTokenStart = Date.now();
       const token = await getAuthToken();
+      const tokenMs = Date.now() - tTokenStart;
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
@@ -378,10 +388,12 @@ class HomeService {
         console.log('⚠️ No Firebase token available');
       }
 
+      const tReqStart = Date.now();
       const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/assignments/today?t=${new Date().getTime()}`, {
         method: 'GET',
         headers,
       });
+      const requestMs = Date.now() - tReqStart;
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -389,7 +401,21 @@ class HomeService {
         throw new Error(`Failed to fetch today's assignments: ${response.status} - ${errorText}`);
       }
 
+      const tJsonStart = Date.now();
       const result = await response.json();
+      const jsonMs = Date.now() - tJsonStart;
+
+      const totalMs = Date.now() - t0;
+      const serverTotalMs = result?.timings_ms?.server_total_ms;
+      const serverGeneratorMs = result?.timings_ms?.server_generator_call_ms;
+      const planGenerationMs = result?.plan_generation_time_ms ?? result?.timings_ms?.plan_generation_time_ms;
+      const planSource = result?.plan_source ?? result?.timings_ms?.plan_source;
+
+      console.log(
+        `⏱️ getTodayAssignments timings: total=${totalMs}ms (token=${tokenMs}ms, request=${requestMs}ms, json=${jsonMs}ms) ` +
+          `server_total=${serverTotalMs ?? 'n/a'}ms server_generator=${serverGeneratorMs ?? 'n/a'}ms ` +
+          `plan_generation=${planGenerationMs ?? 'n/a'}ms plan_source=${planSource ?? 'n/a'}`
+      );
       console.log('✅ Successfully fetched today\'s assignments:', result);
       return result;
     } catch (error) {
@@ -543,7 +569,7 @@ class HomeService {
           return {
             success: false,
             error: 'rate_limit',
-            message: 'You have reached your daily limit.'
+            message: 'Daily refresh limit reached. Try again tomorrow.'
           };
         }
 

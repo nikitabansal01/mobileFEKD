@@ -165,11 +165,31 @@ class SymptomCheckinService {
         return null;
       }
 
+      const getAudioUploadMeta = (u: string): { name: string; type: string } => {
+        const rawExt = (u.split('.').pop() || '').split('?')[0].toLowerCase();
+        const ext = rawExt || 'm4a';
+        switch (ext) {
+          case 'm4a':
+            return { name: 'yap.m4a', type: 'audio/mp4' };
+          case 'mp4':
+            return { name: 'yap.mp4', type: 'audio/mp4' };
+          case 'wav':
+            return { name: 'yap.wav', type: 'audio/wav' };
+          case 'webm':
+            return { name: 'yap.webm', type: 'audio/webm' };
+          case 'mp3':
+            return { name: 'yap.mp3', type: 'audio/mpeg' };
+          default:
+            return { name: `yap.${ext}`, type: 'audio/mp4' };
+        }
+      };
+
       const formData = new FormData();
+      const meta = getAudioUploadMeta(uri);
       formData.append('file', {
         uri,
-        name: 'yap.m4a',
-        type: 'audio/m4a',
+        name: meta.name,
+        type: meta.type,
       } as any);
 
       const response = await fetch(`${API_BASE_URL}/api/v1/symptom-checkin/transcribe`, {
