@@ -56,8 +56,17 @@ const ResultLoadingScreen = () => {
       console.log('💾 [ResultLoadingScreen] Lifestyle focus saved:', selectedOptions);
       
       // Also save to backend session immediately
-      await sessionService.updateSessionLifestyleFocus(selectedOptions);
+      const updateSuccess = await sessionService.updateSessionLifestyleFocus(selectedOptions);
       console.log('✅ [ResultLoadingScreen] Lifestyle focus synced to backend');
+      
+      if (updateSuccess) {
+        // OPTIMIZATION: Start generation HERE immediately instead of waiting for next screen
+        // This utilizes the 2.5s transition animation time for backend processing
+        console.log('🚀 [ResultLoadingScreen] Pre-starting recommendation generation to reduce latency...');
+        sessionService.startRecommendationGeneration().catch(err => 
+          console.log('⚠️ [ResultLoadingScreen] Background generation start warning:', err)
+        );
+      }
     } catch (error) {
       console.error('❌ [ResultLoadingScreen] Failed to save lifestyle focus:', error);
     }
