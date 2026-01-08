@@ -37,22 +37,22 @@ const isAndroid = Platform.OS === 'android';
 const FONT_SIZES = {
   // From Figma: Keyboard numbers (18.35px)
   keyboardNumber: moderateScale(18.35, 1.5),
-  
+
   // From Figma: Header text (14px Noto Serif)
   header: moderateScale(14, 1.5),
-  
+
   // From Figma: Message text (14px Inter Regular) - using moderateScale for better scaling
-  message: moderateScale(14,1.5),
-  
+  message: moderateScale(14, 1.5),
+
   // From Figma: Button text (12px Inter Regular)
   button: moderateScale(12, 1.5),
-  
+
   // From Figma: Time display (12px Inter Regular)
   time: moderateScale(12, 1.5),
-  
+
   // From Figma: Status bar time (15.22px SF Pro Semibold)
   statusBar: moderateScale(15.22, 1.5),
-  
+
   // Additional sizes for UI elements
   title: moderateScale(18, 1.5),
   subtitle: moderateScale(16, 1.5),
@@ -119,11 +119,11 @@ type ChoiceOption = {
 // Components
 function GradientText({ children, style }: { children: string; style?: any }) {
   return (
-    <MaskedView 
+    <MaskedView
       maskElement={
         <Text style={[
-          style, 
-          { 
+          style,
+          {
             backgroundColor: "transparent",
             includeFontPadding: isAndroid ? false : undefined,
             textAlignVertical: isAndroid ? 'center' : undefined,
@@ -133,28 +133,28 @@ function GradientText({ children, style }: { children: string; style?: any }) {
         </Text>
       }
       style={[
-        { 
-          ...(isAndroid && { 
+        {
+          ...(isAndroid && {
             renderToHardwareTextureAndroid: true,
-            needsOffscreenAlphaCompositing: true 
+            needsOffscreenAlphaCompositing: true
           } as any)
         }
       ]}
     >
-      <LinearGradient 
-        colors={[BRAND.gradPurple, BRAND.gradPink]} 
-        start={{ x: 0, y: 0 }} 
+      <LinearGradient
+        colors={[BRAND.gradPurple, BRAND.gradPink]}
+        start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
-        style={{ 
+        style={{
           flex: 1,
-          ...(isAndroid && { 
-            renderToHardwareTextureAndroid: true 
+          ...(isAndroid && {
+            renderToHardwareTextureAndroid: true
           } as any)
         }}
       >
         <Text style={[
-          style, 
-          { 
+          style,
+          {
             opacity: 0,
             includeFontPadding: isAndroid ? false : undefined,
             textAlignVertical: isAndroid ? 'center' : undefined,
@@ -191,7 +191,14 @@ function BotThinkingMessage() {
     return () => clearInterval(interval);
   }, []);
 
-  return <BotMessage text={`Thinking${dots}`} />;
+  // Use fixed-width container to prevent bubble resizing when dots change
+  return (
+    <View style={styles.botMessageContainer}>
+      <View style={[styles.botMessageBubble, { minWidth: scale(100) }]}>
+        <GradientText style={styles.botMessageText}>{`Thinking${dots}`}</GradientText>
+      </View>
+    </View>
+  );
 }
 
 function UserMessage({ text }: { text: string }) {
@@ -222,9 +229,9 @@ function ChoiceButton({
       onPress={onPress}
       activeOpacity={0.8}
     >
-            {isSelected ? (
-              <LinearGradient
-                colors={[COLORS.gradPurple, COLORS.gradPink]}
+      {isSelected ? (
+        <LinearGradient
+          colors={[COLORS.gradPurple, COLORS.gradPink]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.choiceButtonGradient}
@@ -281,7 +288,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
   const isCarePlanContext = route?.params?.conversationContext?.context === 'care_plan_modal';
   const isSymptomContext = route?.params?.conversationContext?.context === 'symptom_checkin';
-  
+
   // Weekly Check-in state
   const [checkinId, setCheckinId] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<QuestionResponse | null>(null);
@@ -303,11 +310,11 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   // Symptom (daily) check-in state
   const [symptomThreadId, setSymptomThreadId] = useState<string | null>(null);
   const [symptomTapOptions, setSymptomTapOptions] = useState<SymptomTapOption[]>([]);
-  
+
   // Show continue button after check-in completion
   const [showContinueButton, setShowContinueButton] = useState(false);
   const [isLoadingCheckin, setIsLoadingCheckin] = useState(false);
-  
+
   // Handle conversation context from different chats
   useEffect(() => {
     const contextFromRoute = route?.params?.conversationContext;
@@ -315,7 +322,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     // Prevent UI blocks from leaking between contexts.
     setUiBlocks([]);
     setChatSessionId(null);
-    
+
     if (contextFromRoute?.context === "care_plan_modal") {
       // Care Plan check-in (daily thread) - start or resume from API
       initializeCarePlanCheckin(contextFromRoute?.userResponse);
@@ -709,6 +716,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const submitCarePlanMessage = async (threadId: string, messageText: string) => {
     if (!threadId) return;
 
+    console.log('[CarePlan] Sending message:', messageText);
+
     // Optimistically add user message
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -721,6 +730,13 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     setIsLoadingCheckin(true);
     try {
       const result = await carePlanCheckinService.sendMessage(threadId, messageText);
+      console.log('[CarePlan] API response:', JSON.stringify({
+        thread_id: result?.thread_id,
+        history_count: result?.history?.length,
+        tap_options: result?.tap_options?.length,
+        ui_blocks_count: result?.ui_blocks?.length,
+        ui_blocks: result?.ui_blocks,
+      }));
       if (result) {
         setCarePlanTapOptions(result.tap_options || []);
         setUiBlocks(result.ui_blocks || []);
@@ -734,18 +750,18 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     }
     setIsLoadingCheckin(false);
   };
-  
+
   // Initialize weekly check-in from API
   const initializeWeeklyCheckin = async () => {
     setIsLoadingCheckin(true);
     try {
       const result = await weeklyCheckinService.startCheckin();
-      
+
       if (result) {
         setCheckinId(result.checkin_id);
         setCurrentQuestion(result.question);
         setDynamicTapOptions(result.question.tap_options || []);
-        
+
         // Set messages from history if available, otherwise use current message
         if (result.question.history && result.question.history.length > 0) {
           const historyMessages = result.question.history;
@@ -763,7 +779,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             { id: "1", text: result.question.message, isBot: true },
           ]);
         }
-        
+
         // Set mode based on question type
         if (result.question.question_type === "slider") {
           setShowSlider(true);
@@ -775,7 +791,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           setShowSlider(false);
           setMode("idle");
         }
-        
+
         setShowSelectedValue(false);
       } else {
         // Fallback if API fails
@@ -791,11 +807,11 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     }
     setIsLoadingCheckin(false);
   };
-  
+
   // Submit response and get next question
   const submitCheckinResponse = async (response: any, displayText: string) => {
     if (!checkinId || !currentQuestion) return;
-    
+
     // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -804,7 +820,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     };
     setMessages(prev => [...prev, userMessage]);
     scrollToBottom();
-    
+
     setIsLoadingCheckin(true);
     try {
       const result = await weeklyCheckinService.submitResponse(
@@ -813,11 +829,11 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         response,
         displayText
       );
-      
+
       if (result) {
         setCurrentQuestion(result.question);
         setDynamicTapOptions(result.question.tap_options || []);
-        
+
         // Update messages from history if available
         if (result.question.history && result.question.history.length > 0) {
           setMessages(result.question.history);
@@ -839,7 +855,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           setMessages(prev => [...prev, botMessage]);
         }
         scrollToBottom();
-        
+
         // Update mode based on next question type
         if (result.question.is_complete) {
           // Check-in complete - show continue button instead of auto-navigation
@@ -889,12 +905,12 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   // Get choice options based on context
   const getChoiceOptions = (): ChoiceOption[] => {
     const contextFromRoute = route?.params?.conversationContext;
-    
+
     // Use dynamic tap options from API for weekly check-in
     if (contextFromRoute?.context === "weekly_checkin" && dynamicTapOptions.length > 0) {
       return dynamicTapOptions;
     }
-    
+
     switch (contextFromRoute?.context) {
       case "care_plan_modal":
         if (carePlanTapOptions.length > 0) return carePlanTapOptions;
@@ -954,7 +970,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   // Get header title based on context
   const getHeaderTitle = (): string => {
     const contextFromRoute = route?.params?.conversationContext;
-    
+
     switch (contextFromRoute?.context) {
       case "care_plan_modal":
         return "Care Plan Check-in";
@@ -1064,6 +1080,20 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         return;
       }
 
+      // Weekly check-in: route typed/voice input to the API
+      if (contextFromRoute?.context === "weekly_checkin") {
+        console.log("[handleSend] weekly_checkin context detected, checkinId:", checkinId, "currentQuestion:", currentQuestion?.question_key);
+        if (!checkinId || !currentQuestion) {
+          console.warn("[handleSend] Weekly check-in not initialized yet - checkinId:", checkinId, "currentQuestion:", currentQuestion);
+          return;
+        }
+        if (!text) setValue("");
+        // For typed/voice input, send the text as the response value
+        console.log("[handleSend] Calling submitCheckinResponse with:", messageText);
+        submitCheckinResponse(messageText, messageText);
+        return;
+      }
+
       // Generic chat contexts (AI-driven)
       if (
         contextFromRoute?.context === 'personalise' ||
@@ -1104,7 +1134,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       ).filter(Boolean);
 
       const messageText = selectedTexts.join(", ");
-      
+
       // Use API for weekly check-in
       const contextFromRoute = route?.params?.conversationContext;
 
@@ -1138,14 +1168,14 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
       if (contextFromRoute?.context === "weekly_checkin" && checkinId && currentQuestion) {
         // For multi_select, send array; for tap_choice, send single value
-        const response = currentQuestion.question_type === "multi_select" 
-          ? selectedOptions 
+        const response = currentQuestion.question_type === "multi_select"
+          ? selectedOptions
           : selectedOptions[0];
         submitCheckinResponse(response, messageText);
       } else {
         handleSend(messageText);
       }
-      
+
       setSelectedOptions([]); // Clear selections after sending
     }
   };
@@ -1329,7 +1359,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         ? await carePlanCheckinService.transcribeAudio(recordingUri)
         : isSymptomCheckin
           ? await symptomCheckinService.transcribeAudio(recordingUri)
-        : await weeklyCheckinService.transcribeAudio(recordingUri);
+          : await weeklyCheckinService.transcribeAudio(recordingUri);
       const transcript = (result?.text || "").trim();
 
       if (!transcript) {
@@ -1378,7 +1408,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       if (value <= 8) return labels["7"] || labels["8"] || "Strong";
       return labels["9"] || "Extreme";
     }
-    
+
     // Default labels
     if (value === 1) return "None";
     if (value <= 3) return "Mild";
@@ -1396,7 +1426,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         return;  // Block selection until API is ready
       }
     }
-    
+
     setShowSlider(false);
     setShowSelectedValue(true);
 
@@ -1638,10 +1668,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const renderIdleMode = () => {
     const contextFromRoute = route?.params?.conversationContext;
     const isCarePlanModal = contextFromRoute?.context === "care_plan_modal";
-    
+
     console.log('renderIdleMode - contextFromRoute:', contextFromRoute);
     console.log('renderIdleMode - isCarePlanModal:', isCarePlanModal);
-    
+
     // Force Care Plan modal to work - early return
     if (isCarePlanModal) {
       return (
@@ -1653,23 +1683,23 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             contentContainerStyle={styles.scrollContent}
           >
             <Avatar showMessage={false} />
-            <View style={{marginTop: verticalScale(20)}}>
-            <View style={styles.messagesWrapper}>
-              {/* Show all messages from the messages array */}
-              {messages.map((message, index) => (
-                <View key={message.id}>
-                  {message.isBot ? (
-                    <BotMessage text={message.text} />
-                  ) : (
-                    <UserMessage text={message.text} />
-                  )}
-                </View>
-              ))}
+            <View style={{ marginTop: verticalScale(20) }}>
+              <View style={styles.messagesWrapper}>
+                {/* Show all messages from the messages array */}
+                {messages.map((message, index) => (
+                  <View key={message.id}>
+                    {message.isBot ? (
+                      <BotMessage text={message.text} />
+                    ) : (
+                      <UserMessage text={message.text} />
+                    )}
+                  </View>
+                ))}
 
-              {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
+                {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
 
-              {renderUiBlocksInline()}
-            </View>
+                {renderUiBlocksInline()}
+              </View>
             </View>
           </ScrollView>
 
@@ -1724,19 +1754,18 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         </View>
       );
     }
-    
+
     return (
       <View style={styles.idleModeContainer}>
         {isLoadingCheckin && !showSlider && !showSelectedValue && messages.length === 0 ? (
-          // Show loading state while initializing weekly check-in
-          <View style={styles.sliderPageContainer}>
-            <View style={styles.sliderTopSpacer} />
-            <Avatar showMessage={true} />
-            <View style={styles.selectedValueContainer}>
-              <BotThinkingMessage />
-            </View>
-            <View style={styles.sliderBottomSpacer} />
-          </View>
+          // Show loading state - Avatar in same position as normal state, no message box
+          <ScrollView
+            style={styles.messagesContainer}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            <Avatar showMessage={false} />
+          </ScrollView>
         ) : (
           <>
             <ScrollView
@@ -1763,7 +1792,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
                 {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
               </View>
-              
+
               {/* Render Slider INLINE if active */}
               {showSlider && (
                 <View style={styles.sliderContainer}>
@@ -1820,22 +1849,22 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         contentContainerStyle={styles.scrollContent}
       >
         <Avatar showMessage={false} />
-        <View style={{marginTop: verticalScale(20)}}>
-        <View style={styles.messagesWrapper}>
-          {messages.map((message, index) => (
-            <View key={message.id}>
-              {message.isBot ? (
-                <BotMessage text={message.text} />
-              ) : (
-                <UserMessage text={message.text} />
-              )}
-            </View>
-          ))}
+        <View style={{ marginTop: verticalScale(20) }}>
+          <View style={styles.messagesWrapper}>
+            {messages.map((message, index) => (
+              <View key={message.id}>
+                {message.isBot ? (
+                  <BotMessage text={message.text} />
+                ) : (
+                  <UserMessage text={message.text} />
+                )}
+              </View>
+            ))}
 
-          {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
+            {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
 
-          {renderUiBlocksInline()}
-        </View>
+            {renderUiBlocksInline()}
+          </View>
         </View>
       </ScrollView>
 
@@ -1863,7 +1892,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               />
             </TouchableOpacity>
             <TouchableOpacity style={styles.whiteButton} onPress={() => setMode("tap")}>
-              <Ionicons name="checkmark-circle-outline" style={{fontSize: moderateScale(24, 1.5)}} color={COLORS.onPrimaryContainer} />
+              <Ionicons name="checkmark-circle-outline" style={{ fontSize: moderateScale(24, 1.5) }} color={COLORS.onPrimaryContainer} />
             </TouchableOpacity>
           </>
         ) : (
@@ -1872,7 +1901,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               colors={[COLORS.gradPurple, COLORS.gradPink]}
               style={styles.buttonGradient}
             >
-              <Ionicons name="send" style={{fontSize: moderateScale(24, 1.5)}} color={COLORS.white} />
+              <Ionicons name="send" style={{ fontSize: moderateScale(24, 1.5) }} color={COLORS.white} />
             </LinearGradient>
           </TouchableOpacity>
         )}
@@ -1889,22 +1918,22 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         contentContainerStyle={styles.scrollContent}
       >
         <Avatar showMessage={false} />
-        <View style={{marginTop: verticalScale(20)}}>
-        <View style={styles.messagesWrapper}>
-          {messages.map((message, index) => (
-            <View key={message.id}>
-              {message.isBot ? (
-                <BotMessage text={message.text} />
-              ) : (
-                <UserMessage text={message.text} />
-              )}
-            </View>
-          ))}
+        <View style={{ marginTop: verticalScale(20) }}>
+          <View style={styles.messagesWrapper}>
+            {messages.map((message, index) => (
+              <View key={message.id}>
+                {message.isBot ? (
+                  <BotMessage text={message.text} />
+                ) : (
+                  <UserMessage text={message.text} />
+                )}
+              </View>
+            ))}
 
-          {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
+            {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
 
-          {renderUiBlocksInline()}
-        </View>
+            {renderUiBlocksInline()}
+          </View>
         </View>
         <View style={styles.choiceOptionsContainer}>
           <View style={styles.choiceOptionsGrid}>
@@ -1925,7 +1954,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         <View style={styles.CTAGroup1}>
           <View style={styles.btn55Container}>
             <TouchableOpacity style={styles.whiteButton} onPress={() => setMode("type")}>
-              <Ionicons name="chatbubble-ellipses-outline" style={{fontSize: 24}} color={COLORS.onPrimaryContainer} />
+              <Ionicons name="chatbubble-ellipses-outline" style={{ fontSize: 24 }} color={COLORS.onPrimaryContainer} />
             </TouchableOpacity>
             <Text style={styles.btnLabel}>type</Text>
           </View>
@@ -1980,9 +2009,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
   const renderContent = () => (
     <View style={[styles.root, mode === "idle" && styles.rootIdle]}>
-      <Header 
-        onClose={navigateToIndex} 
-        title={getHeaderTitle()} 
+      <Header
+        onClose={navigateToIndex}
+        title={getHeaderTitle()}
       />
 
       {mode === "idle" && renderIdleMode()}
@@ -2009,7 +2038,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       />
 
       {mode === "idle" && !showContinueButton && (
-        <FooterCTA 
+        <FooterCTA
           setMode={(newMode) => {
             // Rating gate: until the user selects 1–9, they cannot Tap/Yap/Type.
             if (showSlider) {
@@ -2018,7 +2047,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             }
 
             setMode(newMode);
-          }} 
+          }}
           disabled={showSlider || isTranscribing}
           isRecording={isRecording}
           recordingComplete={recordingComplete}
@@ -2045,7 +2074,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         onOverviewChange={(next) => setSymptomOverview(next)}
         onRequestRefreshOverview={refreshSymptomOverview}
       />
-      
+
       {/* Continue button after check-in completion */}
       {showContinueButton && (
         <View style={styles.continueButtonContainer}>
@@ -2070,7 +2099,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      <StatusBar style="dark"/>
+      <StatusBar style="dark" />
       {mode === "type" ? (
         <KeyboardAvoidingView
           style={styles.kav}
@@ -2197,11 +2226,11 @@ const styles = StyleSheet.create({
     ...(isAndroid
       ? ({ elevation: 1 } as any)
       : {
-          shadowColor: '#000',
-          shadowOpacity: 0.06,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 4 },
-        }),
+        shadowColor: '#000',
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+      }),
   },
   uiBlockTitle: {
     fontSize: FONT_SIZES.small,
@@ -2442,7 +2471,7 @@ const styles = StyleSheet.create({
     borderRadius: scale(30),
     minWidth: scale(44),
     minHeight: scale(44),
-    
+
   },
   buttonGradient: {
     width: '100%',
