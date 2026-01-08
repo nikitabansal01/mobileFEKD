@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: moderateScale(22, 1.5),
-    fontWeight: '600',
+    fontFamily: 'Inter600',
     fontFamily: 'serif',
     color: COLORS.black,
     marginBottom: verticalScale(3),
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: moderateScale(8, 1.5),
-    fontWeight: '500',
+    fontFamily: 'Inter500',
     color: '#A65D50',
     fontFamily: FONT_FAMILIES['Inter-Medium'],
   },
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
   },
   personalizationTitle: {
     fontSize: moderateScale(14, 1.5),
-    fontWeight: '500',
+    fontFamily: 'Inter500',
     fontFamily: FONT_FAMILIES['Inter-Medium'],
     color: 'black',
   },
@@ -668,7 +668,7 @@ const styles = StyleSheet.create({
   arrowIcon: {
     fontSize: moderateScale(18, 1.5),
     color: COLORS.black,
-    fontWeight: 'bold',
+    fontFamily: 'Inter600',
   },
   settingsContainer: {
     backgroundColor: COLORS.white,
@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
   },
   healthIconText: {
     fontSize: moderateScale(24),
-    fontWeight: 'bold',
+    fontFamily: 'Inter600',
     color: COLORS.black,
   },
   healthText: {
@@ -706,7 +706,7 @@ const styles = StyleSheet.create({
   },
   healthTitle: {
     fontSize: moderateScale(14, 1.5),
-    fontWeight: '500',
+    fontFamily: 'Inter500',
     fontFamily: FONT_FAMILIES['Inter-Medium'],
     color: COLORS.black,
     marginBottom: verticalScale(8),
@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
   },
   menuIconText: {
     fontSize: moderateScale(24),
-    fontWeight: 'bold',
+    fontFamily: 'Inter600',
     color: COLORS.black,
   },
   menuText: {

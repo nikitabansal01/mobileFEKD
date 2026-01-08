@@ -8,7 +8,7 @@ const LifeCycleMenuDailogSvg = ({title,highlighted}) => (
         style={{
           color: "#BB4471",
           fontSize: 14,
-          fontFamily: "Poppins500",
+          fontFamily: "Inter500",
           fontWeight: "500",
           padding:13,
           lineHeight:18

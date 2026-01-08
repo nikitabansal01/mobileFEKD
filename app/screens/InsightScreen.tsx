@@ -1733,7 +1733,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14, 1.5),
     // fontFamily: 'NotoSerif-Medium',
     fontFamily: "NotoSerif500",
-    // fontWeight: '500',
+    // fontFamily: 'Inter500',
     color: '#000000',
     textAlign: 'center',
     lineHeight: moderateScale(21, 1.5), // 150% of 14px
@@ -1756,7 +1756,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(22, 1.5),
     // fontFamily: 'NotoSerif-SemiBold',
     fontFamily: "NotoSerif600",
-    // fontWeight: '600',
+    // fontFamily: 'Inter600',
     color: '#000000',
     textAlign: 'center',
     lineHeight: moderateScale(27.5, 1.5), // 125% of 22px
@@ -1772,7 +1772,7 @@ const styles = StyleSheet.create({
   monthText: {
     fontSize: moderateScale(12, 1.5),
     fontFamily: FONTS['Inter-Regular'],
-    fontWeight: '400',
+    fontFamily: 'Inter400',
     color: '#000000',
     lineHeight: moderateScale(15, 1.5), // 125% of 12px
     letterSpacing: 0,
@@ -1810,7 +1810,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14, 1.5),
     // fontFamily: 'NotoSerif-Medium',
     fontFamily: "NotoSerif500",
-    // fontWeight: '500',
+    // fontFamily: 'Inter500',
     color: '#000000',
     textAlign: 'center',
     lineHeight: moderateScale(21, 1.5), // 150% of 14px
@@ -1928,7 +1928,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14, 1.5),
     // fontFamily: 'NotoSerif-Medium',
     fontFamily: "NotoSerif500",
-    // fontWeight: '500',
+    // fontFamily: 'Inter500',
     color: '#000000',
     textAlign: 'center',
     lineHeight: moderateScale(21, 1.5), // 150% of 14px
@@ -1953,7 +1953,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14, 1.5),
     // fontFamily: 'NotoSerif-Medium',
     fontFamily: "NotoSerif500",
-    // fontWeight: '500',
+    // fontFamily: 'Inter500',
     color: '#000000',
     textAlign: 'center',
     lineHeight: moderateScale(21, 1.5), // 150% of 14px
@@ -1990,7 +1990,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14, 1.5),
     // fontFamily: 'NotoSerif-Medium',
     fontFamily: "NotoSerif500",
-    // fontWeight: '500',
+    // fontFamily: 'Inter500',
     color: '#000000',
     // textAlign: 'center',
     lineHeight: moderateScale(21, 1.5), // 150% of 14px
@@ -2080,7 +2080,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14, 1.5),
     // fontFamily: 'NotoSerif-Medium',
     fontFamily: "NotoSerif500",
-    // fontWeight: '500',
+    // fontFamily: 'Inter500',
     color: '#000000',
     textAlign: 'center',
     lineHeight: moderateScale(21, 1.5), // 150% of 14px
@@ -2119,7 +2119,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14, 1.5),
     // fontFamily: 'NotoSerif-Medium',
     fontFamily: "NotoSerif500",
-    // fontWeight: '500',
+    // fontFamily: 'Inter500',
     color: '#000000',
     textAlign: 'center',
     lineHeight: moderateScale(21, 1.5), // 150% of 14px
@@ -2312,7 +2312,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: moderateScale(18),
-    fontWeight: '700',
+    fontFamily: 'Inter600',
     color: '#333',
     textAlign: 'center',
     marginBottom: verticalScale(12),
@@ -2340,7 +2340,7 @@ const styles = StyleSheet.create({
   modalButtonPrimaryText: {
     color: '#FFFFFF',
     fontSize: moderateScale(16),
-    fontWeight: '600',
+    fontFamily: 'Inter600',
     fontFamily: FONTS['Inter-SemiBold'],
   },
   modalButtonSecondary: {
@@ -2353,7 +2353,7 @@ const styles = StyleSheet.create({
   modalButtonSecondaryText: {
     color: '#666',
     fontSize: moderateScale(14),
-    fontWeight: '500',
+    fontFamily: 'Inter500',
     textAlign: 'center',
     fontFamily: FONTS['Inter-Medium'],
   },

@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
     // },
     timeText: {
         fontSize: moderateScale(15),
-        fontWeight: '600',
+        fontFamily: 'Inter600',
         color: COLORS.black,
         fontFamily: FONT_FAMILIES['Inter-SemiBold'],
     },
@@ -650,7 +650,7 @@ const styles = StyleSheet.create({
     },
     headerTitleMask: {
         fontSize: moderateScale(16, 1.5),
-        fontWeight: '600',
+        fontFamily: 'Inter600',
         textAlign: 'center',
         fontFamily: 'NotoSerif600',
         lineHeight: moderateScale(24, 1.5),
@@ -905,7 +905,7 @@ const styles = StyleSheet.create({
     cardTitle: {
         fontSize: moderateScale(12, 1.5),
         lineHeight: moderateScale(16, 1.5),
-        fontWeight: '600',
+        fontFamily: 'Inter600',
         color: '#404040',
         textAlign: 'center',
         fontFamily: 'NotoSerif600',
@@ -983,7 +983,7 @@ const styles = StyleSheet.create({
     ctaButtonText: {
         fontSize: moderateScale(14, 1.5),
         lineHeight: moderateScale(18, 1.5),
-        fontWeight: '500',
+        fontFamily: 'Inter500',
         color: COLORS.black,
         fontFamily: FONT_FAMILIES['Inter-Medium'],
     },
@@ -1043,14 +1043,14 @@ const styles = StyleSheet.create({
     proLabel: {
         fontSize: moderateScale(14, 1.5),
         lineHeight: moderateScale(18, 1.5),
-        fontWeight: 'bold',
+        fontFamily: 'Inter600',
         color: COLORS.white,
         fontFamily: 'Inter-Medium',
     },
     colName: {
         fontSize: moderateScale(14, 1.5),
         lineHeight: moderateScale(18, 1.5),
-        fontWeight: 'bold',
+        fontFamily: 'Inter600',
         color: COLORS.neutral700,
         fontFamily: 'Inter-Medium',
         textAlign: 'center',
@@ -1092,14 +1092,14 @@ const styles = StyleSheet.create({
     proPrice: {
         fontSize: moderateScale(12, 1.5),
         lineHeight: moderateScale(14, 1.5),
-        fontWeight: 'bold',
+        fontFamily: 'Inter600',
         color: COLORS.white,
         fontFamily: 'Inter-Bold',
     },
     proPeriod: {
         fontSize: moderateScale(12, 1.5),
         lineHeight: moderateScale(14, 1.5),
-        fontWeight: 'bold',
+        fontFamily: 'Inter600',
         color: COLORS.white,
         fontFamily: 'Inter-Bold',
     },
@@ -1107,7 +1107,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: moderateScale(12, 1.5),
         lineHeight: moderateScale(14, 1.5),
-        fontWeight: 'bold',
+        fontFamily: 'Inter600',
         color: COLORS.white,
         fontFamily: 'Inter-Bold',
     },

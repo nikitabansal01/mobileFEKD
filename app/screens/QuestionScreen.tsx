@@ -324,6 +324,10 @@ const QuestionScreen = () => {
   const navigation = useNavigation<StackNavigationProp<any>>();
   const insets = useSafeAreaInsets();
   const othersInputRef = useRef<TextInput>(null);
+  
+  // Debounce ref for saving answers
+  const saveDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedAnswersRef = useRef<string>(''); // Track last saved state to avoid redundant saves
 
   const totalSteps = questionSteps.length;
   // KeyboardAwareScrollView reference storage
@@ -345,36 +349,60 @@ const QuestionScreen = () => {
       const savedAnswers = await AsyncStorage.getItem(STORAGE_KEY);
       if (savedAnswers) {
         const parsedAnswers = JSON.parse(savedAnswers);
-        console.log('💾 Loaded saved answers:', parsedAnswers);
+        console.log('💾 [QuestionScreen] Loaded saved answers:', Object.keys(parsedAnswers).length, 'fields');
         setAnswers(parsedAnswers);
+        lastSavedAnswersRef.current = savedAnswers; // Track what was loaded
       }
     } catch (error) {
-      console.error('❌ Failed to load saved answers:', error);
+      console.error('❌ [QuestionScreen] Failed to load saved answers:', error);
     }
   };
 
-  // Save answers to AsyncStorage
-  const saveAnswersToStorage = async (answersToSave: typeof answers) => {
-    try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(answersToSave));
-      console.log('💾 Answers saved to storage');
-    } catch (error) {
-      console.error('❌ Failed to save answers to storage:', error);
+  // Save answers to AsyncStorage (debounced - called internally)
+  const saveAnswersToStorageImmediate = async (answersToSave: typeof answers) => {
+    const serialized = JSON.stringify(answersToSave);
+    
+    // Skip if no actual change
+    if (serialized === lastSavedAnswersRef.current) {
+      return;
     }
+    
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, serialized);
+      lastSavedAnswersRef.current = serialized;
+      console.log('💾 [QuestionScreen] Answers persisted (' + Object.keys(answersToSave).length + ' fields)');
+    } catch (error) {
+      console.error('❌ [QuestionScreen] Failed to save answers to storage:', error);
+    }
+  };
+  
+  // Debounced save - waits 1 second after last change before saving
+  const saveAnswersToStorageDebounced = (answersToSave: typeof answers) => {
+    // Clear any pending save
+    if (saveDebounceRef.current) {
+      clearTimeout(saveDebounceRef.current);
+    }
+    
+    // Schedule save after 1 second of no changes
+    saveDebounceRef.current = setTimeout(() => {
+      saveAnswersToStorageImmediate(answersToSave);
+    }, 1000);
   };
 
   // Clear saved answers from AsyncStorage
   const clearSavedAnswers = async () => {
     try {
       await AsyncStorage.removeItem(STORAGE_KEY);
-      console.log('🗑️ Cleared saved answers from storage');
+      lastSavedAnswersRef.current = '';
+      console.log('🗑️ [QuestionScreen] Cleared saved answers from storage');
     } catch (error) {
-      console.error('❌ Failed to clear saved answers from storage:', error);
+      console.error('❌ [QuestionScreen] Failed to clear saved answers from storage:', error);
     }
   };
 
   // Create session and load saved answers on component mount
   useEffect(() => {
+    console.log('🚀 [QuestionScreen] Initializing...');
     const initializeSession = async () => {
       try {
         // Load saved answers first
@@ -384,21 +412,29 @@ const QuestionScreen = () => {
         const sessionValid = await sessionService.validateAndRefreshSession();
         if (sessionValid) {
           setSessionCreated(true);
+          console.log('✅ [QuestionScreen] Session ready');
         } else {
-          console.error('Session initialization failed');
+          console.error('❌ [QuestionScreen] Session initialization failed');
         }
       } catch (error) {
-        console.error('Session initialization error:', error);
+        console.error('❌ [QuestionScreen] Session initialization error:', error);
       }
     };
 
     initializeSession();
+    
+    // Cleanup debounce timer on unmount
+    return () => {
+      if (saveDebounceRef.current) {
+        clearTimeout(saveDebounceRef.current);
+      }
+    };
   }, []);
 
-  // Auto-save answers whenever they change
+  // Auto-save answers whenever they change (DEBOUNCED - saves after 1s of no changes)
   useEffect(() => {
     if (Object.keys(answers).length > 0) {
-      saveAnswersToStorage(answers);
+      saveAnswersToStorageDebounced(answers);
     }
   }, [answers]);
 
@@ -1280,7 +1316,7 @@ const styles = StyleSheet.create({
   clearButtonText: {
     fontSize: moderateScale(12, 1.5),
     color: '#666666',
-    fontWeight: 'bold',
+    fontFamily: 'Inter600',
   },
   defaultPlaceholder: {
     fontFamily: 'Inter400',

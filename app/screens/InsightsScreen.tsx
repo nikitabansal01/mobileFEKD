@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: moderateScale(18),
-        fontWeight: '700',
+        fontFamily: 'Inter600',
         color: '#333',
     },
     loadingContainer: {
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     backButtonText: {
         color: '#FFF',
         fontSize: moderateScale(14),
-        fontWeight: '600',
+        fontFamily: 'Inter600',
     },
     content: {
         flex: 1,
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: moderateScale(16),
-        fontWeight: '700',
+        fontFamily: 'Inter600',
         color: '#333',
         marginBottom: verticalScale(12),
     },
@@ -311,12 +311,12 @@ const styles = StyleSheet.create({
     categoryName: {
         flex: 1,
         fontSize: moderateScale(16),
-        fontWeight: '600',
+        fontFamily: 'Inter600',
         color: '#333',
     },
     completionRate: {
         fontSize: moderateScale(18),
-        fontWeight: '700',
+        fontFamily: 'Inter600',
         color: '#A29AEA',
     },
     progressBarContainer: {
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     },
     weekValue: {
         fontSize: moderateScale(14),
-        fontWeight: '600',
+        fontFamily: 'Inter600',
         color: '#333',
     },
     favoritesRow: {

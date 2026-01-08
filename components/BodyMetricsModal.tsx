@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: moderateScale(22),
-        fontWeight: '700',
+        fontFamily: 'Inter600',
         color: '#1A1A1A',
         marginBottom: verticalScale(4),
     },
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     inputLabel: {
         width: scale(80),
         fontSize: moderateScale(16),
-        fontWeight: '500',
+        fontFamily: 'Inter500',
         color: '#333333',
     },
     inputWrapper: {
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     input: {
         flex: 1,
         fontSize: moderateScale(18),
-        fontWeight: '600',
+        fontFamily: 'Inter600',
         color: '#333333',
         paddingVertical: verticalScale(14),
     },
@@ -303,12 +303,12 @@ const styles = StyleSheet.create({
     },
     bmiValue: {
         fontSize: moderateScale(32),
-        fontWeight: '700',
+        fontFamily: 'Inter600',
         color: '#A29AEA',
     },
     bmiCategory: {
         fontSize: moderateScale(14),
-        fontWeight: '600',
+        fontFamily: 'Inter600',
         marginTop: verticalScale(4),
     },
     bmiNormal: {
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     saveText: {
         color: '#FFFFFF',
         fontSize: moderateScale(16),
-        fontWeight: '700',
+        fontFamily: 'Inter600',
     },
 });
 

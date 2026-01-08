@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import AuvraCharacterNoShadow from './AuvraCharacterNoShadow';
 import { rewardService } from '../services/rewardService';
 
@@ -38,54 +39,77 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
   const [canFreeze, setCanFreeze] = useState(false);
 
   // Fetch streak risk status to show badge
+  // OPTIMIZED: Only fetch after user profile exists (not during signup flow)
   useEffect(() => {
+    let isMounted = true;
+    let interval: ReturnType<typeof setInterval> | null = null;
+
     const fetchStreakStatus = async () => {
+      if (!isMounted) return;
+      
       try {
+        // Skip if still in signup flow (session link not yet complete)
+        // This prevents wasteful API calls before user profile exists
+        const sessionLinkPending = await AsyncStorage.getItem('session_link_complete');
+        const freshSignupPending = await AsyncStorage.getItem('fresh_signup_pending_refresh');
+        
+        if (sessionLinkPending === 'pending' || freshSignupPending === 'true') {
+          console.log('⏳ Skipping streak fetch - signup in progress');
+          return;
+        }
+        
         const data = await rewardService.getRewardsStatus();
-        if (data) {
+        if (data && isMounted) {
           setStreakAtRisk(data.streak_at_risk || false);
           setCanFreeze(data.can_freeze || false);
         }
       } catch (error) {
+        // Silent fail - streak badge is not critical
         console.log('Error fetching streak status for nav badge:', error);
       }
     };
 
-    fetchStreakStatus();
-    
+    // Initial fetch with small delay to let app stabilize
+    const initialTimeout = setTimeout(fetchStreakStatus, 500);
+
     // Refresh every 60 seconds
-    const interval = setInterval(fetchStreakStatus, 60000);
-    return () => clearInterval(interval);
+    interval = setInterval(fetchStreakStatus, 60000);
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(initialTimeout);
+      if (interval) clearInterval(interval);
+    };
   }, []);
 
   const tabs = [
-    { 
-      key: 'home', 
-      label: 'Home', 
+    {
+      key: 'home',
+      label: 'Home',
       icon: require('../assets/icons/IconHome.png'),
-      showBadge: streakAtRisk && canFreeze, // Show red dot if at risk
+      showBadge: false, // Badge removed as requested
     },
-    { 
-      key: 'personalize', 
-      label: 'Personalize', 
+    {
+      key: 'personalize',
+      label: 'Personalize',
       icon: require('../assets/icons/IconPersonalize.png'),
-      showBadge: streakAtRisk && canFreeze, // Show red dot if at risk
+      showBadge: false, // Badge removed as requested
     },
-    { 
-      key: 'auvra', 
-      label: 'Auvra', 
+    {
+      key: 'auvra',
+      label: 'Auvra',
       icon: null,
       showBadge: false,
     },
-    { 
-      key: 'insights', 
-      label: 'Insights', 
+    {
+      key: 'insights',
+      label: 'Insights',
       icon: require('../assets/icons/IconProgress.png'),
       showBadge: false,
     },
-    { 
-      key: 'profile', 
-      label: 'Profile', 
+    {
+      key: 'profile',
+      label: 'Profile',
       icon: require('../assets/icons/IconProfile.png'),
       showBadge: false,
     },
@@ -99,7 +123,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
     // React Navigation mode
     const { state, navigation } = props;
     activeTab = state.routes[state.index].name;
-    
+
     handleTabPress = (routeName: string) => {
       const event = navigation.emit({
         type: 'tabPress',
@@ -116,7 +140,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
     const { activeTab: legacyActiveTab = 'home', onTabPress, navigation: propNavigation } = props;
     activeTab = legacyActiveTab;
     const navigation = propNavigation || hookNavigation;
-    
+
     handleTabPress = (routeName: string) => {
       if (onTabPress) {
         onTabPress(routeName);
@@ -138,7 +162,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
         locations={[0, 0.6, 1]}
         style={styles.gradientBackground}
       />
-      
+
       {/* Main Navigation Bar */}
       <View style={styles.navigationBar}>
         {/* White navigation background */}
@@ -146,7 +170,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
           <View style={styles.tabsRow}>
             {tabs.map((tab) => {
               const isActive = activeTab === tab.key;
-              
+
               return (
                 <TouchableOpacity
                   key={tab.key}
@@ -159,7 +183,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
                 >
                   <View>
                     {tab.icon ? (
-                      <Image 
+                      <Image
                         source={tab.icon}
                         style={styles.tabIcon}
                         tintColor={isActive ? '#C17EC9' : '#000000'}
@@ -168,12 +192,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
                     ) : (
                       <View style={styles.emptyIconSpace} />
                     )}
-                    {/* Red alert badge */}
-                    {tab.showBadge && (
-                      <View style={styles.alertBadge}>
-                        <View style={styles.alertBadgePulse} />
-                      </View>
-                    )}
+                    {/* Red alert badge removed as requested */}
                   </View>
                   <Text style={[
                     styles.tabLabel,
@@ -186,10 +205,10 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
             })}
           </View>
         </View>
-        
+
         {/* Auvra Character - positioned over the navigation */}
         <View style={styles.characterWrapper}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.characterContainer}
             onPress={() => handleTabPress('auvra')}
             activeOpacity={0.7}

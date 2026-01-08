@@ -62,8 +62,8 @@ const ChatHistoryScreen: React.FC<ChatHistoryScreenProps> = ({ onBackToHome, act
     },
     {
       id: '3',
-      title: 'Want to Personalise?',
-      preview: 'Add 25+ personalisation factors to improve your action plan',
+      title: 'Want to Personalize?',
+      preview: 'Add 25+ personalization factors to improve your action plan',
       timestamp: 'Last week',
       avatar: Images.ChatThumbnail,
     },
@@ -87,7 +87,7 @@ const ChatHistoryScreen: React.FC<ChatHistoryScreenProps> = ({ onBackToHome, act
       case '2': // Symptom checkin
         context = 'symptom_checkin';
         break;
-      case '3': // Want to Personalise?
+      case '3': // Want to Personalize?
         context = 'personalise';
         break;
       case '4': // Know my body
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
   },
   chatTitle: {
     fontSize: moderateScale(12, 1.1),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#000000',
     flex: 1,
   },

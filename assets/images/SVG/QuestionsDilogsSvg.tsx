@@ -30,7 +30,7 @@ const QuestionsDilogsSvg = ({text,width,height}:Props) => (
       />
     </G>
     <Defs>
-      <Text style={{padding:10,fontSize:12,fontWeight:"400",lineHeight:22,fontFamily:"Poppins400",color:"#000"}}>{text}</Text>
+      <Text style={{padding:10,fontSize:12,fontWeight:"400",lineHeight:22,fontFamily:"Inter400",color:"#000"}}>{text}</Text>
     </Defs>
   </Svg>
 );

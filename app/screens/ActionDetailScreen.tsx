@@ -905,7 +905,7 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: responsiveFontSize(4),
     color: '#4A4A4A',
-    fontWeight: '400',
+    fontFamily: 'Inter400',
   },
   closeButtonContainer: {
     justifyContent: 'center',
@@ -917,7 +917,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: moderateScale(12, 1.5),
     color: '#9E9E9E',
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     textAlign: 'center',
     textAlignVertical: 'center',
     includeFontPadding: false,
@@ -1187,7 +1187,7 @@ const styles = StyleSheet.create({
   conditionsSubtitle: {
     fontSize: moderateScale(12, 1),
     color: '#9E9E9E',
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     marginBottom: responsiveHeight(1.5),
     textAlign: 'center',
     width: '100%',
@@ -1208,7 +1208,7 @@ const styles = StyleSheet.create({
   conditionTagText: {
     fontSize: moderateScale(11),
     color: '#4A4A4A',
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
   },
   adviceSection: {
     alignItems: 'center',
@@ -1271,7 +1271,7 @@ const styles = StyleSheet.create({
   adviceTypeBadgeText: {
     fontSize: moderateScale(11),
     color: '#000000',
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
   },
   adviceTitleContainer: {
     position: 'absolute',
@@ -1282,7 +1282,7 @@ const styles = StyleSheet.create({
   adviceTitle: {
     fontSize: moderateScale(14),
     color: '#FFFFFF',
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     textShadowColor: 'rgba(0, 0, 0, 0.4)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
@@ -1350,7 +1350,7 @@ const styles = StyleSheet.create({
   },
   feedbackTitle: {
     fontSize: moderateScale(14, 1.5),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#333333',
     marginBottom: responsiveHeight(1.5),
     textAlign: 'center',
@@ -1456,7 +1456,7 @@ const styles = StyleSheet.create({
   },
   replaceModalTitle: {
     fontSize: moderateScale(18, 1.5),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#333333',
     textAlign: 'center',
     marginBottom: responsiveHeight(2.5),

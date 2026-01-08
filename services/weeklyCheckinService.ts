@@ -54,7 +54,8 @@ export interface QuestionResponse {
   is_complete: boolean;
   question_key: string | null;
   question_type: string | null; // "slider", "tap_choice", "multi_select", "free_text", "confirmation"
-  message: string;
+  message: string;  // Combined message for backward compatibility
+  messages?: string[];  // Array of short messages for multi-bubble display
   tap_options: TapOption[];
   is_required: boolean;
   current_index: number;
@@ -93,6 +94,10 @@ export interface StartCheckInResponse {
 export interface SubmitResponseResult {
   checkin_id: string;
   question: QuestionResponse;
+}
+
+export interface TranscribeResponse {
+  text: string;
 }
 
 class WeeklyCheckinService {
@@ -291,6 +296,72 @@ class WeeklyCheckinService {
       return await response.json();
     } catch (error) {
       console.error('❌ Error fetching correlations:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Transcribe a locally recorded audio file (Yap) into text.
+   *
+   * The backend returns { text }, and the UI places it into the text input so the
+   * user can edit before sending.
+   */
+  async transcribeAudio(uri: string): Promise<TranscribeResponse | null> {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        console.error('❌ No auth token available');
+        return null;
+      }
+
+      const getAudioUploadMeta = (u: string): { name: string; type: string } => {
+        const rawExt = (u.split('.').pop() || '').split('?')[0].toLowerCase();
+        const ext = rawExt || 'm4a';
+        // Whisper/OpenAI reliably supports: mp3, mp4/m4a, wav, webm.
+        // Expo iOS previously produced .caf with the HIGH_QUALITY preset; we now record .m4a.
+        switch (ext) {
+          case 'm4a':
+            return { name: 'yap.m4a', type: 'audio/mp4' };
+          case 'mp4':
+            return { name: 'yap.mp4', type: 'audio/mp4' };
+          case 'wav':
+            return { name: 'yap.wav', type: 'audio/wav' };
+          case 'webm':
+            return { name: 'yap.webm', type: 'audio/webm' };
+          case 'mp3':
+            return { name: 'yap.mp3', type: 'audio/mpeg' };
+          default:
+            return { name: `yap.${ext}`, type: 'audio/mp4' };
+        }
+      };
+
+      const formData = new FormData();
+      // NOTE: RN FormData file typing is loosely defined; cast to any.
+      const meta = getAudioUploadMeta(uri);
+      formData.append('file', {
+        uri,
+        name: meta.name,
+        type: meta.type,
+      } as any);
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/weekly-checkin/transcribe`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          // Do NOT set Content-Type; let fetch set multipart boundaries.
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('❌ Failed to transcribe audio:', response.status, text);
+        return null;
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('❌ Error transcribing audio:', error);
       return null;
     }
   }

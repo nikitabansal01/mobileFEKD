@@ -144,6 +144,13 @@ export interface AssignmentsResponse {
   cycle_phase?: string;
   show_feedback_prompt_after_seconds?: number;
   weekly_checkin?: WeeklyCheckinStatus | null;
+
+  // Optional performance instrumentation (returned by backend)
+  plan_generation_time_ms?: number | null;
+  plan_source?: string | null;
+  timings_ms?: {
+    [key: string]: any;
+  };
 }
 
 /**
@@ -216,6 +223,70 @@ export interface PlanSatisfactionResponse {
   error?: string;
   feedback_count?: number;
   new_actions?: ActionPlanItem[];
+}
+
+/**
+ * Daily Review item status for each action
+ */
+export interface DailyReviewItemStatus {
+  item_id: number;
+  status: 'forgot_to_mark' | 'replaced' | 'skipped' | 'was_completed';
+  replacement_text?: string;
+  replacement_category?: string;
+}
+
+/**
+ * Daily Review request
+ */
+export interface DailyReviewRequest {
+  plan_id: number;
+  items: DailyReviewItemStatus[];
+  use_freeze: boolean;
+}
+
+/**
+ * Daily Review response
+ */
+export interface DailyReviewResponse {
+  success: boolean;
+  streak_maintained: boolean;
+  streak_broken: boolean;
+  freezes_used: number;
+  new_streak_count: number;
+  items_carried_forward: number[];
+  today_plan_updated: boolean;
+  message: string;
+  error?: string;
+}
+
+/**
+ * Pending review item info
+ */
+export interface PendingReviewItemInfo {
+  id: number;
+  title: string;
+  category: string;
+  time_slot: string;
+  target_hormone: string;
+  is_completed: boolean;
+  is_replaced?: boolean;
+  hero_image_url?: string;
+}
+
+/**
+ * Pending review response
+ */
+export interface PendingReviewResponse {
+  needs_review: boolean;
+  review_date?: string;
+  plan_id?: number;
+  items: PendingReviewItemInfo[];
+  total_items: number;
+  completed_count: number;
+  incomplete_count: number;
+  streak_at_risk: boolean;
+  freezes_available: number;
+  was_frozen: boolean;
 }
 
 /**
@@ -300,9 +371,12 @@ class HomeService {
    */
   async getTodayAssignments(): Promise<AssignmentsResponse | null> {
     try {
+      const t0 = Date.now();
       console.log('🔄 Fetching today\'s assignments:', `${API_BASE_URL}/api/v1/new-scheduling/assignments/today`);
 
+      const tTokenStart = Date.now();
       const token = await getAuthToken();
+      const tokenMs = Date.now() - tTokenStart;
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
@@ -314,10 +388,12 @@ class HomeService {
         console.log('⚠️ No Firebase token available');
       }
 
+      const tReqStart = Date.now();
       const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/assignments/today?t=${new Date().getTime()}`, {
         method: 'GET',
         headers,
       });
+      const requestMs = Date.now() - tReqStart;
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -325,7 +401,21 @@ class HomeService {
         throw new Error(`Failed to fetch today's assignments: ${response.status} - ${errorText}`);
       }
 
+      const tJsonStart = Date.now();
       const result = await response.json();
+      const jsonMs = Date.now() - tJsonStart;
+
+      const totalMs = Date.now() - t0;
+      const serverTotalMs = result?.timings_ms?.server_total_ms;
+      const serverGeneratorMs = result?.timings_ms?.server_generator_call_ms;
+      const planGenerationMs = result?.plan_generation_time_ms ?? result?.timings_ms?.plan_generation_time_ms;
+      const planSource = result?.plan_source ?? result?.timings_ms?.plan_source;
+
+      console.log(
+        `⏱️ getTodayAssignments timings: total=${totalMs}ms (token=${tokenMs}ms, request=${requestMs}ms, json=${jsonMs}ms) ` +
+          `server_total=${serverTotalMs ?? 'n/a'}ms server_generator=${serverGeneratorMs ?? 'n/a'}ms ` +
+          `plan_generation=${planGenerationMs ?? 'n/a'}ms plan_source=${planSource ?? 'n/a'}`
+      );
       console.log('✅ Successfully fetched today\'s assignments:', result);
       return result;
     } catch (error) {
@@ -479,7 +569,7 @@ class HomeService {
           return {
             success: false,
             error: 'rate_limit',
-            message: 'You have reached your daily limit.'
+            message: 'Daily refresh limit reached. Try again tomorrow.'
           };
         }
 
@@ -679,6 +769,116 @@ class HomeService {
     } catch (error) {
       console.error('❌ Error refreshing all:', error);
       return { success: false, error: 'network_error', message: 'Network error. Check your connection.' };
+    }
+  }
+
+  /**
+   * Check if user has a pending daily review
+   * 
+   * @returns Promise resolving to pending review data or null on error
+   */
+  async getPendingReview(): Promise<PendingReviewResponse | null> {
+    try {
+      console.log('🔄 Checking pending review:', `${API_BASE_URL}/api/v1/new-scheduling/pending-review`);
+
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/pending-review`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to check pending review:', errorText);
+        return null;
+      }
+
+      const result = await response.json();
+      console.log('✅ Pending review check result:', JSON.stringify(result));
+      return result;
+    } catch (error) {
+      console.error('❌ Error checking pending review:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Submit daily review for previous day's action plan
+   * 
+   * @param planId - ID of the plan being reviewed
+   * @param items - Status of each item in the review
+   * @param useFreeze - Whether to use streak freeze if needed
+   * @returns Promise resolving to review result or null on error
+   */
+  async submitDailyReview(
+    planId: number,
+    items: DailyReviewItemStatus[],
+    useFreeze: boolean
+  ): Promise<DailyReviewResponse | null> {
+    try {
+      console.log('🔄 Submitting daily review:', `${API_BASE_URL}/api/v1/new-scheduling/submit-daily-review`);
+
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const requestBody: DailyReviewRequest = {
+        plan_id: planId,
+        items,
+        use_freeze: useFreeze,
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/submit-daily-review`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to submit daily review:', errorText);
+        return { 
+          success: false, 
+          error: 'server_error', 
+          message: 'Unable to submit review. Please try again.',
+          streak_maintained: false,
+          streak_broken: false,
+          freezes_used: 0,
+          new_streak_count: 0,
+          items_carried_forward: [],
+          today_plan_updated: false
+        };
+      }
+
+      const result = await response.json();
+      console.log('✅ Daily review submitted:', result);
+      return { success: true, ...result };
+    } catch (error) {
+      console.error('❌ Error submitting daily review:', error);
+      return { 
+        success: false, 
+        error: 'network_error', 
+        message: 'Network error. Check your connection.',
+        streak_maintained: false,
+        streak_broken: false,
+        freezes_used: 0,
+        new_streak_count: 0,
+        items_carried_forward: [],
+        today_plan_updated: false
+      };
     }
   }
 }

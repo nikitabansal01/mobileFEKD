@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Dimensions, Image, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { FONT_FAMILIES } from '../../constants/fonts';
+import { BRAND, COLORS } from '../../constants/Colors';
 
 // Responsive dimensions
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -20,22 +21,6 @@ const FONT_SIZES = {
   // Additional sizes for UI elements
   caption: moderateScale(10, 1.5),
   small: moderateScale(11, 1.5),
-};
-
-const COLORS = {
-    // Figma Light theme tokens sampled from variables
-    surface: "#FEF7FF",
-    onSurface: "#1D1B20",
-    surfaceDivider: "#E6E0E9",
-    outlineVariant: "#D7D5DE",   //make it more light
-    primaryContainer: "#EADDFF",
-    onPrimaryContainer: "#4F378A",
-    greyMedium: "#6F6F6F",
-    greyLight: "#949494",
-    white: "#FFFFFF",
-    // Custom gradient colors sampled from screenshot (purple→pink)
-    gradPurple: "#A78BFA",
-    gradPink: "#F0A3C2",
 };
 
 type Mode = "idle" | "tap" | "yap" | "type";
@@ -71,53 +56,41 @@ export default function FooterChatbotCTA({
 
                 {/* Center 80 */}
                 <View style={styles.btn80Container}>
-                    {!disabled && isRecording ? (
-                        <Pressable
-                            style={styles.btn80}
-                            onPressIn={onStartRecording}
-                            onPressOut={onStopRecording}
-                        >
-                            <LinearGradient
-                                colors={[COLORS.gradPurple, COLORS.gradPink]}
-                                style={styles.btn80Gradient}
-                            >
-                                <Image
-                                source={require("../../assets/images/yap-icon-white.png")} // local image
-                                style={{ width: scale(50), height: scale(50) }}
-                                resizeMode="contain"
-                            />
-                                {/* <Ionicons name="mic" size={30} color={COLORS.white} /> */}
-                            </LinearGradient>
-                        </Pressable>
-                    ) : !disabled && recordingComplete ? (
+                    {!disabled && recordingComplete ? (
                         <TouchableOpacity style={styles.btn80} onPress={onSendRecording}>
                             <LinearGradient
-                                colors={[COLORS.gradPurple, COLORS.gradPink]}
+                                colors={[BRAND.gradPurple, BRAND.gradPink]}
                                 style={styles.btn80Gradient}
                             >
                                 <Ionicons name="send" size={30} color={COLORS.white} />
                             </LinearGradient>
                         </TouchableOpacity>
-                    ) : !disabled ? (
-                        <Pressable
-                            style={styles.btn80}
-                            onPressIn={onStartRecording}
-                            onPressOut={onStopRecording}
-                        >
-                            <Image
-                                source={require("../../assets/images/yap-icon.png")} // local image
-                                style={{ width: scale(50), height: scale(50) }}
-                                resizeMode="contain"
-                            />
-                        </Pressable>
                     ) : (
-                        <TouchableOpacity style={[styles.btn80, disabled && styles.btnDisabled]} disabled={disabled} onPress={() => setMode("idle")}>
-                            <Image
-                                source={require("../../assets/images/yap-icon.png")} // local image
-                                style={{ width: scale(40), height: verticalScale(40) }}
-                                resizeMode="contain"
-                            />
-                        </TouchableOpacity>
+                        <Pressable
+                            style={[styles.btn80, disabled && styles.btnDisabled]}
+                            disabled={disabled}
+                            onPressIn={disabled ? undefined : onStartRecording}
+                            onPressOut={disabled ? undefined : onStopRecording}
+                        >
+                            {isRecording ? (
+                                <LinearGradient
+                                    colors={[BRAND.gradPurple, BRAND.gradPink]}
+                                    style={styles.btn80Gradient}
+                                >
+                                    <Image
+                                        source={require("../../assets/images/yap-icon-white.png")}
+                                        style={{ width: scale(50), height: scale(50) }}
+                                        resizeMode="contain"
+                                    />
+                                </LinearGradient>
+                            ) : (
+                                <Image
+                                    source={require("../../assets/images/yap-icon.png")}
+                                    style={{ width: scale(50), height: scale(50) }}
+                                    resizeMode="contain"
+                                />
+                            )}
+                        </Pressable>
                     )}
                     <Text style={styles.btnLabelCenter}>
                         {!disabled && isRecording ? "recording" : 

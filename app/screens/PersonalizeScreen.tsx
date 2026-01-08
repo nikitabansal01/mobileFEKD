@@ -191,7 +191,7 @@ export default function PersonalizeScreen() {
   const [claimingRewardId, setClaimingRewardId] = useState<string | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationEmoji, setCelebrationEmoji] = useState('🎉');
-  
+
   // Streak milestone celebration state
   const [milestoneToShow, setMilestoneToShow] = useState<number | null>(null);
 
@@ -219,7 +219,7 @@ export default function PersonalizeScreen() {
       setRewardsData(rewards);
       setCurrentStreakDays(rewards.current_streak);
       if (preferences) setPreferencesData(preferences);
-      
+
       // Check for streak milestone celebration
       if (rewards.current_streak > 0) {
         const milestone = await shouldCelebrateMilestone(rewards.current_streak);
@@ -875,7 +875,7 @@ export default function PersonalizeScreen() {
                     styles.milestoneName,
                     {
                       color: textColor,
-                      fontWeight: isActive ? '600' : '400',
+                      fontFamily: isActive ? 'Inter600' : 'Inter400',
                     }
                   ]}>
                     {milestone.name}
@@ -1089,7 +1089,7 @@ export default function PersonalizeScreen() {
                           );
                         }}
                       >
-                        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>Save Streak</Text>
+                        <Text style={{ color: '#fff', fontFamily: 'Inter600', fontSize: 12 }}>Save Streak</Text>
                       </TouchableOpacity>
                     ) : !rewardsData?.today_frozen ? (
                       /* Priority 2: Proactive freeze for today */
@@ -1126,10 +1126,10 @@ export default function PersonalizeScreen() {
                           );
                         }}
                       >
-                        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>Use Today</Text>
+                        <Text style={{ color: '#fff', fontFamily: 'Inter600', fontSize: 12 }}>Use Today</Text>
                       </TouchableOpacity>
                     ) : (
-                      <Text style={{ color: '#22c55e', fontWeight: '600', fontSize: 12 }}>❄️ Frozen</Text>
+                      <Text style={{ color: '#22c55e', fontFamily: 'Inter600', fontSize: 12 }}>❄️ Frozen</Text>
                     )}
                   </>
                 ) : (
@@ -1377,9 +1377,8 @@ const styles = StyleSheet.create({
   },
   labsTitleAligned: {
     fontSize: moderateScale(14, 1.5),
-    fontWeight: '500',
-    color: COLORS.black,
     fontFamily: 'NotoSerif400',
+    color: COLORS.black,
     lineHeight: moderateScale(21, 1.5),
     position: 'absolute',
     left: scale(126), // Responsive positioning
@@ -1398,9 +1397,8 @@ const styles = StyleSheet.create({
   },
   labsTitle: {
     fontSize: moderateScale(14, 1.5),
-    fontWeight: '500',
-    color: COLORS.black,
     fontFamily: 'NotoSerif400',
+    color: COLORS.black,
     lineHeight: moderateScale(21, 1.5),
     letterSpacing: 0,
     textAlign: 'center',
@@ -1468,9 +1466,8 @@ const styles = StyleSheet.create({
   },
   labsTitleText: {
     fontSize: moderateScale(14, 1.5),
-    fontWeight: '500',
-    color: COLORS.black,
     fontFamily: 'NotoSerif400',
+    color: COLORS.black,
     lineHeight: moderateScale(21, 1.5),
     includeFontPadding: isAndroid ? false : undefined,
     textAlignVertical: isAndroid ? 'center' : undefined,
@@ -1513,9 +1510,8 @@ const styles = StyleSheet.create({
   },
   uploadButtonText: {
     fontSize: moderateScale(14, 1.5),
-    fontWeight: '500',
-    color: COLORS.black,
     fontFamily: FONT_FAMILIES['Inter-Medium'],
+    color: COLORS.black,
     letterSpacing: 0,
     includeFontPadding: isAndroid ? false : undefined,
     textAlignVertical: isAndroid ? 'center' : undefined,
@@ -1564,10 +1560,9 @@ const styles = StyleSheet.create({
   },
   streakTitle: {
     fontSize: moderateScale(14, 1.5),
-    fontWeight: '500',
+    fontFamily: 'NotoSerif400',
     color: COLORS.black,
     textAlign: 'center',
-    fontFamily: 'NotoSerif400',
     lineHeight: moderateScale(21, 1.5),
     marginBottom: verticalScale(20),
     marginTop: verticalScale(30),
@@ -1592,17 +1587,12 @@ const styles = StyleSheet.create({
   },
   streakNumber: {
     fontSize: moderateScale(80, 1),
-    fontWeight: '700',
-    fontFamily: 'serif', // Use system serif font
+    fontFamily: 'NotoSerif600', // Use serif for streak numbers
     lineHeight: moderateScale(100, 0.5),
     textAlign: 'center',
     verticalAlign: 'middle',
     includeFontPadding: isAndroid ? false : undefined,
     textAlignVertical: isAndroid ? 'center' : undefined,
-    // Android-specific font weight handling
-    ...(isAndroid && {
-      fontWeight: 'bold',
-    }),
   },
   streakLabel: {
     fontSize: moderateScale(12, 1.5),
@@ -1623,9 +1613,8 @@ const styles = StyleSheet.create({
   },
   top20Text: {
     fontSize: moderateScale(12, 1.5),
-    fontWeight: '600',
-    color: '#F6C34C',
     fontFamily: FONT_FAMILIES['Inter-Regular'],
+    color: '#F6C34C',
     lineHeight: moderateScale(15, 1.5),
     includeFontPadding: isAndroid ? false : undefined,
     textAlignVertical: isAndroid ? 'center' : undefined,
@@ -1702,7 +1691,7 @@ const styles = StyleSheet.create({
   },
   milestoneName: {
     fontSize: moderateScale(12, 1.5),
-    fontWeight: '500',
+    fontFamily: 'Inter500',
     fontFamily: FONT_FAMILIES['Inter-Regular'],
     lineHeight: moderateScale(15, 1.5),
     includeFontPadding: isAndroid ? false : undefined,
@@ -1733,7 +1722,7 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     fontSize: moderateScale(14, 1.5),
-    fontWeight: '500',
+    fontFamily: 'Inter500',
     color: COLORS.greyMedium,
     fontFamily: 'NotoSerif400',
     lineHeight: moderateScale(21, 1.5),
@@ -1784,7 +1773,7 @@ const styles = StyleSheet.create({
   },
   rewardTitle: {
     fontSize: moderateScale(14, 1.5),
-    fontWeight: '500',
+    fontFamily: 'Inter500',
     color: COLORS.black,
     fontFamily: 'NotoSerif400',
     lineHeight: moderateScale(21, 1.5),

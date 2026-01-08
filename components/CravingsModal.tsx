@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: moderateScale(22),
-        fontWeight: '700',
+        fontFamily: 'Inter600',
         color: '#1A1A1A',
         marginBottom: verticalScale(4),
     },
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: moderateScale(14),
-        fontWeight: '600',
+        fontFamily: 'Inter600',
         color: '#666666',
         marginTop: verticalScale(16),
         marginBottom: verticalScale(8),
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     addButtonText: {
         color: '#FFFFFF',
         fontSize: moderateScale(24),
-        fontWeight: '600',
+        fontFamily: 'Inter600',
     },
     customCravingsRow: {
         flexDirection: 'row',
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: moderateScale(14),
         color: '#A29AEA',
-        fontWeight: '600',
+        fontFamily: 'Inter600',
         marginTop: verticalScale(12),
     },
     errorText: {
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
     saveText: {
         color: '#FFFFFF',
         fontSize: moderateScale(16),
-        fontWeight: '700',
+        fontFamily: 'Inter600',
     },
 });
 

@@ -1,6 +1,8 @@
 import React from 'react';
 import { StyleProp, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
+import { COLORS, UI } from '../constants/Colors';
+import { FONT_INTER } from '../constants/fonts';
 
 
 /**
@@ -57,7 +59,7 @@ const PrimaryButton = ({ title, onPress, style, disabled = false, children }: Pr
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#ffffff',
+    backgroundColor: COLORS.white,
     borderRadius: 100,
     width: responsiveWidth(88), // Default width
     paddingVertical: responsiveHeight(1.5),
@@ -65,7 +67,7 @@ const styles = StyleSheet.create({
     // marginBottom: responsiveHeight(0),
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000000',
+    shadowColor: UI.shadowDark,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -78,12 +80,12 @@ const styles = StyleSheet.create({
     opacity: 0.75,
   },
   buttonText: {
-    fontFamily: 'Inter500',
+    fontFamily: FONT_INTER.medium,
     fontSize: responsiveFontSize(1.98), // 14px
-    color: '#000000',
+    color: COLORS.black,
   },
   buttonTextDisabled: {
-    color: '#6f6f6f',
+    color: COLORS.greyMedium,
   },
 });
 

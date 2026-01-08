@@ -106,8 +106,19 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       setLoading(true);
       setLoadingMessage('Signing in with Google...');
       
-      signInWithCredential(auth, credential)
+      // Set pending flag BEFORE auth to prevent ResearchingScreen from navigating early
+      AsyncStorage.setItem('session_link_complete', 'pending')
+        .then(() => signInWithCredential(auth, credential))
         .then(async (result) => {
+          // Track post-auth flow timing for debugging performance (signup vs login)
+          try {
+            const isNewUser = !!result?.additionalUserInfo?.isNewUser;
+            await AsyncStorage.setItem('post_auth_flow', isNewUser ? 'signup' : 'login');
+            await AsyncStorage.setItem('post_auth_started_ms', Date.now().toString());
+          } catch (e) {
+            // ignore
+          }
+
           // Save login state using authService (Google doesn't store passwords)
           await authService.setLoggedIn(result.user.uid);
           if (rememberMe && result.user.email) {
@@ -175,6 +186,15 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
     setLoading(true);
     setLoadingMessage('Creating your account...');
     try {
+      // Set pending flag BEFORE auth to prevent ResearchingScreen from navigating early
+      await AsyncStorage.setItem('session_link_complete', 'pending');
+      // Track post-auth flow timing for debugging performance
+      try {
+        await AsyncStorage.setItem('post_auth_flow', 'signup');
+        await AsyncStorage.setItem('post_auth_started_ms', Date.now().toString());
+      } catch (e) {
+        // ignore
+      }
       const result = await signUpWithEmail(email, password);
       
       if (result.success) {
@@ -236,6 +256,9 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       const firebaseCredential = provider.credential({
         idToken: credential.identityToken!,
       });
+      
+      // Set pending flag BEFORE auth to prevent ResearchingScreen from navigating early
+      await AsyncStorage.setItem('session_link_complete', 'pending');
       
       const result = await signInWithCredential(auth, firebaseCredential);
       

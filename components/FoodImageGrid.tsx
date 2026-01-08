@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
   },
   foodName: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Inter500',
     color: '#333',
   },
   calories: {

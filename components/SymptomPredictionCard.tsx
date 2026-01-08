@@ -518,12 +518,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: moderateScale(18, 0.5),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#2D2D2D',
   },
   subtitle: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
     marginTop: verticalScale(2),
   },
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
   },
   phaseAlertTitle: {
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#2D2D2D',
   },
   phaseFlow: {
@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
   },
   phaseName: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#4A4A4A',
     textTransform: 'capitalize',
   },
@@ -572,7 +572,7 @@ const styles = StyleSheet.create({
   },
   daysUntil: {
     fontSize: moderateScale(11),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
     marginTop: verticalScale(4),
   },
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
   },
   outlookText: {
     fontSize: moderateScale(13),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#5D4037',
     lineHeight: verticalScale(20),
   },
@@ -619,12 +619,12 @@ const styles = StyleSheet.create({
   },
   symptomName: {
     fontSize: moderateScale(15),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#2D2D2D',
   },
   expectedDate: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
   // Likelihood
@@ -640,12 +640,12 @@ const styles = StyleSheet.create({
   },
   likelihoodText: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins700',
+    fontFamily: 'Inter600',
     color: '#2D2D2D',
   },
   likelihoodLabel: {
     fontSize: moderateScale(9),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#4A4A4A',
   },
   confidenceIcon: {
@@ -658,7 +658,7 @@ const styles = StyleSheet.create({
   },
   severityLabel: {
     fontSize: moderateScale(11),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
     marginBottom: verticalScale(6),
   },
@@ -680,7 +680,7 @@ const styles = StyleSheet.create({
   },
   adviceTitle: {
     fontSize: moderateScale(13),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#2D2D2D',
     marginBottom: verticalScale(8),
   },
@@ -692,12 +692,12 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(12),
     color: '#E98BAC',
     marginRight: scale(8),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
   },
   adviceText: {
     flex: 1,
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#4A4A4A',
     lineHeight: verticalScale(18),
   },
@@ -712,7 +712,7 @@ const styles = StyleSheet.create({
   },
   personalizedText: {
     fontSize: moderateScale(10),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#7C4DFF',
   },
   // Empty state
@@ -726,7 +726,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
     textAlign: 'center',
     lineHeight: verticalScale(22),
@@ -739,7 +739,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: verticalScale(12),
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
   errorContainer: {
@@ -752,7 +752,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
     textAlign: 'center',
   },
@@ -765,7 +765,7 @@ const styles = StyleSheet.create({
   },
   retryText: {
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#FFFFFF',
   },
   // Compact version
@@ -789,7 +789,7 @@ const styles = StyleSheet.create({
   },
   compactTitle: {
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#2D2D2D',
   },
   compactPrediction: {
@@ -803,17 +803,17 @@ const styles = StyleSheet.create({
   compactSymptomName: {
     flex: 1,
     fontSize: moderateScale(13),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#4A4A4A',
   },
   compactLikelihood: {
     fontSize: moderateScale(13),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#E57373',
   },
   compactMore: {
     fontSize: moderateScale(11),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
     marginTop: verticalScale(6),
   },

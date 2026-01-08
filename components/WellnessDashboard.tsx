@@ -24,6 +24,7 @@ import {
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import Svg, { Circle } from 'react-native-svg';
+import { BACKGROUND, BRAND, TEXT } from '../constants/Colors';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPE DEFINITIONS
@@ -73,16 +74,16 @@ interface ScoreRingProps {
   emoji?: string;
 }
 
-const ScoreRing: React.FC<ScoreRingProps> = ({ 
-  score, 
-  size = 140, 
+const ScoreRing: React.FC<ScoreRingProps> = ({
+  score,
+  size = 140,
   strokeWidth = 12,
   emoji = '😊'
 }) => {
   const animatedValue = new Animated.Value(0);
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  
+
   useEffect(() => {
     Animated.timing(animatedValue, {
       toValue: score,
@@ -158,7 +159,7 @@ const DimensionBar: React.FC<DimensionBarProps> = ({ dimension, onPress }) => {
   };
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.dimensionContainer}
       onPress={onPress}
       activeOpacity={0.7}
@@ -202,14 +203,14 @@ const WellnessDashboard: React.FC<WellnessDashboardProps> = ({
     try {
       setLoading(true);
       setError(null);
-      
+
       // TODO: Replace with actual API call
       // const response = await fetch(`${API_URL}/wellness-score/${userId}`);
       // const data = await response.json();
-      
+
       // Mock data for now
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       setWellnessData({
         overall_score: 73,
         dimension_scores: {
@@ -234,7 +235,7 @@ const WellnessDashboard: React.FC<WellnessDashboardProps> = ({
         message: "You're doing well! Small improvements add up.",
         trend: 'improving',
       });
-      
+
     } catch (err) {
       setError('Failed to load wellness data');
       console.error('Wellness fetch error:', err);
@@ -245,7 +246,7 @@ const WellnessDashboard: React.FC<WellnessDashboardProps> = ({
 
   const getDimensions = (): DimensionScore[] => {
     if (!wellnessData) return [];
-    
+
     return [
       { name: 'Sleep', score: wellnessData.dimension_scores.sleep, icon: '😴', color: '#7C4DFF' },
       { name: 'Mood', score: wellnessData.dimension_scores.mood, icon: '😊', color: '#E91E63' },
@@ -323,8 +324,8 @@ const WellnessDashboard: React.FC<WellnessDashboardProps> = ({
 
       {/* Main Score */}
       <View style={styles.mainScoreContainer}>
-        <ScoreRing 
-          score={wellnessData.overall_score} 
+        <ScoreRing
+          score={wellnessData.overall_score}
           emoji={wellnessData.emoji}
         />
         <Text style={styles.mainMessage}>{wellnessData.message}</Text>
@@ -347,7 +348,7 @@ const WellnessDashboard: React.FC<WellnessDashboardProps> = ({
       <View style={styles.insightsSection}>
         <Text style={styles.sectionTitle}>✨ Insights</Text>
         {wellnessData.insights.map((insight, index) => (
-          <TouchableOpacity 
+          <TouchableOpacity
             key={index}
             style={styles.insightCard}
             onPress={() => onInsightPress?.(insight)}
@@ -396,7 +397,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: moderateScale(20, 0.5),
-    fontFamily: 'Poppins600',
+    fontFamily: 'NotoSerif600',
     color: '#2D2D2D',
   },
   refreshButton: {
@@ -418,17 +419,17 @@ const styles = StyleSheet.create({
   },
   scoreNumber: {
     fontSize: moderateScale(32, 0.5),
-    fontFamily: 'Poppins700',
+    fontFamily: 'Inter600',
     color: '#2D2D2D',
   },
   scoreLabel: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
   mainMessage: {
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#4A4A4A',
     textAlign: 'center',
     marginTop: verticalScale(12),
@@ -439,7 +440,7 @@ const styles = StyleSheet.create({
   },
   trendIndicator: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
   dimensionsSection: {
@@ -447,7 +448,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: moderateScale(16),
-    fontFamily: 'Poppins600',
+    fontFamily: 'NotoSerif500',
     color: '#2D2D2D',
     marginBottom: verticalScale(12),
   },
@@ -466,12 +467,12 @@ const styles = StyleSheet.create({
   dimensionName: {
     flex: 1,
     fontSize: moderateScale(13),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#4A4A4A',
   },
   dimensionScore: {
     fontSize: moderateScale(13),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#2D2D2D',
   },
   barBackground: {
@@ -497,7 +498,7 @@ const styles = StyleSheet.create({
   },
   insightText: {
     fontSize: moderateScale(13),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#4A4A4A',
     lineHeight: verticalScale(20),
   },
@@ -513,12 +514,12 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14),
     color: '#E98BAC',
     marginRight: scale(8),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
   },
   recommendationText: {
     flex: 1,
     fontSize: moderateScale(13),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#4A4A4A',
     lineHeight: verticalScale(20),
   },
@@ -530,7 +531,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: verticalScale(12),
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
   errorContainer: {
@@ -543,7 +544,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
     textAlign: 'center',
   },
@@ -556,7 +557,7 @@ const styles = StyleSheet.create({
   },
   retryText: {
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#FFFFFF',
   },
   // Compact version
@@ -579,12 +580,12 @@ const styles = StyleSheet.create({
   },
   compactTitle: {
     fontSize: moderateScale(16),
-    fontFamily: 'Poppins600',
+    fontFamily: 'NotoSerif600',
     color: '#2D2D2D',
   },
   compactMessage: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
     marginTop: verticalScale(4),
   },
@@ -598,7 +599,7 @@ const styles = StyleSheet.create({
   },
   trendText: {
     fontSize: moderateScale(11),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#4CAF50',
   },
 });

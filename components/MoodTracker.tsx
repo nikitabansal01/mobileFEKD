@@ -326,12 +326,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: moderateScale(18, 0.5),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#2D2D2D',
   },
   subtitle: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
     marginTop: verticalScale(2),
   },
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   },
   streakText: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#FF9800',
   },
   // Logged state
@@ -366,12 +366,12 @@ const styles = StyleSheet.create({
   },
   loggedTitle: {
     fontSize: moderateScale(16),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#2D2D2D',
   },
   loggedSubtitle: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
     marginTop: verticalScale(2),
   },
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
   },
   editText: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#6F6F6F',
   },
   // Mood selection
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -verticalScale(18),
     fontSize: moderateScale(10),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
   },
   // Energy slider
   energyContainer: {
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   },
   energyTitle: {
     fontSize: moderateScale(13),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#6F6F6F',
     marginBottom: verticalScale(8),
   },
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
   },
   energyLabel: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
     marginTop: verticalScale(6),
   },
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
   },
   logButtonText: {
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#FFFFFF',
   },
   // History
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
   },
   historyTitle: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#6F6F6F',
     marginBottom: verticalScale(10),
   },
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
   },
   historyLabel: {
     fontSize: moderateScale(10),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#9E9E9E',
   },
 });

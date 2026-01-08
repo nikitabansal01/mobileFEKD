@@ -395,12 +395,12 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: moderateScale(22, 0.5),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#FFFFFF',
   },
   headerSubtitle: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: 'rgba(255, 255, 255, 0.9)',
     marginTop: verticalScale(4),
   },
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
   closeText: {
     fontSize: moderateScale(16),
     color: '#FFFFFF',
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
   },
   content: {
     flex: 1,
@@ -426,13 +426,13 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: moderateScale(16),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#2D2D2D',
     marginBottom: verticalScale(4),
   },
   sectionSubtitle: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
     marginBottom: verticalScale(15),
   },
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
   },
   voiceName: {
     fontSize: moderateScale(16),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#2D2D2D',
   },
   voiceNameSelected: {
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
   },
   voiceDescription: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
   },
   selectedBadge: {
@@ -490,11 +490,11 @@ const styles = StyleSheet.create({
   selectedIcon: {
     color: '#FFFFFF',
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
   },
   voicePersonality: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#9E9E9E',
     fontStyle: 'italic',
     marginBottom: verticalScale(10),
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
   },
   previewText: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#6F6F6F',
   },
   // Speed Control
@@ -534,12 +534,12 @@ const styles = StyleSheet.create({
   },
   speedTitle: {
     fontSize: moderateScale(15),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#2D2D2D',
   },
   speedValue: {
     fontSize: moderateScale(13),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#A29AEA',
   },
   speedSlider: {
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   },
   speedOptionText: {
     fontSize: moderateScale(11),
-    fontFamily: 'Poppins500',
+    fontFamily: 'Inter500',
     color: '#6F6F6F',
   },
   speedOptionTextSelected: {
@@ -588,12 +588,12 @@ const styles = StyleSheet.create({
   },
   toggleTitle: {
     fontSize: moderateScale(15),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#2D2D2D',
   },
   toggleDescription: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#6F6F6F',
     marginTop: verticalScale(2),
     maxWidth: responsiveWidth(60),
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   },
   tipsTitle: {
     fontSize: moderateScale(14),
-    fontFamily: 'Poppins600',
+    fontFamily: 'Inter600',
     color: '#6F6F6F',
     marginBottom: verticalScale(10),
   },
@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
   },
   tipText: {
     fontSize: moderateScale(12),
-    fontFamily: 'Poppins400',
+    fontFamily: 'Inter400',
     color: '#5D4037',
     marginBottom: verticalScale(6),
     lineHeight: verticalScale(20),
