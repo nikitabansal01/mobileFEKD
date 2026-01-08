@@ -119,25 +119,51 @@ class SessionService {
       console.log('Attempting to create session:', `${API_BASE_URL}/api/v1/questions/sessions`);
       console.log('Request data:', { device_id: deviceId });
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          device_id: deviceId
-        }),
-      });
+      // Add timeout to prevent hanging indefinitely
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-      if (!response.ok) {
-        throw new Error(`Session creation failed: ${response.status}`);
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            device_id: deviceId
+          }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Session creation failed with status:', response.status, errorText);
+          throw new Error(`Session creation failed: ${response.status}`);
+        }
+
+        const sessionData: SessionData = await response.json();
+        console.log('✅ Session created successfully:', sessionData.session_id);
+        await this.saveSessionId(sessionData.session_id);
+        return sessionData;
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        
+        // More detailed error logging
+        if (fetchError.name === 'AbortError') {
+          console.error('❌ Session creation timed out after 30s');
+        } else if (fetchError.message?.includes('Network request failed')) {
+          console.error('❌ Network request failed - check internet connection');
+          console.error('   API URL:', API_BASE_URL);
+          console.error('   Device may not have internet access or DNS is not resolving');
+        } else {
+          console.error('❌ Fetch error:', fetchError.message || fetchError);
+        }
+        throw fetchError;
       }
-
-      const sessionData: SessionData = await response.json();
-      await this.saveSessionId(sessionData.session_id);
-      return sessionData;
-    } catch (error) {
-      console.error('Session creation error:', error);
+    } catch (error: any) {
+      console.error('Session creation error:', error.message || error);
       return null;
     }
   }
