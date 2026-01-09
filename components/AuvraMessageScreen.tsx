@@ -110,15 +110,15 @@ const AuvraMessageScreen: React.FC<AuvraMessageScreenProps> = ({
         <View style={styles.characterContainer}>
           <AuvraCharacter size={characterSize} />
         </View>
-        
+
         {/* Text container */}
         <View style={styles.textContainer}>
           {specialMessage ? (
             // Special message format (e.g., "Hi! I'm" + "Auvra")
             <>
               <Text style={[
-                styles.prefixText, 
-                { 
+                styles.prefixText,
+                {
                   fontSize: specialMessage.prefixFontSize || responsiveFontSize(1.2),
                   color: specialMessage.prefixColor || '#6f6f6f'
                 }
@@ -131,8 +131,8 @@ const AuvraMessageScreen: React.FC<AuvraMessageScreenProps> = ({
                     style={styles.maskedViewInner}
                     maskElement={
                       <Text style={[
-                        styles.mainText, 
-                        { 
+                        styles.mainText,
+                        {
                           fontSize: specialMessage.mainTextFontSize || responsiveFontSize(2.4),
                           backgroundColor: 'transparent'
                         }

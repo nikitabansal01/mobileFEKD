@@ -11,12 +11,16 @@ import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { FONT_FAMILIES, useAppFonts } from '../../constants/fonts';
 import { rewardService, RewardsStatusResponse } from '../../services/rewardService';
 import { preferencesService, AllPreferencesResponse, PreferenceType } from '../../services/preferencesService';
+import { personalizationService, ProfileSummaryResponse, DiscoveryPrompt } from '../../services/personalizationService';
 import PreferenceModal from '../../components/PreferenceModal';
 import BodyMetricsModal from '../../components/BodyMetricsModal';
 import CravingsModal from '../../components/CravingsModal';
+import ProfileSummaryCard from '../../components/ProfileSummaryCard';
+import DiscoveryPromptCard from '../../components/DiscoveryPromptCard';
 // StreakAtRiskBanner removed - streak alerts handled via popup in HomeScreen
 import StreakMilestoneModal from '../../components/StreakMilestoneModal';
 import { shouldCelebrateMilestone, markMilestoneCelebrated } from '../../utils/streakMilestones';
+
 // Constants from Figma design
 const BACKGROUND_VECTOR_IMAGE = "http://localhost:3845/assets/cf926b4d5ec2719e28f1af07e084ed30c131abe4.svg";
 // const MILESTONE_BG_IMAGE = require("../../assets/images/milestone-bg.png");
@@ -208,17 +212,25 @@ export default function PersonalizeScreen() {
   // Modal visibility state
   const [activeModal, setActiveModal] = useState<PreferenceType | null>(null);
 
-  // Load rewards and preferences data when screen is focused
+  // 2026 Vision - Profile Summary State
+  const [profileSummary, setProfileSummary] = useState<ProfileSummaryResponse | null>(null);
+
+  // Load rewards, preferences, and profile summary data when screen is focused
   const loadRewardsData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [rewards, preferences] = await Promise.all([
+      const [rewards, preferences, profile] = await Promise.all([
         rewardService.getRewardsStatus(),
         preferencesService.getAllPreferences().catch(() => null),
+        personalizationService.getProfileSummary().catch((err) => {
+          console.log('Profile summary not available:', err);
+          return null;
+        }),
       ]);
       setRewardsData(rewards);
       setCurrentStreakDays(rewards.current_streak);
       if (preferences) setPreferencesData(preferences);
+      if (profile) setProfileSummary(profile);
 
       // Check for streak milestone celebration
       if (rewards.current_streak > 0) {
@@ -233,6 +245,7 @@ export default function PersonalizeScreen() {
       setIsLoading(false);
     }
   }, []);
+
 
   // Disable back gesture and load data on focus
   useFocusEffect(
@@ -253,6 +266,55 @@ export default function PersonalizeScreen() {
   const navigateToIndex = () => {
     navigation.navigate('MainScreenTabs');
   };
+
+  // 2026 Vision - Navigate to chat with focus on a specific discovery prompt
+  const handleDiscoveryExplore = (prompt: DiscoveryPrompt) => {
+    console.log('🔍 [Personalize] Exploring:', prompt.id);
+    // Navigate to chatbot with personalise context and focus on this gap
+    (navigation as any).navigate('ChatbotScreen', {
+      context: 'personalise',
+      initialMessage: prompt.question,
+      focus: prompt.id,
+    });
+  };
+
+  // 2026 Vision - Navigate to general personalization chat
+  const handleStartPersonalizeChat = () => {
+    console.log('💜 [Personalize] Starting general chat');
+    (navigation as any).navigate('ChatbotScreen', {
+      context: 'personalise',
+      initialMessage: 'Help me understand you better',
+    });
+  };
+
+  // 2026 Vision - Render the new profile summary section
+  const renderProfileSection = () => {
+    if (!profileSummary) return null;
+
+    return (
+      <View style={{ marginTop: verticalScale(8) }}>
+        {/* Profile Summary Card */}
+        <ProfileSummaryCard
+          traits={profileSummary.known_traits}
+          profileDensity={profileSummary.profile_density}
+          onStartChat={handleStartPersonalizeChat}
+          onTraitPress={(trait) => {
+            console.log('Trait pressed:', trait.id);
+            // Could open edit modal or chat focused on this trait
+          }}
+        />
+
+        {/* Discovery Prompts Card */}
+        {profileSummary.discovery_prompts.length > 0 && (
+          <DiscoveryPromptCard
+            prompts={profileSummary.discovery_prompts}
+            onExplore={handleDiscoveryExplore}
+          />
+        )}
+      </View>
+    );
+  };
+
 
   const Animation = () => {
     if (Platform.OS === "web") {
@@ -1037,9 +1099,11 @@ export default function PersonalizeScreen() {
         overScrollMode={isAndroid ? "never" : "auto"}
       >
         {renderLabsSection()}
+        {renderProfileSection()}
         {renderStreakSection()}
 
         {/* Your Preferences & Tokens Section */}
+
         {(rewardsData || preferencesData) && (
           <View style={styles.preferencesSection}>
             <Text style={styles.preferencesSectionTitle}>Your Status</Text>
