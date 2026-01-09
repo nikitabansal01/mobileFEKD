@@ -7,12 +7,47 @@
  * - Unlock status for gated features
  */
 
-import { API_BASE_URL } from '../constants/api';
-import { auth } from '../config/firebase';
+import { getAuth } from 'firebase/auth';
+import { Platform } from 'react-native';
+
+/**
+ * Gets the API base URL based on platform and environment
+ */
+const getApiBaseUrl = () => {
+    const envUrl = process.env.EXPO_PUBLIC_API_URL;
+    if (envUrl) return envUrl;
+
+    if (Platform.OS === 'android') {
+        return 'http://10.0.2.2:8000';
+    } else {
+        return 'http://localhost:8000';
+    }
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+/**
+ * Retrieves Firebase authentication token for API requests
+ */
+const getAuthToken = async (): Promise<string | null> => {
+    try {
+        const auth = getAuth();
+        const user = auth.currentUser;
+        if (user) {
+            const token = await user.getIdToken();
+            return token;
+        }
+        return null;
+    } catch (error) {
+        console.error('❌ Failed to get Firebase token:', error);
+        return null;
+    }
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════════
+
 
 export interface TraitChip {
     id: string;
@@ -56,16 +91,16 @@ class PersonalizationService {
     private baseUrl = `${API_BASE_URL}/api/v1/personalization`;
 
     private async getAuthHeaders(): Promise<Record<string, string>> {
-        const user = auth.currentUser;
-        if (!user) {
+        const token = await getAuthToken();
+        if (!token) {
             throw new Error('User not authenticated');
         }
-        const token = await user.getIdToken();
         return {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
         };
     }
+
 
     /**
      * Get comprehensive profile summary for the PersonalizeScreen.
