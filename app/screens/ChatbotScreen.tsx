@@ -146,8 +146,8 @@ const buildPersonaliseOptionsFromProfile = (summary: any): ChoiceOption[] => {
       const title = (p?.title || '').toString().trim();
       if (!title) return null;
       const icon = (p?.icon || '').toString().trim();
-      // Keep tap options as natural user messages the model can respond to.
-      const text = `${icon ? icon + ' ' : ''}Personalise: ${title}`;
+      // Make tap options feel like answers to "Want to personalize?" (clear, first-person intent).
+      const text = `${icon ? icon + ' ' : ''}I want to personalize my ${title.toLowerCase()}`;
       return { id: `personalise_prompt_${hashText(text)}`, text };
     })
     .filter(Boolean) as ChoiceOption[];
@@ -162,10 +162,10 @@ const buildPersonaliseOptionsFromProfile = (summary: any): ChoiceOption[] => {
   if (knownTraits.length > 0) {
     options.push({ id: 'personalise_show_traits', text: 'Show what you already know about me' });
   }
-  options.push({ id: 'personalise_recommend_next', text: 'What should I personalise next?' });
-  options.push({ id: 'personalise_update_prefs', text: 'Update my preferences' });
+  options.push({ id: 'personalise_recommend_next', text: 'Pick one thing to personalise for me' });
+  options.push({ id: 'personalise_update_prefs', text: 'I want to update my preferences' });
   if (hasLocked) {
-    options.push({ id: 'personalise_unlock_help', text: 'How do I unlock more personalization features?' });
+    options.push({ id: 'personalise_unlock_help', text: 'I want to unlock more personalization features' });
   }
 
   // De-dupe by text (case-insensitive) and cap for UI.
@@ -1040,9 +1040,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         if (personaliseTapOptions.length > 0) return personaliseTapOptions;
         if (uiBlocks && uiBlocks.length > 0) return [];
         return [
-          { id: "add-factors", text: "Add personalization factors" },
-          { id: "update-preferences", text: "Update my preferences" },
-          { id: "customise-plan", text: "Customise my action plan" },
+          { id: "add-factors", text: "I want to personalise more factors" },
+          { id: "update-preferences", text: "I want to update my preferences" },
+          { id: "customise-plan", text: "I want to customise my action plan" },
         ];
       case "know_body":
         return [

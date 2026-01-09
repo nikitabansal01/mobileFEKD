@@ -1099,7 +1099,6 @@ export default function PersonalizeScreen() {
         overScrollMode={isAndroid ? "never" : "auto"}
       >
         {renderLabsSection()}
-        {renderProfileSection()}
         {renderStreakSection()}
 
         {/* Your Preferences & Tokens Section */}
