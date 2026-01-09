@@ -12,6 +12,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import "react-native-reanimated";
 import { auth } from './config/firebase';
 
+// Web-only: Import global CSS to fix scrollbar and body overflow
+if (Platform.OS === 'web') {
+  require('./global.web.css');
+}
+
 // Screens
 import ActionCompletedScreen from './app/screens/ActionCompletedScreen';
 import ActionDetailScreen from './app/screens/ActionDetailScreen';
@@ -99,7 +104,8 @@ export default function App() {
               initialRouteName="SplashScreen"
               screenOptions={{
                 headerShown: false,
-                gestureEnabled: Platform.OS === 'ios', // Disable gestures on Android to prevent interference with scrolling
+                gestureEnabled: Platform.OS === 'ios' || Platform.OS === 'web', // Enable gestures on web
+                cardStyle: { flex: 1 }, // Critical for web scroll - gives bounded height
               }}
             >
               <Stack.Screen name="SplashScreen" component={SplashScreen} />
