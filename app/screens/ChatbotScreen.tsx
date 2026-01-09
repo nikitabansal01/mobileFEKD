@@ -8,6 +8,7 @@ import carePlanCheckinService, { TapOption as CarePlanTapOption } from "@/servic
 import homeService, { ActionPlanResponse, AssignmentsResponse } from "@/services/homeService";
 import { rewardService, RewardsStatusResponse } from "@/services/rewardService";
 import chatService from "@/services/chatService";
+import { personalizationService } from "@/services/personalizationService";
 import symptomCheckinService, { TapOption as SymptomTapOption } from "@/services/symptomCheckinService";
 import symptomTrackingService, { SymptomOverviewResponse } from "@/services/symptomTrackingService";
 import weeklyCheckinService, { QuestionResponse, TapOption } from "@/services/weeklyCheckinService";
@@ -109,6 +110,75 @@ const hashText = (text: string) => {
     hash = (hash * 31 + text.charCodeAt(i)) | 0;
   }
   return Math.abs(hash).toString(36);
+};
+
+const choicesToChoiceOptions = (choices?: Array<string | null | undefined> | null): ChoiceOption[] => {
+  if (!choices || choices.length === 0) return [];
+  const cleaned = choices
+    .map((c) => (c || "").trim())
+    .filter((c) => c.length > 0)
+    .slice(0, 8);
+  return cleaned.map((text) => ({
+    id: `ai_choice_${hashText(text)}`,
+    text,
+  }));
+};
+
+const buildPersonaliseOptionsFromProfile = (summary: any): ChoiceOption[] => {
+  if (!summary) return [];
+
+  const prompts: Array<any> = Array.isArray(summary.discovery_prompts) ? summary.discovery_prompts : [];
+  const unlockStatuses: Array<any> = Array.isArray(summary.unlock_statuses) ? summary.unlock_statuses : [];
+  const knownTraits: Array<any> = Array.isArray(summary.known_traits) ? summary.known_traits : [];
+
+  const priorityRank = (p?: string) => {
+    if (p === 'high') return 0;
+    if (p === 'medium') return 1;
+    return 2;
+  };
+
+  const topPrompts = [...prompts]
+    .sort((a, b) => priorityRank(a?.priority) - priorityRank(b?.priority))
+    .slice(0, 4);
+
+  const promptOptions: ChoiceOption[] = topPrompts
+    .map((p) => {
+      const title = (p?.title || '').toString().trim();
+      if (!title) return null;
+      const icon = (p?.icon || '').toString().trim();
+      // Keep tap options as natural user messages the model can respond to.
+      const text = `${icon ? icon + ' ' : ''}Personalise: ${title}`;
+      return { id: `personalise_prompt_${hashText(text)}`, text };
+    })
+    .filter(Boolean) as ChoiceOption[];
+
+  const hasLocked = unlockStatuses.some((s) => s && s.accessible === false);
+  const options: ChoiceOption[] = [];
+
+  // Put the most actionable “gap discovery” prompts first.
+  options.push(...promptOptions);
+
+  // Then add a few consistent, but still contextual, helpers.
+  if (knownTraits.length > 0) {
+    options.push({ id: 'personalise_show_traits', text: 'Show what you already know about me' });
+  }
+  options.push({ id: 'personalise_recommend_next', text: 'What should I personalise next?' });
+  options.push({ id: 'personalise_update_prefs', text: 'Update my preferences' });
+  if (hasLocked) {
+    options.push({ id: 'personalise_unlock_help', text: 'How do I unlock more personalization features?' });
+  }
+
+  // De-dupe by text (case-insensitive) and cap for UI.
+  const seen = new Set<string>();
+  const deduped: ChoiceOption[] = [];
+  for (const opt of options) {
+    const key = (opt.text || '').trim().toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(opt);
+    if (deduped.length >= 8) break;
+  }
+  return deduped;
 };
 
 type ChoiceOption = {
@@ -311,6 +381,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const [symptomThreadId, setSymptomThreadId] = useState<string | null>(null);
   const [symptomTapOptions, setSymptomTapOptions] = useState<SymptomTapOption[]>([]);
 
+  // Personalise (AI chat) tap options
+  const [personaliseTapOptions, setPersonaliseTapOptions] = useState<ChoiceOption[]>([]);
+
   // Show continue button after check-in completion
   const [showContinueButton, setShowContinueButton] = useState(false);
   const [isLoadingCheckin, setIsLoadingCheckin] = useState(false);
@@ -322,6 +395,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     // Prevent UI blocks from leaking between contexts.
     setUiBlocks([]);
     setChatSessionId(null);
+    setPersonaliseTapOptions([]);
 
     if (contextFromRoute?.context === "care_plan_modal") {
       // Care Plan check-in (daily thread) - start or resume from API
@@ -353,12 +427,29 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           : contextFromRoute?.initialMessage) ||
         'I want to personalize';
 
-      const result = await chatService.sendMessage({
-        message: seedMessage,
-        conversation_context: 'personalise',
-        input_mode: 'tap',
-        session_id: null,
-      });
+      const [chatResult, profileResult] = await Promise.allSettled([
+        chatService.sendMessage({
+          message: seedMessage,
+          conversation_context: 'personalise',
+          input_mode: 'tap',
+          session_id: null,
+        }),
+        personalizationService.getProfileSummary(),
+      ]);
+
+      const result = chatResult.status === 'fulfilled' ? chatResult.value : null;
+      const profileSummary = profileResult.status === 'fulfilled' ? profileResult.value : null;
+
+      // Best-effort: build more contextual tap options for the personalize flow.
+      // If the backend sends explicit choices, those should win.
+      if (profileSummary) {
+        const fromProfile = buildPersonaliseOptionsFromProfile(profileSummary);
+        if (fromProfile.length > 0) setPersonaliseTapOptions(fromProfile);
+      }
+      if (result?.choices && Array.isArray(result.choices) && result.choices.length > 0) {
+        const fromAi = choicesToChoiceOptions(result.choices);
+        if (fromAi.length > 0) setPersonaliseTapOptions(fromAi);
+      }
 
       if (result) {
         setChatSessionId(result.session_id);
@@ -428,6 +519,11 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       if (result) {
         if (!chatSessionId) setChatSessionId(result.session_id);
         setUiBlocks(result.ui_blocks || []);
+
+        if (conversationContext === 'personalise') {
+          const fromAi = choicesToChoiceOptions(result.choices || []);
+          if (fromAi.length > 0) setPersonaliseTapOptions(fromAi);
+        }
 
         const botMessage: Message = {
           id: Date.now().toString() + '_bot',
@@ -939,6 +1035,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         if (symptomTapOptions.length > 0) return symptomTapOptions;
         return [];
       case "personalise":
+        // Prefer contextual options (profile-driven or backend-provided). If the backend is
+        // showing interactive UI blocks, avoid stacking generic fallbacks.
+        if (personaliseTapOptions.length > 0) return personaliseTapOptions;
+        if (uiBlocks && uiBlocks.length > 0) return [];
         return [
           { id: "add-factors", text: "Add personalization factors" },
           { id: "update-preferences", text: "Update my preferences" },
