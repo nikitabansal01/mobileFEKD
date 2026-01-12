@@ -997,7 +997,7 @@ const styles = StyleSheet.create({
   },
   titleSection: {
     alignItems: 'center',
-    marginTop: responsiveHeight(1), // Reduced from 2 to 1 for tighter spacing
+    marginTop: responsiveHeight(0.5), // Reduced to minimal
     width: '100%',
   },
   title: {
@@ -1013,13 +1013,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: responsiveHeight(0.5), // Reduced further to 0.5 for minimal gap
+    marginBottom: 0, // Removed bottom margin completely
     width: '100%',
   },
   gradientContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: responsiveHeight(8), // Reduced from 18 to 8 to fix large gap
+    minHeight: responsiveHeight(6), // Reduced from 8 to 6 for tighter layout
     width: '100%',
   },
   imageContainer: {
