@@ -997,7 +997,7 @@ const styles = StyleSheet.create({
   },
   titleSection: {
     alignItems: 'center',
-    marginTop: responsiveHeight(2), // Reduced from 4 to 2 to fix large gap
+    marginTop: responsiveHeight(1), // Reduced from 2 to 1 for tighter spacing
     width: '100%',
   },
   title: {
@@ -1013,7 +1013,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: responsiveHeight(1.5), // Reduced from 2 to 1.5 to fix large gap
+    marginBottom: responsiveHeight(1), // Reduced from 1.5 to 1 for tighter spacing
     width: '100%',
   },
   gradientContainer: {
