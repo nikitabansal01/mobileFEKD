@@ -6,6 +6,7 @@ import HomeScreen from './HomeScreen';
 import InsightScreen from './InsightScreen';
 import PersonalizeScreen from './PersonalizeScreen';
 import ProfileScreen from './ProfileScreen';
+import ProgressScreen from './ProgressScreen';
 
 type TabType = 'home' | 'personalize' | 'progress' | 'community' | 'auvra' | 'insights' | 'profile';
 
@@ -64,7 +65,7 @@ export default function MainScreenTabs({ route }: MainScreenTabsProps) {
       />
       <Tab.Screen
         name="progress"
-        component={InsightScreen}
+        component={ProgressScreen}
       />
       <Tab.Screen
         name="community"

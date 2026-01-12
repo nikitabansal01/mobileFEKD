@@ -192,12 +192,25 @@ export default function ActionPlanTimeline({
     // Add Weekly Check-in assignment if available AND (due OR completed today)
     let weeklyCheckIn: Assignment | null = null;
 
-    // Check if weekly check-in was completed today
+    // Check if weekly check-in was completed today (relative to the plan date)
     const isCompletedToday = (): boolean => {
       if (!weeklyCheckinStatus?.last_completed) return false;
-      const today = new Date();
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      return weeklyCheckinStatus.last_completed.startsWith(todayStr);
+
+      // Use the plan date from backend as the reference point for "today"
+      // to avoid mismatch between device time and content time
+      const planDate = assignments?.date || new Date().toISOString().split('T')[0];
+
+      try {
+        // Convert last_completed (UTC) to a date object
+        const completedDate = new Date(weeklyCheckinStatus.last_completed);
+        // Format to YYYY-MM-DD in local time
+        const completedDateStr = `${completedDate.getFullYear()}-${String(completedDate.getMonth() + 1).padStart(2, '0')}-${String(completedDate.getDate()).padStart(2, '0')}`;
+
+        return completedDateStr === planDate;
+      } catch (e) {
+        // Fallback to prefix matching if parsing fails
+        return weeklyCheckinStatus.last_completed.startsWith(planDate);
+      }
     };
 
     const completedToday = isCompletedToday();
@@ -998,8 +1011,8 @@ export default function ActionPlanTimeline({
                   {/* (hormone image rendered behind the circle) */}
 
                   {/* Hormone number (relative to image) - hide for Weekly Check-in */}
-                  {/* Shows gradient checkmark SVG for completed items, +N for pending */}
-                  {a.id !== -1 && (
+                  {/* Shows gradient checkmark SVG for completed items, +N for pending (Weekly Check-in now shows checkmark) */}
+                  {(a.is_completed || a.id !== -1) && (
                     a.is_completed ? (
                       // Premium gradient checkmark for completed items
                       <View style={[
@@ -1106,9 +1119,17 @@ export default function ActionPlanTimeline({
             const todayLastY = todayAnchors.at(-1)?.y ?? 0;
             const gapCenterY = todayLastY + geom.ITEM_BLOCK_H / 2 + geom.CAP_BOTTOM + responsiveHeight(4);
 
-            // Calculate date (tomorrow)
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
+            // Calculate date (tomorrow relative to plan date)
+            let tomorrow: Date;
+            if (assignments?.date) {
+              const parts = assignments.date.split('-');
+              tomorrow = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+              tomorrow.setDate(tomorrow.getDate() + 1);
+            } else {
+              tomorrow = new Date();
+              tomorrow.setDate(tomorrow.getDate() + 1);
+            }
+
             const tomorrowDate = tomorrow.getDate();
             const tomorrowMonth = tomorrow.toLocaleString('en-US', { month: 'long' });
 

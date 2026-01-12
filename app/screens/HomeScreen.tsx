@@ -1698,7 +1698,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                   const rotation = isLeft ? '-5deg' : '10deg';
 
                   return (
-                    <View key={hormone} style={styles.questItem}>
+                    <TouchableOpacity
+                      key={hormone}
+                      style={styles.questItem}
+                      onPress={() => {
+                        navigation.navigate('ChatbotScreen', {
+                          conversationContext: {
+                            context: 'know_body',
+                            initialMessage: `I want to learn about my ${hormone}`,
+                            userResponse: `I want to learn about my ${hormone}`
+                          }
+                        });
+                      }}
+                      activeOpacity={0.7}
+                    >
                       <View style={styles.questImageContainer}>
                         {typeof getHormoneIcon(hormone) === 'string' ? (
                           <Text style={styles.questIcon}>{getHormoneIcon(hormone)}</Text>
@@ -1729,7 +1742,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                           {hormoneStats.completed}/{hormoneStats.total}
                         </Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   );
                 })}
               </View>

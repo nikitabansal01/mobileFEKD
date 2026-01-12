@@ -411,11 +411,51 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       initializeWeeklyCheckin();
     } else if (contextFromRoute?.context === "personalise") {
       initializePersonaliseChat(contextFromRoute);
+    } else if (contextFromRoute?.context === "know_body") {
+      initializeKnowBodyChat(contextFromRoute);
     } else {
       // Default: Initialize weekly check-in from API
       initializeWeeklyCheckin();
     }
   }, [route?.params?.conversationContext]);
+
+  const initializeKnowBodyChat = async (contextFromRoute?: any) => {
+    setIsLoadingCheckin(true);
+    setChatSessionId(null);
+    try {
+      const seedMessage =
+        (contextFromRoute?.userResponse && contextFromRoute.userResponse !== 'Continue conversation'
+          ? contextFromRoute.userResponse
+          : contextFromRoute?.initialMessage) ||
+        'I want to learn about my body';
+
+      const result = await chatService.sendMessage({
+        message: seedMessage,
+        conversation_context: 'know_body',
+        input_mode: 'tap',
+        session_id: null,
+      });
+
+      if (result) {
+        setChatSessionId(result.session_id);
+        if (result.content) {
+          const newMsg: Message = { id: `bot_${Date.now()}`, text: result.content, isBot: true };
+          setMessages([newMsg]);
+        }
+        if (result.ui_blocks) {
+          setUiBlocks(result.ui_blocks);
+        }
+        if (result.choices && Array.isArray(result.choices)) {
+          setPersonaliseTapOptions(choicesToChoiceOptions(result.choices));
+        }
+      }
+    } catch (error) {
+      console.error('❌ Failed to initialize Know My Body chat:', error);
+      Alert.alert('Error', 'Could not start health education session. Please try again.');
+    } finally {
+      setIsLoadingCheckin(false);
+    }
+  };
 
   const initializePersonaliseChat = async (contextFromRoute?: any) => {
     setIsLoadingCheckin(true);
@@ -1295,15 +1335,16 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const handleChoicePress = (option: ChoiceOption) => {
     const contextFromRoute = route?.params?.conversationContext;
 
+    // "Something else" switches to type mode for custom input across all contexts
+    if (option.id === "something_else") {
+      setMode("type");
+      // Focus the text input after switching mode
+      setTimeout(() => textInputRef.current?.focus(), 100);
+      return;
+    }
+
     // Weekly check-in keeps multi-select behavior.
     if (contextFromRoute?.context === "weekly_checkin") {
-      // "Something else" switches to type mode for custom input
-      if (option.id === "something_else") {
-        setMode("type");
-        // Focus the text input after switching mode
-        setTimeout(() => textInputRef.current?.focus(), 100);
-        return;
-      }
       toggleOption(option.id);
       return;
     }
@@ -1649,52 +1690,40 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         setMessages((prev) => [...prev, { id: Date.now().toString(), text: displayText, isBot: false }]);
         scrollToBottom();
       }
-    }
 
-    if (contextFromRoute?.context === 'care_plan_modal' && carePlanThreadId) {
+      // Clear UI blocks immediately to prevent multiple clicks while waiting for backend
+      setUiBlocks([]);
+
+      const threadId = contextFromRoute?.context === 'care_plan_modal' ? carePlanThreadId :
+        contextFromRoute?.context === 'symptom_checkin' ? symptomThreadId : null;
+
+      if (!threadId) {
+        console.warn("No thread ID for UI event");
+        return;
+      }
+
       const event: UIEventRequest = {
-        thread_id: carePlanThreadId,
+        thread_id: threadId,
         block_id: block.id,
         event_type: 'action',
         action_id: action.id,
-        metadata: {
-          ...(action.payload || {}),
-          display_text: (action.title || '').toString(),
-        },
+        metadata: action.payload,
       };
-      // Clear CTA buttons immediately when user clicks to avoid confusion
-      setUiBlocks([]);
-      setIsLoadingCheckin(true);
-      try {
-        const result = await carePlanCheckinService.sendEvent(event);
-        applyCarePlanApiResult(result);
-      } finally {
-        setIsLoadingCheckin(false);
-      }
-      return;
-    }
 
-    if (contextFromRoute?.context === 'symptom_checkin' && symptomThreadId) {
-      const event: UIEventRequest = {
-        thread_id: symptomThreadId,
-        block_id: block.id,
-        event_type: 'action',
-        action_id: action.id,
-        metadata: {
-          ...(action.payload || {}),
-          display_text: (action.title || '').toString(),
-        },
-      };
-      // Clear CTA buttons immediately when user clicks to avoid confusion
-      setUiBlocks([]);
       setIsLoadingCheckin(true);
       try {
-        const result = await symptomCheckinService.sendEvent(event);
-        applySymptomApiResult(result);
+        const result = contextFromRoute?.context === 'care_plan_modal' ?
+          await carePlanCheckinService.sendEvent(event) :
+          await symptomCheckinService.sendEvent(event);
+
+        if (contextFromRoute?.context === 'care_plan_modal') {
+          applyCarePlanApiResult(result);
+        } else {
+          applySymptomApiResult(result);
+        }
       } finally {
         setIsLoadingCheckin(false);
       }
-      return;
     }
   };
 

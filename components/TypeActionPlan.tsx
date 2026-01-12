@@ -20,6 +20,7 @@ import Svg, { Defs, Line, Stop, LinearGradient as SvgLinearGradient } from 'reac
 
 // ====== Type imports ======
 import { Assignment } from '../services/homeService';
+import CompletedCheckSvg from '../assets/images/SVG/CompletedCheckSvg';
 type AssignmentsMap = Record<string, Assignment[]>;
 
 // Weekly Check-in status from API
@@ -145,13 +146,20 @@ export default function TypeActionPlan({
     // OR if completed today (show as completed item)
     let weeklyCheckInItem: (Assignment & { timeSlot: string }) | undefined = undefined;
 
-    // Check if weekly check-in was completed today
+    // Check if weekly check-in was completed today (relative to the plan date)
     const isCompletedToday = (): boolean => {
       if (!weeklyCheckinStatus?.last_completed) return false;
-      const today = new Date();
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      // last_completed is in YYYY-MM-DD format
-      return weeklyCheckinStatus.last_completed.startsWith(todayStr);
+
+      // Use the plan date from backend as the reference point for "today"
+      const planDate = assignments?.date || new Date().toISOString().split('T')[0];
+
+      try {
+        const completedDate = new Date(weeklyCheckinStatus.last_completed);
+        const completedDateStr = `${completedDate.getFullYear()}-${String(completedDate.getMonth() + 1).padStart(2, '0')}-${String(completedDate.getDate()).padStart(2, '0')}`;
+        return completedDateStr === planDate;
+      } catch (e) {
+        return weeklyCheckinStatus.last_completed.startsWith(planDate);
+      }
     };
 
     const completedToday = isCompletedToday();
@@ -620,6 +628,13 @@ export default function TypeActionPlan({
           ) : (
             <Text style={styles.actionImage}>📋</Text>
           )}
+
+          {/* Completion checkmark badge - centered over image */}
+          {assignment.is_completed && (
+            <View style={styles.completedBadge}>
+              <CompletedCheckSvg size={scale(24)} />
+            </View>
+          )}
         </TouchableOpacity>
 
         {/* Action information */}
@@ -749,12 +764,29 @@ export default function TypeActionPlan({
         {renderMiddleLine()}
 
         {/* Tomorrow section */}
-        <View style={styles.tomorrowSection}>
-          <View style={styles.tomorrowHeader}>
-            <Text style={styles.tomorrowSectionTitle}>Tomorrow</Text>
-            <Text style={styles.tomorrowDateText}>16th July, 2025</Text>
-          </View>
-        </View>
+        {(() => {
+          // Calculate date (tomorrow relative to plan date)
+          let tomorrow: Date;
+          if (assignments?.date) {
+            const parts = assignments.date.split('-');
+            tomorrow = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            tomorrow.setDate(tomorrow.getDate() + 1);
+          } else {
+            tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+          }
+
+          const tomorrowDateStr = `${tomorrow.getDate()}${getOrdinalSuffix(tomorrow.getDate())} ${tomorrow.toLocaleString('en-US', { month: 'long' })}, ${tomorrow.getFullYear()}`;
+
+          return (
+            <View style={styles.tomorrowSection}>
+              <View style={styles.tomorrowHeader}>
+                <Text style={styles.tomorrowSectionTitle}>Tomorrow</Text>
+                <Text style={styles.tomorrowDateText}>{tomorrowDateStr}</Text>
+              </View>
+            </View>
+          );
+        })()}
 
         {/* Third line: from Tomorrow label bottom to next list + lock */}
         {renderBottomLine()}
@@ -821,6 +853,16 @@ export default function TypeActionPlan({
 }
 
 // ====== Utility: Date formatting ======
+function getOrdinalSuffix(day: number) {
+  if (day > 3 && day < 21) return 'th';
+  switch (day % 10) {
+    case 1: return "st";
+    case 2: return "nd";
+    case 3: return "rd";
+    default: return "th";
+  }
+}
+
 function formatToday(d: Date) {
   const month = d.toLocaleString('en-US', { month: 'long' });
   const day = d.getDate();
@@ -907,6 +949,17 @@ const styles = StyleSheet.create({
   },
   actionImage: {
     fontSize: responsiveFontSize(3),
+  },
+  completedBadge: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    borderRadius: scale(25),
   },
   actionImagePhoto: {
     width: '100%',

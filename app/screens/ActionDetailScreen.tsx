@@ -407,7 +407,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                   <MaskedView
                     style={styles.gradientContainer}
                     maskElement={
-                      <View style={{ backgroundColor: 'transparent' }}>
+                      <View style={{ backgroundColor: 'transparent', justifyContent: 'center', alignItems: 'center' }}>
                         <Text
                           style={styles.title}
                           allowFontScaling={false}
@@ -422,7 +422,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                       colors={['#D8A7CA', '#C17EC9']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
-                      style={{ flex: 1, width: '100%', height: '100%' }}
+                      style={{ flex: 1, width: '100%', minHeight: responsiveHeight(18) }}
                     />
                   </MaskedView>
                 </View>
@@ -1024,7 +1024,7 @@ const styles = StyleSheet.create({
   gradientContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: responsiveHeight(12),
+    minHeight: responsiveHeight(18), // Increased from 12 to 18 to prevent truncation of multi-line titles
     width: '100%',
   },
   imageContainer: {

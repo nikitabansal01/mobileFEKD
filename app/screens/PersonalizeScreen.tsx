@@ -20,9 +20,9 @@ import DiscoveryPromptCard from '../../components/DiscoveryPromptCard';
 // StreakAtRiskBanner removed - streak alerts handled via popup in HomeScreen
 import StreakMilestoneModal from '../../components/StreakMilestoneModal';
 import { shouldCelebrateMilestone, markMilestoneCelebrated } from '../../utils/streakMilestones';
-import LabsSection from '../../components/Personalization/LabsSection';
-import StreakSection from '../../components/Personalization/StreakSection';
-import RewardsList from '../../components/Personalization/RewardsList';
+import LabsSection from '../components/Personalization/LabsSection';
+import StreakSection from '../components/Personalization/StreakSection';
+import RewardsList from '../components/Personalization/RewardsList';
 
 // Constants from Figma design
 const BACKGROUND_VECTOR_IMAGE = "http://localhost:3845/assets/cf926b4d5ec2719e28f1af07e084ed30c131abe4.svg";
@@ -920,5 +920,9 @@ const styles = StyleSheet.create({
   },
   celebrationEmoji: {
     fontSize: moderateScale(100),
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: moderateScale(4),
   },
 });

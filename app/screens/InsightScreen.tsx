@@ -557,37 +557,50 @@ const InsightScreen = () => {
   );
 
   const renderHormoneQuest = (title: string, description: string, progress: number, total: number, color: string, progessColor: string, bgColor: string) => (
-    <LinearGradient
-      colors={getGradientColors(color)}
-      start={{ x: 0.59, y: 0.18 }}
-      end={{ x: 0.41, y: 0.82 }}
-      style={styles.hormoneQuest}
+    <TouchableOpacity
+      onPress={() => {
+        navigation.navigate('ChatbotScreen', {
+          conversationContext: {
+            context: 'know_body',
+            initialMessage: `I want to learn about my ${title}`,
+            userResponse: `I want to learn about my ${title}`
+          }
+        });
+      }}
+      activeOpacity={0.8}
     >
-      <View style={styles.hormoneQuestContent}>
-        <View style={styles.hormoneInfo}>
-          <Text style={[styles.hormoneTitle, { color }]}>{title}</Text>
-          <Text style={styles.hormoneDescription}>{description}</Text>
+      <LinearGradient
+        colors={getGradientColors(color)}
+        start={{ x: 0.59, y: 0.18 }}
+        end={{ x: 0.41, y: 0.82 }}
+        style={styles.hormoneQuest}
+      >
+        <View style={styles.hormoneQuestContent}>
+          <View style={styles.hormoneInfo}>
+            <Text style={[styles.hormoneTitle, { color }]}>{title}</Text>
+            <Text style={styles.hormoneDescription}>{description}</Text>
+          </View>
+          <View style={styles.actionPlanHormoneCharacter}>
+            {/* Character illustration */}
+            <Image
+              source={getCharacterImage(title)}
+              style={styles.actionPlanCharacterImage}
+              resizeMode="contain"
+            />
+          </View>
         </View>
-        <View style={styles.actionPlanHormoneCharacter}>
-          {/* Character illustration */}
-          <Image
-            source={getCharacterImage(title)}
-            style={styles.actionPlanCharacterImage}
-            resizeMode="contain"
-          />
-        </View>
-      </View>
 
-      <View style={styles.progressSection}>
-        <View style={styles.progressBarContainer}>
-          <View style={[styles.progressBar, { backgroundColor: progessColor, width: `${(progress / total) * 100}%` }]} />
+        <View style={styles.progressSection}>
+          <View style={styles.progressBarContainer}>
+            <View style={[styles.progressBar, { backgroundColor: progessColor, width: `${(progress / total) * 100}%` }]} />
+          </View>
+          <View style={styles.progressInfo}>
+            <Text style={styles.hormoneProgressText}>{progress}/{total} actions completed</Text>
+            <Ionicons name="chevron-forward" size={16} color="#949494" />
+          </View>
         </View>
-        <View style={styles.progressInfo}>
-          <Text style={styles.hormoneProgressText}>{progress}/{total} actions completed</Text>
-          <Ionicons name="chevron-forward" size={16} color="#949494" />
-        </View>
-      </View>
-    </LinearGradient>
+      </LinearGradient>
+    </TouchableOpacity>
   );
 
   const renderActionItem = (emoji: string, label: string) => (
@@ -764,37 +777,50 @@ const InsightScreen = () => {
               decelerationRate="fast"
               snapToAlignment="start"
               renderItem={({ item }) =>
-                <LinearGradient
-                  colors={getGradientColors(item.bgColor)}
-                  start={{ x: 0.4, y: 0.18 }}
-                  end={{ x: 0.5, y: 1.5 }}
-                  style={styles.hormoneQuest}
+                <TouchableOpacity
+                  onPress={() => {
+                    navigation.navigate('ChatbotScreen', {
+                      conversationContext: {
+                        context: 'know_body',
+                        initialMessage: `I want to learn about my ${item.title}`,
+                        userResponse: `I want to learn about my ${item.title}`
+                      }
+                    });
+                  }}
+                  activeOpacity={0.8}
                 >
-                  <View style={styles.hormoneQuestContent}>
-                    <View style={styles.hormoneInfo}>
-                      <Text style={[styles.hormoneTitle, { color: item.color }]}>{item.title}</Text>
-                      <Text style={styles.hormoneDescription}>{item.description}</Text>
+                  <LinearGradient
+                    colors={getGradientColors(item.bgColor)}
+                    start={{ x: 0.4, y: 0.18 }}
+                    end={{ x: 0.5, y: 1.5 }}
+                    style={styles.hormoneQuest}
+                  >
+                    <View style={styles.hormoneQuestContent}>
+                      <View style={styles.hormoneInfo}>
+                        <Text style={[styles.hormoneTitle, { color: item.color }]}>{item.title}</Text>
+                        <Text style={styles.hormoneDescription}>{item.description}</Text>
+                      </View>
+                      <View style={styles.actionPlanHormoneCharacter}>
+                        {/* Character illustration */}
+                        <Image
+                          source={getCharacterImage(item.title)}
+                          style={styles.actionPlanCharacterImage}
+                          resizeMode="contain"
+                        />
+                      </View>
                     </View>
-                    <View style={styles.actionPlanHormoneCharacter}>
-                      {/* Character illustration */}
-                      <Image
-                        source={getCharacterImage(item.title)}
-                        style={styles.actionPlanCharacterImage}
-                        resizeMode="contain"
-                      />
-                    </View>
-                  </View>
 
-                  <View style={styles.progressSection}>
-                    <View style={styles.progressBarContainer}>
-                      <View style={[styles.progressBar, { backgroundColor: item.progessColor, width: `${(item.progress / item.total) * 100}%` }]} />
+                    <View style={styles.progressSection}>
+                      <View style={styles.progressBarContainer}>
+                        <View style={[styles.progressBar, { backgroundColor: item.progessColor, width: `${(item.progress / item.total) * 100}%` }]} />
+                      </View>
+                      <View style={styles.progressInfo}>
+                        <Text style={styles.hormoneProgressText}>{item.progress}/{item.total} actions completed</Text>
+                        <Ionicons name="chevron-forward" size={16} color="#949494" />
+                      </View>
                     </View>
-                    <View style={styles.progressInfo}>
-                      <Text style={styles.hormoneProgressText}>{item.progress}/{item.total} actions completed</Text>
-                      <Ionicons name="chevron-forward" size={16} color="#949494" />
-                    </View>
-                  </View>
-                </LinearGradient>
+                  </LinearGradient>
+                </TouchableOpacity>
               }
 
             />
