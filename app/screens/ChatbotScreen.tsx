@@ -12,6 +12,7 @@ import { personalizationService } from "@/services/personalizationService";
 import symptomCheckinService, { TapOption as SymptomTapOption } from "@/services/symptomCheckinService";
 import symptomTrackingService, { SymptomOverviewResponse } from "@/services/symptomTrackingService";
 import weeklyCheckinService, { QuestionResponse, TapOption } from "@/services/weeklyCheckinService";
+import { getAuth } from "firebase/auth";
 import type { UIBlock, UIBlockAction, UIEventRequest } from "@/utils/uiBlocks";
 import { Ionicons } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
@@ -424,6 +425,46 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     setIsLoadingCheckin(true);
     setChatSessionId(null);
     try {
+      const auth = getAuth();
+      const userId = auth.currentUser?.uid;
+
+      // Check if we should resume an existing session
+      // If user came from "Continue conversation" or if just opening the chat without specific query
+      const isResumeIntent = contextFromRoute?.userResponse === 'Continue conversation' ||
+        !contextFromRoute?.userResponse;
+
+      if (userId && isResumeIntent) {
+        // Try to find active session
+        const sessions = await chatService.getSessions(userId);
+        const activeSession = sessions.find(s =>
+          s.conversation_context === 'know_body' &&
+          s.status === 'active'
+        );
+
+        if (activeSession) {
+          console.log('🔄 Resuming Know My Body session:', activeSession.session_id);
+          const history = await chatService.getSessionMessages(userId, activeSession.session_id);
+
+          if (history && history.length > 0) {
+            setChatSessionId(activeSession.session_id);
+            setMessages(history.map((msg: any) => ({
+              id: `${msg.timestamp}`, // Use timestamp as ID
+              text: msg.content,
+              isBot: msg.role === 'assistant'
+            })));
+
+            // If last message was bot, restore options?
+            // Ideally backend returns choices in history tokens but for now let's leave it.
+            // Or we could trigger a "refresh options" call if needed.
+
+            setIsLoadingCheckin(false);
+            setTimeout(() => scrollToBottom(), 100);
+            return; // EXIT HERE - do not send seed message
+          }
+        }
+      }
+
+      // If no active session or explicit new query, start new
       const seedMessage =
         (contextFromRoute?.userResponse && contextFromRoute.userResponse !== 'Continue conversation'
           ? contextFromRoute.userResponse
