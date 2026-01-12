@@ -13,6 +13,7 @@ import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-nat
 import { moderateScale, verticalScale } from 'react-native-size-matters';
 import homeService from '@/services/homeService';
 import { rewardService, RefreshStatus } from '@/services/rewardService';
+import { getImageSource } from '@/utils/imageUtils';
 
 // Replacement reasons for "Not for me" feedback
 const REPLACEMENT_REASONS = [
@@ -60,6 +61,16 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
     specific_action?: string;
     hero_image_url?: string;
     hormone_persona_intro?: string;
+    // Category for determining heading format
+    category?: 'food' | 'movement' | 'mindfulness';
+    // Category-specific fields for heading
+    food_items?: string[];
+    food_amounts?: string[];
+    exercise_types?: string[];
+    exercise_durations?: string[];
+    exercise_intensities?: string[];
+    mindfulness_techniques?: string[];
+    mindfulness_durations?: string[];
     research_studies?: Array<{
       title: string;
       authors?: string;
@@ -84,6 +95,46 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
       image?: string;
     }>;
   } : null;
+
+  /**
+   * Formats the "How?" screen heading based on category.
+   * Shows short, actionable text like Figma design:
+   * - Food: "Eat at least 1 cup of Quinoa"
+   * - Movement: "Morning Yoga for 15 minutes"
+   * - Mindfulness: "Deep Breathing for 5 minutes"
+   */
+  const formatHowHeading = (): string => {
+    if (!action) return '';
+
+    const { title, category, food_amounts, exercise_durations, mindfulness_durations } = action;
+
+    switch (category) {
+      case 'food':
+        const amount = food_amounts?.[0] || '';
+        if (amount) {
+          return `${amount} of ${title}`;
+        }
+        return title;
+
+      case 'movement':
+        const duration = exercise_durations?.[0] || '';
+        if (duration) {
+          return `${title} for ${duration}`;
+        }
+        return title;
+
+      case 'mindfulness':
+        const mDuration = mindfulness_durations?.[0] || '';
+        if (mDuration) {
+          return `${title} for ${mDuration}`;
+        }
+        return title;
+
+      default:
+        // Fallback: if no category, just use title
+        return title || '';
+    }
+  };
 
   // State management
   const [isHowMode, setIsHowMode] = useState(false);
@@ -357,8 +408,9 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                         <Text
                           style={styles.title}
                           allowFontScaling={false}
+                          numberOfLines={4}
                         >
-                          {action?.specific_action || ''}
+                          {formatHowHeading()}
                         </Text>
                       </View>
                     }
@@ -372,9 +424,9 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                   </MaskedView>
                 </View>
                 <View style={styles.imageContainer}>
-                  {action?.hero_image_url ? (
+                  {getImageSource(action?.hero_image_url) ? (
                     <Image
-                      source={{ uri: action.hero_image_url }}
+                      source={getImageSource(action?.hero_image_url)!}
                       style={styles.actionImageFull}
                       resizeMode="cover"
                     />
@@ -518,9 +570,9 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                   </MaskedView>
                 </View>
                 <View style={styles.imageContainer}>
-                  {action?.hero_image_url ? (
+                  {getImageSource(action?.hero_image_url) ? (
                     <Image
-                      source={{ uri: action.hero_image_url }}
+                      source={getImageSource(action?.hero_image_url)!}
                       style={styles.actionImageFull}
                       resizeMode="cover"
                     />
@@ -969,7 +1021,7 @@ const styles = StyleSheet.create({
   gradientContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: responsiveHeight(8),
+    minHeight: responsiveHeight(12),
     width: '100%',
   },
   imageContainer: {
@@ -1045,10 +1097,11 @@ const styles = StyleSheet.create({
   descriptionText: {
     fontSize: moderateScale(12, 1.5),
     fontFamily: 'Inter400',
-    lineHeight: moderateScale(16, 1.5),
+    lineHeight: moderateScale(20, 1.5),
     color: '#000000',
     verticalAlign: 'top',
     textAlign: 'left',
+    paddingBottom: verticalScale(2),
   },
   studyDetails: {
     width: '100%',

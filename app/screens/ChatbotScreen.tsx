@@ -88,18 +88,18 @@ const YAP_RECORDING_OPTIONS: Audio.RecordingOptions = {
     extension: ".m4a",
     outputFormat: Audio.AndroidOutputFormat.MPEG_4,
     audioEncoder: Audio.AndroidAudioEncoder.AAC,
-    sampleRate: 44100,
+    sampleRate: 16000,
     numberOfChannels: 1,
-    bitRate: 128000,
+    bitRate: 64000,
   },
   ios: {
     ...Audio.RecordingOptionsPresets.HIGH_QUALITY.ios,
     extension: ".m4a",
     outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
     audioQuality: Audio.IOSAudioQuality.HIGH,
-    sampleRate: 44100,
+    sampleRate: 16000,
     numberOfChannels: 1,
-    bitRate: 128000,
+    bitRate: 64000,
   },
 };
 
@@ -575,7 +575,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         purpose: action.purpose || '',
         target_hormone: action.hormones?.[0] || '',
         hormone_persona_intro: action.hormone_persona_intro || '',
-        hero_image_url: action.hero_image_url || '',
+        hero_image_url: action.hero_image_url,
         research_studies: action.research_studies || [],
         is_completed: action.is_completed || false,
         is_replaced: false,
@@ -1004,16 +1004,21 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
     // Use dynamic tap options from API for weekly check-in
     if (contextFromRoute?.context === "weekly_checkin" && dynamicTapOptions.length > 0) {
-      return dynamicTapOptions;
+      // Add "Something else" option at the end for custom text input
+      return [...dynamicTapOptions, { id: "something_else", text: "💬 Something else" }];
     }
 
     switch (contextFromRoute?.context) {
       case "care_plan_modal":
-        if (carePlanTapOptions.length > 0) return carePlanTapOptions;
+        if (carePlanTapOptions.length > 0) {
+          // Add "Something else" to API options
+          return [...carePlanTapOptions, { id: "something_else", text: "💬 Something else" }];
+        }
         return [
           { id: "want-to-change", text: "👎 I want to change it" },
           { id: "alternate-suggestions", text: "🔁 I want alternate suggestions" },
           { id: "manage_plan", text: "🧩 Manage plan" },
+          { id: "something_else", text: "💬 Something else" },
         ];
       case "weekly_checkin":
         // Fallback options if API didn't return any
@@ -1024,16 +1029,18 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           { id: "a_lot", text: "A big change" },
           { id: "prefer_type", text: "I'd rather type" },
           { id: "skip", text: "Prefer not to say" },
+          { id: "something_else", text: "💬 Something else" },
         ];
       case "symptom_checkin":
         // If the backend is driving an inline UI block (e.g., severity 1–9),
         // don't show unrelated fallback tap options.
         if (uiBlocks && uiBlocks.length > 0) return [];
 
-        // Prefer API-provided tap options. If none are provided, avoid generic fallbacks
-        // because they often mismatch the current question/state.
-        if (symptomTapOptions.length > 0) return symptomTapOptions;
-        return [];
+        // Prefer API-provided tap options. Add "Something else" option to allow custom input.
+        if (symptomTapOptions.length > 0) {
+          return [...symptomTapOptions, { id: "something_else", text: "💬 Something else" }];
+        }
+        return [{ id: "something_else", text: "💬 Something else" }];
       case "personalise":
         // Prefer contextual options (profile-driven or backend-provided). If the backend is
         // showing interactive UI blocks, avoid stacking generic fallbacks.
@@ -1285,6 +1292,13 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
     // Weekly check-in keeps multi-select behavior.
     if (contextFromRoute?.context === "weekly_checkin") {
+      // "Something else" switches to type mode for custom input
+      if (option.id === "something_else") {
+        setMode("type");
+        // Focus the text input after switching mode
+        setTimeout(() => textInputRef.current?.focus(), 100);
+        return;
+      }
       toggleOption(option.id);
       return;
     }
@@ -1350,6 +1364,13 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         setSelectedOptions([]);
         return;
       }
+    }
+
+    // Handle "Something else" for any context - switch to type mode
+    if (option.id === "something_else") {
+      setMode("type");
+      setTimeout(() => textInputRef.current?.focus(), 100);
+      return;
     }
 
     // Default: tap-to-send.
@@ -1636,6 +1657,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           display_text: (action.title || '').toString(),
         },
       };
+      // Clear CTA buttons immediately when user clicks to avoid confusion
+      setUiBlocks([]);
       setIsLoadingCheckin(true);
       try {
         const result = await carePlanCheckinService.sendEvent(event);
@@ -1657,6 +1680,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           display_text: (action.title || '').toString(),
         },
       };
+      // Clear CTA buttons immediately when user clicks to avoid confusion
+      setUiBlocks([]);
       setIsLoadingCheckin(true);
       try {
         const result = await symptomCheckinService.sendEvent(event);
@@ -1796,9 +1821,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                   </View>
                 ))}
 
-                {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
-
                 {renderUiBlocksInline()}
+
+                {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
               </View>
             </View>
           </ScrollView>
@@ -1835,9 +1860,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                   </View>
                 ))}
 
-                {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
-
                 {renderUiBlocksInline()}
+
+                {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
               </View>
             </View>
           </ScrollView>

@@ -4,7 +4,7 @@ import AuvraChatModal from '@/components/AuvraChatModal';
 import CalendarBottomSheet from '@/components/CalendarBottomSheet';
 import DailyReviewModal from '@/components/DailyReviewModal';
 import apiPromiseManager from '@/services/apiPromiseManager';
-import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse, ActionPlanResponse, ActionPlanItem, DailyReviewResponse, PendingReviewResponse } from '@/services/homeService';
+import homeService, { AssignmentsResponse, CycleInfo, HormoneStats, ProgressStatsResponse, ActionPlanResponse, ActionPlanItem, DailyReviewResponse, PendingReviewResponse, DailyReviewRequest } from '@/services/homeService';
 import { rewardService, RefreshStatus, RewardsStatusResponse } from '@/services/rewardService';
 // StreakAtRiskBanner removed - using one-time Alert popup instead
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -25,13 +25,117 @@ import {
   Text,
   TouchableOpacity,
   UIManager,
-  View
+  View,
+  Modal,
+  StatusBar
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import Svg, { Circle, Defs, Line, Polygon, Stop, LinearGradient as SvgLinearGradient, RadialGradient as SvgRadialGradient } from 'react-native-svg';
 import TypeActionPlan from '../../components/TypeActionPlan';
+import { BRAND, BRAND_GRADIENT, TEXT, BACKGROUND, BORDER, UI, COLORS } from '@/constants/Colors';
+import { FONT_INTER, FONT_SERIF, TYPOGRAPHY } from '@/constants/fonts';
+import { LinearGradient } from 'expo-linear-gradient';
+import LottieView from 'lottie-react-native';
+
+// =============================================================================
+// SUB-COMPONENTS
+// =============================================================================
+
+/**
+ * DesigningPlanOverlay
+ * 
+ * A full-screen overlay shown after daily review submission while the backend
+ * generates the new action plan. Allows "fire-and-forget" UX.
+ */
+const DesigningPlanOverlay = ({ visible }: { visible: boolean }) => {
+  const [loadingText, setLoadingText] = useState("Analyzing your feedback...");
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (visible) {
+      // Fade in
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+
+      // Pulse animation for the logo
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.1,
+            duration: 1500,
+            useNativeDriver: true,
+            easing: Easing.inOut(Easing.ease),
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+            easing: Easing.inOut(Easing.ease),
+          }),
+        ])
+      ).start();
+
+      // Cycle loading text
+      const texts = [
+        "Analyzing your feedback...",
+        "Checking cycle phase...",
+        "Optimizing for your goals...",
+        "Finalizing your plan...",
+      ];
+      let index = 0;
+      const interval = setInterval(() => {
+        index = (index + 1) % texts.length;
+        setLoadingText(texts[index]);
+      }, 3000);
+
+      return () => clearInterval(interval);
+    } else {
+      fadeAnim.setValue(0);
+    }
+  }, [visible]);
+
+  if (!visible) return null;
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View style={styles.overlayContainer}>
+        <StatusBar barStyle="light-content" />
+        <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFill} />
+
+        <Animated.View style={[styles.overlayContent, { opacity: fadeAnim }]}>
+          <View style={styles.iconContainer}>
+            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+              <LottieView
+                source={require('../../assets/animation/auvra-character.json')}
+                autoPlay
+                loop
+                style={styles.overlayAvatar}
+              />
+            </Animated.View>
+          </View>
+
+          <Text style={styles.overlayTitle}>Designing your today's action plan</Text>
+
+          <Text style={styles.overlaySubtitle}>
+            Based on your goals, cycle phase, and feedback factors...
+          </Text>
+
+          <View style={styles.loadingPill}>
+            <ActivityIndicator color={BRAND.accent} size="small" style={{ marginRight: 8 }} />
+            <Text style={styles.loadingText}>{loadingText}</Text>
+          </View>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+};
+
 
 type RootStackParamList = {
   ChatbotScreen: {
@@ -93,7 +197,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const planSlideAnim = useRef(new Animated.Value(0)).current; // For plan reveal animation (0 = hidden, 1 = visible)
   const planScaleAnim = useRef(new Animated.Value(0.95)).current; // Slight scale for lock-break effect
   const [showPlanAnimation, setShowPlanAnimation] = useState(false); // Track if we should animate plan entrance
-  
+
   // ScrollView ref for scrolling to top
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -160,6 +264,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   // Note: Fresh signup data loading is now handled by SignupLoadingScreen
   // which waits until data is ready before navigating to HomeScreen
 
+  // STATE FOR FIRE-AND-FORGET SUBMISSION
+  const [isDesigningPlan, setIsDesigningPlan] = useState(false);
+
+
   // Disable swipe back gesture to prevent interference with scrolling
   useFocusEffect(
     React.useCallback(() => {
@@ -181,22 +289,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const lockOpacity = useRef(new Animated.Value(1)).current;
   const lockScale = useRef(new Animated.Value(1)).current;
   const contentSlide = useRef(new Animated.Value(0)).current; // 0 = hidden/down, 1 = visible/up
-  
+
   // Track if we've already loaded data for this focus event to prevent duplicates
   const dataLoadingRef = useRef<boolean>(false);
   const lastFocusTimeRef = useRef<number>(0);
   const loadCallIdRef = useRef<number>(0); // Unique ID for each load call to detect stale calls
   const componentIdRef = useRef<string>(Math.random().toString(36).substring(7)); // Unique ID for this component instance
-  
+
   // Refs to track state for useFocusEffect (avoids stale closure and dependency issues)
   const showDailyReviewRef = useRef(showDailyReview);
   const isReviewBlockingRef = useRef(isReviewBlocking);
-  
+
   // Keep refs in sync with state
   useEffect(() => {
     showDailyReviewRef.current = showDailyReview;
     isReviewBlockingRef.current = isReviewBlocking;
-    
+
     // CRITICAL: If review becomes active, immediately hide AuvraChatModal and clear timer
     if (isReviewBlocking || showDailyReview) {
       setShowAuvraChat(false);
@@ -212,7 +320,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     const instanceId = componentIdRef.current;
     if (isTodayDataReady && isReviewBlocking && !showDailyReview) {
       console.log(`🔓 [HomeScreen:${instanceId}] Today data ready and modal closed - triggering unlock animation`);
-      
+
       // Trigger Lock Break Animation
       setIsUnlocking(true);
       setIsReviewBlocking(false);
@@ -234,7 +342,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         setIsUnlocking(false);
         lockScale.setValue(1);
         lockOpacity.setValue(1);
-        
+
         Animated.spring(planSlideAnim, {
           toValue: 1,
           friction: 4,
@@ -256,26 +364,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       // SYNCHRONOUS GUARD: Check and set flag immediately to prevent race conditions
       const now = Date.now();
       const instanceId = componentIdRef.current;
-      
+
       // STRICT DEDUPLICATION: If last call was within 500ms, always skip
       // This handles React's potential double-invocation
       if (now - lastFocusTimeRef.current < 500) {
         console.log(`🔄 [HomeScreen:${instanceId}] Skipped - within 500ms dedup window`);
         return;
       }
-      
+
       // Skip if already loading (check FIRST, before any async operations)
       if (dataLoadingRef.current) {
         console.log(`🔄 [HomeScreen:${instanceId}] Skipped - already loading`);
         return;
       }
-      
+
       // Prevent duplicate calls within 2 seconds (after the initial load)
       if (initialDataLoadedRef.current && now - lastFocusTimeRef.current < 2000) {
         console.log(`🔄 [HomeScreen:${instanceId}] Skipped - within 2s dedup window`);
         return;
       }
-      
+
       // Skip if daily review modal is already showing - prevents loops and duplicate checks
       if (showDailyReviewRef.current) {
         console.log(`🔄 [HomeScreen:${instanceId}] Skipped - review modal showing`);
@@ -313,13 +421,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         } catch (e) {
           // AsyncStorage error - continue anyway
         }
-        
+
         // Check if this call has been superseded by a newer one
         if (loadCallIdRef.current !== thisCallId) {
           console.log(`⏭️ [HomeScreen:${instanceId}] Stale call (callId: ${thisCallId}), skipping`);
           return;
         }
-        
+
         try {
           // STEP 1: Check for pending review FIRST
           console.log(`📋 [HomeScreen:${instanceId}] Checking pending review...`);
@@ -386,7 +494,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           }
 
           setCycleInfo(cycleData?.cycle_info || null);
-          
+
           // If we got assignments, use them; otherwise use pending review items if available
           if (assignmentsData) {
             console.log(`✅ [HomeScreen:${instanceId}] Got ${assignmentsData.total_assignments} assignments`);
@@ -405,7 +513,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
                 console.log(
                   `⏱️ [HomeScreen:${instanceId}] post_auth_to_assignments=${postAuthToAssignmentsMs}ms flow=${postAuthFlow ?? 'unknown'} ` +
-                    `plan_source=${planSource ?? 'n/a'} server_total=${serverTotalMs ?? 'n/a'}ms server_generator=${serverGeneratorMs ?? 'n/a'}ms plan_generation=${planGenMs ?? 'n/a'}ms`
+                  `plan_source=${planSource ?? 'n/a'} server_total=${serverTotalMs ?? 'n/a'}ms server_generator=${serverGeneratorMs ?? 'n/a'}ms plan_generation=${planGenMs ?? 'n/a'}ms`
                 );
 
                 // Clear after first successful plan fetch to avoid noisy logs on later opens
@@ -458,8 +566,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           const totalLoadMs = Date.now() - focusLoadStartMs;
           console.log(
             `⏱️ [HomeScreen:${instanceId}] Home load timings (callId: ${thisCallId}): total=${totalLoadMs}ms ` +
-              `(pendingReview=${stepTimings.pendingReviewMs ?? 'n/a'}ms, cycle=${stepTimings.cycleMs ?? 'n/a'}ms, ` +
-              `assignments=${stepTimings.assignmentsMs ?? 'n/a'}ms, rewards=${stepTimings.rewardsMs ?? 'n/a'}ms)`
+            `(pendingReview=${stepTimings.pendingReviewMs ?? 'n/a'}ms, cycle=${stepTimings.cycleMs ?? 'n/a'}ms, ` +
+            `assignments=${stepTimings.assignmentsMs ?? 'n/a'}ms, rewards=${stepTimings.rewardsMs ?? 'n/a'}ms)`
           );
 
           // Best-effort approximation for "time to plan rendered" after state updates
@@ -609,11 +717,141 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     resetInactivityTimer(); // Reset timer when user closes manually
   };
 
+  /**
+ * Handle non-blocking daily review submission
+ * 
+ * This implements the "fire-and-forget" UX pattern:
+ * 1. Close modal immediately
+ * 2. Show "Designing Plan" overlay
+ * 3. Submit to backend in background
+ * 4. Refresh data when ready
+ */
+  const handleDailyReviewSubmitAsync = async (reviewData: DailyReviewRequest) => {
+    const instanceId = componentIdRef.current;
+
+    // 1. Close modal immediately (instant feedback)
+    setShowDailyReview(false);
+    setPendingReviewData(null);
+    reviewSubmissionInProgressRef.current = true;
+
+    // 2. Show designing overlay
+    setIsDesigningPlan(true);
+
+    console.log(`🚀 [HomeScreen:${instanceId}] Starting async review submission & plan generation...`);
+
+    try {
+      // 3. Submit to backend (this can take 2+ mins if new plan generated)
+      const submitStart = Date.now();
+      const result = await homeService.submitDailyReview(
+        reviewData.plan_id,
+        reviewData.items,
+        reviewData.use_freeze
+      );
+
+      console.log(`✅ [HomeScreen:${instanceId}] Async submission complete in ${Date.now() - submitStart}ms`);
+
+      if (result?.success) {
+        // Scroll to top to prepare for new content
+        if (scrollViewRef.current) {
+          scrollViewRef.current.scrollTo({ y: 0, animated: false });
+        }
+
+        // 4. Load the newly generated data
+        // Small delay to ensure DB consistency
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        const [assignmentsData, rewardsData] = await Promise.all([
+          homeService.getTodayAssignments(),
+          rewardService.getRewardsStatus().catch(() => null),
+        ]);
+
+        if (assignmentsData) {
+          setAssignments(assignmentsData);
+          if (assignmentsData.hormone_stats) {
+            setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
+          }
+          wireUpActionPlan(assignmentsData);
+        }
+
+        if (rewardsData && rewardsData.refresh_status) {
+          setRefreshStatus(rewardsData.refresh_status);
+        }
+
+        // Success! Hide overlay and Trigger unlock animation
+        // We set these flags to trigger the existing unlock logic
+        setIsTodayDataReady(true);
+        setIsReviewBlocking(false);
+        setShowPlanAnimation(true);
+        planSlideAnim.setValue(0);
+        planScaleAnim.setValue(0.95);
+
+        // Trigger the unlock animation manually since we bypassed the normal close flow
+        requestAnimationFrame(() => {
+          // Short artificial delay before hiding overlay to make transition smooth
+          setTimeout(() => {
+            setIsDesigningPlan(false);
+
+            // Trigger Lock Break Animation
+            setIsUnlocking(true);
+            Animated.parallel([
+              Animated.timing(lockScale, {
+                toValue: 2.5,
+                duration: 1200,
+                useNativeDriver: true,
+                easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+              }),
+              Animated.timing(lockOpacity, {
+                toValue: 0,
+                duration: 1000,
+                delay: 300,
+                useNativeDriver: true,
+              }),
+            ]).start(() => {
+              setIsUnlocking(false);
+              lockScale.setValue(1);
+              lockOpacity.setValue(1);
+
+              Animated.spring(planSlideAnim, {
+                toValue: 1,
+                friction: 4,
+                tension: 20,
+                useNativeDriver: true,
+              }).start(() => {
+                setShowPlanAnimation(false);
+                setIsTodayDataReady(false);
+              });
+            });
+          }, 1500); // Keep overlay for at least 1.5s so user can read message
+        });
+
+      } else {
+        // Handle failure
+        setIsDesigningPlan(false);
+        Alert.alert('Submission Failed', result?.error || 'Please try again.');
+        // Re-open modal
+        setShowDailyReview(true);
+      }
+    } catch (error) {
+      console.error(`❌ [HomeScreen:${instanceId}] Async submission failed:`, error);
+      setIsDesigningPlan(false);
+      Alert.alert('Error', 'An unexpected error occurred. Your progress is saved locally.');
+      // Re-open modal
+      setShowDailyReview(true);
+    } finally {
+      // Don't reset this immediately, wait for animation to finish
+      setTimeout(() => {
+        reviewSubmissionInProgressRef.current = false;
+      }, 5000);
+    }
+  };
+
   // Handle Daily Review modal close - animate plan entrance
   const handleDailyReviewClose = async () => {
-    // Clear review data FIRST, then hide modal - prevents loops
+    // Standard close without submit (e.g. dismissed)
     setPendingReviewData(null);
     setShowDailyReview(false);
+
+    // ... existing logic ...
 
     // Reset the submission in progress ref so next focus can check for reviews
     reviewSubmissionInProgressRef.current = false;
@@ -644,7 +882,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         setIsUnlocking(false);
         lockScale.setValue(1);
         lockOpacity.setValue(1);
-        
+
         // Slide up animation for the plan - slower and more dramatic
         Animated.spring(planSlideAnim, {
           toValue: 1,
@@ -662,7 +900,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       console.log(`📋 [HomeScreen:${instanceId}] Modal closed but today data not ready - forcing refresh`);
       setIsReviewBlocking(false);
       setShowPlanAnimation(false);
-      
+
       // Force refresh home data
       try {
         setLoading(true);
@@ -710,7 +948,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     // NOTE: Small delay ensures backend has time to generate today's plan
     try {
       console.log(`🔄 [HomeScreen:${instanceId}] Loading today action plan in background...`);
-      
+
       // Wait briefly for backend to finish generating plan
       await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -742,7 +980,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
         }
         wireUpActionPlan(assignmentsData);
-        
+
         // Mark that today's data is ready - this enables the unlock animation
         setIsTodayDataReady(true);
         console.log(`✅ [HomeScreen:${instanceId}] Today data ready - unlock animation will trigger on modal close`);
@@ -869,7 +1107,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         console.log(`⏭️ [HomeScreen:${instanceId}] route params useEffect - data already loaded by useFocusEffect`);
         return;
       }
-      
+
       // Skip if useFocusEffect is currently loading data
       if (dataLoadingRef.current) {
         console.log(`⏭️ [HomeScreen:${instanceId}] route params useEffect - useFocusEffect is loading, skipping`);
@@ -938,13 +1176,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       console.log(`⏭️ [HomeScreen:${instanceId}] loadHomeData skipped - already loaded or loading`);
       return;
     }
-    
+
     // Skip if review is blocking - let useFocusEffect handle that case
     if (isReviewBlockingRef.current || showDailyReviewRef.current) {
       console.log(`⏭️ [HomeScreen:${instanceId}] loadHomeData skipped - review is blocking`);
       return;
     }
-    
+
     // Set both flags to prevent concurrent calls
     dataLoadingRef.current = true;
     initialDataLoadedRef.current = true;
@@ -971,7 +1209,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       ]);
 
       setCycleInfo(cycleData?.cycle_info || null);
-      
+
       if (assignmentsData) {
         setAssignments(assignmentsData);
         if (assignmentsData?.hormone_stats) {
@@ -996,7 +1234,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           items: reviewItems,
         } as any);
       }
-        
+
       setLoading(false);
       console.log(`✅ [HomeScreen:${instanceId}] loadHomeData complete`);
     } catch (error) {
@@ -1035,7 +1273,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         purpose: action.purpose || '',
         target_hormone: action.hormones?.[0] || '',
         hormone_persona_intro: action.hormone_persona_intro || '',
-        hero_image_url: action.hero_image_url || '',
+        hero_image_url: action.hero_image_url,
         research_studies: action.research_studies || [],
         is_completed: action.is_completed || false,
         is_replaced: false,
@@ -1057,7 +1295,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       console.log(`⏭️ [HomeScreen:${instanceId}] loadHomeDataWithoutLoading skipped - review is blocking`);
       return;
     }
-    
+
     try {
       // Check pending review first
       const reviewResponse = await homeService.getPendingReview();
@@ -1077,7 +1315,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       ]);
 
       setCycleInfo(cycleData?.cycle_info || null);
-      
+
       if (assignmentsData) {
         setAssignments(assignmentsData);
         if (assignmentsData?.hormone_stats) {
@@ -1120,10 +1358,29 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
   /**
    * Format date string to readable format
-   * @param dateString - Date string to format
+   * @param dateString - Date string to format (YYYY-MM-DD)
    * @returns Formatted date string
+   * 
+   * NOTE: We parse the date components directly instead of using new Date(dateString)
+   * because new Date("2026-01-09") creates a UTC midnight date, which when displayed
+   * in timezones behind UTC (like Pacific) would show as the previous day.
    */
   const formatDate = (dateString: string) => {
+    // Parse date components directly to avoid timezone issues
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
+      const day = parseInt(parts[2], 10);
+      // Create date with local timezone (not UTC)
+      const date = new Date(year, month, day);
+      return date.toLocaleDateString('en-US', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    }
+    // Fallback for other date formats
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       day: 'numeric',
@@ -1612,8 +1869,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                     {loading ? "Generating your plan..." : "Unable to load plan"}
                   </Text>
                   {!loading && (
-                    <TouchableOpacity 
-                      style={styles.retryButton} 
+                    <TouchableOpacity
+                      style={styles.retryButton}
                       onPress={() => {
                         setLoading(true);
                         loadHomeData();
@@ -1663,21 +1920,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       </ScrollView>
 
       {/* Auvra Chat Modal - NEVER show when review is pending
-          CRITICAL: Triple-check all blocking conditions to prevent z-index conflict with DailyReviewModal */}
-      {showAuvraChat && 
-       !isReviewBlocking && 
-       !showDailyReview && 
-       !pendingReviewData?.needs_review && (
-        <AuvraChatModal
-          onClose={handleAuvraClose}
-          onResponse={handleAuvraResponse}
-          actions={actionPlan?.actions || []}
-          planId={actionPlan?.plan_id}
-          onReplaceItems={handleReplaceItems}
-          isLoading={isSubmittingFeedback}
-          refreshStatus={refreshStatus}
-        />
-      )}
+            CRITICAL: Triple-check all blocking conditions to prevent z-index conflict with DailyReviewModal */}
+      {showAuvraChat &&
+        !isReviewBlocking &&
+        !showDailyReview &&
+        !pendingReviewData?.needs_review && (
+          <AuvraChatModal
+            onClose={handleAuvraClose}
+            onResponse={handleAuvraResponse}
+            actions={actionPlan?.actions || []}
+            planId={actionPlan?.plan_id}
+            onReplaceItems={handleReplaceItems}
+            isLoading={isSubmittingFeedback}
+            refreshStatus={refreshStatus}
+          />
+        )}
 
       {/* Calendar Bottom Sheet */}
       <CalendarBottomSheet
@@ -1692,7 +1949,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         reviewData={pendingReviewData}
         onReviewComplete={handleDailyReviewComplete}
         isMandatory={true}
+        onSubmit={handleDailyReviewSubmitAsync}
       />
+
+      {/* Designing Plan Overlay - Premium loading experience during async plan generation */}
+      <DesigningPlanOverlay visible={isDesigningPlan} />
     </View>
   );
 };
@@ -2251,6 +2512,71 @@ const styles = StyleSheet.create({
   },
   refreshHourglass: {
     fontSize: responsiveFontSize(1.6),
+  },
+  overlayContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+  },
+  overlayContent: {
+    width: '85%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 30,
+  },
+  gradientCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: BRAND.accent,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  iconContainer: {
+    marginBottom: 30,
+  },
+  overlayAvatar: {
+    width: 120,
+    height: 120,
+  },
+  overlayEmoji: {
+    fontSize: 48,
+  },
+  overlayTitle: {
+    fontFamily: FONT_SERIF.bold,
+    fontSize: 24,
+    color: '#FFF',
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 32,
+  },
+  overlaySubtitle: {
+    fontFamily: FONT_INTER.medium,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+    marginBottom: 30,
+    lineHeight: 22,
+  },
+  loadingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  loadingText: {
+    fontFamily: FONT_INTER.medium,
+    fontSize: 13,
+    color: '#FFF',
   },
 });
 

@@ -388,8 +388,15 @@ class HomeService {
         console.log('⚠️ No Firebase token available');
       }
 
+      let timezone = 'UTC';
+      try {
+        timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      } catch (e) {
+        console.warn('Failed to get local timezone', e);
+      }
+
       const tReqStart = Date.now();
-      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/assignments/today?t=${new Date().getTime()}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/assignments/today?t=${new Date().getTime()}&timezone=${encodeURIComponent(timezone)}`, {
         method: 'GET',
         headers,
       });
@@ -413,8 +420,8 @@ class HomeService {
 
       console.log(
         `⏱️ getTodayAssignments timings: total=${totalMs}ms (token=${tokenMs}ms, request=${requestMs}ms, json=${jsonMs}ms) ` +
-          `server_total=${serverTotalMs ?? 'n/a'}ms server_generator=${serverGeneratorMs ?? 'n/a'}ms ` +
-          `plan_generation=${planGenerationMs ?? 'n/a'}ms plan_source=${planSource ?? 'n/a'}`
+        `server_total=${serverTotalMs ?? 'n/a'}ms server_generator=${serverGeneratorMs ?? 'n/a'}ms ` +
+        `plan_generation=${planGenerationMs ?? 'n/a'}ms plan_source=${planSource ?? 'n/a'}`
       );
       console.log('✅ Successfully fetched today\'s assignments:', result);
       return result;
@@ -850,9 +857,9 @@ class HomeService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Failed to submit daily review:', errorText);
-        return { 
-          success: false, 
-          error: 'server_error', 
+        return {
+          success: false,
+          error: 'server_error',
           message: 'Unable to submit review. Please try again.',
           streak_maintained: false,
           streak_broken: false,
@@ -868,9 +875,9 @@ class HomeService {
       return { success: true, ...result };
     } catch (error) {
       console.error('❌ Error submitting daily review:', error);
-      return { 
-        success: false, 
-        error: 'network_error', 
+      return {
+        success: false,
+        error: 'network_error',
         message: 'Network error. Check your connection.',
         streak_maintained: false,
         streak_broken: false,
