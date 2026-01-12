@@ -41,10 +41,11 @@
       "expo-web-browser"
     ],
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "747cf977-804f-41b1-8bb8-74bcc862280d"
+        "projectId": "bd0233ad-fa9b-4731-8442-ac80b7f74042"
       }
     },
-    "owner": "kajold"
+    "owner": "mohanganesh3"
   }
 }
