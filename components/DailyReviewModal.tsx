@@ -67,6 +67,7 @@ interface DailyReviewModalProps {
   reviewData: PendingReviewResponse | null;
   onReviewComplete: (result: DailyReviewResponse) => void;
   isMandatory?: boolean;
+  onSubmit?: (data: DailyReviewRequest) => void; // New prop for external handling
 }
 
 type ReviewStatus = 'forgot_to_mark' | 'replaced' | 'skipped' | 'was_completed';
@@ -168,14 +169,14 @@ const getTimeSlotIcon = (timeSlot: string): string => {
 // SUB-COMPONENTS (Memoized for Performance)
 // ============================================================================
 
-const ReviewCard = React.memo(({ 
-  item, 
-  state, 
-  onStatusSelect 
-}: { 
-  item: PendingReviewItemInfo, 
-  state: ItemReviewState | undefined, 
-  onStatusSelect: (itemId: number, status: ReviewStatus) => void 
+const ReviewCard = React.memo(({
+  item,
+  state,
+  onStatusSelect
+}: {
+  item: PendingReviewItemInfo,
+  state: ItemReviewState | undefined,
+  onStatusSelect: (itemId: number, status: ReviewStatus) => void
 }) => {
   const selectedStatus = state?.status;
 
@@ -331,6 +332,7 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
   reviewData,
   onReviewComplete,
   isMandatory = true,
+  onSubmit, // New prop
 }) => {
   // Step management: 1=Intro, 2=All Cards Review, 3=Replacement Details, 4=Streak Result
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
@@ -418,7 +420,7 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
     try {
       await AsyncStorage.removeItem(draftKey);
       lastSavedStateRef.current = '';
-    } catch (error) {}
+    } catch (error) { }
   }, [getDraftKey]);
 
   // ============================================================================
@@ -561,6 +563,20 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
           replacement_category: state.status === 'replaced' ? state.replacement_category : undefined,
         }));
 
+      // If external handler provided, use it (Fire-and-forget flow)
+      if (onSubmit) {
+        const payload: DailyReviewRequest = {
+          plan_id: reviewData.plan_id,
+          items,
+          use_freeze: useFreeze
+        };
+
+        await clearDraft(); // Clear draft immediately
+        onSubmit(payload); // Hand off to parent
+        return;
+      }
+
+      // Default internal behavior (Blocking)
       const result = await homeService.submitDailyReview(reviewData.plan_id, items, useFreeze);
 
       if (result?.success) {
@@ -585,13 +601,13 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
     if (!reviewData?.review_date) {
       return { label: 'Yesterday', fullDate: '' };
     }
-    
+
     const reviewDate = new Date(reviewData.review_date + 'T12:00:00');
     const today = new Date();
     today.setHours(12, 0, 0, 0);
-    
+
     const daysDiff = Math.floor((today.getTime() - reviewDate.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     let label = '';
     if (daysDiff <= 1) {
       label = 'Yesterday';
@@ -600,13 +616,13 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
     } else {
       label = reviewDate.toLocaleDateString('en-US', { weekday: 'long' });
     }
-    
-    const fullDate = reviewDate.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
+
+    const fullDate = reviewDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
     });
-    
+
     return { label, fullDate };
   };
 
@@ -636,7 +652,7 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
         </View>
 
         <Text style={styles.introTitle}>Let's reflect on your actions</Text>
-        
+
         {/* Stats Row */}
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
@@ -659,7 +675,7 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
         <Text style={styles.introSubtitle}>
           Quick check: What really happened with each action? This helps us make tomorrow even better! 💫
         </Text>
-        
+
         <PrimaryButton
           title="Let's Review →"
           onPress={() => changeStep(2)}
@@ -831,7 +847,7 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
                     </Text>
                   </View>
                 )}
-                
+
                 <TouchableOpacity
                   style={[styles.freezeOption, useFreeze && styles.freezeOptionSelected]}
                   onPress={() => {
@@ -889,20 +905,20 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
   const isLoading = !reviewData || !reviewData.items || !isDraftLoaded;
 
   return (
-    <Modal 
-      visible={visible} 
+    <Modal
+      visible={visible}
       transparent={true}
       animationType="fade"
       statusBarTranslucent
       onRequestClose={handleModalClose}
     >
       <View style={styles.overlay}>
-        <Animated.View 
+        <Animated.View
           style={[
-            styles.container, 
-            { 
-              opacity: fadeAnim, 
-              transform: [{ translateY: slideAnim }] 
+            styles.container,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
             }
           ]}
         >
@@ -943,11 +959,11 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
               <Text style={styles.loadingText}>Loading your review...</Text>
             </View>
           ) : (
-            <ScrollView 
-              style={styles.content} 
-              contentContainerStyle={styles.contentContainer} 
-              showsVerticalScrollIndicator={false} 
-              bounces={false} 
+            <ScrollView
+              style={styles.content}
+              contentContainerStyle={styles.contentContainer}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
               keyboardShouldPersistTaps="handled"
             >
               {currentStep === 1 && renderIntroStep()}
@@ -963,12 +979,12 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
 };
 
 const styles = StyleSheet.create({
-  modalContainer: { 
-    flex: 1, 
-    backgroundColor: BACKGROUND.white 
+  modalContainer: {
+    flex: 1,
+    backgroundColor: BACKGROUND.white
   },
-  keyboardView: { 
-    flex: 1 
+  keyboardView: {
+    flex: 1
   },
   overlay: { flex: 1, backgroundColor: UI.overlay, justifyContent: 'center', alignItems: 'center' },
   container: { width: SCREEN_WIDTH * 0.94, minHeight: responsiveHeight(50), maxHeight: SCREEN_HEIGHT * 0.88, backgroundColor: BACKGROUND.white, borderRadius: moderateScale(24), overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.25, shadowRadius: 20, elevation: 10 },
@@ -987,7 +1003,7 @@ const styles = StyleSheet.create({
   content: { width: '100%' },
   contentContainer: { padding: responsiveWidth(5), paddingBottom: responsiveHeight(4) },
   stepContainer: { width: '100%', minHeight: responsiveHeight(40) },
-  
+
   // Intro Step
   introHeader: { alignItems: 'center', marginBottom: responsiveHeight(1) },
   introGradientCircle: { width: responsiveWidth(20), height: responsiveWidth(20), borderRadius: responsiveWidth(10), justifyContent: 'center', alignItems: 'center' },
@@ -1007,7 +1023,7 @@ const styles = StyleSheet.create({
   frozenBadge: { backgroundColor: BACKGROUND.lightBlue, paddingHorizontal: responsiveWidth(4), paddingVertical: responsiveHeight(1), borderRadius: moderateScale(20), marginBottom: responsiveHeight(2), alignSelf: 'center' },
   frozenText: { fontSize: moderateScale(12), fontFamily: FONT_INTER.medium, color: '#0369A1' },
   primaryBtn: { width: '100%', marginTop: responsiveHeight(2) },
-  
+
   // Cards Step
   sectionTitle: { fontSize: moderateScale(20), fontFamily: FONT_SERIF.medium, color: TEXT.secondary, marginBottom: responsiveHeight(2) },
   cardsScrollView: { marginBottom: responsiveHeight(2) },
@@ -1029,7 +1045,7 @@ const styles = StyleSheet.create({
   statusEmoji: { fontSize: moderateScale(20), marginBottom: responsiveHeight(0.3) },
   statusLabel: { fontSize: moderateScale(11), fontFamily: FONT_INTER.semiBold, color: TEXT.secondary, textAlign: 'center' },
   statusSublabel: { fontSize: moderateScale(8), fontFamily: FONT_INTER.regular, color: TEXT.greyLight, textAlign: 'center', marginTop: 1 },
-  
+
   // Replacement Step
   replacementScrollView: { marginBottom: responsiveHeight(2) },
   replacementCard: { backgroundColor: BACKGROUND.purpleTint, borderRadius: moderateScale(16), padding: responsiveWidth(4), marginBottom: responsiveHeight(2) },
@@ -1048,7 +1064,7 @@ const styles = StyleSheet.create({
   categoryChipTextSelected: { color: BRAND.warmPurple, fontFamily: FONT_INTER.medium },
   otherReasonContainer: { marginTop: responsiveHeight(1.5) },
   otherReasonInput: { backgroundColor: BACKGROUND.white, borderRadius: moderateScale(12), padding: responsiveWidth(3.5), fontSize: moderateScale(13), fontFamily: FONT_INTER.regular, color: TEXT.secondary, borderWidth: 1.5, borderColor: BORDER.light },
-  
+
   // Streak Resolution Step
   summaryCard: { backgroundColor: BACKGROUND.purpleTint, borderRadius: moderateScale(16), padding: responsiveWidth(4), marginBottom: responsiveHeight(2) },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: responsiveHeight(0.8) },
@@ -1073,7 +1089,7 @@ const styles = StyleSheet.create({
   noFreezeWarning: { marginTop: responsiveHeight(2), alignItems: 'center' },
   noFreezeText: { fontSize: moderateScale(14), fontFamily: FONT_INTER.medium, color: TEXT.muted, marginBottom: responsiveHeight(0.5) },
   noFreezeSubtext: { fontSize: moderateScale(12), fontFamily: FONT_INTER.regular, color: TEXT.greyLight, textAlign: 'center', lineHeight: moderateScale(18) },
-  
+
   // Result Step
   resultContent: { alignItems: 'center', marginBottom: responsiveHeight(3), paddingTop: responsiveHeight(2) },
   resultEmoji: { fontSize: moderateScale(60), marginBottom: responsiveHeight(1.5) },

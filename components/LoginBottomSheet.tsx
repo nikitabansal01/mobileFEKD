@@ -18,7 +18,9 @@ import {
   Alert,
   Animated,
   Dimensions,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -102,10 +104,10 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
     if (googleResponse?.type === 'success') {
       const { id_token } = googleResponse.params;
       const credential = GoogleAuthProvider.credential(id_token);
-      
+
       setLoading(true);
       setLoadingMessage('Signing in with Google...');
-      
+
       // Set pending flag BEFORE auth to prevent ResearchingScreen from navigating early
       AsyncStorage.setItem('session_link_complete', 'pending')
         .then(() => signInWithCredential(auth, credential))
@@ -124,13 +126,13 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
           if (rememberMe && result.user.email) {
             await authService.saveCredentials(result.user.email, '', rememberMe);
           }
-          
+
           // Start session link in background (don't await)
           // SignupLoadingScreen will wait for completion flag
           sessionService.linkSessionToUser(result.user).catch((linkError) => {
             console.error('Session linking failed:', linkError);
           });
-          
+
           // Navigate to loading screen immediately
           // It will wait for session_link_complete flag
           onClose();
@@ -196,19 +198,19 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
         // ignore
       }
       const result = await signUpWithEmail(email, password);
-      
+
       if (result.success) {
         // Save credentials and login state using authService
         await authService.saveCredentials(email, password, rememberMe);
         await authService.setLoggedIn(result.user?.uid || '');
-        
+
         // Start session link in background (don't await)
         // SignupLoadingScreen will wait for completion flag
         setLoadingMessage('Linking your survey data...');
         sessionService.linkSessionToUser(result.user).catch((linkError) => {
           console.error('Session linking failed:', linkError);
         });
-        
+
         // Navigate to loading screen immediately
         // It will wait for session_link_complete flag
         onClose();
@@ -236,7 +238,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
   const handleAppleSignin = async () => {
     try {
       const isAvailable = await AppleAuthentication.isAvailableAsync();
-      
+
       if (!isAvailable) {
         Alert.alert("Error", "Apple authentication is not available on this device");
         return;
@@ -256,24 +258,24 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       const firebaseCredential = provider.credential({
         idToken: credential.identityToken!,
       });
-      
+
       // Set pending flag BEFORE auth to prevent ResearchingScreen from navigating early
       await AsyncStorage.setItem('session_link_complete', 'pending');
-      
+
       const result = await signInWithCredential(auth, firebaseCredential);
-      
+
       // Save login state using authService (Apple doesn't store passwords)
       await authService.setLoggedIn(result.user.uid);
       if (rememberMe && result.user.email) {
         await authService.saveCredentials(result.user.email, '', rememberMe);
       }
-      
+
       // Start session link in background (don't await)
       // SignupLoadingScreen will wait for completion flag
       sessionService.linkSessionToUser(result.user).catch((linkError) => {
         console.error('Session linking failed:', linkError);
       });
-      
+
       // Navigate to loading screen immediately
       // It will wait for session_link_complete flag
       onClose();
@@ -300,115 +302,122 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
         ]}
       >
         <View style={styles.handleBar} />
-        
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
         >
-          {/* Header Section */}
-          <View style={styles.headerContainer}>
-            <Text style={styles.subHeaderText}>But first...</Text>
-            <View style={styles.gradientTitleContainer}>
-              <GradientText
-                text="How would you like to sign up?"
-                textStyle={styles.gradientTitleText}
-                containerStyle={styles.maskedView}
-              />
-            </View>
-          </View>
-
-          {/* Form Section */}
-          <View style={styles.formContainer}>
-            {/* Email Input */}
-            <View style={styles.inputContainer}>
-              <TextInputContainer
-                placeholder="Email address or Phone Number"
-                value={email}
-                onChangeText={setEmail}
-                containerStyle={styles.textInput}
-              />
-            </View>
-
-            {/* Password Input */}
-            <View style={styles.inputContainer}>
-              <TextInputContainer
-                placeholder="Set Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={true}
-                containerStyle={styles.textInput}
-              />
-            </View>
-
-            {/* Confirm Password Input */}
-            <View style={styles.inputContainer}>
-              <TextInputContainer
-                placeholder="Confirm Password"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={true}
-                containerStyle={styles.textInput}
-              />
-            </View>
-
-            {/* Remember Me */}
-            <TouchableOpacity
-              style={styles.rememberContainer}
-              onPress={() => setRememberMe(!rememberMe)}
-            >
-              <View style={[styles.checkbox, rememberMe && styles.checkboxSelected]}>
-                {rememberMe && <RightTickSvg size={responsiveFontSize(1.4)} color="#FFF" />}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Header Section */}
+            <View style={styles.headerContainer}>
+              <Text style={styles.subHeaderText}>But first...</Text>
+              <View style={styles.gradientTitleContainer}>
+                <GradientText
+                  text="How would you like to sign up?"
+                  textStyle={styles.gradientTitleText}
+                  containerStyle={styles.maskedView}
+                />
               </View>
-              <Text style={styles.rememberText}>Remember me</Text>
-            </TouchableOpacity>
-          </View>
+            </View>
 
-          {/* Divider */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
+            {/* Form Section */}
+            <View style={styles.formContainer}>
+              {/* Email Input */}
+              <View style={styles.inputContainer}>
+                <TextInputContainer
+                  placeholder="Email address or Phone Number"
+                  value={email}
+                  onChangeText={setEmail}
+                  containerStyle={styles.textInput}
+                />
+              </View>
 
-          {/* Social Login Buttons */}
-          <View style={styles.socialContainer}>
-            <TouchableOpacity
-              style={styles.socialButton}
-              onPress={handleGoogleSignin}
-              disabled={!googleRequest}
-            >
-              <GoogleIconSvg />
-              <Text style={styles.socialButtonText}>Sign up with Google</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.socialButton}
-              onPress={handleAppleSignin}
-            >
-              <AppleIconSvg />
-              <Text style={styles.socialButtonText}>Sign up with Apple</Text>
-            </TouchableOpacity>
-          </View>
+              {/* Password Input */}
+              <View style={styles.inputContainer}>
+                <TextInputContainer
+                  placeholder="Set Password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={true}
+                  containerStyle={styles.textInput}
+                />
+              </View>
 
-          {/* Terms and Conditions */}
-          <View style={styles.termsContainer}>
-            <Text style={styles.termsText}>
-              By signing up, you agree to Auvra by Hormone Insight's{' '}
-              <Text style={styles.termsLink}>Terms and Conditions</Text>
-              {' '}and{' '}
-              <Text style={styles.termsLink}>Privacy Policy</Text>
-            </Text>
-          </View>
-        </ScrollView>
+              {/* Confirm Password Input */}
+              <View style={styles.inputContainer}>
+                <TextInputContainer
+                  placeholder="Confirm Password"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={true}
+                  containerStyle={styles.textInput}
+                />
+              </View>
 
-        {/* Bottom Button */}
-        <FixedBottomContainer>
-          <PrimaryButton
-            title={loading ? loadingMessage : "Sign up"}
-            onPress={handleSignup}
-            disabled={loading || !email || !password || !confirmPassword}
-          />
-        </FixedBottomContainer>
+              {/* Remember Me */}
+              <TouchableOpacity
+                style={styles.rememberContainer}
+                onPress={() => setRememberMe(!rememberMe)}
+              >
+                <View style={[styles.checkbox, rememberMe && styles.checkboxSelected]}>
+                  {rememberMe && <RightTickSvg size={responsiveFontSize(1.4)} color="#FFF" />}
+                </View>
+                <Text style={styles.rememberText}>Remember me</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Social Login Buttons */}
+            <View style={styles.socialContainer}>
+              <TouchableOpacity
+                style={styles.socialButton}
+                onPress={handleGoogleSignin}
+                disabled={!googleRequest}
+              >
+                <GoogleIconSvg />
+                <Text style={styles.socialButtonText}>Sign up with Google</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.socialButton}
+                onPress={handleAppleSignin}
+              >
+                <AppleIconSvg />
+                <Text style={styles.socialButtonText}>Sign up with Apple</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Terms and Conditions */}
+            <View style={styles.termsContainer}>
+              <Text style={styles.termsText}>
+                By signing up, you agree to Auvra by Hormone Insight's{' '}
+                <Text style={styles.termsLink}>Terms and Conditions</Text>
+                {' '}and{' '}
+                <Text style={styles.termsLink}>Privacy Policy</Text>
+              </Text>
+            </View>
+          </ScrollView>
+
+          {/* Bottom Button */}
+          <FixedBottomContainer>
+            <PrimaryButton
+              title={loading ? loadingMessage : "Sign up"}
+              onPress={handleSignup}
+              disabled={loading || !email || !password || !confirmPassword}
+            />
+          </FixedBottomContainer>
+        </KeyboardAvoidingView>
       </Animated.View>
     </Modal>
   );
@@ -440,6 +449,9 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginTop: 8,
     marginBottom: 20,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   scrollContent: {
     paddingHorizontal: responsiveWidth(5),

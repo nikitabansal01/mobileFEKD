@@ -12,6 +12,7 @@ import { personalizationService } from "@/services/personalizationService";
 import symptomCheckinService, { TapOption as SymptomTapOption } from "@/services/symptomCheckinService";
 import symptomTrackingService, { SymptomOverviewResponse } from "@/services/symptomTrackingService";
 import weeklyCheckinService, { QuestionResponse, TapOption } from "@/services/weeklyCheckinService";
+import { getAuth } from "firebase/auth";
 import type { UIBlock, UIBlockAction, UIEventRequest } from "@/utils/uiBlocks";
 import { Ionicons } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
@@ -88,18 +89,18 @@ const YAP_RECORDING_OPTIONS: Audio.RecordingOptions = {
     extension: ".m4a",
     outputFormat: Audio.AndroidOutputFormat.MPEG_4,
     audioEncoder: Audio.AndroidAudioEncoder.AAC,
-    sampleRate: 44100,
+    sampleRate: 16000,
     numberOfChannels: 1,
-    bitRate: 128000,
+    bitRate: 64000,
   },
   ios: {
     ...Audio.RecordingOptionsPresets.HIGH_QUALITY.ios,
     extension: ".m4a",
     outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
     audioQuality: Audio.IOSAudioQuality.HIGH,
-    sampleRate: 44100,
+    sampleRate: 16000,
     numberOfChannels: 1,
-    bitRate: 128000,
+    bitRate: 64000,
   },
 };
 
@@ -363,6 +364,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const [checkinId, setCheckinId] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<QuestionResponse | null>(null);
   const [dynamicTapOptions, setDynamicTapOptions] = useState<TapOption[]>([]);
+  const [isCheckinAlreadyCompleted, setIsCheckinAlreadyCompleted] = useState(false);  // Read-only mode
 
   // Care Plan (daily) check-in state
   const [carePlanThreadId, setCarePlanThreadId] = useState<string | null>(null);
@@ -411,11 +413,91 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       initializeWeeklyCheckin();
     } else if (contextFromRoute?.context === "personalise") {
       initializePersonaliseChat(contextFromRoute);
+    } else if (contextFromRoute?.context === "know_body") {
+      initializeKnowBodyChat(contextFromRoute);
     } else {
       // Default: Initialize weekly check-in from API
       initializeWeeklyCheckin();
     }
   }, [route?.params?.conversationContext]);
+
+  const initializeKnowBodyChat = async (contextFromRoute?: any) => {
+    setIsLoadingCheckin(true);
+    setChatSessionId(null);
+    try {
+      const auth = getAuth();
+      const userId = auth.currentUser?.uid;
+
+      // Check if we should resume an existing session
+      // If user came from "Continue conversation" or if just opening the chat without specific query
+      const isResumeIntent = contextFromRoute?.userResponse === 'Continue conversation' ||
+        !contextFromRoute?.userResponse;
+
+      if (userId && isResumeIntent) {
+        // Try to find active session
+        const sessions = await chatService.getSessions(userId);
+        const activeSession = sessions.find(s =>
+          s.conversation_context === 'know_body' &&
+          s.status === 'active'
+        );
+
+        if (activeSession) {
+          console.log('🔄 Resuming Know My Body session:', activeSession.session_id);
+          const history = await chatService.getSessionMessages(userId, activeSession.session_id);
+
+          if (history && history.length > 0) {
+            setChatSessionId(activeSession.session_id);
+            setMessages(history.map((msg: any) => ({
+              id: `${msg.timestamp}`, // Use timestamp as ID
+              text: msg.content,
+              isBot: msg.role === 'assistant'
+            })));
+
+            // If last message was bot, restore options?
+            // Ideally backend returns choices in history tokens but for now let's leave it.
+            // Or we could trigger a "refresh options" call if needed.
+
+            setIsLoadingCheckin(false);
+            setTimeout(() => scrollToBottom(), 100);
+            return; // EXIT HERE - do not send seed message
+          }
+        }
+      }
+
+      // If no active session or explicit new query, start new
+      const seedMessage =
+        (contextFromRoute?.userResponse && contextFromRoute.userResponse !== 'Continue conversation'
+          ? contextFromRoute.userResponse
+          : contextFromRoute?.initialMessage) ||
+        'I want to learn about my body';
+
+      const result = await chatService.sendMessage({
+        message: seedMessage,
+        conversation_context: 'know_body',
+        input_mode: 'tap',
+        session_id: null,
+      });
+
+      if (result) {
+        setChatSessionId(result.session_id);
+        if (result.content) {
+          const newMsg: Message = { id: `bot_${Date.now()}`, text: result.content, isBot: true };
+          setMessages([newMsg]);
+        }
+        if (result.ui_blocks) {
+          setUiBlocks(result.ui_blocks);
+        }
+        if (result.choices && Array.isArray(result.choices)) {
+          setPersonaliseTapOptions(choicesToChoiceOptions(result.choices));
+        }
+      }
+    } catch (error) {
+      console.error('❌ Failed to initialize Know My Body chat:', error);
+      Alert.alert('Error', 'Could not start health education session. Please try again.');
+    } finally {
+      setIsLoadingCheckin(false);
+    }
+  };
 
   const initializePersonaliseChat = async (contextFromRoute?: any) => {
     setIsLoadingCheckin(true);
@@ -505,6 +587,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       isBot: false,
     };
     setMessages((prev) => [...prev, userMessage]);
+
+    // Clear UI blocks immediately since user has responded via text
+    setUiBlocks([]);
+
     scrollToBottom();
 
     setIsLoadingCheckin(true);
@@ -520,8 +606,13 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         if (!chatSessionId) setChatSessionId(result.session_id);
         setUiBlocks(result.ui_blocks || []);
 
-        if (conversationContext === 'personalise') {
+        if (conversationContext === 'personalise' || conversationContext === 'know_body') {
           const fromAi = choicesToChoiceOptions(result.choices || []);
+          // Always update options if we got choices, or clear them if empty? 
+          // Usually we want to clear old ones if new response doesn't have choices?
+          // But existing logic only sets if length > 0.
+          // Let's stick to existing pattern but maybe clear if empty array is returned explicitly?
+          // For now, minimal change: just allow know_body.
           if (fromAi.length > 0) setPersonaliseTapOptions(fromAi);
         }
 
@@ -575,7 +666,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         purpose: action.purpose || '',
         target_hormone: action.hormones?.[0] || '',
         hormone_persona_intro: action.hormone_persona_intro || '',
-        hero_image_url: action.hero_image_url || '',
+        hero_image_url: action.hero_image_url,
         research_studies: action.research_studies || [],
         is_completed: action.is_completed || false,
         is_replaced: false,
@@ -858,6 +949,37 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         setCurrentQuestion(result.question);
         setDynamicTapOptions(result.question.tap_options || []);
 
+        // Check if this is an already-completed check-in (read-only mode)
+        if (result.is_already_completed) {
+          setIsCheckinAlreadyCompleted(true);
+          console.log('[WeeklyCheckin] Already completed - displaying in read-only mode');
+
+          // Set messages from chat history
+          if (result.question.history && result.question.history.length > 0) {
+            setMessages(result.question.history);
+          }
+
+          // Add completion message at the end
+          if (result.question.messages && result.question.messages.length > 0) {
+            const completionMessages: Message[] = result.question.messages.map((text: string, index: number) => ({
+              id: `completion_${index}`,
+              text: text,
+              isBot: true,
+            }));
+            setMessages(prev => [...prev, ...completionMessages]);
+          }
+
+          // Hide all input controls
+          setShowSlider(false);
+          setMode("idle");
+          setShowContinueButton(true);  // Show continue button to go back
+          setIsLoadingCheckin(false);
+          return;
+        }
+
+        // Not completed yet - normal flow
+        setIsCheckinAlreadyCompleted(false);
+
         // Set messages from history if available, otherwise use current message
         if (result.question.history && result.question.history.length > 0) {
           const historyMessages = result.question.history;
@@ -1004,16 +1126,21 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
     // Use dynamic tap options from API for weekly check-in
     if (contextFromRoute?.context === "weekly_checkin" && dynamicTapOptions.length > 0) {
-      return dynamicTapOptions;
+      // Add "Something else" option at the end for custom text input
+      return [...dynamicTapOptions, { id: "something_else", text: "💬 Something else" }];
     }
 
     switch (contextFromRoute?.context) {
       case "care_plan_modal":
-        if (carePlanTapOptions.length > 0) return carePlanTapOptions;
+        if (carePlanTapOptions.length > 0) {
+          // Add "Something else" to API options
+          return [...carePlanTapOptions, { id: "something_else", text: "💬 Something else" }];
+        }
         return [
           { id: "want-to-change", text: "👎 I want to change it" },
           { id: "alternate-suggestions", text: "🔁 I want alternate suggestions" },
           { id: "manage_plan", text: "🧩 Manage plan" },
+          { id: "something_else", text: "💬 Something else" },
         ];
       case "weekly_checkin":
         // Fallback options if API didn't return any
@@ -1024,31 +1151,41 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           { id: "a_lot", text: "A big change" },
           { id: "prefer_type", text: "I'd rather type" },
           { id: "skip", text: "Prefer not to say" },
+          { id: "something_else", text: "💬 Something else" },
         ];
       case "symptom_checkin":
         // If the backend is driving an inline UI block (e.g., severity 1–9),
         // don't show unrelated fallback tap options.
         if (uiBlocks && uiBlocks.length > 0) return [];
 
-        // Prefer API-provided tap options. If none are provided, avoid generic fallbacks
-        // because they often mismatch the current question/state.
-        if (symptomTapOptions.length > 0) return symptomTapOptions;
-        return [];
+        // Prefer API-provided tap options. Add "Something else" option to allow custom input.
+        if (symptomTapOptions.length > 0) {
+          return [...symptomTapOptions, { id: "something_else", text: "💬 Something else" }];
+        }
+        return [{ id: "something_else", text: "💬 Something else" }];
       case "personalise":
         // Prefer contextual options (profile-driven or backend-provided). If the backend is
         // showing interactive UI blocks, avoid stacking generic fallbacks.
-        if (personaliseTapOptions.length > 0) return personaliseTapOptions;
+        if (personaliseTapOptions.length > 0) {
+          return [...personaliseTapOptions, { id: "something_else", text: "💬 Something else" }];
+        }
         if (uiBlocks && uiBlocks.length > 0) return [];
         return [
           { id: "add-factors", text: "I want to personalise more factors" },
           { id: "update-preferences", text: "I want to update my preferences" },
           { id: "customise-plan", text: "I want to customise my action plan" },
+          { id: "something_else", text: "💬 Something else" },
         ];
       case "know_body":
+        // Use dynamic AI options if available
+        if (personaliseTapOptions.length > 0) {
+          return [...personaliseTapOptions, { id: "something_else", text: "💬 Something else" }];
+        }
         return [
           { id: "learn-phases", text: "Learn about menstrual phases" },
           { id: "hormone-info", text: "Understand hormone changes" },
           { id: "body-symptoms", text: "Track body symptoms" },
+          { id: "something_else", text: "💬 Something else" },
         ];
       default:
         return [
@@ -1061,6 +1198,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           { id: "more-stress", text: "More stress/workload" },
           { id: "more-caffeine", text: "More caffeine" },
           { id: "more-alcohol", text: "More alcohol" },
+          { id: "something_else", text: "💬 Something else" },
         ];
     }
   };
@@ -1283,6 +1421,14 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const handleChoicePress = (option: ChoiceOption) => {
     const contextFromRoute = route?.params?.conversationContext;
 
+    // "Something else" switches to type mode for custom input across all contexts
+    if (option.id === "something_else") {
+      setMode("type");
+      // Focus the text input after switching mode
+      setTimeout(() => textInputRef.current?.focus(), 100);
+      return;
+    }
+
     // Weekly check-in keeps multi-select behavior.
     if (contextFromRoute?.context === "weekly_checkin") {
       toggleOption(option.id);
@@ -1350,6 +1496,13 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         setSelectedOptions([]);
         return;
       }
+    }
+
+    // Handle "Something else" for any context - switch to type mode
+    if (option.id === "something_else") {
+      setMode("type");
+      setTimeout(() => textInputRef.current?.focus(), 100);
+      return;
     }
 
     // Default: tap-to-send.
@@ -1623,48 +1776,40 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         setMessages((prev) => [...prev, { id: Date.now().toString(), text: displayText, isBot: false }]);
         scrollToBottom();
       }
-    }
 
-    if (contextFromRoute?.context === 'care_plan_modal' && carePlanThreadId) {
+      // Clear UI blocks immediately to prevent multiple clicks while waiting for backend
+      setUiBlocks([]);
+
+      const threadId = contextFromRoute?.context === 'care_plan_modal' ? carePlanThreadId :
+        contextFromRoute?.context === 'symptom_checkin' ? symptomThreadId : null;
+
+      if (!threadId) {
+        console.warn("No thread ID for UI event");
+        return;
+      }
+
       const event: UIEventRequest = {
-        thread_id: carePlanThreadId,
+        thread_id: threadId,
         block_id: block.id,
         event_type: 'action',
         action_id: action.id,
-        metadata: {
-          ...(action.payload || {}),
-          display_text: (action.title || '').toString(),
-        },
+        metadata: action.payload,
       };
-      setIsLoadingCheckin(true);
-      try {
-        const result = await carePlanCheckinService.sendEvent(event);
-        applyCarePlanApiResult(result);
-      } finally {
-        setIsLoadingCheckin(false);
-      }
-      return;
-    }
 
-    if (contextFromRoute?.context === 'symptom_checkin' && symptomThreadId) {
-      const event: UIEventRequest = {
-        thread_id: symptomThreadId,
-        block_id: block.id,
-        event_type: 'action',
-        action_id: action.id,
-        metadata: {
-          ...(action.payload || {}),
-          display_text: (action.title || '').toString(),
-        },
-      };
       setIsLoadingCheckin(true);
       try {
-        const result = await symptomCheckinService.sendEvent(event);
-        applySymptomApiResult(result);
+        const result = contextFromRoute?.context === 'care_plan_modal' ?
+          await carePlanCheckinService.sendEvent(event) :
+          await symptomCheckinService.sendEvent(event);
+
+        if (contextFromRoute?.context === 'care_plan_modal') {
+          applyCarePlanApiResult(result);
+        } else {
+          applySymptomApiResult(result);
+        }
       } finally {
         setIsLoadingCheckin(false);
       }
-      return;
     }
   };
 
@@ -1796,9 +1941,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                   </View>
                 ))}
 
-                {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
-
                 {renderUiBlocksInline()}
+
+                {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
               </View>
             </View>
           </ScrollView>
@@ -1835,9 +1980,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                   </View>
                 ))}
 
-                {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
-
                 {renderUiBlocksInline()}
+
+                {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
               </View>
             </View>
           </ScrollView>
@@ -2037,9 +2182,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         </View>
         <View style={styles.choiceOptionsContainer}>
           <View style={styles.choiceOptionsGrid}>
-            {choiceOptions.map((option) => (
+            {choiceOptions.map((option, index) => (
               <ChoiceButton
-                key={option.id}
+                key={`${option.id}_${index}`}
                 option={option}
                 isSelected={route?.params?.conversationContext?.context === "weekly_checkin" && selectedOptions.includes(option.id)}
                 onPress={() => handleChoicePress(option)}
@@ -2050,50 +2195,53 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         <View style={{ flex: 1 }} />
       </ScrollView>
 
-      <View style={styles.CTAWrapper}>
-        <View style={styles.CTAGroup1}>
-          <View style={styles.btn55Container}>
-            <TouchableOpacity style={styles.whiteButton} onPress={() => setMode("type")}>
-              <Ionicons name="chatbubble-ellipses-outline" style={{ fontSize: 24 }} color={COLORS.onPrimaryContainer} />
-            </TouchableOpacity>
-            <Text style={styles.btnLabel}>type</Text>
-          </View>
-          <View style={styles.btn55Container}>
-            <TouchableOpacity style={styles.whiteButton} onPress={() => setMode("idle")}>
-              <Image
-                source={require("./../../assets/images/yap-icon.png")}
-                style={{ width: scale(24), height: scale(24) }}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-            <Text style={styles.btnLabel}>yap</Text>
-          </View>
-        </View>
-        {route?.params?.conversationContext?.context === "weekly_checkin" ? (
-          <View>
+      {/* Hide input controls when viewing completed weekly check-in */}
+      {!(route?.params?.conversationContext?.context === "weekly_checkin" && isCheckinAlreadyCompleted) && (
+        <View style={styles.CTAWrapper}>
+          <View style={styles.CTAGroup1}>
             <View style={styles.btn55Container}>
-              <TouchableOpacity
-                style={[
-                  styles.sendButtonLg,
-                  selectedOptions.length === 0 && styles.sendButtonDisabled
-                ]}
-                onPress={sendSelectedOptions}
-                disabled={selectedOptions.length === 0}
-              >
-                <LinearGradient
-                  colors={selectedOptions.length > 0 ? [COLORS.gradPurple, COLORS.gradPink] : [COLORS.disabledGradient, COLORS.disabledGradient]}
-                  style={styles.sendButtonGradient}
-                >
-                  <Ionicons name="send" size={20} color={COLORS.white} />
-                </LinearGradient>
+              <TouchableOpacity style={styles.whiteButton} onPress={() => setMode("type")}>
+                <Ionicons name="chatbubble-ellipses-outline" style={{ fontSize: 24 }} color={COLORS.onPrimaryContainer} />
               </TouchableOpacity>
-              <Text style={styles.btnLabel}>
-                {selectedOptions.length > 0 ? `send (${selectedOptions.length})` : 'send'}
-              </Text>
+              <Text style={styles.btnLabel}>type</Text>
+            </View>
+            <View style={styles.btn55Container}>
+              <TouchableOpacity style={styles.whiteButton} onPress={() => setMode("idle")}>
+                <Image
+                  source={require("./../../assets/images/yap-icon.png")}
+                  style={{ width: scale(24), height: scale(24) }}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+              <Text style={styles.btnLabel}>yap</Text>
             </View>
           </View>
-        ) : null}
-      </View>
+          {route?.params?.conversationContext?.context === "weekly_checkin" ? (
+            <View>
+              <View style={styles.btn55Container}>
+                <TouchableOpacity
+                  style={[
+                    styles.sendButtonLg,
+                    selectedOptions.length === 0 && styles.sendButtonDisabled
+                  ]}
+                  onPress={sendSelectedOptions}
+                  disabled={selectedOptions.length === 0}
+                >
+                  <LinearGradient
+                    colors={selectedOptions.length > 0 ? [COLORS.gradPurple, COLORS.gradPink] : [COLORS.disabledGradient, COLORS.disabledGradient]}
+                    style={styles.sendButtonGradient}
+                  >
+                    <Ionicons name="send" size={20} color={COLORS.white} />
+                  </LinearGradient>
+                </TouchableOpacity>
+                <Text style={styles.btnLabel}>
+                  {selectedOptions.length > 0 ? `send (${selectedOptions.length})` : 'send'}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+        </View>
+      )}
     </>
   );
 

@@ -20,6 +20,7 @@ import Svg, { Defs, Line, Stop, LinearGradient as SvgLinearGradient } from 'reac
 
 // ====== Type imports ======
 import { Assignment } from '../services/homeService';
+import CompletedCheckSvg from '../assets/images/SVG/CompletedCheckSvg';
 type AssignmentsMap = Record<string, Assignment[]>;
 
 // Weekly Check-in status from API
@@ -142,25 +143,57 @@ export default function TypeActionPlan({
     const allAssignments: (Assignment & { timeSlot: string })[] = [];
 
     // Add "Weekly Check-in" assignment ONLY if available and due (dynamic from API)
+    // OR if completed today (show as completed item)
     let weeklyCheckInItem: (Assignment & { timeSlot: string }) | undefined = undefined;
 
-    if (weeklyCheckinStatus?.is_available && weeklyCheckinStatus?.is_due) {
-      const isResume = !!weeklyCheckinStatus.incomplete_id;
-      const purpose = isResume
-        ? `Continue your check-in | ${topConcern}`
-        : `Track your progress & concerns | ${topConcern}`;
+    // Check if weekly check-in was completed today (relative to the plan date)
+    const isCompletedToday = (): boolean => {
+      if (!weeklyCheckinStatus?.last_completed) return false;
+
+      // Use the plan date from backend as the reference point for "today"
+      const planDate = assignments?.date || new Date().toISOString().split('T')[0];
+
+      try {
+        const completedDate = new Date(weeklyCheckinStatus.last_completed);
+        const completedDateStr = `${completedDate.getFullYear()}-${String(completedDate.getMonth() + 1).padStart(2, '0')}-${String(completedDate.getDate()).padStart(2, '0')}`;
+        return completedDateStr === planDate;
+      } catch (e) {
+        return weeklyCheckinStatus.last_completed.startsWith(planDate);
+      }
+    };
+
+    const completedToday = isCompletedToday();
+
+    if (weeklyCheckinStatus?.is_available && (weeklyCheckinStatus?.is_due || completedToday)) {
+      const isResume = !!weeklyCheckinStatus.incomplete_id && weeklyCheckinStatus.is_due;
+
+      // Determine title and purpose based on completion status
+      let title: string;
+      let purpose: string;
+
+      if (completedToday && !weeklyCheckinStatus.is_due) {
+        // Completed today - show as completed
+        title = 'Weekly Check-in ✓';
+        purpose = `Completed | ${topConcern}`;
+      } else if (isResume) {
+        title = 'Continue Check-in';
+        purpose = `Continue your check-in | ${topConcern}`;
+      } else {
+        title = 'Weekly Check-in';
+        purpose = `Track your progress & concerns | ${topConcern}`;
+      }
 
       weeklyCheckInItem = {
         id: -1, // Special ID for check-in
         recommendation_id: -1,
-        title: isResume ? 'Continue Check-in' : 'Weekly Check-in',
+        title: title,
         purpose: purpose,
         category: 'food', // Categorized as food to appear in Eat section
         conditions: [],
         symptoms: [],
         hormones: [],
-        is_completed: false,
-        completed_at: '',
+        is_completed: completedToday && !weeklyCheckinStatus.is_due, // Mark as completed if done today
+        completed_at: completedToday ? weeklyCheckinStatus.last_completed || '' : '',
         advices: [],
         food_amounts: [],
         food_items: [],
@@ -530,6 +563,15 @@ export default function TypeActionPlan({
         variants: assignment.variants || [],
         hero_image_url: assignment.hero_image_url,
         hormone_persona_intro: assignment.hormone_persona_intro,
+        // Category-specific fields for "How?" screen heading
+        category: assignment.category,
+        food_items: assignment.food_items || [],
+        food_amounts: assignment.food_amounts || [],
+        exercise_types: assignment.exercise_types || [],
+        exercise_durations: assignment.exercise_durations || [],
+        exercise_intensities: assignment.exercise_intensities || [],
+        mindfulness_techniques: assignment.mindfulness_techniques || [],
+        mindfulness_durations: assignment.mindfulness_durations || [],
       });
     };
 
@@ -555,6 +597,15 @@ export default function TypeActionPlan({
                   variants: assignment.variants || [],
                   hero_image_url: assignment.hero_image_url,
                   hormone_persona_intro: assignment.hormone_persona_intro,
+                  // Category-specific fields for "How?" screen heading
+                  category: assignment.category,
+                  food_items: assignment.food_items || [],
+                  food_amounts: assignment.food_amounts || [],
+                  exercise_types: assignment.exercise_types || [],
+                  exercise_durations: assignment.exercise_durations || [],
+                  exercise_intensities: assignment.exercise_intensities || [],
+                  mindfulness_techniques: assignment.mindfulness_techniques || [],
+                  mindfulness_durations: assignment.mindfulness_durations || [],
                 })
               });
             } catch (error) {
@@ -576,6 +627,13 @@ export default function TypeActionPlan({
             />
           ) : (
             <Text style={styles.actionImage}>📋</Text>
+          )}
+
+          {/* Completion checkmark badge - centered over image */}
+          {assignment.is_completed && (
+            <View style={styles.completedBadge}>
+              <CompletedCheckSvg size={scale(24)} />
+            </View>
           )}
         </TouchableOpacity>
 
@@ -706,12 +764,29 @@ export default function TypeActionPlan({
         {renderMiddleLine()}
 
         {/* Tomorrow section */}
-        <View style={styles.tomorrowSection}>
-          <View style={styles.tomorrowHeader}>
-            <Text style={styles.tomorrowSectionTitle}>Tomorrow</Text>
-            <Text style={styles.tomorrowDateText}>16th July, 2025</Text>
-          </View>
-        </View>
+        {(() => {
+          // Calculate date (tomorrow relative to plan date)
+          let tomorrow: Date;
+          if (assignments?.date) {
+            const parts = assignments.date.split('-');
+            tomorrow = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            tomorrow.setDate(tomorrow.getDate() + 1);
+          } else {
+            tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+          }
+
+          const tomorrowDateStr = `${tomorrow.getDate()}${getOrdinalSuffix(tomorrow.getDate())} ${tomorrow.toLocaleString('en-US', { month: 'long' })}, ${tomorrow.getFullYear()}`;
+
+          return (
+            <View style={styles.tomorrowSection}>
+              <View style={styles.tomorrowHeader}>
+                <Text style={styles.tomorrowSectionTitle}>Tomorrow</Text>
+                <Text style={styles.tomorrowDateText}>{tomorrowDateStr}</Text>
+              </View>
+            </View>
+          );
+        })()}
 
         {/* Third line: from Tomorrow label bottom to next list + lock */}
         {renderBottomLine()}
@@ -778,6 +853,16 @@ export default function TypeActionPlan({
 }
 
 // ====== Utility: Date formatting ======
+function getOrdinalSuffix(day: number) {
+  if (day > 3 && day < 21) return 'th';
+  switch (day % 10) {
+    case 1: return "st";
+    case 2: return "nd";
+    case 3: return "rd";
+    default: return "th";
+  }
+}
+
 function formatToday(d: Date) {
   const month = d.toLocaleString('en-US', { month: 'long' });
   const day = d.getDate();
@@ -864,6 +949,17 @@ const styles = StyleSheet.create({
   },
   actionImage: {
     fontSize: responsiveFontSize(3),
+  },
+  completedBadge: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    borderRadius: scale(25),
   },
   actionImagePhoto: {
     width: '100%',

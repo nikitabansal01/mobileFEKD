@@ -13,6 +13,7 @@ import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-nat
 import { moderateScale, verticalScale } from 'react-native-size-matters';
 import homeService from '@/services/homeService';
 import { rewardService, RefreshStatus } from '@/services/rewardService';
+import { getImageSource } from '@/utils/imageUtils';
 
 // Replacement reasons for "Not for me" feedback
 const REPLACEMENT_REASONS = [
@@ -60,6 +61,16 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
     specific_action?: string;
     hero_image_url?: string;
     hormone_persona_intro?: string;
+    // Category for determining heading format
+    category?: 'food' | 'movement' | 'mindfulness';
+    // Category-specific fields for heading
+    food_items?: string[];
+    food_amounts?: string[];
+    exercise_types?: string[];
+    exercise_durations?: string[];
+    exercise_intensities?: string[];
+    mindfulness_techniques?: string[];
+    mindfulness_durations?: string[];
     research_studies?: Array<{
       title: string;
       authors?: string;
@@ -85,10 +96,52 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
     }>;
   } : null;
 
+  /**
+   * Formats the "How?" screen heading based on category.
+   * Shows short, actionable text like Figma design:
+   * - Food: "Eat at least 1 cup of Quinoa"
+   * - Movement: "Morning Yoga for 15 minutes"
+   * - Mindfulness: "Deep Breathing for 5 minutes"
+   */
+  const formatHowHeading = (): string => {
+    if (!action) return '';
+
+    const { title, category, food_amounts, exercise_durations, mindfulness_durations } = action;
+
+    switch (category) {
+      case 'food':
+        const amount = food_amounts?.[0] || '';
+        if (amount) {
+          // Figma design: "Eat at least 1 cup of Quinoa today"
+          return `Eat at least ${amount} of ${title} today`;
+        }
+        return `Eat ${title} today`;
+
+      case 'movement':
+        const duration = exercise_durations?.[0] || '';
+        if (duration) {
+          // Figma design: "Do Yoga for 15 minutes today"
+          return `Do ${title} for ${duration} today`;
+        }
+        return `Do ${title} today`;
+
+      case 'mindfulness':
+        const mDuration = mindfulness_durations?.[0] || '';
+        if (mDuration) {
+          // Figma design: "Practice Deep Breathing for 5 minutes today"
+          return `Practice ${title} for ${mDuration} today`;
+        }
+        return `Practice ${title} today`;
+
+      default:
+        // Fallback: if no category, just use title
+        return title || '';
+    }
+  };
+
   // State management
   const [isHowMode, setIsHowMode] = useState(false);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  const [scrollEnabled, setScrollEnabled] = useState(true);
   const [showStudyDetails, setShowStudyDetails] = useState(false);
   const sliderRef = React.useRef<AppIntroSlider>(null);
 
@@ -340,7 +393,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
         style={styles.content}
         contentContainerStyle={{ paddingBottom: responsiveHeight(20) }} // Increased to ensure content scrolls above button
         showsVerticalScrollIndicator={false}
-        scrollEnabled={scrollEnabled}
+        scrollEnabled={true}
       >
         {/* Main Content */}
         <View style={styles.mainContent}>
@@ -348,17 +401,18 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
             // How Mode Content
             <>
               {/* Title and Image Section */}
-              <View style={styles.titleSection}>
-                <View style={styles.titleContainer}>
+              <View style={[styles.titleSection, { marginTop: responsiveHeight(1) }]}>
+                <View style={[styles.titleContainer, { marginBottom: responsiveHeight(1) }]}>
                   <MaskedView
                     style={styles.gradientContainer}
                     maskElement={
-                      <View style={{ backgroundColor: 'transparent' }}>
+                      <View style={{ backgroundColor: 'transparent', justifyContent: 'center', alignItems: 'center' }}>
                         <Text
                           style={styles.title}
                           allowFontScaling={false}
+                          numberOfLines={4}
                         >
-                          {action?.specific_action || ''}
+                          {formatHowHeading()}
                         </Text>
                       </View>
                     }
@@ -367,14 +421,14 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                       colors={['#D8A7CA', '#C17EC9']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
-                      style={{ flex: 1, width: '100%', height: '100%' }}
+                      style={{ flex: 1, width: '100%', minHeight: responsiveHeight(10) }}
                     />
                   </MaskedView>
                 </View>
                 <View style={styles.imageContainer}>
-                  {action?.hero_image_url ? (
+                  {getImageSource(action?.hero_image_url) ? (
                     <Image
-                      source={{ uri: action.hero_image_url }}
+                      source={getImageSource(action?.hero_image_url)!}
                       style={styles.actionImageFull}
                       resizeMode="cover"
                     />
@@ -411,11 +465,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
               {/* Advice Slider */}
               {action?.variants && action.variants.length > 0 && (
                 <View style={styles.adviceSection}>
-                  <View
-                    style={styles.sliderContainer}
-                    onTouchStart={() => setScrollEnabled(false)}
-                    onTouchEnd={() => setScrollEnabled(true)}
-                  >
+                  <View style={styles.sliderContainer}>
                     <AppIntroSlider
                       ref={sliderRef}
                       data={action.variants}
@@ -518,9 +568,9 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                   </MaskedView>
                 </View>
                 <View style={styles.imageContainer}>
-                  {action?.hero_image_url ? (
+                  {getImageSource(action?.hero_image_url) ? (
                     <Image
-                      source={{ uri: action.hero_image_url }}
+                      source={getImageSource(action?.hero_image_url)!}
                       style={styles.actionImageFull}
                       resizeMode="cover"
                     />
@@ -947,7 +997,7 @@ const styles = StyleSheet.create({
   },
   titleSection: {
     alignItems: 'center',
-    marginTop: responsiveHeight(4), // Calibrated for airy look
+    marginTop: responsiveHeight(0.5), // Reduced to 0.5 for ultra-tight spacing
     width: '100%',
   },
   title: {
@@ -963,13 +1013,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: responsiveHeight(2),
+    marginBottom: responsiveHeight(0.25), // Reduced to 0.25 for ultra-tight spacing
     width: '100%',
   },
   gradientContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: responsiveHeight(8),
+    minHeight: responsiveHeight(6), // Reduced to 6 for ultra-tight spacing
     width: '100%',
   },
   imageContainer: {
@@ -1045,10 +1095,11 @@ const styles = StyleSheet.create({
   descriptionText: {
     fontSize: moderateScale(12, 1.5),
     fontFamily: 'Inter400',
-    lineHeight: moderateScale(16, 1.5),
+    lineHeight: moderateScale(20, 1.5),
     color: '#000000',
     verticalAlign: 'top',
     textAlign: 'left',
+    paddingBottom: verticalScale(2),
   },
   studyDetails: {
     width: '100%',

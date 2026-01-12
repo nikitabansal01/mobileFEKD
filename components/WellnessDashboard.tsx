@@ -58,6 +58,7 @@ interface WellnessDashboardProps {
   userId: string;
   onRefresh?: () => void;
   onInsightPress?: (insight: string) => void;
+  onDimensionPress?: (dimension: string) => void;
   compact?: boolean;
 }
 
@@ -189,6 +190,7 @@ const WellnessDashboard: React.FC<WellnessDashboardProps> = ({
   userId,
   onRefresh,
   onInsightPress,
+  onDimensionPress,
   compact = false,
 }) => {
   const [loading, setLoading] = useState(true);
@@ -340,7 +342,11 @@ const WellnessDashboard: React.FC<WellnessDashboardProps> = ({
       <View style={styles.dimensionsSection}>
         <Text style={styles.sectionTitle}>Breakdown</Text>
         {getDimensions().map((dim, index) => (
-          <DimensionBar key={index} dimension={dim} />
+          <DimensionBar
+            key={index}
+            dimension={dim}
+            onPress={() => onDimensionPress?.(dim.name)}
+          />
         ))}
       </View>
 

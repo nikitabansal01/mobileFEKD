@@ -91,6 +91,41 @@ class ChatService {
       return null;
     }
   }
+  async getSessions(userId: string, limit: number = 10): Promise<any[]> {
+    try {
+      const token = await getAuthToken();
+      const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${userId}?limit=${limit}`, {
+        method: 'GET',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (!response.ok) return [];
+      return await response.json();
+    } catch (error) {
+      console.error('❌ Error getting sessions:', error);
+      return [];
+    }
+  }
+
+  async getSessionMessages(userId: string, sessionId: string): Promise<any[]> {
+    try {
+      const token = await getAuthToken();
+      const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${userId}/${sessionId}/messages`, {
+        method: 'GET',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (!response.ok) return [];
+      return await response.json();
+    } catch (error) {
+      console.error('❌ Error getting session messages:', error);
+      return [];
+    }
+  }
 }
 
 export const chatService = new ChatService();

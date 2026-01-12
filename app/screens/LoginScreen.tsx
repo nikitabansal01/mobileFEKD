@@ -5,7 +5,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { GoogleAuthProvider, OAuthProvider, signInWithCredential } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
-import { Alert, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -90,7 +90,7 @@ const LoginScreen = () => {
           await authService.setLoggedIn(result.user.uid);
           // For social logins, we enable remember me by default
           await authService.saveCredentials('', '', true);
-          
+
           Alert.alert('Success', 'Google login successful!');
           navigation.navigate('MainScreenTabs');
         })
@@ -112,13 +112,13 @@ const LoginScreen = () => {
     setLoading(true);
     try {
       const result = await signInWithEmail(email, password);
-      
+
       if (result.success && result.user) {
         // Save credentials based on remember me preference
         await authService.saveCredentials(email, password, rememberMe);
         // Mark user as logged in
         await authService.setLoggedIn(result.user.uid);
-        
+
         Alert.alert("Success", "Login successful!");
         navigation.navigate('MainScreenTabs');
       } else {
@@ -144,7 +144,7 @@ const LoginScreen = () => {
   const handleAppleSignin = async () => {
     try {
       const isAvailable = await AppleAuthentication.isAvailableAsync();
-      
+
       if (!isAvailable) {
         Alert.alert("Error", "Apple authentication is not available on this device");
         return;
@@ -161,14 +161,14 @@ const LoginScreen = () => {
       const firebaseCredential = provider.credential({
         idToken: credential.identityToken!,
       });
-      
+
       const result = await signInWithCredential(auth, firebaseCredential);
-      
+
       // Save login state
       await authService.setLoggedIn(result.user.uid);
       // For social logins, we enable remember me by default
       await authService.saveCredentials('', '', true);
-      
+
       Alert.alert("Success", "Apple login successful!");
       navigation.navigate('MainScreenTabs');
     } catch (error: any) {
@@ -185,124 +185,130 @@ const LoginScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header Section */}
-      <View style={styles.headerSection}>
-        <View style={styles.characterContainer}>
-          <AuvraCharacter size={responsiveWidth(20)} />
-        </View>
-        
-        <View style={styles.titleContainer}>
-          <GradientText
-            text="Welcome Back!"
-            textStyle={styles.title}
-            containerStyle={styles.maskedView}
-          />
-        </View>
-        
-        <Text style={styles.subtitle}>
-          Login to start taking care of your hormones
-        </Text>
-      </View>
-
-      {/* Scrollable Form Section */}
-      <ScrollView 
-        style={styles.scrollContainer}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        {/* Email Input */}
-        <View style={styles.inputContainer}>
-          <TextInputContainer
-            placeholder="Email address or Phone Number"
-            value={email}
-            onChangeText={setEmail}
-            containerStyle={styles.textInput}
-          />
-        </View>
+        {/* Header Section */}
+        <View style={styles.headerSection}>
+          <View style={styles.characterContainer}>
+            <AuvraCharacter size={responsiveWidth(20)} />
+          </View>
 
-        {/* Password Input */}
-        <View style={styles.inputContainer}>
-          <TextInputContainer
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={true}
-            containerStyle={styles.textInput}
-          />
-        </View>
+          <View style={styles.titleContainer}>
+            <GradientText
+              text="Welcome Back!"
+              textStyle={styles.title}
+              containerStyle={styles.maskedView}
+            />
+          </View>
 
-        {/* Remember Me & Forgot Password */}
-        <View style={styles.optionsContainer}>
-          <TouchableOpacity
-            style={styles.rememberContainer}
-            onPress={() => setRememberMe(!rememberMe)}
-          >
-            <View style={[styles.checkbox, rememberMe && styles.checkboxSelected]}>
-              {rememberMe && <RightTickSvg size={responsiveFontSize(1.4)} color="#FFF" />}
-            </View>
-            <Text style={styles.rememberText}>Remember me</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity>
-            <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Divider */}
-        <View style={styles.dividerContainer}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        {/* Social Login Buttons */}
-        <View style={styles.socialContainer}>
-          <TouchableOpacity
-            style={styles.socialButton}
-            onPress={handleGoogleSignin}
-            disabled={!googleRequest}
-          >
-            <GoogleIconSvg />
-            <Text style={styles.socialButtonText}>Continue with Google</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={styles.socialButton}
-            onPress={handleAppleSignin}
-          >
-            <AppleIconSvg />
-            <Text style={styles.socialButtonText}>Continue with Apple</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Sign Up Link */}
-        <View style={styles.signupLinkContainer}>
-          <Text style={styles.signupLinkText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('OnboardingScreen')}>
-            <Text style={styles.signupLinkAction}>Sign up</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Terms and Conditions */}
-        <View style={styles.termsContainer}>
-          <Text style={styles.termsText}>
-            By continuing, you agree to Auvra by Hormone Insight's{' '}
-            <Text style={styles.termsLink}>Terms and Conditions</Text>
-            {' '}and{' '}
-            <Text style={styles.termsLink}>Privacy Policy</Text>
+          <Text style={styles.subtitle}>
+            Login to start taking care of your hormones
           </Text>
         </View>
-      </ScrollView>
 
-      {/* Bottom Button */}
-      <FixedBottomContainer>
-        <PrimaryButton
-          title={loading ? "Logging in..." : "Log in"}
-          onPress={handleLogin}
-          disabled={loading || !email || !password}
-        />
-      </FixedBottomContainer>
+        {/* Scrollable Form Section */}
+        <ScrollView
+          style={styles.scrollContainer}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Email Input */}
+          <View style={styles.inputContainer}>
+            <TextInputContainer
+              placeholder="Email address or Phone Number"
+              value={email}
+              onChangeText={setEmail}
+              containerStyle={styles.textInput}
+            />
+          </View>
+
+          {/* Password Input */}
+          <View style={styles.inputContainer}>
+            <TextInputContainer
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={true}
+              containerStyle={styles.textInput}
+            />
+          </View>
+
+          {/* Remember Me & Forgot Password */}
+          <View style={styles.optionsContainer}>
+            <TouchableOpacity
+              style={styles.rememberContainer}
+              onPress={() => setRememberMe(!rememberMe)}
+            >
+              <View style={[styles.checkbox, rememberMe && styles.checkboxSelected]}>
+                {rememberMe && <RightTickSvg size={responsiveFontSize(1.4)} color="#FFF" />}
+              </View>
+              <Text style={styles.rememberText}>Remember me</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity>
+              <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Divider */}
+          <View style={styles.dividerContainer}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Social Login Buttons */}
+          <View style={styles.socialContainer}>
+            <TouchableOpacity
+              style={styles.socialButton}
+              onPress={handleGoogleSignin}
+              disabled={!googleRequest}
+            >
+              <GoogleIconSvg />
+              <Text style={styles.socialButtonText}>Continue with Google</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.socialButton}
+              onPress={handleAppleSignin}
+            >
+              <AppleIconSvg />
+              <Text style={styles.socialButtonText}>Continue with Apple</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Sign Up Link */}
+          <View style={styles.signupLinkContainer}>
+            <Text style={styles.signupLinkText}>Don't have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('OnboardingScreen')}>
+              <Text style={styles.signupLinkAction}>Sign up</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Terms and Conditions */}
+          <View style={styles.termsContainer}>
+            <Text style={styles.termsText}>
+              By continuing, you agree to Auvra by Hormone Insight's{' '}
+              <Text style={styles.termsLink}>Terms and Conditions</Text>
+              {' '}and{' '}
+              <Text style={styles.termsLink}>Privacy Policy</Text>
+            </Text>
+          </View>
+        </ScrollView>
+
+        {/* Bottom Button */}
+        <FixedBottomContainer>
+          <PrimaryButton
+            title={loading ? "Logging in..." : "Log in"}
+            onPress={handleLogin}
+            disabled={loading || !email || !password}
+          />
+        </FixedBottomContainer>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -311,6 +317,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   headerSection: {
     alignItems: 'center',

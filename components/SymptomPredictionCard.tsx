@@ -130,7 +130,7 @@ interface SeverityIndicatorProps {
 
 const SeverityIndicator: React.FC<SeverityIndicatorProps> = ({ severity }) => {
   const dots = Array.from({ length: 9 }, (_, i) => i + 1);
-  
+
   const getDotColor = (dotIndex: number) => {
     if (dotIndex > severity) return '#E0E0E0';
     if (severity <= 3) return '#81C784';
@@ -174,16 +174,27 @@ const PredictionItem: React.FC<PredictionItemProps> = ({
   onToggle,
 }) => {
   const config = getSymptomConfig(prediction.symptom);
-  
+
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
+    let date: Date;
+
+    // Check if it's a simple YYYY-MM-DD string
+    if (dateStr.length === 10 && dateStr.includes('-')) {
+      const parts = dateStr.split('-');
+      // Create date in local timezone
+      date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    } else {
+      date = new Date(dateStr);
+    }
+
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    if (date.toDateString() === today.toDateString()) return 'Today';
-    if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
-    
+
+    const dateOnlyString = date.toDateString();
+    if (dateOnlyString === today.toDateString()) return 'Today';
+    if (dateOnlyString === tomorrow.toDateString()) return 'Tomorrow';
+
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
@@ -202,7 +213,7 @@ const PredictionItem: React.FC<PredictionItemProps> = ({
             <Text style={styles.expectedDate}>{formatDate(prediction.expected_date)}</Text>
           </View>
         </View>
-        <LikelihoodBadge 
+        <LikelihoodBadge
           likelihood={prediction.likelihood}
           confidence={prediction.confidence}
         />
@@ -309,27 +320,27 @@ const SymptomPredictionCard: React.FC<SymptomPredictionCardProps> = ({
     try {
       setLoading(true);
       setError(null);
-      
+
       // TODO: Replace with actual API call
       // const response = await fetch(`${API_URL}/predict-symptoms/${userId}`);
       // const data = await response.json();
-      
+
       // Mock data
       await new Promise(resolve => setTimeout(resolve, 800));
-      
+
       const today = new Date();
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
       const dayAfter = new Date(today);
       dayAfter.setDate(dayAfter.getDate() + 2);
-      
+
       setData({
         predictions: [
           {
             symptom: 'cramps',
             likelihood: 0.85,
             expected_severity: 6,
-            expected_date: tomorrow.toISOString(),
+            expected_date: tomorrow.toISOString().split('T')[0], // Use YYYY-MM-DD for testing robust parsing
             confidence: 'high',
             proactive_advice: [
               'Start taking magnesium supplements now',
@@ -343,7 +354,7 @@ const SymptomPredictionCard: React.FC<SymptomPredictionCardProps> = ({
             symptom: 'bloating',
             likelihood: 0.72,
             expected_severity: 5,
-            expected_date: tomorrow.toISOString(),
+            expected_date: tomorrow.toISOString().split('T')[0],
             confidence: 'medium',
             proactive_advice: [
               'Reduce sodium intake today',
@@ -357,7 +368,7 @@ const SymptomPredictionCard: React.FC<SymptomPredictionCardProps> = ({
             symptom: 'fatigue',
             likelihood: 0.65,
             expected_severity: 4,
-            expected_date: dayAfter.toISOString(),
+            expected_date: dayAfter.toISOString().split('T')[0],
             confidence: 'medium',
             proactive_advice: [
               'Get to bed 30 minutes earlier tonight',
@@ -370,13 +381,13 @@ const SymptomPredictionCard: React.FC<SymptomPredictionCardProps> = ({
         phase_transition: {
           from_phase: 'luteal',
           to_phase: 'menstrual',
-          expected_date: tomorrow.toISOString(),
+          expected_date: tomorrow.toISOString().split('T')[0],
           days_until: 1,
         },
         overall_outlook: "Expect some symptoms in the next couple days as you transition. Being proactive now can really help! 💪",
         prediction_date: today.toISOString(),
       });
-      
+
     } catch (err) {
       setError('Failed to load predictions');
       console.error('Prediction fetch error:', err);
@@ -410,7 +421,7 @@ const SymptomPredictionCard: React.FC<SymptomPredictionCardProps> = ({
   if (compact && data.predictions.length > 0) {
     const topPrediction = data.predictions[0];
     const config = getSymptomConfig(topPrediction.symptom);
-    
+
     return (
       <TouchableOpacity style={styles.compactContainer} activeOpacity={0.8}>
         <LinearGradient
@@ -465,7 +476,7 @@ const SymptomPredictionCard: React.FC<SymptomPredictionCardProps> = ({
       </View>
 
       {/* Predictions list */}
-      <ScrollView 
+      <ScrollView
         style={styles.predictionsScroll}
         showsVerticalScrollIndicator={false}
       >

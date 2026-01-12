@@ -1,14 +1,32 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import WellnessDashboard from '@/components/WellnessDashboard';
+import { auth } from '@/config/firebase';
 
 const ProgressScreen = () => {
+  const navigation = useNavigation<any>();
+  const user = auth.currentUser;
+
+  const handleDimensionPress = (dimension: string) => {
+    navigation.navigate('ChatbotScreen', {
+      conversationContext: {
+        context: 'know_body',
+        initialMessage: `I want to learn about my ${dimension}`,
+        userResponse: `I want to learn about my ${dimension}`
+      }
+    });
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Progress</Text>
-        <Text style={styles.subtitle}>Track your progress here</Text>
-      </View>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <WellnessDashboard
+          userId={user?.uid || ''}
+          onDimensionPress={handleDimensionPress}
+        />
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -18,21 +36,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontFamily: 'Inter600',
-    color: '#000000',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666666',
+  scrollContent: {
+    paddingBottom: 20,
   },
 });
 
