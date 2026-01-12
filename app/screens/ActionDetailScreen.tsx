@@ -401,10 +401,10 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
             // How Mode Content
             <>
               {/* Title and Image Section */}
-              <View style={styles.titleSection}>
-                <View style={styles.titleContainer}>
+              <View style={styles.titleSectionCompact}>
+                <View style={styles.titleContainerCompact}>
                   <MaskedView
-                    style={styles.gradientContainer}
+                    style={styles.gradientContainerCompact}
                     maskElement={
                       <View style={{ backgroundColor: 'transparent', justifyContent: 'center', alignItems: 'center' }}>
                         <Text
@@ -997,7 +997,12 @@ const styles = StyleSheet.create({
   },
   titleSection: {
     alignItems: 'center',
-    marginTop: responsiveHeight(0.5), // Reduced to minimal
+    marginTop: responsiveHeight(4), // Reverted to original Airy look
+    width: '100%',
+  },
+  titleSectionCompact: {
+    alignItems: 'center',
+    marginTop: responsiveHeight(0.5), // Compact for How screen
     width: '100%',
   },
   title: {
@@ -1013,13 +1018,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 0, // Removed bottom margin completely
+    marginBottom: responsiveHeight(2), // Reverted to original
+    width: '100%',
+  },
+  titleContainerCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 0, // No margin for How screen
     width: '100%',
   },
   gradientContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: responsiveHeight(6), // Reduced from 8 to 6 for tighter layout
+    minHeight: responsiveHeight(18), // Reverted to original
+    width: '100%',
+  },
+  gradientContainerCompact: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: responsiveHeight(6), // Compact for How screen
     width: '100%',
   },
   imageContainer: {
