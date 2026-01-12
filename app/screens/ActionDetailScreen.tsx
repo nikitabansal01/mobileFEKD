@@ -112,23 +112,26 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
       case 'food':
         const amount = food_amounts?.[0] || '';
         if (amount) {
-          return `${amount} of ${title}`;
+          // Figma design: "Eat at least 1 cup of Quinoa today"
+          return `Eat at least ${amount} of ${title} today`;
         }
-        return title;
+        return `Eat ${title} today`;
 
       case 'movement':
         const duration = exercise_durations?.[0] || '';
         if (duration) {
-          return `${title} for ${duration}`;
+          // Figma design: "Do Yoga for 15 minutes today"
+          return `Do ${title} for ${duration} today`;
         }
-        return title;
+        return `Do ${title} today`;
 
       case 'mindfulness':
         const mDuration = mindfulness_durations?.[0] || '';
         if (mDuration) {
-          return `${title} for ${mDuration}`;
+          // Figma design: "Practice Deep Breathing for 5 minutes today"
+          return `Practice ${title} for ${mDuration} today`;
         }
-        return title;
+        return `Practice ${title} today`;
 
       default:
         // Fallback: if no category, just use title

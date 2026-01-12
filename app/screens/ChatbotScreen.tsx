@@ -1044,18 +1044,22 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       case "personalise":
         // Prefer contextual options (profile-driven or backend-provided). If the backend is
         // showing interactive UI blocks, avoid stacking generic fallbacks.
-        if (personaliseTapOptions.length > 0) return personaliseTapOptions;
+        if (personaliseTapOptions.length > 0) {
+          return [...personaliseTapOptions, { id: "something_else", text: "💬 Something else" }];
+        }
         if (uiBlocks && uiBlocks.length > 0) return [];
         return [
           { id: "add-factors", text: "I want to personalise more factors" },
           { id: "update-preferences", text: "I want to update my preferences" },
           { id: "customise-plan", text: "I want to customise my action plan" },
+          { id: "something_else", text: "💬 Something else" },
         ];
       case "know_body":
         return [
           { id: "learn-phases", text: "Learn about menstrual phases" },
           { id: "hormone-info", text: "Understand hormone changes" },
           { id: "body-symptoms", text: "Track body symptoms" },
+          { id: "something_else", text: "💬 Something else" },
         ];
       default:
         return [
@@ -1068,6 +1072,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           { id: "more-stress", text: "More stress/workload" },
           { id: "more-caffeine", text: "More caffeine" },
           { id: "more-alcohol", text: "More alcohol" },
+          { id: "something_else", text: "💬 Something else" },
         ];
     }
   };
