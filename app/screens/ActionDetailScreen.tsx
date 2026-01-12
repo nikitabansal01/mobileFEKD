@@ -401,8 +401,8 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
             // How Mode Content
             <>
               {/* Title and Image Section */}
-              <View style={styles.titleSection}>
-                <View style={styles.titleContainer}>
+              <View style={[styles.titleSection, { marginTop: responsiveHeight(1) }]}>
+                <View style={[styles.titleContainer, { marginBottom: responsiveHeight(1) }]}>
                   <MaskedView
                     style={styles.gradientContainer}
                     maskElement={
@@ -421,7 +421,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                       colors={['#D8A7CA', '#C17EC9']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
-                      style={{ flex: 1, width: '100%', minHeight: responsiveHeight(18) }}
+                      style={{ flex: 1, width: '100%', minHeight: responsiveHeight(10) }}
                     />
                   </MaskedView>
                 </View>
