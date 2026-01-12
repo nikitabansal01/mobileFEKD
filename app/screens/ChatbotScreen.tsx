@@ -363,6 +363,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const [checkinId, setCheckinId] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<QuestionResponse | null>(null);
   const [dynamicTapOptions, setDynamicTapOptions] = useState<TapOption[]>([]);
+  const [isCheckinAlreadyCompleted, setIsCheckinAlreadyCompleted] = useState(false);  // Read-only mode
 
   // Care Plan (daily) check-in state
   const [carePlanThreadId, setCarePlanThreadId] = useState<string | null>(null);
@@ -897,6 +898,37 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         setCheckinId(result.checkin_id);
         setCurrentQuestion(result.question);
         setDynamicTapOptions(result.question.tap_options || []);
+
+        // Check if this is an already-completed check-in (read-only mode)
+        if (result.is_already_completed) {
+          setIsCheckinAlreadyCompleted(true);
+          console.log('[WeeklyCheckin] Already completed - displaying in read-only mode');
+
+          // Set messages from chat history
+          if (result.question.history && result.question.history.length > 0) {
+            setMessages(result.question.history);
+          }
+
+          // Add completion message at the end
+          if (result.question.messages && result.question.messages.length > 0) {
+            const completionMessages: Message[] = result.question.messages.map((text: string, index: number) => ({
+              id: `completion_${index}`,
+              text: text,
+              isBot: true,
+            }));
+            setMessages(prev => [...prev, ...completionMessages]);
+          }
+
+          // Hide all input controls
+          setShowSlider(false);
+          setMode("idle");
+          setShowContinueButton(true);  // Show continue button to go back
+          setIsLoadingCheckin(false);
+          return;
+        }
+
+        // Not completed yet - normal flow
+        setIsCheckinAlreadyCompleted(false);
 
         // Set messages from history if available, otherwise use current message
         if (result.question.history && result.question.history.length > 0) {
@@ -2109,50 +2141,53 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         <View style={{ flex: 1 }} />
       </ScrollView>
 
-      <View style={styles.CTAWrapper}>
-        <View style={styles.CTAGroup1}>
-          <View style={styles.btn55Container}>
-            <TouchableOpacity style={styles.whiteButton} onPress={() => setMode("type")}>
-              <Ionicons name="chatbubble-ellipses-outline" style={{ fontSize: 24 }} color={COLORS.onPrimaryContainer} />
-            </TouchableOpacity>
-            <Text style={styles.btnLabel}>type</Text>
-          </View>
-          <View style={styles.btn55Container}>
-            <TouchableOpacity style={styles.whiteButton} onPress={() => setMode("idle")}>
-              <Image
-                source={require("./../../assets/images/yap-icon.png")}
-                style={{ width: scale(24), height: scale(24) }}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-            <Text style={styles.btnLabel}>yap</Text>
-          </View>
-        </View>
-        {route?.params?.conversationContext?.context === "weekly_checkin" ? (
-          <View>
+      {/* Hide input controls when viewing completed weekly check-in */}
+      {!(route?.params?.conversationContext?.context === "weekly_checkin" && isCheckinAlreadyCompleted) && (
+        <View style={styles.CTAWrapper}>
+          <View style={styles.CTAGroup1}>
             <View style={styles.btn55Container}>
-              <TouchableOpacity
-                style={[
-                  styles.sendButtonLg,
-                  selectedOptions.length === 0 && styles.sendButtonDisabled
-                ]}
-                onPress={sendSelectedOptions}
-                disabled={selectedOptions.length === 0}
-              >
-                <LinearGradient
-                  colors={selectedOptions.length > 0 ? [COLORS.gradPurple, COLORS.gradPink] : [COLORS.disabledGradient, COLORS.disabledGradient]}
-                  style={styles.sendButtonGradient}
-                >
-                  <Ionicons name="send" size={20} color={COLORS.white} />
-                </LinearGradient>
+              <TouchableOpacity style={styles.whiteButton} onPress={() => setMode("type")}>
+                <Ionicons name="chatbubble-ellipses-outline" style={{ fontSize: 24 }} color={COLORS.onPrimaryContainer} />
               </TouchableOpacity>
-              <Text style={styles.btnLabel}>
-                {selectedOptions.length > 0 ? `send (${selectedOptions.length})` : 'send'}
-              </Text>
+              <Text style={styles.btnLabel}>type</Text>
+            </View>
+            <View style={styles.btn55Container}>
+              <TouchableOpacity style={styles.whiteButton} onPress={() => setMode("idle")}>
+                <Image
+                  source={require("./../../assets/images/yap-icon.png")}
+                  style={{ width: scale(24), height: scale(24) }}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+              <Text style={styles.btnLabel}>yap</Text>
             </View>
           </View>
-        ) : null}
-      </View>
+          {route?.params?.conversationContext?.context === "weekly_checkin" ? (
+            <View>
+              <View style={styles.btn55Container}>
+                <TouchableOpacity
+                  style={[
+                    styles.sendButtonLg,
+                    selectedOptions.length === 0 && styles.sendButtonDisabled
+                  ]}
+                  onPress={sendSelectedOptions}
+                  disabled={selectedOptions.length === 0}
+                >
+                  <LinearGradient
+                    colors={selectedOptions.length > 0 ? [COLORS.gradPurple, COLORS.gradPink] : [COLORS.disabledGradient, COLORS.disabledGradient]}
+                    style={styles.sendButtonGradient}
+                  >
+                    <Ionicons name="send" size={20} color={COLORS.white} />
+                  </LinearGradient>
+                </TouchableOpacity>
+                <Text style={styles.btnLabel}>
+                  {selectedOptions.length > 0 ? `send (${selectedOptions.length})` : 'send'}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+        </View>
+      )}
     </>
   );
 

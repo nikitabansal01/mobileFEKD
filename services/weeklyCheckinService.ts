@@ -86,6 +86,8 @@ export interface StartCheckInResponse {
   week_number: number;
   year: number;
   question: QuestionResponse;
+  is_already_completed?: boolean;  // True if viewing completed check-in in read-only mode
+  next_due_date?: string;  // When the next check-in is available
 }
 
 /**
