@@ -997,11 +997,11 @@ const styles = StyleSheet.create({
   },
   titleSection: {
     alignItems: 'center',
-    marginTop: responsiveHeight(0.5), // Reduced to 0.5 for ultra-tight spacing
+    marginTop: 0, // Zero margin to match mockup
     width: '100%',
   },
   title: {
-    fontSize: moderateScale(22, 1), // Precise scale for Serif
+    fontSize: moderateScale(22, 1),
     fontFamily: 'NotoSerif600',
     color: '#D8A7CA',
     textAlign: 'center',
@@ -1013,13 +1013,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: responsiveHeight(0.25), // Reduced to 0.25 for ultra-tight spacing
+    marginBottom: 0, // Zero margin to match mockup
     width: '100%',
   },
   gradientContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: responsiveHeight(6), // Reduced to 6 for ultra-tight spacing
+    minHeight: responsiveHeight(4), // Minimal height - just enough for text
     width: '100%',
   },
   imageContainer: {
