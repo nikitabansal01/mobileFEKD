@@ -2096,9 +2096,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         </View>
         <View style={styles.choiceOptionsContainer}>
           <View style={styles.choiceOptionsGrid}>
-            {choiceOptions.map((option) => (
+            {choiceOptions.map((option, index) => (
               <ChoiceButton
-                key={option.id}
+                key={`${option.id}_${index}`}
                 option={option}
                 isSelected={route?.params?.conversationContext?.context === "weekly_checkin" && selectedOptions.includes(option.id)}
                 onPress={() => handleChoicePress(option)}
