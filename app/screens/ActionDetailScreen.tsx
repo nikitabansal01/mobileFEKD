@@ -1013,13 +1013,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: responsiveHeight(1), // Reduced from 1.5 to 1 for tighter spacing
+    marginBottom: responsiveHeight(0.5), // Reduced further to 0.5 for minimal gap
     width: '100%',
   },
   gradientContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: responsiveHeight(18), // Increased from 12 to 18 to prevent truncation of multi-line titles
+    minHeight: responsiveHeight(8), // Reduced from 18 to 8 to fix large gap
     width: '100%',
   },
   imageContainer: {
