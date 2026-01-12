@@ -546,6 +546,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       isBot: false,
     };
     setMessages((prev) => [...prev, userMessage]);
+
+    // Clear UI blocks immediately since user has responded via text
+    setUiBlocks([]);
+
     scrollToBottom();
 
     setIsLoadingCheckin(true);
