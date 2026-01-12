@@ -142,7 +142,6 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
   // State management
   const [isHowMode, setIsHowMode] = useState(false);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  const [scrollEnabled, setScrollEnabled] = useState(true);
   const [showStudyDetails, setShowStudyDetails] = useState(false);
   const sliderRef = React.useRef<AppIntroSlider>(null);
 
@@ -394,7 +393,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
         style={styles.content}
         contentContainerStyle={{ paddingBottom: responsiveHeight(20) }} // Increased to ensure content scrolls above button
         showsVerticalScrollIndicator={false}
-        scrollEnabled={scrollEnabled}
+        scrollEnabled={true}
       >
         {/* Main Content */}
         <View style={styles.mainContent}>
@@ -466,11 +465,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
               {/* Advice Slider */}
               {action?.variants && action.variants.length > 0 && (
                 <View style={styles.adviceSection}>
-                  <View
-                    style={styles.sliderContainer}
-                    onTouchStart={() => setScrollEnabled(false)}
-                    onTouchEnd={() => setScrollEnabled(true)}
-                  >
+                  <View style={styles.sliderContainer}>
                     <AppIntroSlider
                       ref={sliderRef}
                       data={action.variants}
@@ -1002,7 +997,7 @@ const styles = StyleSheet.create({
   },
   titleSection: {
     alignItems: 'center',
-    marginTop: responsiveHeight(4), // Calibrated for airy look
+    marginTop: responsiveHeight(2), // Reduced from 4 to 2 to fix large gap
     width: '100%',
   },
   title: {
@@ -1018,7 +1013,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: responsiveHeight(2),
+    marginBottom: responsiveHeight(1.5), // Reduced from 2 to 1.5 to fix large gap
     width: '100%',
   },
   gradientContainer: {
