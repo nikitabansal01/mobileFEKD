@@ -401,10 +401,10 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
             // How Mode Content
             <>
               {/* Title and Image Section */}
-              <View style={styles.titleSectionCompact}>
-                <View style={styles.titleContainerCompact}>
+              <View style={styles.titleSection}>
+                <View style={styles.titleContainer}>
                   <MaskedView
-                    style={styles.gradientContainerCompact}
+                    style={styles.gradientContainer}
                     maskElement={
                       <View style={{ backgroundColor: 'transparent', justifyContent: 'center', alignItems: 'center' }}>
                         <Text
@@ -997,12 +997,7 @@ const styles = StyleSheet.create({
   },
   titleSection: {
     alignItems: 'center',
-    marginTop: responsiveHeight(4), // Reverted to original Airy look
-    width: '100%',
-  },
-  titleSectionCompact: {
-    alignItems: 'center',
-    marginTop: responsiveHeight(0.5), // Compact for How screen
+    marginTop: responsiveHeight(0.5), // Reduced to 0.5 for ultra-tight spacing
     width: '100%',
   },
   title: {
@@ -1018,26 +1013,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: responsiveHeight(2), // Reverted to original
-    width: '100%',
-  },
-  titleContainerCompact: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 0, // No margin for How screen
+    marginBottom: responsiveHeight(0.25), // Reduced to 0.25 for ultra-tight spacing
     width: '100%',
   },
   gradientContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: responsiveHeight(18), // Reverted to original
-    width: '100%',
-  },
-  gradientContainerCompact: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: responsiveHeight(6), // Compact for How screen
+    minHeight: responsiveHeight(6), // Reduced to 6 for ultra-tight spacing
     width: '100%',
   },
   imageContainer: {
