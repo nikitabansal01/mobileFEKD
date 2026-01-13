@@ -16,7 +16,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.raphy0316.hormoneinsight"
+      "bundleIdentifier": "com.raphy0316.hormoneinsight",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Auvra needs access to your microphone for voice transcription so you can speak your messages instead of typing.",
+        "NSSpeechRecognitionUsageDescription": "Auvra uses speech recognition to convert your voice to text for easier messaging."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,7 +31,8 @@
       "package": "com.raphy0316.hormoneinsight",
       "permissions": [
         "INTERNET",
-        "ACCESS_NETWORK_STATE"
+        "ACCESS_NETWORK_STATE",
+        "RECORD_AUDIO"
       ],
       "versionCode": 4
     },
@@ -38,13 +43,20 @@
     "plugins": [
       "expo-font",
       "expo-router",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Auvra needs access to your microphone for voice transcription."
+        }
+      ]
     ],
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "747cf977-804f-41b1-8bb8-74bcc862280d"
+        "projectId": "bd0233ad-fa9b-4731-8442-ac80b7f74042"
       }
     },
-    "owner": "kajold"
+    "owner": "mohanganesh3"
   }
 }

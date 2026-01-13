@@ -190,32 +190,32 @@ const LoginScreen = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        {/* Header Section */}
-        <View style={styles.headerSection}>
-          <View style={styles.characterContainer}>
-            <AuvraCharacter size={responsiveWidth(20)} />
-          </View>
-
-          <View style={styles.titleContainer}>
-            <GradientText
-              text="Welcome Back!"
-              textStyle={styles.title}
-              containerStyle={styles.maskedView}
-            />
-          </View>
-
-          <Text style={styles.subtitle}>
-            Login to start taking care of your hormones
-          </Text>
-        </View>
-
-        {/* Scrollable Form Section */}
+        {/* Scrollable Content - entire screen slides up with keyboard */}
         <ScrollView
           style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Header Section */}
+          <View style={styles.headerSection}>
+            <View style={styles.characterContainer}>
+              <AuvraCharacter size={responsiveWidth(20)} />
+            </View>
+
+            <View style={styles.titleContainer}>
+              <GradientText
+                text="Welcome Back!"
+                textStyle={styles.title}
+                containerStyle={styles.maskedView}
+              />
+            </View>
+
+            <Text style={styles.subtitle}>
+              Login to start taking care of your hormones
+            </Text>
+          </View>
+
           {/* Email Input */}
           <View style={styles.inputContainer}>
             <TextInputContainer

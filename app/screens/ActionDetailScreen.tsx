@@ -552,8 +552,8 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                   <MaskedView
                     style={styles.gradientContainer}
                     maskElement={
-                      <View style={{ backgroundColor: 'transparent' }}>
-                        <Text style={styles.title}>
+                      <View style={{ backgroundColor: 'transparent', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
+                        <Text style={styles.title} allowFontScaling={false}>
                           💡 Why {action?.title || 'Pumpkin Seeds'}?
                         </Text>
                       </View>
@@ -563,7 +563,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                       colors={['#D8A7CA', '#C17EC9']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
-                      style={{ flex: 1, width: '100%', height: '100%' }}
+                      style={{ flex: 1, width: '100%', minHeight: responsiveHeight(10) }}
                     />
                   </MaskedView>
                 </View>
@@ -1019,7 +1019,7 @@ const styles = StyleSheet.create({
   gradientContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: responsiveHeight(6), // Reduced to 6 for ultra-tight spacing
+    minHeight: responsiveHeight(10), // Increased to 10 to fit 2-line titles like "Why Gentle Stretching?"
     width: '100%',
   },
   imageContainer: {

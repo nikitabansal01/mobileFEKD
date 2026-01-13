@@ -23,7 +23,7 @@ import { Audio } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Dimensions, Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Dimensions, Image, Keyboard, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { FONT_FAMILIES, useAppFonts } from '../../constants/fonts';
@@ -1125,9 +1125,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     const contextFromRoute = route?.params?.conversationContext;
 
     // Use dynamic tap options from API for weekly check-in
+    // NOTE: Backend already includes "Something else..." - don't add another one!
     if (contextFromRoute?.context === "weekly_checkin" && dynamicTapOptions.length > 0) {
-      // Add "Something else" option at the end for custom text input
-      return [...dynamicTapOptions, { id: "something_else", text: "💬 Something else" }];
+      return dynamicTapOptions;
     }
 
     switch (contextFromRoute?.context) {
@@ -1521,7 +1521,26 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
       const perm = await Audio.requestPermissionsAsync();
       if (!perm.granted) {
-        console.warn("Microphone permission not granted");
+        // Show alert to user explaining they need to enable microphone
+        Alert.alert(
+          "Microphone Permission Required",
+          "To use voice input, please enable microphone access for this app in your device settings.",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Open Settings",
+              onPress: () => {
+                // On iOS, this opens the app's settings page
+                if (Platform.OS === 'ios') {
+                  Linking.openURL('app-settings:');
+                } else {
+                  Linking.openSettings();
+                }
+              }
+            }
+          ]
+        );
+        isStartingRecordingRef.current = false;
         return;
       }
 
