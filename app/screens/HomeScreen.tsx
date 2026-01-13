@@ -1446,7 +1446,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const getProgressColor = (hormone: string) => {
     switch (hormone.toLowerCase()) {
       case 'androgens': return '#A29AEA'; // Purple - matches ActionPlanTimeline
-      case 'progesterone': return '#CBF0FF'; // Light blue
+      case 'progesterone': return '#7DD3FC'; // Sky blue (more visible than #CBF0FF)
       case 'estrogen': return '#FF8BA7'; // Pink
       case 'thyroid': return '#F6C34C'; // Yellow
       case 'insulin': return '#90EE90'; // Light green
@@ -1515,11 +1515,25 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
    * @returns Object with first and second hormone colors
    */
   const getHormoneQuestColors = () => {
-    // Get hormones from hormone_stats and sort by priority
-    if (assignments?.hormone_stats) {
-      const sortedHormones = getSortedHormoneKeys(assignments.hormone_stats);
-      const firstHormoneColor = sortedHormones.length > 0 ? getProgressColor(sortedHormones[0]) : '#C17EC9';
-      const secondHormoneColor = sortedHormones.length > 1 ? getProgressColor(sortedHormones[1]) : '#87CEEB';
+    // Use progressStats.hormone_stats (same source as Hormone Quests section)
+    const hormoneStats = progressStats?.hormone_stats || assignments?.hormone_stats;
+
+    if (hormoneStats) {
+      const sortedHormones = getSortedHormoneKeys(hormoneStats);
+      const firstHormone = sortedHormones[0];
+      const secondHormone = sortedHormones[1];
+      const firstHormoneColor = firstHormone ? getProgressColor(firstHormone) : '#C17EC9';
+      const secondHormoneColor = secondHormone ? getProgressColor(secondHormone) : '#87CEEB';
+
+      // Debug logging
+      console.log('🎨 getHormoneQuestColors:', {
+        sortedHormones,
+        firstHormone,
+        secondHormone,
+        firstHormoneColor,
+        secondHormoneColor
+      });
+
       return { firstHormoneColor, secondHormoneColor };
     }
 

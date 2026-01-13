@@ -160,7 +160,7 @@ export const COLORS = {
 // =============================================================================
 export const HORMONE_COLORS: Record<string, string> = {
   androgens: '#A29AEA',
-  progesterone: '#CBF0FF',
+  progesterone: '#7DD3FC',
   estrogen: '#FF8BA7',
   thyroid: '#F6C34C',
   insulin: '#90EE90',

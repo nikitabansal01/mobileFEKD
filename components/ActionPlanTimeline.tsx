@@ -679,7 +679,7 @@ export default function ActionPlanTimeline({
     const h = (hormone || '').toLowerCase();
     switch (h) {
       case 'androgens': return '#A29AEA';
-      case 'progesterone': return '#CBF0FF';
+      case 'progesterone': return '#7DD3FC';
       case 'estrogen': return '#FF8BA7';
       case 'thyroid': return '#F6C34C';
       case 'insulin': return '#90EE90';
