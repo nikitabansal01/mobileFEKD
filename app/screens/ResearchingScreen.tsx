@@ -357,8 +357,8 @@ const ResearchingScreen = () => {
                   maskElement={
                     <Text style={{
                       fontFamily: 'NotoSerif600',
-                      fontStyle: 'italic',
                       fontSize: responsiveFontSize(3.4), //24px
+
                       textAlign: 'center',
                       lineHeight: responsiveHeight(4),
                       backgroundColor: 'transparent'
@@ -409,8 +409,8 @@ const ResearchingScreen = () => {
                   maskElement={
                     <Text style={{
                       fontFamily: 'NotoSerif600',
-                      fontStyle: 'italic',
                       fontSize: responsiveFontSize(3.4), //24px
+
                       textAlign: 'center',
                       lineHeight: responsiveHeight(4),
                       backgroundColor: 'transparent'
@@ -456,7 +456,6 @@ const ResearchingScreen = () => {
                 maskElement={
                   <Text style={{
                     fontFamily: 'NotoSerif600',
-                    fontStyle: 'italic',
                     fontSize: responsiveFontSize(3.4), //24px
                     textAlign: 'center',
                     lineHeight: responsiveHeight(4),

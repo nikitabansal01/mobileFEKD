@@ -15,7 +15,7 @@ import BackButton from '../../components/BackButton';
 import AuvraCharacter from '../../components/AuvraCharacter';
 import sessionService from '../../services/sessionService';
 
-const questionTitle = "Tell us what feels easiest\nto do better this week?";
+const questionTitle = "Tell us what feels easiest\nto do better today?";
 const questionSub = "Choose one or more options";
 const lifestyleOptions = [
   { id: "1", text: "🥗 Eat", value: "eat" },
@@ -201,7 +201,6 @@ const styles = StyleSheet.create({
   },
   questionTitle: {
     fontFamily: 'NotoSerif600',
-    fontStyle: 'italic',
     fontSize: responsiveFontSize(3.4),
     textAlign: 'center',
     lineHeight: responsiveHeight(4),
