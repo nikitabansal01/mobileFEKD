@@ -1125,9 +1125,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     const contextFromRoute = route?.params?.conversationContext;
 
     // Use dynamic tap options from API for weekly check-in
+    // NOTE: Backend already includes "Something else..." - don't add another one!
     if (contextFromRoute?.context === "weekly_checkin" && dynamicTapOptions.length > 0) {
-      // Add "Something else" option at the end for custom text input
-      return [...dynamicTapOptions, { id: "something_else", text: "💬 Something else" }];
+      return dynamicTapOptions;
     }
 
     switch (contextFromRoute?.context) {
