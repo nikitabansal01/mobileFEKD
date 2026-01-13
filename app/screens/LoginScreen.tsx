@@ -188,34 +188,34 @@ const LoginScreen = () => {
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        {/* Header Section */}
-        <View style={styles.headerSection}>
-          <View style={styles.characterContainer}>
-            <AuvraCharacter size={responsiveWidth(20)} />
-          </View>
-
-          <View style={styles.titleContainer}>
-            <GradientText
-              text="Welcome Back!"
-              textStyle={styles.title}
-              containerStyle={styles.maskedView}
-            />
-          </View>
-
-          <Text style={styles.subtitle}>
-            Login to start taking care of your hormones
-          </Text>
-        </View>
-
-        {/* Scrollable Form Section */}
+        {/* Scrollable Content - entire screen slides up with keyboard */}
         <ScrollView
           style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Header Section */}
+          <View style={styles.headerSection}>
+            <View style={styles.characterContainer}>
+              <AuvraCharacter size={responsiveWidth(20)} />
+            </View>
+
+            <View style={styles.titleContainer}>
+              <GradientText
+                text="Welcome Back!"
+                textStyle={styles.title}
+                containerStyle={styles.maskedView}
+              />
+            </View>
+
+            <Text style={styles.subtitle}>
+              Login to start taking care of your hormones
+            </Text>
+          </View>
+
           {/* Email Input */}
           <View style={styles.inputContainer}>
             <TextInputContainer
@@ -323,9 +323,9 @@ const styles = StyleSheet.create({
   },
   headerSection: {
     alignItems: 'center',
-    paddingTop: responsiveHeight(4),  // Reduced from 10% to 4%
+    paddingTop: responsiveHeight(10),
     paddingHorizontal: responsiveWidth(5),
-    marginBottom: responsiveHeight(2),  // Reduced from 3% to 2%
+    marginBottom: responsiveHeight(3),
   },
   characterContainer: {
     alignItems: 'center',
