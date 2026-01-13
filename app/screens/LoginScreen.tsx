@@ -188,7 +188,7 @@ const LoginScreen = () => {
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
       >
         {/* Header Section */}
         <View style={styles.headerSection}>
@@ -323,9 +323,9 @@ const styles = StyleSheet.create({
   },
   headerSection: {
     alignItems: 'center',
-    paddingTop: responsiveHeight(10),
+    paddingTop: responsiveHeight(4),  // Reduced from 10% to 4%
     paddingHorizontal: responsiveWidth(5),
-    marginBottom: responsiveHeight(3),
+    marginBottom: responsiveHeight(2),  // Reduced from 3% to 2%
   },
   characterContainer: {
     alignItems: 'center',
