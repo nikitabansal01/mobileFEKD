@@ -98,10 +98,10 @@ const CustomLoadingSpinner = () => {
 const ResearchingScreen = () => {
   const navigation = useNavigation<StackNavigationProp<any>>();
   const route = useRoute<RouteProp<{ params: ResearchingScreenParams }, 'params'>>();
-  
+
   // Get lifestyle focus from route params (set by ResultLoadingScreen)
   const lifestyleFocus = route.params?.lifestyleFocus || [];
-  
+
   // Steps: 0: first animation, 1: second animation, 2: completion screen
   // (Question step removed - now handled by ResultLoadingScreen)
   const [step, setStep] = useState(0);
@@ -111,7 +111,7 @@ const ResearchingScreen = () => {
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false); // User login status
   const [hasStartedRecommendation, setHasStartedRecommendation] = useState(false); // Recommendation generation start status
   const [authChecked, setAuthChecked] = useState(false); // Auth state check status
-  
+
   // Use refs for interval to avoid state update loops
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isPollingRef = useRef<boolean>(false);
@@ -126,18 +126,18 @@ const ResearchingScreen = () => {
     console.log('🔐 [ResearchingScreen] Setting up auth listener');
     const unsubscribe = auth.onAuthStateChanged(async (user: any) => {
       setAuthChecked(true);
-      
+
       if (user) {
         setIsUserLoggedIn(true);
         setShowLogin(false); // Close bottom sheet when logged in
-        
+
         // Stop polling if still running
         if (pollingIntervalRef.current) {
           clearInterval(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
           isPollingRef.current = false;
         }
-        
+
         // Check if LoginBottomSheet is handling navigation via SignupLoadingScreen
         // If session_link_complete is 'pending', LoginBottomSheet started the session link
         // and SignupLoadingScreen will handle navigation - DON'T double-navigate
@@ -146,7 +146,7 @@ const ResearchingScreen = () => {
           console.log('⏳ [ResearchingScreen] Session link in progress, SignupLoadingScreen will handle navigation');
           return; // Let SignupLoadingScreen handle navigation
         }
-        
+
         console.log('✅ [ResearchingScreen] User logged in, navigating to MainScreenTabs');
         // If user is already logged in (returning user), navigate directly to home
         navigation.navigate('MainScreenTabs');
@@ -161,10 +161,10 @@ const ResearchingScreen = () => {
   // Helper function to start recommendation generation
   const startRecommendationGeneration = async () => {
     if (hasStartedRecommendation) return;
-    
+
     try {
       console.log('🚀 [ResearchingScreen] Starting recommendation generation with lifestyle_focus:', lifestyleFocus);
-      
+
       setHasStartedRecommendation(true);
       const success = await sessionService.startRecommendationGeneration();
       if (success) {
@@ -183,7 +183,7 @@ const ResearchingScreen = () => {
         setRecommendationStatus('completed');
         return;
       }
-      
+
       console.error('❌ [ResearchingScreen] Recommendation start error:', error);
       setRecommendationStatus('error');
       setCanProceedToFinal(true);
@@ -195,12 +195,12 @@ const ResearchingScreen = () => {
   // So it will generate with correct distribution!
   useEffect(() => {
     if (isUserLoggedIn || hasStartedRecommendation) return;
-    
+
     // Start immediately - lifestyle_focus was already saved by ResultLoadingScreen
     console.log('⚡ [ResearchingScreen] Starting recommendations immediately with lifestyle_focus:', lifestyleFocus);
     startRecommendationGeneration();
   }, [isUserLoggedIn, hasStartedRecommendation]);
-  
+
   // Start polling function (uses refs to avoid re-render loops)
   const startPolling = () => {
     // Prevent double polling
@@ -208,16 +208,16 @@ const ResearchingScreen = () => {
       console.log('⏭️ [ResearchingScreen] Polling already active, skipping');
       return;
     }
-    
+
     isPollingRef.current = true;
     console.log('🔄 [ResearchingScreen] Starting status polling (every 2.5s)');
-    
+
     pollingIntervalRef.current = setInterval(async () => {
       try {
         const status = await sessionService.getRecommendationStatus();
         if (status) {
           setRecommendationStatus(status.status);
-          
+
           // Stop status checking when completed
           if (status.status === 'completed') {
             console.log('✅ [ResearchingScreen] Recommendations completed!');
@@ -234,7 +234,7 @@ const ResearchingScreen = () => {
       }
     }, 3500); // Check every 3.5 seconds (optimized: less API load, still responsive)
   };
-  
+
   // Stop polling function
   const stopPolling = () => {
     if (pollingIntervalRef.current) {
@@ -296,9 +296,9 @@ const ResearchingScreen = () => {
             aspectRatio: 0.46,
           }}
         >
-          <Image 
+          <Image
             // source={Images.GraphicEstrogenDefault} 
-            source={Images.EstrogenBothHand} 
+            source={Images.EstrogenBothHand}
             style={{ width: '100%', height: '100%' }}
             resizeMode="contain"
           />
@@ -313,8 +313,8 @@ const ResearchingScreen = () => {
             transform: [{ rotate: "340deg" }],
           }}
         >
-          <Image 
-            source={Images.LHCharacterBothHand} 
+          <Image
+            source={Images.LHCharacterBothHand}
             style={{ width: '100%', height: '100%' }}
             resizeMode="contain"
           />
@@ -329,8 +329,8 @@ const ResearchingScreen = () => {
 
           }}
         >
-          <Image 
-            source={Images.TestosteroneBothHand} 
+          <Image
+            source={Images.TestosteroneBothHand}
             style={{ width: '100%', height: '100%' }}
             resizeMode="contain"
           />
@@ -357,8 +357,8 @@ const ResearchingScreen = () => {
                   maskElement={
                     <Text style={{
                       fontFamily: 'NotoSerif600',
+                      fontStyle: 'italic',
                       fontSize: responsiveFontSize(3.4), //24px
-                      fontFamily: "Inter600",
                       textAlign: 'center',
                       lineHeight: responsiveHeight(4),
                       backgroundColor: 'transparent'
@@ -409,8 +409,8 @@ const ResearchingScreen = () => {
                   maskElement={
                     <Text style={{
                       fontFamily: 'NotoSerif600',
+                      fontStyle: 'italic',
                       fontSize: responsiveFontSize(3.4), //24px
-                      fontFamily: "Inter600",
                       textAlign: 'center',
                       lineHeight: responsiveHeight(4),
                       backgroundColor: 'transparent'
@@ -432,7 +432,7 @@ const ResearchingScreen = () => {
               style={{
                 color: "#000",
                 fontSize: responsiveFontSize(1.98), //14px
-                fontFamily: "Inter400", 
+                fontFamily: "Inter400",
                 textAlign: "center",
                 marginBottom: 16,
               }}
@@ -456,8 +456,8 @@ const ResearchingScreen = () => {
                 maskElement={
                   <Text style={{
                     fontFamily: 'NotoSerif600',
+                    fontStyle: 'italic',
                     fontSize: responsiveFontSize(3.4), //24px
-                    fontFamily: "Inter600",
                     textAlign: 'center',
                     lineHeight: responsiveHeight(4),
                     backgroundColor: 'transparent'
@@ -505,8 +505,8 @@ const ResearchingScreen = () => {
             transform: [{ rotate: "360deg" }],
           }}
         >
-          <Image 
-            source={Images.GraphicFSHDefault} 
+          <Image
+            source={Images.GraphicFSHDefault}
             style={{ width: '100%', height: '100%' }}
             resizeMode="contain"
           />
@@ -520,8 +520,8 @@ const ResearchingScreen = () => {
             aspectRatio: 1.56,
           }}
         >
-          <Image 
-            source={Images.ProgesteroneBothHand} 
+          <Image
+            source={Images.ProgesteroneBothHand}
             style={{ width: '100%', height: '100%' }}
             resizeMode="contain"
           />
@@ -536,16 +536,16 @@ const ResearchingScreen = () => {
             transform: [{ rotate: "335deg" }],
           }}
         >
-          <Image 
-            source={Images.GraphicGnRHDefault} 
+          <Image
+            source={Images.GraphicGnRHDefault}
             style={{ width: '100%', height: '100%' }}
             resizeMode="contain"
           />
         </View>
       </View>
-      
+
       {/* No bottom button needed - login sheet shows automatically after animations + API completion */}
-      
+
       <LoginBottomSheet visible={showLogin} onClose={() => setShowLogin(false)} />
     </SafeAreaView>
   );

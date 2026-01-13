@@ -42,7 +42,7 @@ const ResultLoadingScreen = () => {
     const newOptions = selectedOptions.includes(key)
       ? selectedOptions.filter(option => option !== key)
       : [...selectedOptions, key];
-    
+
     setSelectedOptions(newOptions);
   };
 
@@ -54,23 +54,23 @@ const ResultLoadingScreen = () => {
       // Save lifestyle focus to AsyncStorage for ResearchingScreen
       await AsyncStorage.setItem('lifestyle_focus', JSON.stringify(selectedOptions));
       console.log('💾 [ResultLoadingScreen] Lifestyle focus saved:', selectedOptions);
-      
+
       // Also save to backend session immediately
       const updateSuccess = await sessionService.updateSessionLifestyleFocus(selectedOptions);
       console.log('✅ [ResultLoadingScreen] Lifestyle focus synced to backend');
-      
+
       if (updateSuccess) {
         // OPTIMIZATION: Start generation HERE immediately instead of waiting for next screen
         // This utilizes the 2.5s transition animation time for backend processing
         console.log('🚀 [ResultLoadingScreen] Pre-starting recommendation generation to reduce latency...');
-        sessionService.startRecommendationGeneration().catch(err => 
+        sessionService.startRecommendationGeneration().catch(err =>
           console.log('⚠️ [ResultLoadingScreen] Background generation start warning:', err)
         );
       }
     } catch (error) {
       console.error('❌ [ResultLoadingScreen] Failed to save lifestyle focus:', error);
     }
-    
+
     // Move to transition message step
     setStep(1);
   };
@@ -201,6 +201,7 @@ const styles = StyleSheet.create({
   },
   questionTitle: {
     fontFamily: 'NotoSerif600',
+    fontStyle: 'italic',
     fontSize: responsiveFontSize(3.4),
     textAlign: 'center',
     lineHeight: responsiveHeight(4),
