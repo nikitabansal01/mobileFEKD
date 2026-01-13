@@ -63,16 +63,14 @@ const ResultScreen = () => {
     const tier3 = sc >= 8;
     const tier2 = sc >= 4 && sc < 8;
 
-    // Progesterone (only low state currently returned by backend)
+    // Progesterone - use new sky blue hand images (not old pink calmer images)
     if (h === 'progesterone') {
       if (lvl === 'low') {
-        if (tier3) return safe(Images.ProgesteroneVerySadCalmer, Images.ProgesteroneSadCalmer);
-        if (tier2) return safe(Images.ProgesteroneSadCalmer, Images.ProgesteroneCharacter);
-        // Mild → neutral calmer baseline
-        return safe(Images.ProgesteroneCalmer, Images.ProgesteroneCharacter);
+        // Low progesterone - use subdued pose (LeftHand)
+        return safe(Images.ProgesteroneLeftHand, Images.ProgesteroneCharacter);
       }
-      // Future: map high progesterone if ever supported
-      return Images.ProgesteroneCharacter;
+      // High or neutral - use energetic pose (BothHand)
+      return safe(Images.ProgesteroneBothHand, Images.ProgesteroneCharacter);
     }
 
     // Testosterone / Androgens
@@ -177,7 +175,7 @@ const ResultScreen = () => {
   // While loading backend data, keep layout simple
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }] }>
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#A29AEA" />
       </SafeAreaView>
     );
@@ -211,7 +209,7 @@ const ResultScreen = () => {
             <View style={styles.characterContainer}>
               <AuvraCharacter size={responsiveWidth(20)} />
             </View>
-            
+
             <View style={styles.titleContainer}>
               <View style={styles.maskedView}>
                 <MaskedView
