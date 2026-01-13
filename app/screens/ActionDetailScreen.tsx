@@ -550,14 +550,10 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
               <View style={styles.titleSection}>
                 <View style={styles.titleContainer}>
                   <MaskedView
-                    style={[styles.gradientContainer, { minHeight: responsiveHeight(8) }]}
+                    style={styles.gradientContainer}
                     maskElement={
-                      <View style={{ backgroundColor: 'transparent', justifyContent: 'center', alignItems: 'center' }}>
-                        <Text
-                          style={styles.title}
-                          allowFontScaling={false}
-                          numberOfLines={3}
-                        >
+                      <View style={{ backgroundColor: 'transparent', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
+                        <Text style={styles.title} allowFontScaling={false}>
                           💡 Why {action?.title || 'Pumpkin Seeds'}?
                         </Text>
                       </View>
@@ -567,7 +563,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                       colors={['#D8A7CA', '#C17EC9']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
-                      style={{ flex: 1, width: '100%', minHeight: responsiveHeight(8) }}
+                      style={{ flex: 1, width: '100%', minHeight: responsiveHeight(10) }}
                     />
                   </MaskedView>
                 </View>
@@ -1023,7 +1019,7 @@ const styles = StyleSheet.create({
   gradientContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: responsiveHeight(8), // Increased to fit 2-3 line titles like "Why Gentle Stretching?"
+    minHeight: responsiveHeight(10), // Increased to 10 to fit 2-line titles like "Why Gentle Stretching?"
     width: '100%',
   },
   imageContainer: {
