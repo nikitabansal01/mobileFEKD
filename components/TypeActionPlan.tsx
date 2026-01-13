@@ -335,7 +335,7 @@ export default function TypeActionPlan({
   const getProgressColor = (hormone: string) => {
     switch (hormone.toLowerCase()) {
       case 'androgens': return '#F6C34C';
-      case 'progesterone': return '#FF6991';
+      case 'progesterone': return '#CBF0FF'; // Sky blue - matches other files
       case 'estrogen': return '#FF8BA7';
       case 'thyroid': return '#87CEEB';
       case 'insulin': return '#FFD700';
