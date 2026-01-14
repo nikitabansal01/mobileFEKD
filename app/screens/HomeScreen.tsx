@@ -260,6 +260,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const freshSignupCheckRef = useRef<boolean>(false);
   const initialDataLoadedRef = useRef<boolean>(false); // Prevent duplicate initial fetches
+  const feedbackShownTodayRef = useRef<boolean>(false); // Track if feedback popup was shown today
 
   // Note: Fresh signup data loading is now handled by SignupLoadingScreen
   // which waits until data is ready before navigating to HomeScreen
@@ -535,6 +536,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             }
             if (assignmentsData) {
               wireUpActionPlan(assignmentsData);
+              // Start feedback timer if this is a newly generated plan
+              // Start feedback timer (shows popup once per session after 30s)
+              startFeedbackTimer();
             }
           } else if (reviewResponse?.items && reviewResponse.items.length > 0) {
             // Use pending review items as display data when assignments blocked
@@ -594,25 +598,45 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }, []) // Empty dependency - focus is the trigger, not state changes
   );
 
-  // Reset inactivity timer - Shows Auvra modal after configured seconds from backend
-  // IMPORTANT: Don't show during review - user must complete review first
-  const resetInactivityTimer = () => {
+  // Show feedback popup ONCE per session, 30 seconds after assignments load
+  // SIMPLE: Just show once per session, no plan_source complexity
+  const startFeedbackTimer = () => {
+    const instanceId = componentIdRef.current;
+
+    // Already shown this session
+    if (feedbackShownTodayRef.current) {
+      return;
+    }
+
+    // Don't start timer if review is blocking or chat already showing
+    if (showAuvraChat || isReviewBlockingRef.current || showDailyReviewRef.current) {
+      return;
+    }
+
+    console.log(`📋 [HomeScreen:${instanceId}] Starting ${feedbackPromptSeconds}s feedback timer`);
+
+    // Clear any existing timer
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
       inactivityTimerRef.current = null;
     }
 
-    // Don't start timer if review is blocking or Auvra chat is already showing
-    if (!showAuvraChat && !isReviewBlockingRef.current && !showDailyReviewRef.current) {
-      // Use feedbackPromptSeconds from backend (default 30 seconds)
-      const timeoutMs = feedbackPromptSeconds * 1000;
-      inactivityTimerRef.current = setTimeout(() => {
-        // Double-check using REFS (not stale state) that review isn't blocking when timer fires
-        if (!isReviewBlockingRef.current && !showDailyReviewRef.current) {
-          setShowAuvraChat(true);
-        }
-      }, timeoutMs);
-    }
+    // Show popup after 30 seconds
+    const timeoutMs = feedbackPromptSeconds * 1000;
+    inactivityTimerRef.current = setTimeout(() => {
+      if (!showAuvraChat && !feedbackShownTodayRef.current) {
+        console.log(`📋 [HomeScreen:${instanceId}] Showing feedback popup`);
+        setShowAuvraChat(true);
+        feedbackShownTodayRef.current = true;
+      }
+    }, timeoutMs);
+  };
+
+  // Reset inactivity timer - DEPRECATED: Now using startFeedbackTimer instead
+  // Keeping for cleanup purposes only
+  const resetInactivityTimer = () => {
+    // Timer is now only started when a new plan is generated
+    // This function no longer starts new timers
   };
 
   // Handle user interaction
@@ -771,6 +795,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
           }
           wireUpActionPlan(assignmentsData);
+          // Start feedback timer (shows popup once per session after 30s)
+          startFeedbackTimer();
         }
 
         if (rewardsData && rewardsData.refresh_status) {

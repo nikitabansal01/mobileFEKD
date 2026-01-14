@@ -136,6 +136,7 @@ const ResultLoadingScreen = () => {
               buttonHeight={responsiveHeight(6)}
               buttonAlignment={{ justifyContent: 'center', alignItems: 'center' }}
               containerAlignment="center"
+              textStyle={{ fontSize: responsiveFontSize(2.2) }}
             />
           </View>
         </View>

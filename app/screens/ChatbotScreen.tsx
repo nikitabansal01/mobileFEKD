@@ -2684,20 +2684,22 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderRadius: scale(10),
     paddingHorizontal: scale(20),
-    paddingVertical: verticalScale(15),
+    paddingVertical: verticalScale(12),
     marginRight: scale(10),
-    // height: verticalScale(50),  // ✅ fixed height
+    minHeight: verticalScale(44),  // Minimum height (single line)
+    maxHeight: verticalScale(120), // Max height (~4 lines) then scroll
     borderWidth: 1,
     borderColor: COLORS.outlineVariant,
   },
   textInput: {
     fontSize: FONT_SIZES.small,        // e.g. 14
-    lineHeight: FONT_SIZES.message,// e.g. 18 → taller than font
+    lineHeight: FONT_SIZES.message,    // e.g. 18 → taller than font
     color: COLORS.onSurface,
-    flex: 1,
     includeFontPadding: isAndroid ? false : undefined,
-    textAlignVertical: isAndroid ? 'center' : undefined, // Better for multiline 
+    textAlignVertical: isAndroid ? 'top' : undefined, // Top align for multiline
     paddingVertical: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   // textInput: {
   //   fontSize: FONT_SIZES.message,

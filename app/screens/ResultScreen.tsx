@@ -40,82 +40,42 @@ const ResultScreen = () => {
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * Get variant character image based on hormone + level + priority.
-   * We intentionally support expressive poses to differentiate states (e.g. high vs low) when assets exist.
-   * Asset naming strategy (current assumptions based on existing files):
-   * - <Hormone>Character.png           → Neutral / baseline ("moderate" display / unknown)
-   * - <Hormone>BothHand.png / BothHandsUp.png → Elevated / "high" energetic state
-   * - <Hormone>LeftHand.png            → "low" / subdued state
-   * - ProgesteroneSadCalmer / VerySadCalmer   → Low progesterone (severity mapped by priority)
-   * - ProgesteroneSuperExcitedCalmer / ExcitedCalmer → (reserved for potential future high state if introduced)
-   * If an expected variant is missing, we gracefully fall back to the neutral Character.
+   * Get variant character image based on hormone.
+   * All hormones now use BothHand images regardless of level (high/low/moderate).
    */
   const getHormoneImage = (hormone?: string, level?: string, priority?: string, isPrimary?: boolean, score?: number) => {
     const h = (hormone || '').toLowerCase();
-    const lvl = (level || '').toLowerCase();
-    const sc = typeof score === 'number' ? score : 0;
 
     // Helper to prefer existing key safely
     const safe = (img: any, fallback: any) => img ? img : fallback;
 
-    // Severity tiers (coarse): allow broader score range future-proofing
-    // Tier 3 (strong): sc >= 8, Tier 2 (moderate): sc >= 4, Tier 1 (mild): <4
-    const tier3 = sc >= 8;
-    const tier2 = sc >= 4 && sc < 8;
-
-    // Progesterone - use new sky blue hand images (not old pink calmer images)
+    // All hormones use BothHand images regardless of level
     if (h === 'progesterone') {
-      if (lvl === 'low') {
-        // Low progesterone - use subdued pose (LeftHand)
-        return safe(Images.ProgesteroneLeftHand, Images.ProgesteroneCharacter);
-      }
-      // High or neutral - use energetic pose (BothHand)
       return safe(Images.ProgesteroneBothHand, Images.ProgesteroneCharacter);
     }
 
-    // Testosterone / Androgens
     if (h === 'androgens') {
-      if (lvl === 'high') {
-        return safe(Images.AndrogensBothHand, Images.AndrogensCharacter);
-      } else if (lvl === 'low') {
-        return safe(Images.AndrogensLeftHand, Images.AndrogensCharacter);
-      }
-      return Images.AndrogensCharacter;
+      return safe(Images.AndrogensBothHand, Images.AndrogensCharacter);
     }
 
     if (h === 'testosterone') {
-      if (lvl === 'high') {
-        // Energetic pose if available
-        return safe(Images.TestosteroneBothHand, Images.TestosteroneCharacter);
-      } else if (lvl === 'low') {
-        // Subdued pose
-        return safe(Images.TestosteroneLeftHand, Images.TestosteroneCharacter);
-      }
-      return Images.TestosteroneCharacter;
+      return safe(Images.TestosteroneBothHand, Images.TestosteroneCharacter);
     }
 
     if (h === 'estrogen') {
-      if (lvl === 'high') return safe(Images.EstrogenBothHand, Images.EstrogenCharacter);
-      if (lvl === 'low') return safe(Images.EstrogenLeftHand, Images.EstrogenCharacter);
-      return Images.EstrogenCharacter;
+      return safe(Images.EstrogenBothHand, Images.EstrogenCharacter);
     }
 
     if (h === 'insulin') {
-      if (lvl === 'high') return safe(Images.InsulinBothHand, Images.InsulinCharacter);
-      if (lvl === 'low') return safe(Images.InsulinLeftHand, Images.InsulinCharacter);
-      return Images.InsulinCharacter;
+      return safe(Images.InsulinBothHand, Images.InsulinCharacter);
     }
 
     if (h === 'cortisol') {
-      if (lvl === 'high') return safe(Images.CortisolBothHand, Images.CortisolCharacter);
-      if (lvl === 'low') return safe(Images.CortisolLeftHand, Images.CortisolCharacter);
-      return Images.CortisolCharacter;
+      return safe(Images.CortisolBothHand, Images.CortisolCharacter);
     }
 
     if (h === 'thyroid') {
-      if (lvl === 'low') return safe(Images.ThyroidLeftHand, Images.ThyroidCharacter); // Only low state currently modeled
-      if (lvl === 'high') return safe(Images.ThyroidBothHand, Images.ThyroidCharacter); // Future-proof
-      return Images.ThyroidCharacter;
+      return safe(Images.ThyroidBothHand, Images.ThyroidCharacter);
     }
 
     // Fallback generic neutral graphic if hormone not recognized
