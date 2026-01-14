@@ -46,13 +46,6 @@ export const FirstLog = createContext<FirstLogContextType | undefined>(undefined
 const Stack = createStackNavigator();
 
 export default function App() {
-  // Disable global font scaling
-  (Text as any).defaultProps = (Text as any).defaultProps || {};
-  (Text as any).defaultProps.allowFontScaling = false;
-
-  (TextInput as any).defaultProps = (TextInput as any).defaultProps || {};
-  (TextInput as any).defaultProps.allowFontScaling = false;
-
   const [loaded] = useFonts({
     Rubik400: require("./assets/fonts/Rubik-Regular.ttf"),
     Rubik500: require("./assets/fonts/Rubik-Medium.ttf"),
