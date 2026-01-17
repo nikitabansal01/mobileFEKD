@@ -875,8 +875,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         setCarePlanTapOptions(result.tap_options || []);
         setUiBlocks(result.ui_blocks || []);
 
-        // Always load history from the result (new threads have only greeting message)
-        const historyMessages = result.history || [];
+        // FORCE clear history if this is a "New Chat" request, 
+        // even if the backend returned history (e.g. reused thread or old server code)
+        const historyMessages = forceNew ? [] : (result.history || []);
         setMessages(historyMessages);
 
         setMode("idle");
