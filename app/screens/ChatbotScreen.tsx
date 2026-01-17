@@ -9,6 +9,7 @@ import homeService, { ActionPlanResponse, AssignmentsResponse } from "@/services
 import { rewardService, RewardsStatusResponse } from "@/services/rewardService";
 import chatService from "@/services/chatService";
 import { personalizationService } from "@/services/personalizationService";
+import HistoryDrawer from "@/components/HistoryDrawer";
 import symptomCheckinService, { TapOption as SymptomTapOption } from "@/services/symptomCheckinService";
 import symptomTrackingService, { SymptomOverviewResponse } from "@/services/symptomTrackingService";
 import weeklyCheckinService, { QuestionResponse, TapOption } from "@/services/weeklyCheckinService";
@@ -389,6 +390,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   // Show continue button after check-in completion
   const [showContinueButton, setShowContinueButton] = useState(false);
   const [isLoadingCheckin, setIsLoadingCheckin] = useState(false);
+
+  // History drawer state
+  const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
 
   // Handle conversation context from different chats
   useEffect(() => {
@@ -2279,6 +2283,30 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       <Header
         onClose={navigateToIndex}
         title={getHeaderTitle()}
+        showHistoryButtons={isCarePlanContext || isSymptomContext}
+        onHistory={() => setShowHistoryDrawer(true)}
+        onNewChat={() => {
+          // Reset messages and start fresh
+          setMessages([]);
+          if (isCarePlanContext) initializeCarePlanCheckin();
+          if (isSymptomContext) initializeSymptomCheckin();
+        }}
+      />
+
+      {/* History Drawer */}
+      <HistoryDrawer
+        visible={showHistoryDrawer}
+        onClose={() => setShowHistoryDrawer(false)}
+        flowType={isCarePlanContext ? 'care_plan' : isSymptomContext ? 'symptom' : 'care_plan'}
+        flowTitle={isCarePlanContext ? 'Care Plan' : isSymptomContext ? 'Symptom' : 'Chat'}
+        onSelectThread={(threadId, loadedMessages) => {
+          setMessages(loadedMessages.map((m: any) => ({ id: m.id, text: m.text, isBot: m.isBot })));
+        }}
+        onNewChat={() => {
+          setMessages([]);
+          if (isCarePlanContext) initializeCarePlanCheckin();
+          if (isSymptomContext) initializeSymptomCheckin();
+        }}
       />
 
       {mode === "idle" && renderIdleMode()}
