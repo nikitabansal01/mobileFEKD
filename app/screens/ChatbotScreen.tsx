@@ -812,9 +812,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         setSymptomTapOptions(result.tap_options || []);
         setUiBlocks(result.ui_blocks || []);
 
-        // FORCE clear history if this is a "New Chat" request, 
-        // even if the backend returned history (e.g. reused thread or old server code)
-        const historyMessages = forceNew ? [] : (result.history || []);
+        const historyMessages = result.history || [];
         setMessages(historyMessages);
 
         setMode("idle");
@@ -877,9 +875,14 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         setCarePlanTapOptions(result.tap_options || []);
         setUiBlocks(result.ui_blocks || []);
 
-        // FORCE clear history if this is a "New Chat" request, 
-        // even if the backend returned history (e.g. reused thread or old server code)
-        const historyMessages = forceNew ? [] : (result.history || []);
+        setCarePlanTapOptions(result.tap_options || []);
+        setUiBlocks(result.ui_blocks || []);
+
+        // Backend returns the new thread with greeting in 'history'.
+        // If forceNew was successful, history has exactly 1 message (greeting).
+        // If it failed (old server), history matches old thread.
+        // We trust the backend now that it is deployed.
+        const historyMessages = result.history || [];
         setMessages(historyMessages);
 
         setMode("idle");
