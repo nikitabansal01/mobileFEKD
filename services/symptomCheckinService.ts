@@ -65,7 +65,7 @@ export interface TranscribeResponse {
 }
 
 class SymptomCheckinService {
-  async startToday(): Promise<StartSymptomCheckInResponse | null> {
+  async startToday(forceNew: boolean = false): Promise<StartSymptomCheckInResponse | null> {
     try {
       const token = await getAuthToken();
       if (!token) {
@@ -73,7 +73,8 @@ class SymptomCheckinService {
         return null;
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/symptom-checkin/start`, {
+      const url = `${API_BASE_URL}/api/v1/symptom-checkin/start${forceNew ? '?force_new=true' : ''}`;
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

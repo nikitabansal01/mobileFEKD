@@ -803,16 +803,18 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     })();
   };
 
-  const initializeSymptomCheckin = async () => {
+  const initializeSymptomCheckin = async (forceNew: boolean = false) => {
     setIsLoadingCheckin(true);
     try {
-      const result = await symptomCheckinService.startToday();
+      const result = await symptomCheckinService.startToday(forceNew);
       if (result) {
         setSymptomThreadId(result.thread_id);
         setSymptomTapOptions(result.tap_options || []);
         setUiBlocks(result.ui_blocks || []);
 
-        const historyMessages = result.history || [];
+        // FORCE clear history if this is a "New Chat" request, 
+        // even if the backend returned history (e.g. reused thread or old server code)
+        const historyMessages = forceNew ? [] : (result.history || []);
         setMessages(historyMessages);
 
         setMode("idle");
@@ -2301,7 +2303,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           }
           if (isSymptomContext) {
             setSymptomThreadId(null);
-            setTimeout(() => initializeSymptomCheckin(), 100);
+            setTimeout(() => initializeSymptomCheckin(true), 100); // forceNew=true
           }
         }}
       />
@@ -2318,7 +2320,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         onNewChat={() => {
           setMessages([]);
           if (isCarePlanContext) initializeCarePlanCheckin(undefined, true); // forceNew=true
-          if (isSymptomContext) initializeSymptomCheckin();
+          if (isSymptomContext) initializeSymptomCheckin(true); // forceNew=true
         }}
       />
 
