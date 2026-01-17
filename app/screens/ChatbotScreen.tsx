@@ -2286,10 +2286,21 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         showHistoryButtons={isCarePlanContext || isSymptomContext}
         onHistory={() => setShowHistoryDrawer(true)}
         onNewChat={() => {
-          // Reset messages and start fresh
+          // Reset ALL state to start fresh
           setMessages([]);
-          if (isCarePlanContext) initializeCarePlanCheckin();
-          if (isSymptomContext) initializeSymptomCheckin();
+          setUiBlocks([]);
+          setCarePlanTapOptions([]);
+          setSymptomTapOptions([]);
+
+          if (isCarePlanContext) {
+            setCarePlanThreadId(null);
+            // Re-initialize will fetch today's thread but without previous messages showing
+            setTimeout(() => initializeCarePlanCheckin(), 100);
+          }
+          if (isSymptomContext) {
+            setSymptomThreadId(null);
+            setTimeout(() => initializeSymptomCheckin(), 100);
+          }
         }}
       />
 
