@@ -865,7 +865,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   };
 
   // Initialize care plan check-in from API (daily thread)
-  const initializeCarePlanCheckin = async (initialUserMessage?: string) => {
+  const initializeCarePlanCheckin = async (initialUserMessage?: string, skipHistory: boolean = false) => {
     setIsLoadingCheckin(true);
     try {
       const result = await carePlanCheckinService.startToday();
@@ -875,7 +875,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         setCarePlanTapOptions(result.tap_options || []);
         setUiBlocks(result.ui_blocks || []);
 
-        const historyMessages = result.history || [];
+        // Only load history if not skipping (for "New Chat" button, skip history)
+        const historyMessages = skipHistory ? [] : (result.history || []);
         setMessages(historyMessages);
 
         setMode("idle");
@@ -2294,8 +2295,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
           if (isCarePlanContext) {
             setCarePlanThreadId(null);
-            // Re-initialize will fetch today's thread but without previous messages showing
-            setTimeout(() => initializeCarePlanCheckin(), 100);
+            // Pass skipHistory=true to avoid loading old messages
+            setTimeout(() => initializeCarePlanCheckin(undefined, true), 100);
           }
           if (isSymptomContext) {
             setSymptomThreadId(null);
