@@ -2295,7 +2295,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
           if (isCarePlanContext) {
             setCarePlanThreadId(null);
-            // Pass skipHistory=true to avoid loading old messages
+            // Pass forceNew=true to create brand new thread (ChatGPT-like)
             setTimeout(() => initializeCarePlanCheckin(undefined, true), 100);
           }
           if (isSymptomContext) {
@@ -2316,7 +2316,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         }}
         onNewChat={() => {
           setMessages([]);
-          if (isCarePlanContext) initializeCarePlanCheckin();
+          if (isCarePlanContext) initializeCarePlanCheckin(undefined, true); // forceNew=true
           if (isSymptomContext) initializeSymptomCheckin();
         }}
       />
