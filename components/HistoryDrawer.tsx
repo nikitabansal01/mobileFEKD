@@ -102,7 +102,16 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
 
     const formatDateTime = (isoString: string) => {
         if (!isoString) return '';
-        const date = new Date(isoString);
+
+        // Backend sends UTC timestamps from datetime.utcnow().isoformat() which lacks 'Z'
+        // We must append 'Z' to treat it as UTC, otherwise JS treats it as local time.
+        // We only do this if it has a time component ('T') and no timezone indication.
+        let safeIso = isoString;
+        if (isoString.includes('T') && !isoString.endsWith('Z') && !isoString.includes('+')) {
+            safeIso = `${isoString}Z`;
+        }
+
+        const date = new Date(safeIso);
         const today = new Date();
 
         const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
