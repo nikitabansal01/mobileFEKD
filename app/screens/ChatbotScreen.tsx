@@ -1109,6 +1109,72 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     setIsLoadingCheckin(false);
   };
 
+  const getCurrentFlowType = () => {
+    const context = route?.params?.conversationContext?.context;
+    if (context === "care_plan_modal") return "care_plan_checkin";
+    if (context === "symptom_checkin") return "symptom_checkin";
+    if (context === "weekly_checkin") return "weekly_checkin";
+    if (context === "know_body") return "know_body";
+    if (context === "personalise") return "personalise";
+    return "weekly_checkin";
+  };
+
+  const handleHistoryPress = () => {
+    setShowHistoryDrawer(true);
+  };
+
+  const handleNewChat = () => {
+    setShowHistoryDrawer(false);
+    const context = route?.params?.conversationContext?.context;
+
+    // Reset based on context
+    if (context === "care_plan_modal") {
+      initializeCarePlanCheckin(undefined, true);
+    } else if (context === "symptom_checkin") {
+      initializeSymptomCheckin(true);
+    } else if (context === "know_body") {
+      initializeKnowBodyChat({ initialMessage: null, userResponse: null });
+    } else if (context === "personalise") {
+      initializePersonaliseChat({ initialMessage: null, userResponse: null });
+    } else {
+      initializeWeeklyCheckin(); // Weekly checkin handles new implementation differently?
+      // Assuming re-init works
+    }
+  };
+
+  const handleSelectThread = (threadId: string, historyMessages: any[]) => {
+    setShowHistoryDrawer(false);
+    const context = route?.params?.conversationContext?.context;
+
+    // Map messages
+    const mappedMessages: Message[] = historyMessages.map((msg: any) => ({
+      id: msg.id || `msg_${Date.now()}_${Math.random()}`,
+      text: msg.content || msg.text || "",
+      isBot: msg.role === 'assistant' || msg.isBot
+    }));
+
+    setMessages(mappedMessages);
+    setMode("idle");
+    setShowSlider(false);
+    setShowSelectedValue(false);
+
+    // Update IDs
+    if (context === "care_plan_modal") {
+      setCarePlanThreadId(threadId);
+      // We might need to fetch tap options for this thread?
+      // Ideally load state from thread. For now history is start.
+      setCarePlanTapOptions([]); // Reset or fetch?
+      // TODO: Ideally call a "resume thread" API to get state.
+    } else if (context === "symptom_checkin") {
+      setSymptomThreadId(threadId);
+      setSymptomTapOptions([]);
+    } else if (context === "weekly_checkin") {
+      setCheckinId(threadId);
+    } else {
+      setChatSessionId(threadId);
+    }
+  };
+
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [recordingComplete, setRecordingComplete] = useState(false);
@@ -2424,6 +2490,14 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       ) : (
         renderContent()
       )}
+      <HistoryDrawer
+        visible={showHistoryDrawer}
+        onClose={() => setShowHistoryDrawer(false)}
+        flowType={getCurrentFlowType()}
+        flowTitle={getHeaderTitle()}
+        onSelectThread={handleSelectThread}
+        onNewChat={handleNewChat}
+      />
     </SafeAreaView>
   );
   // return (
