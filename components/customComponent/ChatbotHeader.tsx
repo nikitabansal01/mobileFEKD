@@ -14,29 +14,39 @@ const FONT_SIZES = {
 };
 
 const COLORS = {
-    // Figma Light theme tokens sampled from variables
-    surface: "#FEF7FF",
-    onSurface: "#1D1B20",
-    surfaceDivider: "#E6E0E9",
-    outlineVariant: "#D7D5DE",   //make it more light
-    primaryContainer: "#EADDFF",
-    onPrimaryContainer: "#4F378A",
-    greyMedium: "#6F6F6F",
-    greyLight: "#949494",
-    white: "#FFFFFF",
+  // Figma Light theme tokens sampled from variables
+  surface: "#FEF7FF",
+  onSurface: "#1D1B20",
+  surfaceDivider: "#E6E0E9",
+  outlineVariant: "#D7D5DE",   //make it more light
+  primaryContainer: "#EADDFF",
+  onPrimaryContainer: "#4F378A",
+  greyMedium: "#6F6F6F",
+  greyLight: "#949494",
+  white: "#FFFFFF",
+  purple: "#9C27B0",
 };
 
 interface ChatbotHeaderProps {
   onClose: () => void;
   title?: string;
+  onHistory?: () => void;
+  onNewChat?: () => void;
+  showHistoryButtons?: boolean;
 }
 
-export default function ChatbotHeader({ onClose, title = "Weekly Check-in" }: ChatbotHeaderProps) {
+export default function ChatbotHeader({
+  onClose,
+  title = "Weekly Check-in",
+  onHistory,
+  onNewChat,
+  showHistoryButtons = false,
+}: ChatbotHeaderProps) {
   return (
     <View style={styles.header}>
-      <TouchableOpacity 
-        accessibilityRole="button" 
-        accessibilityLabel="Close" 
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Close"
         style={styles.closeBtn}
         onPress={onClose}
         activeOpacity={0.7}
@@ -47,6 +57,36 @@ export default function ChatbotHeader({ onClose, title = "Weekly Check-in" }: Ch
       <View style={styles.headerCenter}>
         <Text style={styles.headerTitle}>{title}</Text>
       </View>
+
+      {/* Right side buttons - History and New Chat */}
+      {showHistoryButtons && (
+        <View style={styles.rightButtons}>
+          {onHistory && (
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="History"
+              style={styles.iconBtn}
+              onPress={onHistory}
+              activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="time-outline" size={scale(22)} color={COLORS.purple} />
+            </TouchableOpacity>
+          )}
+          {onNewChat && (
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="New Chat"
+              style={styles.iconBtn}
+              onPress={onNewChat}
+              activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="add-circle-outline" size={scale(24)} color={COLORS.purple} />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -58,6 +98,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
     // backgroundColor: COLORS.surface,
     width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   closeBtn: {
     position: 'absolute',
@@ -80,5 +122,17 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoSerif400',
     color: COLORS.onSurface,
     textAlign: 'center',
+  },
+  rightButtons: {
+    position: 'absolute',
+    right: scale(16),
+    top: '50%',
+    transform: [{ translateY: -scale(12) }],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(12),
+  },
+  iconBtn: {
+    padding: scale(4),
   },
 });
