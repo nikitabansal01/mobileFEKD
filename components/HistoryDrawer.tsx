@@ -100,21 +100,19 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
         }
     };
 
-    const formatDate = (dateStr: string) => {
-        if (!dateStr) return '';
-        const date = new Date(dateStr);
+    const formatDateTime = (isoString: string) => {
+        if (!isoString) return '';
+        const date = new Date(isoString);
         const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
 
-        if (date.toDateString() === today.toDateString()) return 'Today';
-        if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+        const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
-        return date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
-        });
+        if (date.toDateString() === today.toDateString()) {
+            return `Today • ${timeStr}`;
+        }
+
+        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return `${dateStr} • ${timeStr}`;
     };
 
     if (!visible) return null;
@@ -183,8 +181,8 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                                 onPress={() => handleSelectThread(thread)}
                             >
                                 <View style={styles.threadHeader}>
-                                    <Text style={styles.threadDate}>{formatDate(thread.local_date)}</Text>
-                                    <Text style={styles.threadCount}>{thread.message_count} msg</Text>
+                                    <Text style={styles.threadDate}>{formatDateTime(thread.created_at || thread.local_date)}</Text>
+                                    {/* Removed message count as requested */}
                                 </View>
                                 <Text style={styles.threadSummary} numberOfLines={2}>
                                     {thread.summary || 'Conversation started'}
