@@ -670,7 +670,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         purpose: action.purpose || '',
         target_hormone: action.hormones?.[0] || '',
         hormone_persona_intro: action.hormone_persona_intro || '',
-        hero_image_url: action.hero_image_url,
+        hero_image_url: action.hero_image_url || '',
         research_studies: action.research_studies || [],
         is_completed: action.is_completed || false,
         is_replaced: false,
@@ -710,6 +710,11 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     if (assignmentsData) {
       setCarePlanActionPlan(buildActionPlanFromAssignments(assignmentsData));
     }
+  };
+
+  const openPlanManager = () => {
+    refreshCarePlanPlanManagerData();
+    setPlanManagerVisible(true);
   };
 
   const detectFreezeIntent = (text: string) => {
@@ -815,13 +820,13 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         const historyMessages = result.history || [];
         setMessages(historyMessages);
 
-        setMode("idle");
+        setMode("tap");
         setShowSlider(false);
         setShowSelectedValue(false);
       } else {
         setMessages([{ id: "symptom_fallback_1", text: "See any progress with your symptoms today? Track progress, wins, and difficulties.", isBot: true }]);
         setUiBlocks([]);
-        setMode("idle");
+        setMode("tap");
         setShowSlider(false);
         setShowSelectedValue(false);
       }
@@ -829,7 +834,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       console.error("Failed to initialize symptom check-in:", error);
       setMessages([{ id: "symptom_error_1", text: "See any progress with your symptoms today? Track progress, wins, and difficulties.", isBot: true }]);
       setUiBlocks([]);
-      setMode("idle");
+      setMode("tap");
       setShowSlider(false);
       setShowSelectedValue(false);
     }
@@ -885,7 +890,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         const historyMessages = result.history || [];
         setMessages(historyMessages);
 
-        setMode("idle");
+        setMode("tap");
         setShowSlider(false);
         setShowSelectedValue(false);
 
@@ -896,7 +901,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       } else {
         setMessages([{ id: "care_plan_fallback_1", text: "Quick care plan check-in — how are today’s actions going?", isBot: true }]);
         setUiBlocks([]);
-        setMode("idle");
+        setMode("tap");
         setShowSlider(false);
         setShowSelectedValue(false);
       }
@@ -904,7 +909,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       console.error("Failed to initialize care plan check-in:", error);
       setMessages([{ id: "care_plan_error_1", text: "Quick care plan check-in — how are today’s actions going?", isBot: true }]);
       setUiBlocks([]);
-      setMode("idle");
+      setMode("tap");
       setShowSlider(false);
       setShowSelectedValue(false);
     }
@@ -1119,6 +1124,27 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     return "weekly_checkin";
   };
 
+  const isPlanManagerCtaBlock = (block?: UIBlock) => {
+    if (!block) return false;
+    const title = (block.title || '').toLowerCase();
+    const subtitle = (block.subtitle || '').toLowerCase();
+    const textMatch = title.includes('care plan') || title.includes('manage plan') || subtitle.includes('manage plan');
+    const actionMatch = (block.actions || []).some((action) => {
+      const actionTitle = (action.title || '').toLowerCase();
+      const modalMatch = action.payload?.modal === 'PlanManagerModal';
+      return actionTitle.includes('manage plan') || modalMatch;
+    });
+    return textMatch || actionMatch;
+  };
+
+  const getUiBlocksForDisplay = () => {
+    const context = route?.params?.conversationContext?.context;
+    if (context === 'care_plan_modal') {
+      return (uiBlocks || []).filter((block) => !isPlanManagerCtaBlock(block));
+    }
+    return uiBlocks || [];
+  };
+
   const handleHistoryPress = () => {
     setShowHistoryDrawer(true);
   };
@@ -1161,6 +1187,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     // Update IDs
     if (context === "care_plan_modal") {
       setCarePlanThreadId(threadId);
+      setMode("tap");
       // We might need to fetch tap options for this thread?
       // Ideally load state from thread. For now history is start.
       setCarePlanTapOptions([]); // Reset or fetch?
@@ -1910,7 +1937,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   };
 
   const renderUiBlocksInline = () => {
-    if (!uiBlocks || uiBlocks.length === 0) return null;
+    const blocks = getUiBlocksForDisplay();
+    if (!blocks || blocks.length === 0) return null;
 
     const submitSliderEvent = async (block: UIBlock, value: number) => {
       const contextFromRoute = route?.params?.conversationContext;
@@ -1951,7 +1979,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
     return (
       <View style={styles.uiBlocksContainer}>
-        {uiBlocks.map((block) => (
+        {blocks.map((block) => (
           <View key={block.id} style={styles.uiBlockCard}>
             {!!block.title && <Text style={styles.uiBlockTitle}>{block.title}</Text>}
             {!!block.subtitle && <Text style={styles.uiBlockSubtitle}>{block.subtitle}</Text>}
@@ -1969,6 +1997,36 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                     <Text style={styles.uiBlockSliderChipText}>{n}</Text>
                   </TouchableOpacity>
                 ))}
+              </View>
+            ) : block.type === 'swipeable_cards' && Array.isArray(block.payload?.cards) ? (
+              <View style={styles.uiBlockCardList}>
+                {block.payload.cards.map((card: any, idx: number) => {
+                  const action = block.actions?.[idx];
+                  return (
+                    <View key={`${block.id}_card_${idx}`} style={styles.uiBlockCardItem}>
+                      <Text style={styles.uiBlockCardIndex}>{`Option ${idx + 1}`}</Text>
+                      {!!card.title && <Text style={styles.uiBlockCardTitle}>{card.title}</Text>}
+                      {!!card.description && <Text style={styles.uiBlockCardDescription}>{card.description}</Text>}
+                      {!!card.benefit && <Text style={styles.uiBlockCardBenefit}>{card.benefit}</Text>}
+                      {action ? (
+                        <TouchableOpacity
+                          activeOpacity={0.85}
+                          onPress={() => handleUiBlockAction(block, action)}
+                          style={styles.uiBlockCardActionBtn}
+                        >
+                          <LinearGradient
+                            colors={[COLORS.gradPurple, COLORS.gradPink]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.uiBlockCardActionBtnGradient}
+                          >
+                            <Text style={styles.uiBlockCardActionText}>{action.title || 'Select'}</Text>
+                          </LinearGradient>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  );
+                })}
               </View>
             ) : (
               !!block.actions?.length && (
@@ -2024,7 +2082,15 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             contentContainerStyle={styles.scrollContent}
           >
             <Avatar showMessage={false} />
-            <View style={{ marginTop: verticalScale(20) }}>
+            <View style={{ marginTop: verticalScale(8) }}>
+              {!isLoadingCheckin && (
+                <View style={styles.managePlanBar}>
+                  <TouchableOpacity style={styles.managePlanButton} onPress={openPlanManager} activeOpacity={0.85}>
+                    <Text style={styles.managePlanTitle}>Manage today’s plan</Text>
+                    <Text style={styles.managePlanMeta}>Swap items, check refreshes</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
               <View style={styles.messagesWrapper}>
                 {/* Show all messages from the messages array */}
                 {messages.map((message, index) => (
@@ -2575,16 +2641,25 @@ const styles = StyleSheet.create({
   },
 
   managePlanBar: {
-    paddingHorizontal: scale(15),
-    paddingBottom: verticalScale(10),
+    paddingLeft: scale(12),
+    paddingRight: scale(15),
+    paddingBottom: verticalScale(12),
   },
   managePlanButton: {
     borderWidth: 1,
     borderColor: COLORS.outlineVariant,
     backgroundColor: COLORS.white,
-    borderRadius: scale(14),
-    paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(12),
+    borderRadius: scale(16),
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(14),
+    ...(isAndroid
+      ? ({ elevation: 1 } as any)
+      : {
+        shadowColor: '#000',
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+      }),
   },
   managePlanTitle: {
     fontSize: FONT_SIZES.small,
@@ -2635,6 +2710,57 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: scale(8),
+  },
+  uiBlockCardList: {
+    marginTop: verticalScale(10),
+    gap: verticalScale(10),
+  },
+  uiBlockCardItem: {
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    backgroundColor: COLORS.white,
+    borderRadius: scale(14),
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(12),
+  },
+  uiBlockCardIndex: {
+    fontSize: FONT_SIZES.caption,
+    fontFamily: FONT_FAMILIES['Inter-SemiBold'],
+    color: COLORS.greyLight,
+    marginBottom: verticalScale(4),
+  },
+  uiBlockCardTitle: {
+    fontSize: FONT_SIZES.small,
+    fontFamily: FONT_FAMILIES['Inter-SemiBold'],
+    color: COLORS.onSurface,
+  },
+  uiBlockCardDescription: {
+    marginTop: verticalScale(6),
+    fontSize: FONT_SIZES.extraSmall,
+    fontFamily: FONT_FAMILIES['Inter-Regular'],
+    color: COLORS.onSurface,
+  },
+  uiBlockCardBenefit: {
+    marginTop: verticalScale(6),
+    fontSize: FONT_SIZES.extraSmall,
+    fontFamily: FONT_FAMILIES['Inter-Regular'],
+    color: COLORS.greyLight,
+  },
+  uiBlockCardActionBtn: {
+    marginTop: verticalScale(10),
+    borderRadius: scale(12),
+    overflow: 'hidden',
+  },
+  uiBlockCardActionBtnGradient: {
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(10),
+    borderRadius: scale(12),
+  },
+  uiBlockCardActionText: {
+    fontSize: FONT_SIZES.button,
+    fontFamily: FONT_FAMILIES['Inter-SemiBold'],
+    color: COLORS.white,
+    textAlign: 'center',
   },
   uiBlockActionBtn: {
     borderRadius: scale(12),

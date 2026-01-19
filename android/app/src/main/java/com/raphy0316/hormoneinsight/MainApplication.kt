@@ -12,6 +12,9 @@ import com.facebook.react.ReactHost
 import com.facebook.react.common.ReleaseLevel
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint
 import com.facebook.react.defaults.DefaultReactNativeHost
+import com.facebook.react.soloader.OpenSourceMergedSoMapping
+import com.facebook.soloader.SoLoader
+import java.io.IOException
 
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
@@ -45,6 +48,16 @@ class MainApplication : Application(), ReactApplication {
     } catch (e: IllegalArgumentException) {
       ReleaseLevel.STABLE
     }
+
+    // Initialize SoLoader with RN's merged-so mapping so libraries like
+    // `react_featureflagsjni` are resolved from the merged `reactnative` DSO.
+    // Fixes crash: missing `libreact_featureflagsjni.so` on some devices.
+    try {
+      SoLoader.init(this, OpenSourceMergedSoMapping)
+    } catch (e: IOException) {
+      throw RuntimeException(e)
+    }
+
     loadReactNative(this)
     ApplicationLifecycleDispatcher.onApplicationCreate(this)
   }

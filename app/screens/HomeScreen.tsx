@@ -1825,6 +1825,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                   try {
                     const result = await homeService.refreshAllIncomplete();
                     if (result?.success) {
+                      // Log replacement details for debugging
+                      console.log('🔄 Refresh result:', JSON.stringify({
+                        replaced_count: result.replaced_count,
+                        has_replacements: !!result.replacements?.length,
+                        refresh_status: result.refresh_status,
+                      }));
+
                       Alert.alert(
                         '✅ Refreshed!',
                         result.message,
@@ -1833,7 +1840,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                       if (result.refresh_status) {
                         setRefreshStatus(result.refresh_status);
                       }
-                      // Reload assignments
+
+                      // Add small delay to ensure DB commit is fully visible
+                      await new Promise(resolve => setTimeout(resolve, 300));
+
+                      // Reload assignments to get fresh data
                       const newAssignments = await homeService.getTodayAssignments();
                       setAssignments(newAssignments);
                       if (newAssignments) wireUpActionPlan(newAssignments);

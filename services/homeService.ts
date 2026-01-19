@@ -734,6 +734,11 @@ class HomeService {
     message: string;
     error?: string;
     replaced_count?: number;
+    replacements?: Array<{
+      original_id: number;
+      new_id: number;
+      new_action: ActionPlanItem;
+    }>;
     refresh_status?: { limit: number; used: number; remaining: number; can_refresh: boolean };
   } | null> {
     try {
