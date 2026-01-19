@@ -2,55 +2,11 @@
   "expo": {
     "name": "Hormone Insight",
     "slug": "auvra-fe",
-    "scheme": "hormoneinsight",
     "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/images/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff",
-      "hideExponentText": true
-    },
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.raphy0316.hormoneinsight",
-      "infoPlist": {
-        "NSMicrophoneUsageDescription": "Auvra needs access to your microphone for voice transcription so you can speak your messages instead of typing.",
-        "NSSpeechRecognitionUsageDescription": "Auvra uses speech recognition to convert your voice to text for easier messaging."
-      }
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "package": "com.raphy0316.hormoneinsight",
-      "permissions": [
-        "INTERNET",
-        "ACCESS_NETWORK_STATE",
-        "RECORD_AUDIO"
-      ],
-      "versionCode": 4
-    },
     "web": {
       "bundler": "metro",
       "favicon": "./assets/images/favicon.png"
     },
-    "plugins": [
-      "expo-font",
-      "expo-router",
-      "expo-web-browser",
-      [
-        "expo-av",
-        {
-          "microphonePermission": "Auvra needs access to your microphone for voice transcription."
-        }
-      ]
-    ],
     "extra": {
       "router": {},
       "eas": {

@@ -29,9 +29,7 @@ import {
   View
 } from "react-native";
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
-import { verticalScale } from "react-native-size-matters";
 import TextInputContainer from "./customComponent/TextInputContainer";
-import FixedBottomContainer from "./FixedBottomContainer";
 import PrimaryButton from "./PrimaryButton";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -305,10 +303,11 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
 
         <KeyboardAvoidingView
           style={styles.keyboardAvoidingView}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={'padding'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
         >
           <ScrollView
+            style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
@@ -333,6 +332,12 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
                   placeholder="Email address or Phone Number"
                   value={email}
                   onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="username"
+                  autoComplete="email"
+                  returnKeyType="next"
                   containerStyle={styles.textInput}
                 />
               </View>
@@ -344,6 +349,11 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={true}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="password"
+                  autoComplete="password"
+                  returnKeyType="next"
                   containerStyle={styles.textInput}
                 />
               </View>
@@ -355,6 +365,11 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={true}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="password"
+                  autoComplete="password"
+                  returnKeyType="done"
                   containerStyle={styles.textInput}
                 />
               </View>
@@ -407,16 +422,16 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
                 <Text style={styles.termsLink}>Privacy Policy</Text>
               </Text>
             </View>
-          </ScrollView>
 
-          {/* Bottom Button */}
-          <FixedBottomContainer>
-            <PrimaryButton
-              title={loading ? loadingMessage : "Sign up"}
-              onPress={handleSignup}
-              disabled={loading || !email || !password || !confirmPassword}
-            />
-          </FixedBottomContainer>
+            {/* Bottom Button - inside ScrollView so it scrolls with content */}
+            <View style={styles.buttonContainer}>
+              <PrimaryButton
+                title={loading ? loadingMessage : "Sign up"}
+                onPress={handleSignup}
+                disabled={loading || !email || !password || !confirmPassword}
+              />
+            </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Animated.View>
     </Modal>
@@ -439,7 +454,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     zIndex: 2,
     paddingTop: 8,
+    height: SCREEN_HEIGHT * 0.95,
     maxHeight: '95%',
+    overflow: 'hidden',
   },
   handleBar: {
     width: responsiveWidth(36),
@@ -453,7 +470,11 @@ const styles = StyleSheet.create({
   keyboardAvoidingView: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: responsiveWidth(5),
     paddingBottom: responsiveHeight(10),
   },
@@ -554,8 +575,12 @@ const styles = StyleSheet.create({
     lineHeight: responsiveFontSize(1.98) * 1.25,
   },
   termsContainer: {
-    marginBottom: verticalScale(20),
-    paddingBottom: verticalScale(30),
+    marginBottom: responsiveHeight(2),
+  },
+  buttonContainer: {
+    marginTop: responsiveHeight(1),
+    marginBottom: responsiveHeight(4),
+    paddingHorizontal: responsiveWidth(1),
   },
   termsText: {
     fontFamily: "Inter400",

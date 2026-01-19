@@ -187,7 +187,7 @@ const LoginScreen = () => {
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={'padding'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         {/* Scrollable Content - entire screen slides up with keyboard */}
@@ -222,6 +222,12 @@ const LoginScreen = () => {
               placeholder="Email address or Phone Number"
               value={email}
               onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="username"
+              autoComplete="email"
+              returnKeyType="next"
               containerStyle={styles.textInput}
             />
           </View>
@@ -233,6 +239,11 @@ const LoginScreen = () => {
               value={password}
               onChangeText={setPassword}
               secureTextEntry={true}
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="password"
+              autoComplete="password"
+              returnKeyType="done"
               containerStyle={styles.textInput}
             />
           </View>
