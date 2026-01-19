@@ -141,6 +141,59 @@ const ResultScreen = () => {
     );
   }
 
+  // ... (previous imports)
+
+  // Reusable Hormone Card Component
+  const HormoneCard = ({ cardData, isSecondary = false }: { cardData: any, isSecondary?: boolean }) => {
+    if (!cardData) return null;
+
+    const imageSource = getHormoneImage(
+      cardData.hormone,
+      cardData.level,
+      cardData.priority,
+      cardData.is_primary,
+      cardData.score
+    );
+
+    return (
+      <View style={styles.cardWrapper}>
+        <View style={styles.hormoneCard}>
+          <View style={styles.cardContent}>
+            {/* Left Side: Text Content */}
+            <View style={styles.textContent}>
+              {/* Title and Subtitle */}
+              <Text style={styles.hormoneName}>
+                {cardData.name}, <Text style={styles.hormoneSubtitle}>{cardData.subtitle}</Text>
+              </Text>
+
+              {/* Description */}
+              <Text style={styles.hormoneDescription}>
+                {cardData.icon}{' '}
+                {cardData.description}
+              </Text>
+            </View>
+
+            {/* Right Side: Image Content */}
+            <View style={styles.imageContainer}>
+              <Image
+                source={imageSource}
+                style={styles.hormoneImage}
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* Priority Badge */}
+        {cardData.priority ? (
+          <View style={styles.priorityBadge}>
+            <Text style={styles.priorityText}>{cardData.priority}</Text>
+          </View>
+        ) : null}
+      </View>
+    );
+  };
+
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Back button */}
@@ -194,78 +247,10 @@ const ResultScreen = () => {
           {/* Hormone cards */}
           <View style={styles.cardsContainer}>
             {/* Primary hormone card */}
-            {primaryCard && (
-              <View style={styles.cardWrapper}>
-                <View style={styles.hormoneCard}>
-                  <View style={styles.cardContent}>
-                    {/* Title and Subtitle */}
-                    <View style={styles.titleSubtitleContainer}>
-                      <Text style={styles.hormoneName}>
-                        {primaryCard.name}, <Text style={styles.hormoneSubtitle}>{primaryCard.subtitle}</Text>
-                      </Text>
-                    </View>
-
-                    {/* Description */}
-                    <View style={styles.textSection}>
-                      <Text style={styles.hormoneDescription}>
-                        {primaryCard.icon}{' '}
-                        {primaryCard.description}
-                      </Text>
-                    </View>
-
-                    {/* Hormone-specific character image */}
-                    <View style={[styles.graphicSection, styles.progesteroneGraphic]}>
-                      <Image
-                        source={getHormoneImage(primaryCard.hormone, primaryCard.level, primaryCard.priority, primaryCard.is_primary, primaryCard.score)}
-                        style={{ width: scale(120), height: verticalScale(120), resizeMode: 'contain' }}
-                      />
-                    </View>
-                  </View>
-                </View>
-                {primaryCard.priority ? (
-                  <View style={styles.priorityBadge}>
-                    <Text style={styles.priorityText}>{primaryCard.priority}</Text>
-                  </View>
-                ) : null}
-              </View>
-            )}
+            {primaryCard && <HormoneCard cardData={primaryCard} />}
 
             {/* Secondary hormone card */}
-            {secondaryCard && (
-              <View style={styles.cardWrapper}>
-                <View style={styles.hormoneCard}>
-                  <View style={styles.cardContent}>
-                    {/* Title and Subtitle */}
-                    <View style={styles.titleSubtitleContainer}>
-                      <Text style={styles.hormoneName}>
-                        {secondaryCard.name}, <Text style={styles.hormoneSubtitle}>{secondaryCard.subtitle}</Text>
-                      </Text>
-                    </View>
-
-                    {/* Description */}
-                    <View style={styles.textSection}>
-                      <Text style={styles.hormoneDescription}>
-                        {secondaryCard.icon}{' '}
-                        {secondaryCard.description}
-                      </Text>
-                    </View>
-
-                    {/* Hormone-specific character image */}
-                    <View style={[styles.graphicSection, styles.testosteroneGraphic]}>
-                      <Image
-                        source={getHormoneImage(secondaryCard.hormone, secondaryCard.level, secondaryCard.priority, secondaryCard.is_primary, secondaryCard.score)}
-                        style={{ width: scale(120), height: verticalScale(120), resizeMode: 'contain' }}
-                      />
-                    </View>
-                  </View>
-                </View>
-                {secondaryCard.priority ? (
-                  <View style={styles.priorityBadge}>
-                    <Text style={styles.priorityText}>{secondaryCard.priority}</Text>
-                  </View>
-                ) : null}
-              </View>
-            )}
+            {secondaryCard && <HormoneCard cardData={secondaryCard} isSecondary />}
 
             {/* Fallback when no cards */}
             {!primaryCard && !secondaryCard && (
@@ -312,8 +297,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: responsiveHeight(5), // Move Auvra character position up
     paddingHorizontal: responsiveWidth(5),
-    // paddingBottom: responsiveHeight(10), // Sufficient space for bottom button
-    // flexGrow: 1, // Use full height even when content is small
   },
   headerSection: {
     alignItems: 'center',
@@ -333,10 +316,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  gradientText: {
-    width: '100%',
-    height: '100%',
-  },
   title: {
     fontFamily: 'NotoSerif600',
     fontSize: moderateScale(16, 1.5),
@@ -345,91 +324,85 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   cardsContainer: {
-    width: responsiveWidth(78),
-    gap: responsiveHeight(2.7),
+    width: responsiveWidth(85), // Slightly wider container
+    gap: responsiveHeight(2.5),
   },
   cardWrapper: {
     position: 'relative',
-    marginTop: responsiveHeight(1), // Margin for High Priority tag
+    marginTop: responsiveHeight(1),
   },
   hormoneCard: {
     backgroundColor: '#FFFBFC',
-    borderRadius: 12,
-    padding: responsiveWidth(6),
-    position: 'relative',
+    borderRadius: 16,
+    padding: responsiveWidth(5),
     borderWidth: 0.5,
     borderColor: '#cfcfcf',
     elevation: 3,
-    overflow: 'hidden', // Clip parts that extend beyond card area
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    overflow: 'hidden',
+    minHeight: verticalScale(130), // Increased fixed min height for consistency
   },
   cardContent: {
-    flexDirection: 'column', // Vertical layout
-    alignItems: 'flex-start', // Left alignment
-    position: 'relative', // Reference point for absolute positioned elements
+    flexDirection: 'row', // KEY CHANGE: Flex Row layout
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
   },
-  textSection: {
-    maxWidth: responsiveWidth(46), // Limit maximum width for text area (description only)
-    zIndex: 2, // Display above image (zIndex: 1)
+  textContent: {
+    flex: 1, // Takes up remaining space
+    paddingRight: responsiveWidth(2),
+    justifyContent: 'center',
+  },
+  imageContainer: {
+    width: scale(100), // Fixed width for image container
+    height: verticalScale(100), // Fixed height for image container
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  hormoneImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain', // Ensure image fits within container without cropping
   },
   hormoneName: {
     fontFamily: 'Inter600',
-    fontSize: responsiveFontSize(1.98), //14px
+    fontSize: responsiveFontSize(2),
     color: '#000000',
-    lineHeight: responsiveHeight(2),
-    fontFamily: 'Inter600',
+    lineHeight: responsiveHeight(2.8),
+    marginBottom: responsiveHeight(0.5),
   },
   hormoneSubtitle: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.7), //12px
+    fontSize: responsiveFontSize(1.7),
     color: '#6f6f6f',
   },
   hormoneDescription: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.7), //12px
+    fontSize: responsiveFontSize(1.6), // Slightly smaller for better fit
     color: '#6f6f6f',
-    lineHeight: responsiveHeight(2),
-    marginTop: responsiveHeight(0.5),
-  },
-  underlineText: {
-    textDecorationLine: 'underline',
-    textDecorationStyle: 'dotted',
-    textDecorationColor: 'rgba(0,0,0,0.5)',
-  },
-  graphicSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'absolute', // Absolute positioning
-    zIndex: 1, // Display behind text
-  },
-  progesteroneGraphic: {
-    right: scale(-22), // Progesterone image position
-    bottom: verticalScale(-38), // Relative position from card bottom
-  },
-  testosteroneGraphic: {
-    // right: responsiveWidth(-21), // Testosterone image position (more to the right)
-    // bottom: responsiveHeight(-8.5), // Relative position from card bottom
-    right: scale(-22), // Progesterone image position
-    bottom: verticalScale(-25)
+    lineHeight: responsiveHeight(2.2),
   },
   priorityBadge: {
     position: 'absolute',
-    top: responsiveHeight(-1.3), // Slightly above card
+    top: responsiveHeight(-1.3),
     left: responsiveWidth(4),
     backgroundColor: '#F2F0F2',
-    paddingHorizontal: responsiveWidth(2),
+    paddingHorizontal: responsiveWidth(3),
     paddingVertical: responsiveHeight(0.3),
     borderRadius: 13,
     borderWidth: 0.5,
     borderColor: '#e0e0e0',
-    elevation: 1,
-    zIndex: 10, // Display above image (zIndex: 1) with high zIndex
+    elevation: 4,
+    zIndex: 10,
   },
   priorityText: {
     fontFamily: 'Inter500',
-    fontSize: responsiveFontSize(1.42), //10px
+    fontSize: responsiveFontSize(1.4),
     color: '#6f6f6f',
     textAlign: 'center',
-    fontFamily: 'Inter500',
   },
   disclaimerContainer: {
     marginBottom: responsiveHeight(2),
@@ -437,15 +410,10 @@ const styles = StyleSheet.create({
   },
   disclaimerText: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.42), //10px
+    fontSize: responsiveFontSize(1.42),
     color: '#6f6f6f',
     textAlign: 'center',
     lineHeight: responsiveHeight(1.5),
-  },
-  titleSubtitleContainer: {
-    flex: 1,
-    marginBottom: responsiveHeight(0.5),
-    zIndex: 2, // Display above image (zIndex: 1)
   },
 });
 
