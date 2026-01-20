@@ -5,7 +5,7 @@ import { View, Text, StyleSheet, ActivityIndicator, Animated } from 'react-nativ
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import auth from '@react-native-firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { API_BASE_URL } from '../../constants/api';
 import AuvraCharacter from '../../components/AuvraCharacter';
 
@@ -133,7 +133,7 @@ const SignupLoadingScreen = () => {
 
       // Session link is done! Now poll for actual plan existence
       try {
-        const user = auth().currentUser;
+        const user = getAuth().currentUser;
         if (!user) {
           console.log('⚠️ No user found, navigating anyway');
           navigateToHome();
