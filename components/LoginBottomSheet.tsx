@@ -292,171 +292,177 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       transparent
       onRequestClose={onClose}
     >
-      <Pressable style={styles.overlay} onPress={onClose} />
-      <Animated.View
-        style={[
-          styles.bottomSheetCard,
-          { transform: [{ translateY: slideAnim }] },
-        ]}
-      >
-        <View style={styles.handleBar} />
-
+      <View style={styles.modalContainer}>
+        <Pressable style={styles.overlay} onPress={onClose} />
         <KeyboardAvoidingView
           style={styles.keyboardAvoidingView}
-          behavior={'padding'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
+          <Animated.View
+            style={[
+              styles.bottomSheetCard,
+              { transform: [{ translateY: slideAnim }] },
+            ]}
           >
-            {/* Header Section */}
-            <View style={styles.headerContainer}>
-              <Text style={styles.subHeaderText}>But first...</Text>
-              <View style={styles.gradientTitleContainer}>
-                <GradientText
-                  text="How would you like to sign up?"
-                  textStyle={styles.gradientTitleText}
-                  containerStyle={styles.maskedView}
-                />
-              </View>
-            </View>
+            <View style={styles.handleBar} />
 
-            {/* Form Section */}
-            <View style={styles.formContainer}>
-              {/* Email Input */}
-              <View style={styles.inputContainer}>
-                <TextInputContainer
-                  placeholder="Email address or Phone Number"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  textContentType="username"
-                  autoComplete="email"
-                  returnKeyType="next"
-                  containerStyle={styles.textInput}
-                />
-              </View>
-
-              {/* Password Input */}
-              <View style={styles.inputContainer}>
-                <TextInputContainer
-                  placeholder="Set Password"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={true}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  textContentType="password"
-                  autoComplete="password"
-                  returnKeyType="next"
-                  containerStyle={styles.textInput}
-                />
-              </View>
-
-              {/* Confirm Password Input */}
-              <View style={styles.inputContainer}>
-                <TextInputContainer
-                  placeholder="Confirm Password"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={true}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  textContentType="password"
-                  autoComplete="password"
-                  returnKeyType="done"
-                  containerStyle={styles.textInput}
-                />
-              </View>
-
-              {/* Remember Me */}
-              <TouchableOpacity
-                style={styles.rememberContainer}
-                onPress={() => setRememberMe(!rememberMe)}
-              >
-                <View style={[styles.checkbox, rememberMe && styles.checkboxSelected]}>
-                  {rememberMe && <RightTickSvg size={responsiveFontSize(1.4)} color="#FFF" />}
+            <ScrollView
+              style={styles.scrollView}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              bounces={true}
+              nestedScrollEnabled={true}
+            >
+              {/* Header Section */}
+              <View style={styles.headerContainer}>
+                <Text style={styles.subHeaderText}>But first...</Text>
+                <View style={styles.gradientTitleContainer}>
+                  <GradientText
+                    text="How would you like to sign up?"
+                    textStyle={styles.gradientTitleText}
+                    containerStyle={styles.maskedView}
+                  />
                 </View>
-                <Text style={styles.rememberText}>Remember me</Text>
-              </TouchableOpacity>
-            </View>
+              </View>
 
-            {/* Divider */}
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
+              {/* Form Section */}
+              <View style={styles.formContainer}>
+                {/* Email Input */}
+                <View style={styles.inputContainer}>
+                  <TextInputContainer
+                    placeholder="Email address or Phone Number"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    textContentType="username"
+                    autoComplete="email"
+                    returnKeyType="next"
+                    containerStyle={styles.textInput}
+                  />
+                </View>
 
-            {/* Social Login Buttons */}
-            <View style={styles.socialContainer}>
-              <TouchableOpacity
-                style={styles.socialButton}
-                onPress={handleGoogleSignin}
-                disabled={!googleRequest}
-              >
-                <GoogleIconSvg />
-                <Text style={styles.socialButtonText}>Sign up with Google</Text>
-              </TouchableOpacity>
+                {/* Password Input */}
+                <View style={styles.inputContainer}>
+                  <TextInputContainer
+                    placeholder="Set Password"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={true}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    textContentType="password"
+                    autoComplete="password"
+                    returnKeyType="next"
+                    containerStyle={styles.textInput}
+                  />
+                </View>
 
-              <TouchableOpacity
-                style={styles.socialButton}
-                onPress={handleAppleSignin}
-              >
-                <AppleIconSvg />
-                <Text style={styles.socialButtonText}>Sign up with Apple</Text>
-              </TouchableOpacity>
-            </View>
+                {/* Confirm Password Input */}
+                <View style={styles.inputContainer}>
+                  <TextInputContainer
+                    placeholder="Confirm Password"
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={true}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    textContentType="password"
+                    autoComplete="password"
+                    returnKeyType="done"
+                    containerStyle={styles.textInput}
+                  />
+                </View>
 
-            {/* Terms and Conditions */}
-            <View style={styles.termsContainer}>
-              <Text style={styles.termsText}>
-                By signing up, you agree to Auvra by Hormone Insight's{' '}
-                <Text style={styles.termsLink}>Terms and Conditions</Text>
-                {' '}and{' '}
-                <Text style={styles.termsLink}>Privacy Policy</Text>
-              </Text>
-            </View>
+                {/* Remember Me */}
+                <TouchableOpacity
+                  style={styles.rememberContainer}
+                  onPress={() => setRememberMe(!rememberMe)}
+                >
+                  <View style={[styles.checkbox, rememberMe && styles.checkboxSelected]}>
+                    {rememberMe && <RightTickSvg size={responsiveFontSize(1.4)} color="#FFF" />}
+                  </View>
+                  <Text style={styles.rememberText}>Remember me</Text>
+                </TouchableOpacity>
+              </View>
 
-            {/* Bottom Button - inside ScrollView so it scrolls with content */}
-            <View style={styles.buttonContainer}>
-              <PrimaryButton
-                title={loading ? loadingMessage : "Sign up"}
-                onPress={handleSignup}
-                disabled={loading || !email || !password || !confirmPassword}
-              />
-            </View>
-          </ScrollView>
+              {/* Divider */}
+              <View style={styles.dividerContainer}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              {/* Social Login Buttons */}
+              <View style={styles.socialContainer}>
+                <TouchableOpacity
+                  style={styles.socialButton}
+                  onPress={handleGoogleSignin}
+                  disabled={!googleRequest}
+                >
+                  <GoogleIconSvg />
+                  <Text style={styles.socialButtonText}>Sign up with Google</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.socialButton}
+                  onPress={handleAppleSignin}
+                >
+                  <AppleIconSvg />
+                  <Text style={styles.socialButtonText}>Sign up with Apple</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Terms and Conditions */}
+              <View style={styles.termsContainer}>
+                <Text style={styles.termsText}>
+                  By signing up, you agree to Auvra by Hormone Insight's{' '}
+                  <Text style={styles.termsLink}>Terms and Conditions</Text>
+                  {' '}and{' '}
+                  <Text style={styles.termsLink}>Privacy Policy</Text>
+                </Text>
+              </View>
+
+              {/* Bottom Button */}
+              <View style={styles.buttonContainer}>
+                <PrimaryButton
+                  title={loading ? loadingMessage : "Sign up"}
+                  onPress={handleSignup}
+                  disabled={loading || !email || !password || !confirmPassword}
+                />
+              </View>
+
+              {/* Extra padding for keyboard */}
+              <View style={{ height: responsiveHeight(10) }} />
+            </ScrollView>
+          </Animated.View>
         </KeyboardAvoidingView>
-      </Animated.View>
+      </View>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(217, 217, 217, 0.5)",
-    zIndex: 1,
+  },
+  keyboardAvoidingView: {
+    maxHeight: '95%',
   },
   bottomSheetCard: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    zIndex: 2,
     paddingTop: 8,
-    height: SCREEN_HEIGHT * 0.95,
-    maxHeight: '95%',
-    overflow: 'hidden',
+    maxHeight: SCREEN_HEIGHT * 0.92,
   },
   handleBar: {
     width: responsiveWidth(36),
@@ -466,9 +472,6 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginTop: 8,
     marginBottom: 20,
-  },
-  keyboardAvoidingView: {
-    flex: 1,
   },
   scrollView: {
     flex: 1,
