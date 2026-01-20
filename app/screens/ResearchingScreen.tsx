@@ -264,15 +264,18 @@ const ResearchingScreen = () => {
     }
   }, [step]);
 
-  // Auto-show login when animations complete AND API is done
+  // Auto-show login when animations complete - DON'T wait for API!
+  // Generation continues in background while user fills signup form
+  // SignupLoadingScreen will wait for plan readiness after signup
   useEffect(() => {
-    if (step === 2 && canProceedToFinal && !showLogin && !isUserLoggedIn) {
+    if (step === 2 && !showLogin && !isUserLoggedIn) {
       const timer = setTimeout(() => {
+        console.log('🚀 [ResearchingScreen] Showing signup - generation status:', recommendationStatus);
         setShowLogin(true);
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [step, canProceedToFinal, showLogin, isUserLoggedIn]);
+  }, [step, showLogin, isUserLoggedIn]);
 
   // Show loading while checking auth state
   if (!authChecked) {

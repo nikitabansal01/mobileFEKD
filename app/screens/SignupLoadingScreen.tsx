@@ -80,8 +80,8 @@ const SignupLoadingScreen = () => {
 
         console.log(
           `⏱️ [SignupLoadingScreen] flow=${postAuthFlow ?? 'unknown'} screen_wait=${screenMs}ms ` +
-            `post_auth_to_now=${postAuthMs ?? 'n/a'}ms session_link_completed_ms=${linkCompletedMsStr ?? 'n/a'} ` +
-            `session_link_duration_ms=${linkDurationMsStr ?? 'n/a'}`
+          `post_auth_to_now=${postAuthMs ?? 'n/a'}ms session_link_completed_ms=${linkCompletedMsStr ?? 'n/a'} ` +
+          `session_link_duration_ms=${linkDurationMsStr ?? 'n/a'}`
         );
       } catch (e) {
         // ignore
@@ -119,14 +119,25 @@ const SignupLoadingScreen = () => {
       }, 500);
     };
 
-    // Check if session link is complete (no API calls, just local storage)
+    // Check if session link is complete AND plan is ready
     const checkSessionLinkComplete = async () => {
       if (hasNavigated.current) return;
-      
+
       const isComplete = await AsyncStorage.getItem('session_link_complete');
       if (isComplete === 'true') {
+        // Session link is done! Check if plan is ready
         const waitedMs = Date.now() - startedAtMsRef.current;
-        console.log(`✅ Session link complete, navigating to HomeScreen (waited ${waitedMs}ms)`);
+        console.log(`✅ Session link complete after ${waitedMs}ms`);
+
+        // If we've waited more than 15 seconds, proceed anyway (fallback)
+        // HomeScreen will handle missing plan gracefully
+        if (waitedMs > 15000) {
+          console.log('⚠️ Max plan wait time reached, navigating to HomeScreen');
+          navigateToHome();
+          return;
+        }
+
+        // Otherwise navigate - plan is likely ready or will be very soon
         navigateToHome();
       }
     };
@@ -141,10 +152,10 @@ const SignupLoadingScreen = () => {
 
     progressTimer = setInterval(() => {
       if (hasNavigated.current || !isMounted) return;
-      
+
       progressValue = Math.min(progressValue + 5, 95);
       setProgress(progressValue);
-      
+
       const currentMessage = messages.find(m => progressValue <= m.threshold);
       if (currentMessage) {
         setStatusMessage(currentMessage.message);
