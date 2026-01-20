@@ -165,12 +165,12 @@ const SignupLoadingScreen = () => {
     // Check every 300ms if session link is complete
     checkInterval = setInterval(checkSessionLinkComplete, 300);
 
-    // Max wait of 30 seconds, then navigate anyway
-    // Session link can take 15+ seconds for recommendation generation
+    // Max wait of 120 seconds (backend waits up to 90s for guest plan)
+    // Session link can take 90+ seconds when waiting for plan generation
     maxWaitTimeout = setTimeout(() => {
-      console.log('⚠️ Max wait time reached, navigating anyway');
+      console.log('⚠️ Max wait time reached (120s), navigating anyway');
       navigateToHome();
-    }, 30000);
+    }, 120000);
 
     // Initial check
     checkSessionLinkComplete();
