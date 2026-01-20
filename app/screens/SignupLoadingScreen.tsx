@@ -5,7 +5,10 @@ import { View, Text, StyleSheet, ActivityIndicator, Animated } from 'react-nativ
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import auth from '@react-native-firebase/auth';
+import { API_BASE_URL } from '../../constants/api';
 import AuvraCharacter from '../../components/AuvraCharacter';
+
 
 /**
  * Loading screen shown after signup.
@@ -130,7 +133,6 @@ const SignupLoadingScreen = () => {
 
       // Session link is done! Now poll for actual plan existence
       try {
-        const auth = (await import('@react-native-firebase/auth')).default;
         const user = auth().currentUser;
         if (!user) {
           console.log('⚠️ No user found, navigating anyway');
@@ -139,7 +141,6 @@ const SignupLoadingScreen = () => {
         }
 
         const token = await user.getIdToken();
-        const { API_BASE_URL } = await import('../../constants/api');
 
         const response = await fetch(
           `${API_BASE_URL}/api/v1/new-scheduling/assignments/today?timezone=${Intl.DateTimeFormat().resolvedOptions().timeZone}`,
