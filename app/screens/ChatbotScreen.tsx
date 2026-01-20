@@ -2342,20 +2342,26 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             {renderUiBlocksInline()}
           </View>
         </View>
-        <View style={styles.choiceOptionsContainer}>
-          <View style={styles.choiceOptionsGrid}>
-            {choiceOptions.map((option, index) => (
-              <ChoiceButton
-                key={`${option.id}_${index}`}
-                option={option}
-                isSelected={route?.params?.conversationContext?.context === "weekly_checkin" && selectedOptions.includes(option.id)}
-                onPress={() => handleChoicePress(option)}
-              />
-            ))}
-          </View>
-        </View>
-        <View style={{ flex: 1 }} />
       </ScrollView>
+
+      {/* Choice options - OUTSIDE ScrollView so they don't scroll with messages */}
+      <View style={styles.choiceOptionsContainer}>
+        <ScrollView
+          horizontal={false}
+          showsVerticalScrollIndicator={false}
+          style={{ maxHeight: verticalScale(180) }}
+          contentContainerStyle={styles.choiceOptionsGrid}
+        >
+          {choiceOptions.map((option, index) => (
+            <ChoiceButton
+              key={`${option.id}_${index}`}
+              option={option}
+              isSelected={route?.params?.conversationContext?.context === "weekly_checkin" && selectedOptions.includes(option.id)}
+              onPress={() => handleChoicePress(option)}
+            />
+          ))}
+        </ScrollView>
+      </View>
 
       {/* Hide input controls when viewing completed weekly check-in */}
       {!(route?.params?.conversationContext?.context === "weekly_checkin" && isCheckinAlreadyCompleted) && (
