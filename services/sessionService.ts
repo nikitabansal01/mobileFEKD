@@ -430,9 +430,14 @@ class SessionService {
   /**
    * Validates session and recreates if necessary
    * 
+   * IMPORTANT: This method now PRESERVES existing sessions even if the backend
+   * returns 404. This prevents data loss when navigating between screens during
+   * the onboarding flow (e.g., after questionnaire but before signup).
+   * 
+   * @param forceValidate - If true, actually validates with backend. Default false.
    * @returns Promise resolving to validation success status
    */
-  async validateAndRefreshSession(): Promise<boolean> {
+  async validateAndRefreshSession(forceValidate: boolean = false): Promise<boolean> {
     try {
       const sessionId = await this.getSessionId();
       if (!sessionId) {
@@ -441,7 +446,15 @@ class SessionService {
         return newSession !== null;
       }
 
-      // Check if existing session is valid (new endpoint)
+      // If we already have a session ID and don't need to force validate,
+      // just return true. This prevents creating a new session after questionnaire
+      // completion when user navigates between screens.
+      if (!forceValidate) {
+        console.log('Session exists, skipping validation:', sessionId.slice(0, 20) + '...');
+        return true;
+      }
+
+      // Only validate with backend if explicitly requested
       const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/data`, {
         method: 'GET',
         headers: {
@@ -450,18 +463,23 @@ class SessionService {
       });
 
       if (response.status === 404) {
-        console.log('Existing session invalid - creating new session');
-        await this.clearSession();
-        const newSession = await this.createSession();
-        return newSession !== null;
+        // Session not found on backend, but we DO NOT create a new one
+        // This preserves the session ID for the linking step
+        console.log('Session not found on backend but keeping local session ID:', sessionId.slice(0, 20) + '...');
+        return true; // Return true to continue with existing session ID
       }
 
-      console.log('Existing session is valid');
+      console.log('Existing session validated with backend');
       return true;
     } catch (error) {
       console.error('Error during session validation:', error);
-      // Create new session on error
-      await this.clearSession();
+      // On error, keep existing session instead of creating new one
+      const existingSession = await this.getSessionId();
+      if (existingSession) {
+        console.log('Keeping existing session despite error:', existingSession.slice(0, 20) + '...');
+        return true;
+      }
+      // Only create new if we truly have no session
       const newSession = await this.createSession();
       return newSession !== null;
     }
