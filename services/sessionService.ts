@@ -297,6 +297,37 @@ class SessionService {
       console.log('Response status:', response.status, response.statusText);
       console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
+      // Handle 404 - session was deleted on backend (e.g., during auto-transfer)
+      if (response.status === 404) {
+        console.warn('⚠️ Session not found on backend (404) - creating new session and retrying...');
+        await this.clearSession();
+        const newSession = await this.createSession();
+        if (newSession) {
+          // Retry the save with the new session
+          const retryRequestBody = {
+            session_id: newSession.session_id,
+            data: {
+              ...responseData,
+              survey_timezone: userTimezone
+            }
+          };
+          console.log('🔄 Retrying save with new session:', newSession.session_id);
+          const retryResponse = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${newSession.session_id}/data`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(retryRequestBody),
+          });
+          if (!retryResponse.ok) {
+            const retryError = await retryResponse.text();
+            console.error('❌ Retry save also failed:', retryError);
+            throw new Error(`Retry save failed: ${retryResponse.status}`);
+          }
+          console.log('✅ Retry save successful with new session');
+          return true;
+        }
+        throw new Error('Failed to create new session after 404');
+      }
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Answer save response error:', errorText);
@@ -369,6 +400,11 @@ class SessionService {
       });
 
       if (!response.ok) {
+        // Handle 404 - session was deleted on backend
+        if (response.status === 404) {
+          console.warn('⚠️ Session not found during link - clearing stale session');
+          await this.clearSession();
+        }
         throw new Error(`Session link failed: ${response.status}`);
       }
 
@@ -623,6 +659,14 @@ class SessionService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Recommendation status check failed:', errorText);
+
+        // Handle 404 - session was deleted on backend
+        if (response.status === 404) {
+          console.warn('⚠️ Session not found during status check - clearing stale session');
+          await this.clearSession();
+          return null;
+        }
+
         throw new Error(`Recommendation status check failed: ${response.status} - ${errorText}`);
       }
 
@@ -672,6 +716,15 @@ class SessionService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Hormone analysis fetch failed:', errorText);
+
+        // Handle 404 - session was deleted on backend
+        if (response.status === 404) {
+          console.warn('⚠️ Session not found during hormone analysis - clearing stale session');
+          await this.clearSession();
+          // Return null - caller should handle by redirecting to survey
+          return null;
+        }
+
         throw new Error(`Hormone analysis fetch failed: ${response.status} - ${errorText}`);
       }
 
