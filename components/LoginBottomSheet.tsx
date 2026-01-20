@@ -303,14 +303,16 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
 
         <KeyboardAvoidingView
           style={styles.keyboardAvoidingView}
-          behavior={'padding'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 40}
         >
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled={true}
+            bounces={true}
           >
             {/* Header Section */}
             <View style={styles.headerContainer}>
