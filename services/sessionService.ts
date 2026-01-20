@@ -149,7 +149,7 @@ class SessionService {
         return sessionData;
       } catch (fetchError: any) {
         clearTimeout(timeoutId);
-        
+
         // More detailed error logging
         if (fetchError.name === 'AbortError') {
           console.error('❌ Session creation timed out after 30s');
@@ -324,7 +324,7 @@ class SessionService {
       // Set "in progress" flag to prevent premature API calls
       // BottomNavigationBar checks this before fetching streak data
       await AsyncStorage.setItem('session_link_complete', 'pending');
-      
+
       const sessionId = await this.getSessionId();
       if (!sessionId) {
         console.error('No session ID available.');

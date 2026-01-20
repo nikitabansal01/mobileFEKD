@@ -119,26 +119,59 @@ const SignupLoadingScreen = () => {
       }, 500);
     };
 
-    // Check if session link is complete AND plan is ready
-    const checkSessionLinkComplete = async () => {
+    // Check if session link is complete AND plan actually exists
+    const checkPlanReady = async () => {
       if (hasNavigated.current) return;
 
-      const isComplete = await AsyncStorage.getItem('session_link_complete');
-      if (isComplete === 'true') {
-        // Session link is done! Check if plan is ready
-        const waitedMs = Date.now() - startedAtMsRef.current;
-        console.log(`✅ Session link complete after ${waitedMs}ms`);
+      const isLinkComplete = await AsyncStorage.getItem('session_link_complete');
+      if (isLinkComplete !== 'true') return; // Still waiting for link
 
-        // If we've waited more than 15 seconds, proceed anyway (fallback)
-        // HomeScreen will handle missing plan gracefully
-        if (waitedMs > 15000) {
-          console.log('⚠️ Max plan wait time reached, navigating to HomeScreen');
+      const waitedMs = Date.now() - startedAtMsRef.current;
+
+      // Session link is done! Now poll for actual plan existence
+      try {
+        const auth = (await import('@react-native-firebase/auth')).default;
+        const user = auth().currentUser;
+        if (!user) {
+          console.log('⚠️ No user found, navigating anyway');
           navigateToHome();
           return;
         }
 
-        // Otherwise navigate - plan is likely ready or will be very soon
-        navigateToHome();
+        const token = await user.getIdToken();
+        const { API_BASE_URL } = await import('../../constants/api');
+
+        const response = await fetch(
+          `${API_BASE_URL}/api/v1/new-scheduling/assignments/today?timezone=${Intl.DateTimeFormat().resolvedOptions().timeZone}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.plan_id) {
+            // Plan exists! Navigate immediately
+            console.log(`🎉 Plan ${data.plan_id} ready after ${waitedMs}ms, navigating to HomeScreen`);
+            navigateToHome();
+            return;
+          }
+        }
+
+        // Plan not ready yet - keep polling
+        console.log(`⏳ Plan not ready yet (${waitedMs}ms), continuing to poll...`);
+
+        // If we've waited more than 120 seconds, navigate anyway
+        if (waitedMs > 120000) {
+          console.log('⚠️ Max wait time reached (120s), navigating to HomeScreen');
+          navigateToHome();
+        }
+      } catch (err) {
+        console.log('🔍 Error checking plan:', err);
+        // If we've waited too long, just navigate
+        if (waitedMs > 30000) {
+          navigateToHome();
+        }
       }
     };
 
@@ -162,18 +195,17 @@ const SignupLoadingScreen = () => {
       }
     }, 200);
 
-    // Check every 300ms if session link is complete
-    checkInterval = setInterval(checkSessionLinkComplete, 300);
+    // Poll every 2 seconds for plan availability
+    checkInterval = setInterval(checkPlanReady, 2000);
 
-    // Max wait of 120 seconds (backend waits up to 90s for guest plan)
-    // Session link can take 90+ seconds when waiting for plan generation
+    // Max wait of 120 seconds, then navigate anyway
     maxWaitTimeout = setTimeout(() => {
-      console.log('⚠️ Max wait time reached (120s), navigating anyway');
+      console.log('⚠️ Max wait timeout (120s), navigating anyway');
       navigateToHome();
     }, 120000);
 
     // Initial check
-    checkSessionLinkComplete();
+    checkPlanReady();
 
     return () => {
       isMounted = false;
