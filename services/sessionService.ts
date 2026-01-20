@@ -410,6 +410,11 @@ class SessionService {
    */
   async clearSession(): Promise<void> {
     try {
+      const sessionId = await this.getSessionId();
+      if (sessionId) {
+        // Also clear the validation flag for this session
+        await AsyncStorage.removeItem(`session_validated_${sessionId}`);
+      }
       await AsyncStorage.removeItem('session_id');
       this.sessionId = null;
     } catch (error) {
@@ -430,12 +435,11 @@ class SessionService {
   /**
    * Validates session and recreates if necessary
    * 
-   * CRITICAL FIX: This method now ALWAYS validates the session with the backend
-   * on first use to prevent "Session not found" errors from stale session IDs.
+   * CRITICAL: Always validates with backend on first call per app launch.
+   * If session is expired or not found on backend, creates a new session.
+   * Uses a per-session flag to avoid repeated validation during same app launch.
    * 
-   * Uses an in-memory flag to avoid repeated backend calls within the same app session.
-   * 
-   * @param forceValidate - If true, bypass cache and validate with backend. Default false.
+   * @param forceValidate - If true, bypasses the per-launch validation cache.
    * @returns Promise resolving to validation success status
    */
   async validateAndRefreshSession(forceValidate: boolean = false): Promise<boolean> {
@@ -447,17 +451,18 @@ class SessionService {
         return newSession !== null;
       }
 
-      // Check if we've already validated this session in this app session
+      // Check if we've already validated this session this app launch
+      // This prevents repeated backend calls while navigating between screens
       const validatedKey = `session_validated_${sessionId}`;
       const alreadyValidated = await AsyncStorage.getItem(validatedKey);
 
       if (alreadyValidated === 'true' && !forceValidate) {
-        console.log('Session already validated this app session:', sessionId.slice(0, 20) + '...');
+        console.log('Session already validated this launch:', sessionId.slice(0, 20) + '...');
         return true;
       }
 
-      // Validate with backend to ensure session exists
-      console.log('Validating session with backend:', sessionId.slice(0, 20) + '...');
+      // ALWAYS validate with backend on first call
+      console.log('🔍 Validating session with backend:', sessionId.slice(0, 20) + '...');
       const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/data`, {
         method: 'GET',
         headers: {
@@ -466,32 +471,22 @@ class SessionService {
       });
 
       if (response.status === 404) {
-        // Session not found on backend - create a NEW session
-        console.log('⚠️ Session not found on backend, creating new session');
+        // Session expired or not found on backend - create a fresh one
+        console.log('⚠️ Session expired/not found on backend, creating new session');
         await this.clearSession();
-        // Also clear the validated flag for the old session
-        await AsyncStorage.removeItem(validatedKey);
         const newSession = await this.createSession();
-        if (newSession) {
-          // Mark the new session as validated
-          await AsyncStorage.setItem(`session_validated_${newSession.session_id}`, 'true');
-        }
         return newSession !== null;
       }
 
-      // Mark session as validated for this app session
+      // Mark session as validated for this app launch
       await AsyncStorage.setItem(validatedKey, 'true');
-      console.log('✅ Session validated with backend:', sessionId.slice(0, 20) + '...');
+      console.log('✅ Session validated with backend');
       return true;
     } catch (error) {
       console.error('Error during session validation:', error);
-      // On error, keep existing session instead of creating new one
-      const existingSession = await this.getSessionId();
-      if (existingSession) {
-        console.log('Keeping existing session despite error:', existingSession.slice(0, 20) + '...');
-        return true;
-      }
-      // Only create new if we truly have no session
+      // On network error, create a new session to ensure flow works
+      console.log('⚠️ Network error during validation, creating new session');
+      await this.clearSession();
       const newSession = await this.createSession();
       return newSession !== null;
     }
