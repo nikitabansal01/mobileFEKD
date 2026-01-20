@@ -430,11 +430,12 @@ class SessionService {
   /**
    * Validates session and recreates if necessary
    * 
-   * IMPORTANT: This method now PRESERVES existing sessions even if the backend
-   * returns 404. This prevents data loss when navigating between screens during
-   * the onboarding flow (e.g., after questionnaire but before signup).
+   * CRITICAL FIX: This method now ALWAYS validates the session with the backend
+   * on first use to prevent "Session not found" errors from stale session IDs.
    * 
-   * @param forceValidate - If true, actually validates with backend. Default false.
+   * Uses an in-memory flag to avoid repeated backend calls within the same app session.
+   * 
+   * @param forceValidate - If true, bypass cache and validate with backend. Default false.
    * @returns Promise resolving to validation success status
    */
   async validateAndRefreshSession(forceValidate: boolean = false): Promise<boolean> {
@@ -446,15 +447,17 @@ class SessionService {
         return newSession !== null;
       }
 
-      // If we already have a session ID and don't need to force validate,
-      // just return true. This prevents creating a new session after questionnaire
-      // completion when user navigates between screens.
-      if (!forceValidate) {
-        console.log('Session exists, skipping validation:', sessionId.slice(0, 20) + '...');
+      // Check if we've already validated this session in this app session
+      const validatedKey = `session_validated_${sessionId}`;
+      const alreadyValidated = await AsyncStorage.getItem(validatedKey);
+
+      if (alreadyValidated === 'true' && !forceValidate) {
+        console.log('Session already validated this app session:', sessionId.slice(0, 20) + '...');
         return true;
       }
 
-      // Only validate with backend if explicitly requested
+      // Validate with backend to ensure session exists
+      console.log('Validating session with backend:', sessionId.slice(0, 20) + '...');
       const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/data`, {
         method: 'GET',
         headers: {
@@ -463,13 +466,22 @@ class SessionService {
       });
 
       if (response.status === 404) {
-        // Session not found on backend, but we DO NOT create a new one
-        // This preserves the session ID for the linking step
-        console.log('Session not found on backend but keeping local session ID:', sessionId.slice(0, 20) + '...');
-        return true; // Return true to continue with existing session ID
+        // Session not found on backend - create a NEW session
+        console.log('⚠️ Session not found on backend, creating new session');
+        await this.clearSession();
+        // Also clear the validated flag for the old session
+        await AsyncStorage.removeItem(validatedKey);
+        const newSession = await this.createSession();
+        if (newSession) {
+          // Mark the new session as validated
+          await AsyncStorage.setItem(`session_validated_${newSession.session_id}`, 'true');
+        }
+        return newSession !== null;
       }
 
-      console.log('Existing session validated with backend');
+      // Mark session as validated for this app session
+      await AsyncStorage.setItem(validatedKey, 'true');
+      console.log('✅ Session validated with backend:', sessionId.slice(0, 20) + '...');
       return true;
     } catch (error) {
       console.error('Error during session validation:', error);
