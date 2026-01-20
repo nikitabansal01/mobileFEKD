@@ -1,13 +1,19 @@
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Animated } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Animated, Platform } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuth } from 'firebase/auth';
-import { API_BASE_URL } from '../../constants/api';
 import AuvraCharacter from '../../components/AuvraCharacter';
+
+// Inline helper - matches pattern used in homeService.ts
+const getApiBaseUrl = () => {
+  const envUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (envUrl) return envUrl;
+  return Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+};
 
 
 /**
@@ -143,7 +149,7 @@ const SignupLoadingScreen = () => {
         const token = await user.getIdToken();
 
         const response = await fetch(
-          `${API_BASE_URL}/api/v1/new-scheduling/assignments/today?timezone=${Intl.DateTimeFormat().resolvedOptions().timeZone}`,
+          `${getApiBaseUrl()}/api/v1/new-scheduling/assignments/today?timezone=${Intl.DateTimeFormat().resolvedOptions().timeZone}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
