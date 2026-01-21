@@ -1001,14 +1001,33 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           scrollViewRef.current.scrollTo({ y: 0, animated: false });
         }
 
-        // 4. Load the newly generated data
-        // Increased delay to ensure DB consistency with Supabase pooler
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        const [assignmentsData, rewardsData] = await Promise.all([
-          homeService.getTodayAssignments(),
-          rewardService.getRewardsStatus().catch(() => null),
-        ]);
+        // 4. Load the newly generated data with retry mechanism
+        // Retry up to 3 times with increasing delays to handle Supabase pooler staleness
+        let assignmentsData: any = null;
+        let retryCount = 0;
+        const maxRetries = 3;
+        const baseDelay = 1500; // 1.5s base delay
+        
+        while (!assignmentsData && retryCount < maxRetries) {
+          const currentDelay = baseDelay * (retryCount + 1); // 1.5s, 3s, 4.5s
+          console.log(`🔄 [HomeScreen:${instanceId}] Attempt ${retryCount + 1}/${maxRetries}: Waiting ${currentDelay}ms before fetching assignments...`);
+          await new Promise(resolve => setTimeout(resolve, currentDelay));
+          
+          try {
+            assignmentsData = await homeService.getTodayAssignments();
+            if (assignmentsData) {
+              console.log(`✅ [HomeScreen:${instanceId}] Successfully fetched assignments on attempt ${retryCount + 1}`);
+            } else {
+              console.log(`⚠️ [HomeScreen:${instanceId}] Attempt ${retryCount + 1} returned null, will retry...`);
+            }
+          } catch (err) {
+            console.log(`⚠️ [HomeScreen:${instanceId}] Attempt ${retryCount + 1} failed with error:`, err);
+          }
+          retryCount++;
+        }
+        
+        // Fetch rewards in parallel with last retry (optimization)
+        const rewardsData = await rewardService.getRewardsStatus().catch(() => null);
 
         if (assignmentsData) {
           setAssignments(assignmentsData);
@@ -1018,6 +1037,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           wireUpActionPlan(assignmentsData);
           // Start feedback timer (shows popup once per session after 30s)
           startFeedbackTimer();
+        } else {
+          console.error(`❌ [HomeScreen:${instanceId}] Failed to fetch assignments after ${maxRetries} retries. User may need to restart app.`);
+          // Still continue to show the unlock animation - user can pull to refresh
         }
 
         if (rewardsData && rewardsData.refresh_status) {
