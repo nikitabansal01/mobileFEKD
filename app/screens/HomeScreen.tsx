@@ -128,7 +128,7 @@ const DesigningPlanOverlay = ({ visible }: { visible: boolean }) => {
 
           <View style={styles.loadingPill}>
             <ActivityIndicator color={BRAND.accent} size="small" style={{ marginRight: 8 }} />
-            <Text style={styles.loadingText}>{loadingText}</Text>
+            <Text style={styles.loadingPillText}>{loadingText}</Text>
           </View>
         </Animated.View>
       </View>
@@ -167,11 +167,110 @@ interface HomeScreenProps {
       skipTodayLoading?: boolean;
       freshSignup?: boolean;
       shouldRefresh?: boolean; // Added: trigger refetch after action replacement
+      planGenerating?: boolean; // NEW: Indicates plan is still generating in background
     };
   };
 }
 
 const FRESH_SIGNUP_FLAG = 'fresh_signup_pending_refresh';
+
+/**
+ * PlanGeneratingOverlay
+ * 
+ * Shown when user arrives from signup but plan is still being generated.
+ * This provides a beautiful, non-blocking experience while the backend
+ * generates their personalized action plan (60-90 seconds).
+ */
+const PlanGeneratingOverlay = ({ visible, onPlanReady }: { visible: boolean; onPlanReady?: () => void }) => {
+  const [loadingText, setLoadingText] = useState("Crafting your personalized plan...");
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const pollCountRef = useRef(0);
+
+  useEffect(() => {
+    if (visible) {
+      // Fade in
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+
+      // Pulse animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.08,
+            duration: 1500,
+            useNativeDriver: true,
+            easing: Easing.inOut(Easing.ease),
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+            easing: Easing.inOut(Easing.ease),
+          }),
+        ])
+      ).start();
+
+      // Cycle loading text to show progress
+      const texts = [
+        "Crafting your personalized plan...",
+        "Analyzing your hormone profile...",
+        "Selecting optimal activities...",
+        "Generating beautiful images...",
+        "Preparing your daily actions...",
+        "Almost ready...",
+      ];
+      let index = 0;
+      const textInterval = setInterval(() => {
+        index = (index + 1) % texts.length;
+        setLoadingText(texts[index]);
+      }, 4000);
+
+      return () => {
+        clearInterval(textInterval);
+      };
+    } else {
+      fadeAnim.setValue(0);
+    }
+  }, [visible]);
+
+  if (!visible) return null;
+
+  return (
+    <View style={styles.planGeneratingContainer}>
+      <Animated.View style={[styles.planGeneratingContent, { opacity: fadeAnim }]}>
+        <View style={styles.planGeneratingIconContainer}>
+          <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+            <LottieView
+              source={require('../../assets/animation/auvra-character.json')}
+              autoPlay
+              loop
+              style={styles.planGeneratingAvatar}
+            />
+          </Animated.View>
+        </View>
+
+        <Text style={styles.planGeneratingTitle}>Creating Your Plan</Text>
+
+        <Text style={styles.planGeneratingSubtitle}>
+          Auvra is personalizing your daily actions based on your hormone profile, goals, and preferences.
+        </Text>
+
+        <View style={styles.planGeneratingPill}>
+          <ActivityIndicator color={BRAND.accent} size="small" style={{ marginRight: 8 }} />
+          <Text style={styles.planGeneratingText}>{loadingText}</Text>
+        </View>
+
+        <Text style={styles.planGeneratingHint}>
+          This usually takes about a minute
+        </Text>
+      </Animated.View>
+    </View>
+  );
+};
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
@@ -181,6 +280,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const [hasRetried, setHasRetried] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'time' | 'type'>('time');
+  
+  // NEW: Track if plan is still being generated in background
+  const [isPlanGenerating, setIsPlanGenerating] = useState(false);
+  const planPollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Action plan state (new system)
   const [actionPlan, setActionPlan] = useState<ActionPlanResponse | null>(null);
@@ -246,6 +349,117 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       reloadData();
     }
   }, [route?.params?.shouldRefresh]);
+
+  // NEW: Handle planGenerating param - poll for plan readiness after fresh signup
+  useEffect(() => {
+    const instanceId = componentIdRef.current;
+    
+    // Check if coming from signup with plan still generating
+    const checkPlanGenerating = async () => {
+      const planGeneratingFlag = await AsyncStorage.getItem('plan_generating_in_background');
+      const isPlanGeneratingParam = route?.params?.planGenerating;
+      
+      if (planGeneratingFlag === 'true' || isPlanGeneratingParam) {
+        console.log(`🔄 [HomeScreen:${instanceId}] Plan is generating in background - showing generating UI`);
+        setIsPlanGenerating(true);
+        setLoading(false); // Don't show generic loading, show plan generating overlay
+        
+        // Start polling for plan readiness
+        startPlanGenerationPolling();
+      }
+    };
+    
+    checkPlanGenerating();
+    
+    // Cleanup polling on unmount
+    return () => {
+      if (planPollIntervalRef.current) {
+        clearInterval(planPollIntervalRef.current);
+        planPollIntervalRef.current = null;
+      }
+    };
+  }, [route?.params?.planGenerating]);
+  
+  // Poll for plan readiness when plan is generating
+  const startPlanGenerationPolling = async () => {
+    const instanceId = componentIdRef.current;
+    let pollCount = 0;
+    const maxPolls = 60; // Max 60 polls at 3s = 180 seconds max wait
+    
+    // Clear any existing interval
+    if (planPollIntervalRef.current) {
+      clearInterval(planPollIntervalRef.current);
+    }
+    
+    const checkPlanReady = async () => {
+      pollCount++;
+      console.log(`🔍 [HomeScreen:${instanceId}] Polling for plan (attempt ${pollCount}/${maxPolls})...`);
+      
+      try {
+        const assignmentsData = await homeService.getTodayAssignments();
+        
+        if (assignmentsData?.plan_id) {
+          // Plan is ready!
+          console.log(`🎉 [HomeScreen:${instanceId}] Plan ${assignmentsData.plan_id} is ready after ${pollCount} polls!`);
+          
+          // Clear polling
+          if (planPollIntervalRef.current) {
+            clearInterval(planPollIntervalRef.current);
+            planPollIntervalRef.current = null;
+          }
+          
+          // Clear the generating flag
+          await AsyncStorage.removeItem('plan_generating_in_background');
+          
+          // Update state with the plan data
+          setAssignments(assignmentsData);
+          if (assignmentsData?.hormone_stats) {
+            setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
+          }
+          wireUpActionPlan(assignmentsData);
+          
+          // Hide generating overlay
+          setIsPlanGenerating(false);
+          initialDataLoadedRef.current = true;
+          
+          // Start feedback timer for fresh plans
+          startFeedbackTimer();
+          
+          return;
+        }
+        
+        console.log(`⏳ [HomeScreen:${instanceId}] Plan not ready yet (poll ${pollCount})`);
+        
+        // Check if max polls reached
+        if (pollCount >= maxPolls) {
+          console.log(`⚠️ [HomeScreen:${instanceId}] Max polls reached (${maxPolls}), giving up`);
+          if (planPollIntervalRef.current) {
+            clearInterval(planPollIntervalRef.current);
+            planPollIntervalRef.current = null;
+          }
+          await AsyncStorage.removeItem('plan_generating_in_background');
+          setIsPlanGenerating(false);
+          // Show error state or empty state
+          Alert.alert(
+            'Plan Generation Delayed',
+            'Your personalized plan is taking longer than expected. Please pull down to refresh in a moment.',
+            [{ text: 'OK' }]
+          );
+        }
+      } catch (error) {
+        console.log(`❌ [HomeScreen:${instanceId}] Error polling for plan:`, error);
+        // Continue polling unless it's a critical error
+      }
+    };
+    
+    // Initial check
+    await checkPlanReady();
+    
+    // If still generating, start interval
+    if (isPlanGenerating) {
+      planPollIntervalRef.current = setInterval(checkPlanReady, 3000); // Poll every 3 seconds
+    }
+  };
 
   // Auvra chat modal state
   const [showAuvraChat, setShowAuvraChat] = useState(false);
@@ -1299,7 +1513,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         purpose: action.purpose || '',
         target_hormone: action.hormones?.[0] || '',
         hormone_persona_intro: action.hormone_persona_intro || '',
-        hero_image_url: action.hero_image_url,
+        hero_image_url: action.hero_image_url || '', // Ensure non-undefined
         research_studies: action.research_studies || [],
         is_completed: action.is_completed || false,
         is_replaced: false,
@@ -1659,6 +1873,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     const base = getProgressColor(hormone);
     return lightenColor(base, 0.75);
   };
+
+  // Show plan generating overlay if plan is still being generated after signup
+  if (isPlanGenerating) {
+    return (
+      <View style={styles.container}>
+        <PlanGeneratingOverlay visible={true} />
+      </View>
+    );
+  }
 
   if (loading) {
     return (
@@ -2637,10 +2860,67 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
   },
-  loadingText: {
+  loadingPillText: {
     fontFamily: FONT_INTER.medium,
     fontSize: 13,
     color: '#FFF',
+  },
+  
+  // Plan Generating Overlay styles (shown when plan is still being generated after signup)
+  planGeneratingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFF5F8',
+    paddingHorizontal: responsiveWidth(8),
+  },
+  planGeneratingContent: {
+    alignItems: 'center',
+    maxWidth: responsiveWidth(85),
+  },
+  planGeneratingIconContainer: {
+    marginBottom: responsiveHeight(3),
+  },
+  planGeneratingAvatar: {
+    width: responsiveWidth(35),
+    height: responsiveWidth(35),
+  },
+  planGeneratingTitle: {
+    fontFamily: FONT_SERIF.bold,
+    fontSize: responsiveFontSize(2.8),
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: responsiveHeight(1.5),
+  },
+  planGeneratingSubtitle: {
+    fontFamily: FONT_INTER.regular,
+    fontSize: responsiveFontSize(1.8),
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: responsiveHeight(3),
+    lineHeight: responsiveFontSize(2.6),
+  },
+  planGeneratingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(162, 154, 234, 0.15)',
+    paddingVertical: responsiveHeight(1.2),
+    paddingHorizontal: responsiveWidth(5),
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: 'rgba(162, 154, 234, 0.3)',
+    marginBottom: responsiveHeight(2),
+  },
+  planGeneratingText: {
+    fontFamily: FONT_INTER.medium,
+    fontSize: responsiveFontSize(1.6),
+    color: BRAND.accent,
+  },
+  planGeneratingHint: {
+    fontFamily: FONT_INTER.regular,
+    fontSize: responsiveFontSize(1.5),
+    color: '#999',
+    textAlign: 'center',
   },
 });
 

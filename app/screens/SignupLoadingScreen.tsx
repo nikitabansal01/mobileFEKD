@@ -5,28 +5,26 @@ import { View, Text, StyleSheet, ActivityIndicator, Animated, Platform } from 'r
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getAuth } from 'firebase/auth';
 import AuvraCharacter from '../../components/AuvraCharacter';
 
-// Inline helper - matches pattern used in homeService.ts
-const getApiBaseUrl = () => {
-  const envUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (envUrl) return envUrl;
-  return Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
-};
-
-
 /**
- * Loading screen shown after signup.
+ * SignupLoadingScreen - REDESIGNED
  * 
- * Waits for session link to complete before navigating to HomeScreen.
- * This ensures HomeScreen fetches data AFTER the user's recommendations are ready.
+ * This screen ONLY waits for session link to complete (5-10 seconds max).
+ * It does NOT wait for the action plan to be generated.
+ * 
+ * The action plan continues generating in the background while the user
+ * is taken to HomeScreen. HomeScreen handles the "plan not ready" state
+ * with appropriate UI feedback.
  * 
  * Flow:
- * 1. LoginBottomSheet calls session link API and sets 'session_link_complete' flag
- * 2. This screen polls for the flag (no API calls, just local storage check)
- * 3. Once flag is set, navigate to HomeScreen
- * 4. HomeScreen makes 1 API call to fetch data (now ready)
+ * 1. LoginBottomSheet starts session link API call
+ * 2. This screen polls for 'session_link_complete' flag (local storage only)
+ * 3. Once session is linked, navigate to HomeScreen immediately
+ * 4. HomeScreen shows "plan generating" state if plan isn't ready yet
+ * 5. HomeScreen polls and auto-refreshes when plan becomes available
+ * 
+ * This eliminates the 60-120 second wait that was blocking users.
  */
 const SignupLoadingScreen = () => {
   const navigation = useNavigation<StackNavigationProp<any>>();
@@ -65,7 +63,8 @@ const SignupLoadingScreen = () => {
     return () => pulse.stop();
   }, []);
 
-  // Wait for session link to complete, then navigate
+  // Wait for session link to complete, then navigate IMMEDIATELY
+  // DO NOT wait for action plan - HomeScreen will handle that state
   useEffect(() => {
     let isMounted = true;
     let checkInterval: ReturnType<typeof setInterval> | null = null;
@@ -103,11 +102,14 @@ const SignupLoadingScreen = () => {
 
       // Show success message
       setProgress(100);
-      setStatusMessage('Your plan is ready! 🎉');
+      setStatusMessage('Welcome to Auvra! 🎉');
 
       // Clear flags
       // NOTE: Keep post-auth timestamps for HomeScreen to log end-to-end once plan is fetched.
       await AsyncStorage.multiRemove(['fresh_signup_pending_refresh', 'session_link_complete']);
+      
+      // Set flag to indicate this is a fresh signup - HomeScreen will show generating UI
+      await AsyncStorage.setItem('plan_generating_in_background', 'true');
 
       // Small delay to show success message
       setTimeout(() => {
@@ -119,7 +121,7 @@ const SignupLoadingScreen = () => {
             navigation.dispatch(
               CommonActions.reset({
                 index: 0,
-                routes: [{ name: 'MainScreenTabs', params: { freshSignup } }],
+                routes: [{ name: 'MainScreenTabs', params: { freshSignup, planGenerating: true } }],
               })
             );
           });
@@ -128,91 +130,61 @@ const SignupLoadingScreen = () => {
       }, 500);
     };
 
-    // Check if session link is complete AND plan actually exists
-    const checkPlanReady = async () => {
+    // NEW: Only check for session link completion - DO NOT wait for plan
+    // The plan takes 60-90 seconds to generate. We don't want to block the user.
+    // HomeScreen will handle showing appropriate UI for "plan generating" state.
+    const checkSessionLinkComplete = async () => {
       if (hasNavigated.current) return;
 
       const isLinkComplete = await AsyncStorage.getItem('session_link_complete');
-      if (isLinkComplete !== 'true') return; // Still waiting for link
-
       const waitedMs = Date.now() - startedAtMsRef.current;
-
-      // Session link is done! Now poll for actual plan existence
-      try {
-        const user = getAuth().currentUser;
-        if (!user) {
-          console.log('⚠️ No user found, navigating anyway');
-          navigateToHome();
-          return;
-        }
-
-        const token = await user.getIdToken();
-
-        const response = await fetch(
-          `${getApiBaseUrl()}/api/v1/new-scheduling/assignments/today?timezone=${Intl.DateTimeFormat().resolvedOptions().timeZone}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.plan_id) {
-            // Plan exists! Navigate immediately
-            console.log(`🎉 Plan ${data.plan_id} ready after ${waitedMs}ms, navigating to HomeScreen`);
-            navigateToHome();
-            return;
-          }
-        }
-
-        // Plan not ready yet - keep polling
-        console.log(`⏳ Plan not ready yet (${waitedMs}ms), continuing to poll...`);
-
-        // If we've waited more than 120 seconds, navigate anyway
-        if (waitedMs > 120000) {
-          console.log('⚠️ Max wait time reached (120s), navigating to HomeScreen');
-          navigateToHome();
-        }
-      } catch (err) {
-        console.log('🔍 Error checking plan:', err);
-        // If we've waited too long, just navigate
-        if (waitedMs > 30000) {
-          navigateToHome();
-        }
+      
+      if (isLinkComplete === 'true') {
+        // Session link is done! Navigate immediately.
+        // Don't wait for plan - HomeScreen will handle that state.
+        console.log(`✅ [SignupLoadingScreen] Session linked after ${waitedMs}ms - navigating to HomeScreen`);
+        console.log(`📋 Plan is still generating in background - HomeScreen will show generating UI`);
+        navigateToHome();
+        return;
       }
+
+      // Still waiting for session link
+      console.log(`⏳ [SignupLoadingScreen] Waiting for session link... (${waitedMs}ms)`);
     };
 
-    // Progress animation
+    // Progress animation - faster since we're not waiting for plan anymore
     let progressValue = 0;
     const messages = [
-      { threshold: 20, message: 'Linking your survey data...' },
-      { threshold: 50, message: 'Creating your personalized plan...' },
-      { threshold: 80, message: 'Almost ready...' },
+      { threshold: 30, message: 'Linking your account...' },
+      { threshold: 60, message: 'Setting up your profile...' },
+      { threshold: 90, message: 'Almost there...' },
     ];
 
     progressTimer = setInterval(() => {
       if (hasNavigated.current || !isMounted) return;
 
-      progressValue = Math.min(progressValue + 5, 95);
+      // Faster progress since session link takes ~5-10s, not 60-120s
+      progressValue = Math.min(progressValue + 8, 95);
       setProgress(progressValue);
 
       const currentMessage = messages.find(m => progressValue <= m.threshold);
       if (currentMessage) {
         setStatusMessage(currentMessage.message);
       }
-    }, 200);
+    }, 150);
 
-    // Poll every 2 seconds for plan availability
-    checkInterval = setInterval(checkPlanReady, 2000);
+    // Poll every 500ms for session link (much faster than before)
+    checkInterval = setInterval(checkSessionLinkComplete, 500);
 
-    // Max wait of 120 seconds, then navigate anyway
+    // Max wait of 15 seconds for session link (was 120s)
+    // If session link takes longer than this, something is wrong
     maxWaitTimeout = setTimeout(() => {
-      console.log('⚠️ Max wait timeout (120s), navigating anyway');
+      console.log('⚠️ [SignupLoadingScreen] Max wait (15s) for session link - navigating anyway');
       navigateToHome();
-    }, 120000);
+    }, 15000);
 
     // Initial check
-    checkPlanReady();
+    checkSessionLinkComplete();
 
     return () => {
       isMounted = false;
