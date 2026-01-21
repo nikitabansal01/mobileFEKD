@@ -22,6 +22,7 @@ import PrimaryButton from '@/components/PrimaryButton';
 // Services
 import { auth, signInWithEmail } from '@/config/firebase';
 import authService from '@/services/authService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -91,6 +92,15 @@ const LoginScreen = () => {
           // For social logins, we enable remember me by default
           await authService.saveCredentials('', '', true);
 
+          // Clear stale flags from previous sessions (important for returning users)
+          await AsyncStorage.multiRemove([
+            'plan_generating_in_background',
+            'session_link_complete',
+            'fresh_signup_pending_refresh',
+            'post_auth_flow',
+            'post_auth_started_ms'
+          ]);
+
           Alert.alert('Success', 'Google login successful!');
           navigation.navigate('MainScreenTabs');
         })
@@ -118,6 +128,15 @@ const LoginScreen = () => {
         await authService.saveCredentials(email, password, rememberMe);
         // Mark user as logged in
         await authService.setLoggedIn(result.user.uid);
+
+        // Clear stale flags from previous sessions (important for returning users)
+        await AsyncStorage.multiRemove([
+          'plan_generating_in_background',
+          'session_link_complete',
+          'fresh_signup_pending_refresh',
+          'post_auth_flow',
+          'post_auth_started_ms'
+        ]);
 
         Alert.alert("Success", "Login successful!");
         navigation.navigate('MainScreenTabs');
@@ -168,6 +187,15 @@ const LoginScreen = () => {
       await authService.setLoggedIn(result.user.uid);
       // For social logins, we enable remember me by default
       await authService.saveCredentials('', '', true);
+
+      // Clear stale flags from previous sessions (important for returning users)
+      await AsyncStorage.multiRemove([
+        'plan_generating_in_background',
+        'session_link_complete',
+        'fresh_signup_pending_refresh',
+        'post_auth_flow',
+        'post_auth_started_ms'
+      ]);
 
       Alert.alert("Success", "Apple login successful!");
       navigation.navigate('MainScreenTabs');

@@ -385,21 +385,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     const instanceId = componentIdRef.current;
     let pollCount = 0;
     const maxPolls = 60; // Max 60 polls at 3s = 180 seconds max wait
+    let planFound = false; // Track if plan was found to prevent starting interval
     
     // Clear any existing interval
     if (planPollIntervalRef.current) {
       clearInterval(planPollIntervalRef.current);
+      planPollIntervalRef.current = null;
     }
     
     const checkPlanReady = async () => {
+      if (planFound) return; // Already found, don't run again
+      
       pollCount++;
       console.log(`🔍 [HomeScreen:${instanceId}] Polling for plan (attempt ${pollCount}/${maxPolls})...`);
       
       try {
         const assignmentsData = await homeService.getTodayAssignments();
         
-        if (assignmentsData?.plan_id) {
+        if (assignmentsData?.plan_id && assignmentsData?.total_assignments > 0) {
           // Plan is ready!
+          planFound = true;
           console.log(`🎉 [HomeScreen:${instanceId}] Plan ${assignmentsData.plan_id} is ready after ${pollCount} polls!`);
           
           // Clear polling
@@ -420,6 +425,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           
           // Hide generating overlay
           setIsPlanGenerating(false);
+          setLoading(false);
           initialDataLoadedRef.current = true;
           
           // Start feedback timer for fresh plans
@@ -439,6 +445,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           }
           await AsyncStorage.removeItem('plan_generating_in_background');
           setIsPlanGenerating(false);
+          setLoading(false);
           // Show error state or empty state
           Alert.alert(
             'Plan Generation Delayed',
@@ -455,8 +462,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     // Initial check
     await checkPlanReady();
     
-    // If still generating, start interval
-    if (isPlanGenerating) {
+    // Only start interval if plan was NOT found on initial check
+    if (!planFound) {
       planPollIntervalRef.current = setInterval(checkPlanReady, 3000); // Poll every 3 seconds
     }
   };
