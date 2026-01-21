@@ -1002,8 +1002,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         }
 
         // 4. Load the newly generated data
-        // Small delay to ensure DB consistency
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Increased delay to ensure DB consistency with Supabase pooler
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
         const [assignmentsData, rewardsData] = await Promise.all([
           homeService.getTodayAssignments(),
