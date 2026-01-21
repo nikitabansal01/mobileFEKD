@@ -84,29 +84,47 @@ const ResultScreen = () => {
 
   /**
    * Get hormone-specific image styling to ensure visual consistency across all cards.
-   * All hormones now use UNIFIED sizing for consistent card appearance.
+   * Different hormones have different character shapes, so we adjust sizing accordingly.
    */
   const getHormoneImageStyle = (hormone?: string) => {
-    // UNIFIED SIZE: All characters use the same dimensions for visual consistency
-    // This ensures both cards look identical in size
-    return { 
-      width: scale(105), 
-      height: verticalScale(105), 
-      resizeMode: 'contain' as const 
-    };
+    const h = (hormone || '').toLowerCase();
+
+    // Thyroid (hourglass shape) - smaller size for consistent card appearance
+    if (h === 'thyroid') {
+      return { width: scale(90), height: verticalScale(95), resizeMode: 'contain' as const };
+    }
+
+    // Insulin (hourglass shape) - smaller size similar to Thyroid
+    if (h === 'insulin') {
+      return { width: scale(95), height: verticalScale(100), resizeMode: 'contain' as const };
+    }
+
+    // Default size for wider hormones (Progesterone, Testosterone, Estrogen, Cortisol, Androgens)
+    return { width: scale(120), height: verticalScale(120), resizeMode: 'contain' as const };
   };
 
   /**
    * Get hormone-specific graphic positioning style.
-   * UNIFIED positioning for consistent card appearance.
+   * Different shapes need different positioning to appear balanced.
    */
   const getGraphicPositionStyle = (hormone?: string, isPrimary?: boolean) => {
-    // UNIFIED POSITIONING: Same position for all hormones
-    // This ensures the cards have identical visual balance
-    return { 
-      right: scale(-15), 
-      bottom: verticalScale(-20) 
-    };
+    const h = (hormone || '').toLowerCase();
+
+    // Thyroid (vertical hourglass) - position further down/right
+    if (h === 'thyroid') {
+      return { right: scale(-15), bottom: verticalScale(-20) };
+    }
+
+    // Insulin (similar to Thyroid)
+    if (h === 'insulin') {
+      return { right: scale(-15), bottom: verticalScale(-20) };
+    }
+
+    // Default positioning for primary (first card) vs secondary
+    if (isPrimary) {
+      return { right: scale(-22), bottom: verticalScale(-38) };
+    }
+    return { right: scale(-22), bottom: verticalScale(-25) };
   };
 
   // Fetch hormone analysis on mount
@@ -383,13 +401,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFBFC',
     borderRadius: 12,
     padding: responsiveWidth(6),
-    paddingBottom: responsiveWidth(5),
     position: 'relative',
     borderWidth: 0.5,
     borderColor: '#cfcfcf',
     elevation: 3,
     overflow: 'hidden', // Clip parts that extend beyond card area
-    minHeight: verticalScale(115), // FIXED: Ensure consistent card height
   },
   cardContent: {
     flexDirection: 'column', // Vertical layout
@@ -397,7 +413,7 @@ const styles = StyleSheet.create({
     position: 'relative', // Reference point for absolute positioned elements
   },
   textSection: {
-    width: responsiveWidth(48), // Fixed width for text area (description only)
+    maxWidth: responsiveWidth(46), // Limit maximum width for text area (description only)
     zIndex: 2, // Display above image (zIndex: 1)
   },
   hormoneName: {
@@ -429,18 +445,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'absolute', // Absolute positioning
     zIndex: 1, // Display behind text
-    // Default position - will be overridden by getGraphicPositionStyle
-    right: scale(-15),
-    bottom: verticalScale(-20),
   },
-  // DEPRECATED: These are no longer used - unified positioning in getGraphicPositionStyle
   progesteroneGraphic: {
-    right: scale(-15),
-    bottom: verticalScale(-20),
+    right: scale(-22), // Progesterone image position
+    bottom: verticalScale(-38), // Relative position from card bottom
   },
   testosteroneGraphic: {
-    right: scale(-15),
-    bottom: verticalScale(-20),
+    // right: responsiveWidth(-21), // Testosterone image position (more to the right)
+    // bottom: responsiveHeight(-8.5), // Relative position from card bottom
+    right: scale(-22), // Progesterone image position
+    bottom: verticalScale(-25)
   },
   priorityBadge: {
     position: 'absolute',
