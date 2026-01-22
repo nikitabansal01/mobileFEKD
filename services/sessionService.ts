@@ -442,17 +442,46 @@ class SessionService {
   }
 
   /**
-   * Clears the current session
+   * Clears the current session and ALL user-specific cached data
+   * CRITICAL: This must be called on logout to prevent data leaking between users
    */
   async clearSession(): Promise<void> {
     try {
       const sessionId = await this.getSessionId();
       if (sessionId) {
-        // Also clear the validation flag for this session
+        // Clear the validation flag for this session
         await AsyncStorage.removeItem(`session_validated_${sessionId}`);
       }
+      
+      // Clear session ID
       await AsyncStorage.removeItem('session_id');
       this.sessionId = null;
+      
+      // CRITICAL: Clear ALL user-specific data that could leak between users
+      // This ensures a new user doesn't see the old user's cached data
+      const userSpecificKeys = [
+        // Plan generation flags
+        'plan_generating_in_background',
+        'session_link_complete',
+        'fresh_signup_pending_refresh',
+        'post_auth_flow',
+        'post_auth_started_ms',
+        'session_link_completed_ms',
+        'session_link_duration_ms',
+        // HomeScreen cache
+        'homescreen_last_load',
+        // User profile data
+        'userName',
+        'lifestyle_focus',
+        // Any other user-specific cached data
+        'last_plan_id',
+        'cached_assignments',
+        'cached_cycle_info',
+      ];
+      
+      await AsyncStorage.multiRemove(userSpecificKeys);
+      console.log('🧹 Cleared all user-specific cached data');
+      
     } catch (error) {
       console.error('Session clear failed:', error);
     }

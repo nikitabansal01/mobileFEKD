@@ -38,6 +38,7 @@ import { BRAND, BRAND_GRADIENT, TEXT, BACKGROUND, BORDER, UI, COLORS } from '@/c
 import { FONT_INTER, FONT_SERIF, TYPOGRAPHY } from '@/constants/fonts';
 import { LinearGradient } from 'expo-linear-gradient';
 import LottieView from 'lottie-react-native';
+import { auth } from '@/config/firebase';
 
 // =============================================================================
 // SUB-COMPONENTS
@@ -526,10 +527,61 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const lastFocusTimeRef = useRef<number>(0);
   const loadCallIdRef = useRef<number>(0); // Unique ID for each load call to detect stale calls
   const componentIdRef = useRef<string>(Math.random().toString(36).substring(7)); // Unique ID for this component instance
+  
+  // CRITICAL: Track current user UID to detect user changes and reset state
+  const currentUserUidRef = useRef<string | null>(null);
 
   // Refs to track state for useFocusEffect (avoids stale closure and dependency issues)
   const showDailyReviewRef = useRef(showDailyReview);
   const isReviewBlockingRef = useRef(isReviewBlocking);
+
+  // CRITICAL: Detect user changes and reset all state
+  // This prevents data from old user leaking to new user after logout/login
+  useEffect(() => {
+    const checkUserChange = () => {
+      const currentUid = auth.currentUser?.uid || null;
+      const instanceId = componentIdRef.current;
+      
+      if (currentUserUidRef.current !== null && currentUserUidRef.current !== currentUid) {
+        // User changed! Reset ALL state to prevent data leakage
+        console.log(`🔄 [HomeScreen:${instanceId}] USER CHANGED from ${currentUserUidRef.current?.slice(0,8)}... to ${currentUid?.slice(0,8)}... - RESETTING ALL STATE`);
+        
+        // Reset all data state
+        setCycleInfo(null);
+        setAssignments(null);
+        setProgressStats(null);
+        setActionPlan(null);
+        setRewardsData(null);
+        setRefreshStatus(null);
+        setHasRetried(false);
+        setLoading(true);
+        setIsPlanGenerating(false);
+        
+        // Reset refs
+        dataLoadingRef.current = false;
+        lastFocusTimeRef.current = 0;
+        initialDataLoadedRef.current = false;
+        
+        // Clear any polling
+        if (planPollIntervalRef.current) {
+          clearInterval(planPollIntervalRef.current);
+          planPollIntervalRef.current = null;
+        }
+      }
+      
+      currentUserUidRef.current = currentUid;
+    };
+    
+    // Check on mount
+    checkUserChange();
+    
+    // Also listen for auth state changes
+    const unsubscribe = auth.onAuthStateChanged(() => {
+      checkUserChange();
+    });
+    
+    return () => unsubscribe();
+  }, []);
 
   // Keep refs in sync with state
   useEffect(() => {
