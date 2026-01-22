@@ -587,6 +587,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       const now = Date.now();
       const instanceId = componentIdRef.current;
 
+      // FIX: Skip if plan generation polling is active - polling handles this case
+      // This prevents duplicate API calls when navigating from SignupLoadingScreen
+      if (planPollIntervalRef.current) {
+        console.log(`🔄 [HomeScreen:${instanceId}] Skipped - plan generation polling active`);
+        return;
+      }
+
       // STRICT DEDUPLICATION: If last call was within 500ms, always skip
       // This handles React's potential double-invocation
       if (now - lastFocusTimeRef.current < 500) {

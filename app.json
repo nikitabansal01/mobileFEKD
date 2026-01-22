@@ -3,6 +3,7 @@
     "name": "Hormone Insight",
     "slug": "auvra-fe",
     "version": "1.0.0",
+    "scheme": "auvra",
     "web": {
       "bundler": "metro",
       "favicon": "./assets/images/favicon.png"

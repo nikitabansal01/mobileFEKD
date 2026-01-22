@@ -163,6 +163,18 @@ const ResearchingScreen = () => {
     if (hasStartedRecommendation) return;
 
     try {
+      // FIX: Check if ResultLoadingScreen already started generation
+      const alreadyStarted = await AsyncStorage.getItem('recommendation_generation_started');
+      if (alreadyStarted === 'true') {
+        console.log('⏭️ [ResearchingScreen] Generation already started by ResultLoadingScreen, skipping duplicate call');
+        setHasStartedRecommendation(true);
+        setRecommendationStatus('in_progress');
+        // Clear the flag so it doesn't persist across sessions
+        await AsyncStorage.removeItem('recommendation_generation_started');
+        startPolling();
+        return;
+      }
+
       console.log('🚀 [ResearchingScreen] Starting recommendation generation with lifestyle_focus:', lifestyleFocus);
 
       setHasStartedRecommendation(true);

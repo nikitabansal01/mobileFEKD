@@ -63,6 +63,10 @@ const ResultLoadingScreen = () => {
         // OPTIMIZATION: Start generation HERE immediately instead of waiting for next screen
         // This utilizes the 2.5s transition animation time for backend processing
         console.log('🚀 [ResultLoadingScreen] Pre-starting recommendation generation to reduce latency...');
+        
+        // FIX: Set flag to prevent ResearchingScreen from starting generation again
+        await AsyncStorage.setItem('recommendation_generation_started', 'true');
+        
         sessionService.startRecommendationGeneration().catch(err =>
           console.log('⚠️ [ResultLoadingScreen] Background generation start warning:', err)
         );
