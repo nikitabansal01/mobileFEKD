@@ -432,6 +432,60 @@ class HomeService {
   }
 
   /**
+   * Check if today's plan exists WITHOUT triggering generation.
+   * 
+   * Use this for polling after signup to check if a plan has been created,
+   * without causing duplicate plan generation from race conditions.
+   * 
+   * @returns Promise resolving to plan status or null on error
+   */
+  async getTodayPlanStatus(): Promise<{
+    plan_exists: boolean;
+    plan_id: number | null;
+    plan_date: string;
+    ready: boolean;
+    total_assignments: number;
+    cycle_phase?: string;
+    primary_hormone?: string;
+  } | null> {
+    try {
+      console.log('🔍 Checking today\'s plan status (no generation):', `${API_BASE_URL}/api/v1/new-scheduling/assignments/today/status`);
+
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      let timezone = 'UTC';
+      try {
+        timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      } catch (e) {
+        console.warn('Failed to get local timezone', e);
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/assignments/today/status?timezone=${encodeURIComponent(timezone)}`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to check plan status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Plan status:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Error checking plan status:', error);
+      return null;
+    }
+  }
+
+  /**
    * Retrieves progress statistics for the user
    * 
    * @returns Promise resolving to progress stats or null on error

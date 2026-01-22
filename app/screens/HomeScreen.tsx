@@ -381,6 +381,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   }, [route?.params?.planGenerating]);
   
   // Poll for plan readiness when plan is generating
+  // CRITICAL FIX: Use status-only endpoint to prevent duplicate plan generation
   const startPlanGenerationPolling = async () => {
     const instanceId = componentIdRef.current;
     let pollCount = 0;
@@ -397,15 +398,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       if (planFound) return; // Already found, don't run again
       
       pollCount++;
-      console.log(`🔍 [HomeScreen:${instanceId}] Polling for plan (attempt ${pollCount}/${maxPolls})...`);
+      console.log(`🔍 [HomeScreen:${instanceId}] Polling for plan status (attempt ${pollCount}/${maxPolls})...`);
       
       try {
-        const assignmentsData = await homeService.getTodayAssignments();
+        // CRITICAL: Use status-only endpoint that doesn't trigger generation
+        // This prevents race conditions where multiple generation requests could
+        // create duplicate plans
+        const statusData = await homeService.getTodayPlanStatus();
         
-        if (assignmentsData?.plan_id && assignmentsData?.total_assignments > 0) {
-          // Plan is ready!
+        if (statusData?.plan_exists && statusData?.ready && statusData?.plan_id) {
+          // Plan is ready! Now fetch the full assignments
           planFound = true;
-          console.log(`🎉 [HomeScreen:${instanceId}] Plan ${assignmentsData.plan_id} is ready after ${pollCount} polls!`);
+          console.log(`🎉 [HomeScreen:${instanceId}] Plan ${statusData.plan_id} exists after ${pollCount} polls - fetching full data...`);
           
           // Clear polling
           if (planPollIntervalRef.current) {
@@ -416,12 +420,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           // Clear the generating flag
           await AsyncStorage.removeItem('plan_generating_in_background');
           
-          // Update state with the plan data
-          setAssignments(assignmentsData);
-          if (assignmentsData?.hormone_stats) {
-            setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
+          // Now fetch the full assignments (plan already exists, won't regenerate)
+          const assignmentsData = await homeService.getTodayAssignments();
+          
+          if (assignmentsData) {
+            // Update state with the plan data
+            setAssignments(assignmentsData);
+            if (assignmentsData?.hormone_stats) {
+              setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
+            }
+            wireUpActionPlan(assignmentsData);
           }
-          wireUpActionPlan(assignmentsData);
           
           // Hide generating overlay
           setIsPlanGenerating(false);
@@ -434,7 +443,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           return;
         }
         
-        console.log(`⏳ [HomeScreen:${instanceId}] Plan not ready yet (poll ${pollCount})`);
+        console.log(`⏳ [HomeScreen:${instanceId}] Plan not ready yet (poll ${pollCount}, exists=${statusData?.plan_exists}, ready=${statusData?.ready})`);
         
         // Check if max polls reached
         if (pollCount >= maxPolls) {
