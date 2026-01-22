@@ -786,7 +786,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           setCycleInfo(cycleData?.cycle_info || null);
 
           // If we got assignments, use them; otherwise use pending review items if available
-          if (assignmentsData) {
+          // CRITICAL FIX: Check if this is a 202 response (plan is generating) and start polling
+          if (assignmentsData && (assignmentsData as any)?._is_202_response) {
+            console.log(`⏳ [HomeScreen:${instanceId}] Got 202 response - plan is generating, starting polling...`);
+            setIsPlanGenerating(true);
+            await AsyncStorage.setItem('plan_generating_in_background', 'true');
+            startPlanGenerationPolling();
+          } else if (assignmentsData) {
             console.log(`✅ [HomeScreen:${instanceId}] Got ${assignmentsData.total_assignments} assignments`);
 
             // Post-auth (signup/login) end-to-end timing: from auth completion to plan fetch

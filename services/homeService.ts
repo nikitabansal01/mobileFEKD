@@ -407,42 +407,30 @@ class HomeService {
 
       // ═══════════════════════════════════════════════════════════════════════════════════
       // OPTION 3+4 FIX: Handle 202 Accepted (plan is being generated)
-      // Poll the status endpoint until plan is ready, then fetch full plan
+      // CRITICAL FIX: Do NOT poll here - HomeScreen has its own polling loop!
+      // Polling in BOTH places causes DUPLICATE API calls (2x load on server)
+      // Instead, return the 202 info so HomeScreen can handle polling exclusively
       // ═══════════════════════════════════════════════════════════════════════════════════
       if (response.status === 202) {
         const generatingInfo = await response.json();
-        console.log('⏳ Plan is being generated, starting polling...', generatingInfo);
+        console.log('⏳ Plan is being generated - returning 202 info for HomeScreen to poll:', generatingInfo);
         
-        // Poll for completion (max 5 minutes with 3 second intervals)
-        const MAX_POLL_TIME_MS = 5 * 60 * 1000; // 5 minutes
-        const POLL_INTERVAL_MS = generatingInfo.poll_interval_ms || 3000;
-        const pollStartTime = Date.now();
-        
-        while (Date.now() - pollStartTime < MAX_POLL_TIME_MS) {
-          await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
-          
-          const statusResult = await this.getTodayPlanStatus();
-          
-          if (statusResult?.plan_exists) {
-            console.log('✅ Plan generation complete! Fetching full plan...');
-            // Plan is ready - fetch full assignments
-            return await this._fetchFullAssignments(headers, timezone);
-          }
-          
-          if (statusResult?.generating === false && !statusResult?.plan_exists) {
-            // Generation stopped but no plan - something failed
-            console.error('❌ Generation stopped without creating a plan');
-            break;
-          }
-          
-          // Log progress
-          const elapsedSec = Math.round((Date.now() - pollStartTime) / 1000);
-          const progress = statusResult?.progress ?? generatingInfo.progress ?? 0;
-          console.log(`⏳ Still generating... ${progress}% (${elapsedSec}s elapsed)`);
-        }
-        
-        console.error('❌ Plan generation polling timed out');
-        return null;
+        // Return a special response indicating generation is in progress
+        // HomeScreen's startPlanGenerationPolling() will handle the polling
+        return {
+          generating: true,
+          plan_exists: false,
+          plan_id: null,
+          plan_date: generatingInfo.plan_date || new Date().toISOString().split('T')[0],
+          ready: false,
+          total_assignments: 0,
+          progress: generatingInfo.progress || 0,
+          session_id: generatingInfo.session_id,
+          processing_status: generatingInfo.processing_status || 'in_progress',
+          message: generatingInfo.message || 'Generating your personalized plan...',
+          // Mark this response so HomeScreen knows to start polling
+          _is_202_response: true
+        } as any;
       }
 
       if (!response.ok) {
