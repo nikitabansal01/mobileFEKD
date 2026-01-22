@@ -106,13 +106,14 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       setLoading(true);
       setLoadingMessage('Signing in with Google...');
 
-      // Set pending flag BEFORE auth to prevent ResearchingScreen from navigating early
-      AsyncStorage.setItem('session_link_complete', 'pending')
-        .then(() => signInWithCredential(auth, credential))
+      signInWithCredential(auth, credential)
         .then(async (result) => {
+          // CRITICAL: Distinguish between NEW users (signup) and RETURNING users (login)
+          const isNewUser = !!result?.additionalUserInfo?.isNewUser;
+          console.log(`🔐 [Google Auth] isNewUser=${isNewUser}, uid=${result.user.uid}`);
+
           // Track post-auth flow timing for debugging performance (signup vs login)
           try {
-            const isNewUser = !!result?.additionalUserInfo?.isNewUser;
             await AsyncStorage.setItem('post_auth_flow', isNewUser ? 'signup' : 'login');
             await AsyncStorage.setItem('post_auth_started_ms', Date.now().toString());
           } catch (e) {
@@ -125,16 +126,35 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
             await authService.saveCredentials(result.user.email, '', rememberMe);
           }
 
-          // Start session link in background (don't await)
-          // SignupLoadingScreen will wait for completion flag
-          sessionService.linkSessionToUser(result.user).catch((linkError) => {
-            console.error('Session linking failed:', linkError);
-          });
+          if (isNewUser) {
+            // NEW USER: Set pending flag and start session link
+            await AsyncStorage.setItem('session_link_complete', 'pending');
+            
+            // Start session link in background (don't await)
+            // SignupLoadingScreen will wait for completion flag
+            sessionService.linkSessionToUser(result.user).catch((linkError) => {
+              console.error('Session linking failed:', linkError);
+            });
 
-          // Navigate to loading screen immediately
-          // It will wait for session_link_complete flag
-          onClose();
-          navigation.navigate('SignupLoadingScreen');
+            // Navigate to loading screen for new users
+            onClose();
+            navigation.navigate('SignupLoadingScreen');
+          } else {
+            // RETURNING USER: Skip session link entirely!
+            // Clear any stale flags from previous sessions
+            await AsyncStorage.multiRemove([
+              'plan_generating_in_background',
+              'session_link_complete',
+              'fresh_signup_pending_refresh',
+              'post_auth_flow',
+              'post_auth_started_ms'
+            ]);
+
+            console.log('✅ [Google Auth] Returning user - navigating directly to MainScreenTabs');
+            Alert.alert('Success', 'Google login successful!');
+            onClose();
+            navigation.navigate('MainScreenTabs');
+          }
         })
         .catch((error) => {
           Alert.alert('Error', error.message || 'Google signup failed');
@@ -257,10 +277,11 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
         idToken: credential.identityToken!,
       });
 
-      // Set pending flag BEFORE auth to prevent ResearchingScreen from navigating early
-      await AsyncStorage.setItem('session_link_complete', 'pending');
-
       const result = await signInWithCredential(auth, firebaseCredential);
+
+      // CRITICAL: Distinguish between NEW users (signup) and RETURNING users (login)
+      const isNewUser = !!result?.additionalUserInfo?.isNewUser;
+      console.log(`🔐 [Apple Auth] isNewUser=${isNewUser}, uid=${result.user.uid}`);
 
       // Save login state using authService (Apple doesn't store passwords)
       await authService.setLoggedIn(result.user.uid);
@@ -268,16 +289,35 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
         await authService.saveCredentials(result.user.email, '', rememberMe);
       }
 
-      // Start session link in background (don't await)
-      // SignupLoadingScreen will wait for completion flag
-      sessionService.linkSessionToUser(result.user).catch((linkError) => {
-        console.error('Session linking failed:', linkError);
-      });
+      if (isNewUser) {
+        // NEW USER: Set pending flag and start session link
+        await AsyncStorage.setItem('session_link_complete', 'pending');
 
-      // Navigate to loading screen immediately
-      // It will wait for session_link_complete flag
-      onClose();
-      navigation.navigate('SignupLoadingScreen');
+        // Start session link in background (don't await)
+        // SignupLoadingScreen will wait for completion flag
+        sessionService.linkSessionToUser(result.user).catch((linkError) => {
+          console.error('Session linking failed:', linkError);
+        });
+
+        // Navigate to loading screen for new users
+        onClose();
+        navigation.navigate('SignupLoadingScreen');
+      } else {
+        // RETURNING USER: Skip session link entirely!
+        // Clear any stale flags from previous sessions
+        await AsyncStorage.multiRemove([
+          'plan_generating_in_background',
+          'session_link_complete',
+          'fresh_signup_pending_refresh',
+          'post_auth_flow',
+          'post_auth_started_ms'
+        ]);
+
+        console.log('✅ [Apple Auth] Returning user - navigating directly to MainScreenTabs');
+        Alert.alert('Success', 'Apple login successful!');
+        onClose();
+        navigation.navigate('MainScreenTabs');
+      }
     } catch (error: any) {
       Alert.alert("Error", error.message || "Apple signup failed");
     } finally {
