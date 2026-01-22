@@ -367,6 +367,9 @@ class HomeService {
   /**
    * Retrieves today's assignments for the user
    * 
+   * OPTION 3+4 ENHANCEMENT: Handles 202 Accepted response when plan is being generated.
+   * If backend returns 202 with "generating: true", this method will poll until ready.
+   * 
    * @returns Promise resolving to assignments data or null on error
    */
   async getTodayAssignments(): Promise<AssignmentsResponse | null> {
@@ -402,6 +405,46 @@ class HomeService {
       });
       const requestMs = Date.now() - tReqStart;
 
+      // ═══════════════════════════════════════════════════════════════════════════════════
+      // OPTION 3+4 FIX: Handle 202 Accepted (plan is being generated)
+      // Poll the status endpoint until plan is ready, then fetch full plan
+      // ═══════════════════════════════════════════════════════════════════════════════════
+      if (response.status === 202) {
+        const generatingInfo = await response.json();
+        console.log('⏳ Plan is being generated, starting polling...', generatingInfo);
+        
+        // Poll for completion (max 5 minutes with 3 second intervals)
+        const MAX_POLL_TIME_MS = 5 * 60 * 1000; // 5 minutes
+        const POLL_INTERVAL_MS = generatingInfo.poll_interval_ms || 3000;
+        const pollStartTime = Date.now();
+        
+        while (Date.now() - pollStartTime < MAX_POLL_TIME_MS) {
+          await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+          
+          const statusResult = await this.getTodayPlanStatus();
+          
+          if (statusResult?.plan_exists) {
+            console.log('✅ Plan generation complete! Fetching full plan...');
+            // Plan is ready - fetch full assignments
+            return await this._fetchFullAssignments(headers, timezone);
+          }
+          
+          if (statusResult?.generating === false && !statusResult?.plan_exists) {
+            // Generation stopped but no plan - something failed
+            console.error('❌ Generation stopped without creating a plan');
+            break;
+          }
+          
+          // Log progress
+          const elapsedSec = Math.round((Date.now() - pollStartTime) / 1000);
+          const progress = statusResult?.progress ?? generatingInfo.progress ?? 0;
+          console.log(`⏳ Still generating... ${progress}% (${elapsedSec}s elapsed)`);
+        }
+        
+        console.error('❌ Plan generation polling timed out');
+        return null;
+      }
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Failed to fetch today\'s assignments:', errorText);
@@ -432,8 +475,32 @@ class HomeService {
   }
 
   /**
+   * Internal helper to fetch full assignments (used after polling confirms plan exists)
+   */
+  private async _fetchFullAssignments(headers: Record<string, string>, timezone: string): Promise<AssignmentsResponse | null> {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/v1/new-scheduling/assignments/today?t=${new Date().getTime()}&timezone=${encodeURIComponent(timezone)}`,
+        { method: 'GET', headers }
+      );
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to fetch assignments after poll:', errorText);
+        return null;
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('❌ Error fetching assignments after poll:', error);
+      return null;
+    }
+  }
+
+  /**
    * Check if today's plan exists WITHOUT triggering generation.
    * 
+   * OPTION 3+4 ENHANCEMENT: Also returns generation progress if session is generating.
    * Use this for polling after signup to check if a plan has been created,
    * without causing duplicate plan generation from race conditions.
    * 
@@ -441,12 +508,21 @@ class HomeService {
    */
   async getTodayPlanStatus(): Promise<{
     plan_exists: boolean;
+    generating?: boolean;  // NEW: true if session plan is being generated
     plan_id: number | null;
     plan_date: string;
     ready: boolean;
     total_assignments: number;
     cycle_phase?: string;
     primary_hormone?: string;
+    // NEW: Generation progress fields
+    session_id?: string;
+    processing_status?: string;
+    progress?: number;
+    phase?: string;
+    elapsed_seconds?: number;
+    estimated_remaining_seconds?: number;
+    message?: string;
   } | null> {
     try {
       console.log('🔍 Checking today\'s plan status (no generation):', `${API_BASE_URL}/api/v1/new-scheduling/assignments/today/status`);
