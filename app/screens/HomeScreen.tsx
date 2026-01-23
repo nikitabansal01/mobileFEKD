@@ -534,6 +534,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   // Refs to track state for useFocusEffect (avoids stale closure and dependency issues)
   const showDailyReviewRef = useRef(showDailyReview);
   const isReviewBlockingRef = useRef(isReviewBlocking);
+  const showAuvraChatRef = useRef(showAuvraChat);
 
   // CRITICAL: Detect user changes and reset all state
   // This prevents data from old user leaking to new user after logout/login
@@ -587,6 +588,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   useEffect(() => {
     showDailyReviewRef.current = showDailyReview;
     isReviewBlockingRef.current = isReviewBlocking;
+    showAuvraChatRef.current = showAuvraChat;
 
     // CRITICAL: If review becomes active, immediately hide AuvraChatModal and clear timer
     if (isReviewBlocking || showDailyReview) {
@@ -597,6 +599,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       }
     }
   }, [isReviewBlocking, showDailyReview]);
+
+  // Keep showAuvraChatRef synced independently as well (used by timer callback)
+  useEffect(() => {
+    showAuvraChatRef.current = showAuvraChat;
+  }, [showAuvraChat]);
 
   // Auto-trigger unlock animation when today's data becomes ready (modal already closed)
   useEffect(() => {
@@ -895,37 +902,49 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
   // Show feedback popup ONCE per session, 30 seconds after assignments load
   // SIMPLE: Just show once per session, no plan_source complexity
-  const startFeedbackTimer = () => {
+  const startFeedbackTimer = useCallback(() => {
     const instanceId = componentIdRef.current;
 
     // Already shown this session
     if (feedbackShownTodayRef.current) {
+      console.log(`📋 [HomeScreen:${instanceId}] Feedback timer not started: already shown this session`);
+      return;
+    }
+
+    // If a timer is already armed, don't keep resetting it on re-renders/state changes.
+    // We want a single "arm once" behavior per session.
+    if (inactivityTimerRef.current) {
+      console.log(`📋 [HomeScreen:${instanceId}] Feedback timer already armed - leaving as-is`);
       return;
     }
 
     // Don't start timer if review is blocking or chat already showing
-    if (showAuvraChat || isReviewBlockingRef.current || showDailyReviewRef.current) {
+    if (showAuvraChatRef.current || isReviewBlockingRef.current || showDailyReviewRef.current) {
+      console.log(
+        `📋 [HomeScreen:${instanceId}] Feedback timer not started: blocked ` +
+        `(showAuvraChat=${showAuvraChatRef.current}, isReviewBlocking=${isReviewBlockingRef.current}, showDailyReview=${showDailyReviewRef.current})`
+      );
       return;
     }
 
     console.log(`📋 [HomeScreen:${instanceId}] Starting ${feedbackPromptSeconds}s feedback timer`);
 
-    // Clear any existing timer
-    if (inactivityTimerRef.current) {
-      clearTimeout(inactivityTimerRef.current);
-      inactivityTimerRef.current = null;
-    }
-
     // Show popup after 30 seconds
     const timeoutMs = feedbackPromptSeconds * 1000;
     inactivityTimerRef.current = setTimeout(() => {
-      if (!showAuvraChat && !feedbackShownTodayRef.current) {
+      if (!showAuvraChatRef.current && !feedbackShownTodayRef.current) {
         console.log(`📋 [HomeScreen:${instanceId}] Showing feedback popup`);
         setShowAuvraChat(true);
         feedbackShownTodayRef.current = true;
       }
+
+      // Always clear ref when the timer fires so we don't keep a stale handle around
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
+      }
     }, timeoutMs);
-  };
+  }, [feedbackPromptSeconds]);
 
   // Reset inactivity timer - DEPRECATED: Now using startFeedbackTimer instead
   // Keeping for cleanup purposes only
@@ -1346,19 +1365,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     // NOTE: Do NOT close modal here! User clicks "Let's Go" button which calls onClose
   };
 
-  // Start timer when component mounts and data is loaded
-  // IMPORTANT: Don't start timer if review is blocking
+  // Arm the 30s feedback timer whenever we have assignments and we're not blocked.
+  // This also fixes the case where we attempted to start while review was blocking
+  // (startFeedbackTimer returns early) and never retried after review closes.
   useEffect(() => {
     if (!loading && assignments && !isReviewBlocking && !showDailyReview) {
-      resetInactivityTimer();
+      startFeedbackTimer();
     }
 
-    // Clear timer if review becomes blocking
+    // Clear timer if review becomes blocking (redundant with the ref-sync effect, but safe)
     if (isReviewBlocking || showDailyReview) {
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
       }
-      // Also hide Auvra chat if it was showing
       if (showAuvraChat) {
         setShowAuvraChat(false);
       }
@@ -1367,9 +1387,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     return () => {
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
       }
     };
-  }, [loading, assignments, showAuvraChat, feedbackPromptSeconds, isReviewBlocking, showDailyReview]);
+    // Intentionally NOT depending on showAuvraChat to avoid repeatedly re-arming/resetting.
+  }, [loading, assignments, isReviewBlocking, showDailyReview, feedbackPromptSeconds, startFeedbackTimer]);
 
   /**
    * Convert hormone_stats data to HormoneStats interface

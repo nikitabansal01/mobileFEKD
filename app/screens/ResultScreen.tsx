@@ -94,8 +94,10 @@ const ResultScreen = () => {
 
     // Default: bottom-right inside the card
     const base = {
-      right: scale(2),
-      bottom: verticalScale(6),
+      // Slight negative offsets are intentional: the card clips (overflow: hidden)
+      // so the art can sit tighter to the edge like the Figma without overlapping text.
+      right: scale(-10),
+      bottom: verticalScale(-4),
       width: scale(110),
       height: scale(110),
     };
@@ -105,18 +107,19 @@ const ResultScreen = () => {
         ...base,
         width: scale(118),
         height: scale(118),
-        right: scale(0),
-        bottom: verticalScale(4),
+        right: scale(-14),
+        bottom: verticalScale(-8),
       };
     }
 
     if (h === 'testosterone' || h === 'androgens') {
       return {
         ...base,
-        width: scale(114),
-        height: scale(114),
-        right: scale(0),
-        bottom: verticalScale(6),
+        // Wider asset (arms) needs more right push + a bit lower to avoid title overlap.
+        width: scale(120),
+        height: scale(120),
+        right: scale(-18),
+        bottom: verticalScale(-10),
       };
     }
 
@@ -125,8 +128,8 @@ const ResultScreen = () => {
         ...base,
         width: scale(112),
         height: scale(112),
-        right: scale(0),
-        bottom: verticalScale(6),
+        right: scale(-14),
+        bottom: verticalScale(-8),
       };
     }
 
@@ -135,6 +138,9 @@ const ResultScreen = () => {
         ...base,
         width: scale(110),
         height: scale(110),
+        // Keep the waving arm away from the text.
+        right: scale(-16),
+        bottom: verticalScale(-10),
       };
     }
 
@@ -325,7 +331,7 @@ const ResultScreen = () => {
                       </Text>
                     </View>
 
-                    <View style={[styles.graphicSection, getHormoneArtContainerStyle(primaryCard.hormone)]}>
+                    <View pointerEvents="none" style={[styles.graphicSection, getHormoneArtContainerStyle(primaryCard.hormone)]}>
                       <Image
                         pointerEvents="none"
                         source={getHormoneImage(primaryCard.hormone, primaryCard.level, primaryCard.priority, primaryCard.is_primary, primaryCard.score)}
@@ -368,7 +374,7 @@ const ResultScreen = () => {
                       </Text>
                     </View>
 
-                    <View style={[styles.graphicSection, getHormoneArtContainerStyle(secondaryCard.hormone)]}>
+                    <View pointerEvents="none" style={[styles.graphicSection, getHormoneArtContainerStyle(secondaryCard.hormone)]}>
                       <Image
                         pointerEvents="none"
                         source={getHormoneImage(secondaryCard.hormone, secondaryCard.level, secondaryCard.priority, secondaryCard.is_primary, secondaryCard.score)}
@@ -493,12 +499,14 @@ const styles = StyleSheet.create({
     paddingRight: scale(8),
   },
   titleSubtitleContainer: {
-    maxWidth: '72%',
+    // Use padding (not a smaller maxWidth) so titles can wrap naturally while
+    // still leaving breathing room for the buddy art.
+    paddingRight: scale(96),
     marginBottom: responsiveHeight(0.35),
     zIndex: 2,
   },
   textSection: {
-    maxWidth: '72%',
+    paddingRight: scale(96),
     zIndex: 2,
   },
   graphicSection: {
