@@ -40,7 +40,7 @@ const ResultScreen = () => {
   const [error, setError] = useState<string | null>(null);
   const [maxCardHeight, setMaxCardHeight] = useState<number | null>(null);
 
-  const CARD_MIN_HEIGHT = responsiveHeight(17);
+  const CARD_MIN_HEIGHT = responsiveHeight(15.5);
 
   /**
    * Get variant character image based on hormone.
@@ -86,65 +86,97 @@ const ResultScreen = () => {
   };
 
   /**
-   * Get hormone-specific art sizing to ensure visual consistency across all cards.
-   * Art must always stay inside the card (no negative offsets).
+   * Old/prototype-style card art: absolutely positioned inside the card so
+   * we don't reserve too much horizontal space for the illustration.
    */
-  const getHormoneArtSize = (hormone?: string) => {
+  const getHormoneArtContainerStyle = (hormone?: string) => {
     const h = (hormone || '').toLowerCase();
+
+    // Default: bottom-right inside the card
+    const base = {
+      right: scale(8),
+      bottom: verticalScale(6),
+      width: scale(110),
+      height: scale(110),
+    };
 
     if (h === 'progesterone') {
       return {
-        width: scale(104),
-        height: scale(104),
-        transform: [{ scale: 1 }],
+        ...base,
+        width: scale(118),
+        height: scale(118),
+        right: scale(6),
+        bottom: verticalScale(4),
       };
     }
 
     if (h === 'testosterone' || h === 'androgens') {
       return {
-        width: scale(102),
-        height: scale(102),
-        transform: [{ scale: 1 }],
+        ...base,
+        width: scale(114),
+        height: scale(114),
+        right: scale(6),
+        bottom: verticalScale(6),
       };
     }
 
     if (h === 'estrogen') {
       return {
-        width: scale(98),
-        height: scale(98),
-        transform: [{ scale: 1 }],
+        ...base,
+        width: scale(112),
+        height: scale(112),
+        right: scale(6),
+        bottom: verticalScale(6),
       };
     }
 
     if (h === 'insulin') {
       return {
-        width: scale(98),
-        height: scale(98),
-        // Slightly smaller to avoid the "too dominant" perception.
-        transform: [{ scale: 0.92 }],
+        ...base,
+        width: scale(110),
+        height: scale(110),
       };
     }
 
     if (h === 'thyroid') {
       return {
-        width: scale(98),
-        height: scale(98),
-        transform: [{ scale: 0.92 }],
+        ...base,
+        width: scale(110),
+        height: scale(110),
       };
     }
 
     if (h === 'cortisol') {
       return {
-        width: scale(98),
-        height: scale(98),
-        transform: [{ scale: 0.95 }],
+        ...base,
+        width: scale(110),
+        height: scale(110),
       };
     }
 
     return {
-      width: scale(98),
-      height: scale(98),
-      transform: [{ scale: 0.95 }],
+      ...base,
+    };
+  };
+
+  const getHormoneArtImageStyle = (hormone?: string) => {
+    const h = (hormone || '').toLowerCase();
+
+    // Slightly tone down tall assets
+    if (h === 'insulin' || h === 'thyroid') {
+      return {
+        width: '100%' as const,
+        height: '100%' as const,
+        resizeMode: 'contain' as const,
+        transform: [{ scale: 0.92 }],
+      };
+    }
+
+    return {
+      width: '100%' as const,
+      height: '100%' as const,
+      resizeMode: 'contain' as const,
+      transform: [{ scale: 0.98 }],
     };
   };
 
@@ -278,24 +310,26 @@ const ResultScreen = () => {
                   ]}
                   onLayout={(e) => handleCardLayout(e.nativeEvent.layout.height)}
                 >
-                  <View style={styles.cardRow}>
-                    <View style={styles.cardLeftCol}>
+                  <View style={styles.cardContent}>
+                    <View style={styles.titleSubtitleContainer}>
                       <Text style={styles.hormoneTitleStrong}>
                         {primaryCard.name}
                         <Text style={styles.hormoneTitleSoft}>, {primaryCard.subtitle}</Text>
                       </Text>
+                    </View>
 
+                    <View style={styles.textSection}>
                       <Text style={styles.hormoneDescription} numberOfLines={4} ellipsizeMode="tail">
                         {primaryCard.icon ? <Text style={styles.alertIconText}>{primaryCard.icon} </Text> : null}
                         {primaryCard.description}
                       </Text>
                     </View>
 
-                    <View style={styles.cardRightCol}>
+                    <View style={[styles.graphicSection, getHormoneArtContainerStyle(primaryCard.hormone)]}>
                       <Image
                         pointerEvents="none"
                         source={getHormoneImage(primaryCard.hormone, primaryCard.level, primaryCard.priority, primaryCard.is_primary, primaryCard.score)}
-                        style={[styles.cardArtImage, getHormoneArtSize(primaryCard.hormone)]}
+                        style={getHormoneArtImageStyle(primaryCard.hormone)}
                       />
                     </View>
                   </View>
@@ -319,24 +353,26 @@ const ResultScreen = () => {
                   ]}
                   onLayout={(e) => handleCardLayout(e.nativeEvent.layout.height)}
                 >
-                  <View style={styles.cardRow}>
-                    <View style={styles.cardLeftCol}>
+                  <View style={styles.cardContent}>
+                    <View style={styles.titleSubtitleContainer}>
                       <Text style={styles.hormoneTitleStrong}>
                         {secondaryCard.name}
                         <Text style={styles.hormoneTitleSoft}>, {secondaryCard.subtitle}</Text>
                       </Text>
+                    </View>
 
+                    <View style={styles.textSection}>
                       <Text style={styles.hormoneDescription} numberOfLines={4} ellipsizeMode="tail">
                         {secondaryCard.icon ? <Text style={styles.alertIconText}>{secondaryCard.icon} </Text> : null}
                         {secondaryCard.description}
                       </Text>
                     </View>
 
-                    <View style={styles.cardRightCol}>
+                    <View style={[styles.graphicSection, getHormoneArtContainerStyle(secondaryCard.hormone)]}>
                       <Image
                         pointerEvents="none"
                         source={getHormoneImage(secondaryCard.hormone, secondaryCard.level, secondaryCard.priority, secondaryCard.is_primary, secondaryCard.score)}
-                        style={[styles.cardArtImage, getHormoneArtSize(secondaryCard.hormone)]}
+                        style={getHormoneArtImageStyle(secondaryCard.hormone)}
                       />
                     </View>
                   </View>
@@ -427,7 +463,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   cardsContainer: {
-    width: responsiveWidth(86),
+    width: responsiveWidth(82),
     gap: responsiveHeight(2.7),
   },
   cardWrapper: {
@@ -452,24 +488,22 @@ const styles = StyleSheet.create({
     elevation: 2,
     overflow: 'hidden',
   },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: responsiveWidth(1.6),
+  cardContent: {
+    position: 'relative',
+    paddingRight: scale(8),
   },
-  cardLeftCol: {
-    flex: 1,
-    minWidth: 0,
-    paddingRight: responsiveWidth(1),
+  titleSubtitleContainer: {
+    maxWidth: '72%',
+    marginBottom: responsiveHeight(0.35),
+    zIndex: 2,
   },
-  cardRightCol: {
-    width: scale(104),
-    alignItems: 'flex-end',
-    justifyContent: 'flex-end',
+  textSection: {
+    maxWidth: '72%',
+    zIndex: 2,
   },
-  cardArtImage: {
-    resizeMode: 'contain',
+  graphicSection: {
+    position: 'absolute',
+    zIndex: 1,
   },
   hormoneTitleStrong: {
     fontSize: responsiveFontSize(2.05),
