@@ -94,7 +94,7 @@ const ResultScreen = () => {
 
     // Default: bottom-right inside the card
     const base = {
-      right: scale(8),
+      right: scale(2),
       bottom: verticalScale(6),
       width: scale(110),
       height: scale(110),
@@ -105,7 +105,7 @@ const ResultScreen = () => {
         ...base,
         width: scale(118),
         height: scale(118),
-        right: scale(6),
+        right: scale(0),
         bottom: verticalScale(4),
       };
     }
@@ -115,7 +115,7 @@ const ResultScreen = () => {
         ...base,
         width: scale(114),
         height: scale(114),
-        right: scale(6),
+        right: scale(0),
         bottom: verticalScale(6),
       };
     }
@@ -125,7 +125,7 @@ const ResultScreen = () => {
         ...base,
         width: scale(112),
         height: scale(112),
-        right: scale(6),
+        right: scale(0),
         bottom: verticalScale(6),
       };
     }
