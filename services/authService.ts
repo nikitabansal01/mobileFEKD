@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { signOut } from 'firebase/auth';
 import { auth, signInWithEmail } from '@/config/firebase';
+import sessionService from './sessionService';
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -199,6 +200,11 @@ class AuthService {
       await signOut(auth);
       console.log('✅ Firebase sign out successful');
 
+      // CRITICAL: Clear session to prevent reuse by next user
+      // This ensures a new survey creates a fresh session
+      await sessionService.clearSession();
+      console.log('🗑️ Session cleared for clean slate');
+
       // Check if remember me was enabled
       const rememberMe = await this.isRememberMeEnabled();
 
@@ -233,6 +239,10 @@ class AuthService {
   async fullLogout(): Promise<void> {
     try {
       await signOut(auth);
+      
+      // CRITICAL: Clear session to prevent reuse by next user
+      await sessionService.clearSession();
+      console.log('🗑️ Session cleared for clean slate');
       
       // Clear everything
       await AsyncStorage.removeItem(STORAGE_KEYS.IS_LOGGED_IN);

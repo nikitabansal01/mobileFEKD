@@ -38,88 +38,160 @@ const ResultScreen = () => {
   const [primaryCard, setPrimaryCard] = useState<any | null>(null);
   const [secondaryCard, setSecondaryCard] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [maxCardHeight, setMaxCardHeight] = useState<number | null>(null);
+
+  const CARD_MIN_HEIGHT = responsiveHeight(15.5);
 
   /**
-   * Get variant character image based on hormone + level + priority.
-   * We intentionally support expressive poses to differentiate states (e.g. high vs low) when assets exist.
-   * Asset naming strategy (current assumptions based on existing files):
-   * - <Hormone>Character.png           → Neutral / baseline ("moderate" display / unknown)
-   * - <Hormone>BothHand.png / BothHandsUp.png → Elevated / "high" energetic state
-   * - <Hormone>LeftHand.png            → "low" / subdued state
-   * - ProgesteroneSadCalmer / VerySadCalmer   → Low progesterone (severity mapped by priority)
-   * - ProgesteroneSuperExcitedCalmer / ExcitedCalmer → (reserved for potential future high state if introduced)
-   * If an expected variant is missing, we gracefully fall back to the neutral Character.
+   * Get variant character image based on hormone.
+   * All hormones now use BothHand images regardless of level (high/low/moderate).
    */
   const getHormoneImage = (hormone?: string, level?: string, priority?: string, isPrimary?: boolean, score?: number) => {
     const h = (hormone || '').toLowerCase();
-    const lvl = (level || '').toLowerCase();
-    const sc = typeof score === 'number' ? score : 0;
 
     // Helper to prefer existing key safely
     const safe = (img: any, fallback: any) => img ? img : fallback;
 
-    // Severity tiers (coarse): allow broader score range future-proofing
-    // Tier 3 (strong): sc >= 8, Tier 2 (moderate): sc >= 4, Tier 1 (mild): <4
-    const tier3 = sc >= 8;
-    const tier2 = sc >= 4 && sc < 8;
-
-    // Progesterone - use new sky blue hand images (not old pink calmer images)
+    // All hormones use BothHand images regardless of level
     if (h === 'progesterone') {
-      if (lvl === 'low') {
-        // Low progesterone - use subdued pose (LeftHand)
-        return safe(Images.ProgesteroneLeftHand, Images.ProgesteroneCharacter);
-      }
-      // High or neutral - use energetic pose (BothHand)
       return safe(Images.ProgesteroneBothHand, Images.ProgesteroneCharacter);
     }
 
-    // Testosterone / Androgens
     if (h === 'androgens') {
-      if (lvl === 'high') {
-        return safe(Images.AndrogensBothHand, Images.AndrogensCharacter);
-      } else if (lvl === 'low') {
-        return safe(Images.AndrogensLeftHand, Images.AndrogensCharacter);
-      }
-      return Images.AndrogensCharacter;
+      return safe(Images.AndrogensBothHand, Images.AndrogensCharacter);
     }
 
     if (h === 'testosterone') {
-      if (lvl === 'high') {
-        // Energetic pose if available
-        return safe(Images.TestosteroneBothHand, Images.TestosteroneCharacter);
-      } else if (lvl === 'low') {
-        // Subdued pose
-        return safe(Images.TestosteroneLeftHand, Images.TestosteroneCharacter);
-      }
-      return Images.TestosteroneCharacter;
+      return safe(Images.TestosteroneBothHand, Images.TestosteroneCharacter);
     }
 
     if (h === 'estrogen') {
-      if (lvl === 'high') return safe(Images.EstrogenBothHand, Images.EstrogenCharacter);
-      if (lvl === 'low') return safe(Images.EstrogenLeftHand, Images.EstrogenCharacter);
-      return Images.EstrogenCharacter;
+      return safe(Images.EstrogenBothHand, Images.EstrogenCharacter);
     }
 
     if (h === 'insulin') {
-      if (lvl === 'high') return safe(Images.InsulinBothHand, Images.InsulinCharacter);
-      if (lvl === 'low') return safe(Images.InsulinLeftHand, Images.InsulinCharacter);
-      return Images.InsulinCharacter;
+      return safe(Images.InsulinBothHand, Images.InsulinCharacter);
     }
 
     if (h === 'cortisol') {
-      if (lvl === 'high') return safe(Images.CortisolBothHand, Images.CortisolCharacter);
-      if (lvl === 'low') return safe(Images.CortisolLeftHand, Images.CortisolCharacter);
-      return Images.CortisolCharacter;
+      return safe(Images.CortisolBothHand, Images.CortisolCharacter);
     }
 
     if (h === 'thyroid') {
-      if (lvl === 'low') return safe(Images.ThyroidLeftHand, Images.ThyroidCharacter); // Only low state currently modeled
-      if (lvl === 'high') return safe(Images.ThyroidBothHand, Images.ThyroidCharacter); // Future-proof
-      return Images.ThyroidCharacter;
+      return safe(Images.ThyroidBothHand, Images.ThyroidCharacter);
     }
 
     // Fallback generic neutral graphic if hormone not recognized
     return Images.GraphicGnRHDefault;
+  };
+
+  /**
+   * Old/prototype-style card art: absolutely positioned inside the card so
+   * we don't reserve too much horizontal space for the illustration.
+   */
+  const getHormoneArtContainerStyle = (hormone?: string) => {
+    const h = (hormone || '').toLowerCase();
+
+    // Default: bottom-right inside the card
+    const base = {
+      // Slight negative offsets are intentional: the card clips (overflow: hidden)
+      // so the art can sit tighter to the edge like the Figma without overlapping text.
+      right: scale(-10),
+      bottom: verticalScale(-4),
+      width: scale(110),
+      height: scale(110),
+    };
+
+    if (h === 'progesterone') {
+      return {
+        ...base,
+        width: scale(118),
+        height: scale(118),
+        right: scale(-14),
+        bottom: verticalScale(-8),
+      };
+    }
+
+    if (h === 'testosterone' || h === 'androgens') {
+      return {
+        ...base,
+        // Wider asset (arms) needs more right push + a bit lower to avoid title overlap.
+        width: scale(120),
+        height: scale(120),
+        right: scale(-18),
+        bottom: verticalScale(-10),
+      };
+    }
+
+    if (h === 'estrogen') {
+      return {
+        ...base,
+        width: scale(112),
+        height: scale(112),
+        right: scale(-14),
+        bottom: verticalScale(-8),
+      };
+    }
+
+    if (h === 'insulin') {
+      return {
+        ...base,
+        width: scale(110),
+        height: scale(110),
+        // Keep the waving arm away from the text.
+        right: scale(-16),
+        bottom: verticalScale(-10),
+      };
+    }
+
+    if (h === 'thyroid') {
+      return {
+        ...base,
+        width: scale(110),
+        height: scale(110),
+      };
+    }
+
+    if (h === 'cortisol') {
+      return {
+        ...base,
+        width: scale(110),
+        height: scale(110),
+      };
+    }
+
+    return {
+      ...base,
+    };
+  };
+
+  const getHormoneArtImageStyle = (hormone?: string) => {
+    const h = (hormone || '').toLowerCase();
+
+    // Slightly tone down tall assets
+    if (h === 'insulin' || h === 'thyroid') {
+      return {
+        width: '100%' as const,
+        height: '100%' as const,
+        resizeMode: 'contain' as const,
+        transform: [{ scale: 0.92 }],
+      };
+    }
+
+    return {
+      width: '100%' as const,
+      height: '100%' as const,
+      resizeMode: 'contain' as const,
+      transform: [{ scale: 0.98 }],
+    };
+  };
+
+  const handleCardLayout = (height: number) => {
+    setMaxCardHeight((prev) => {
+      const prevValue = prev ?? 0;
+      const next = Math.max(prevValue, height, CARD_MIN_HEIGHT);
+      return next === prevValue ? prev : next;
+    });
   };
 
   // Fetch hormone analysis on mount
@@ -236,28 +308,34 @@ const ResultScreen = () => {
             {/* Primary hormone card */}
             {primaryCard && (
               <View style={styles.cardWrapper}>
-                <View style={styles.hormoneCard}>
+                <View
+                  style={[
+                    styles.hormoneCard,
+                    { minHeight: CARD_MIN_HEIGHT },
+                    maxCardHeight ? { height: maxCardHeight } : null,
+                  ]}
+                  onLayout={(e) => handleCardLayout(e.nativeEvent.layout.height)}
+                >
                   <View style={styles.cardContent}>
-                    {/* Title and Subtitle */}
                     <View style={styles.titleSubtitleContainer}>
-                      <Text style={styles.hormoneName}>
-                        {primaryCard.name}, <Text style={styles.hormoneSubtitle}>{primaryCard.subtitle}</Text>
+                      <Text style={styles.hormoneTitleStrong}>
+                        {primaryCard.name}
+                        <Text style={styles.hormoneTitleSoft}>, {primaryCard.subtitle}</Text>
                       </Text>
                     </View>
 
-                    {/* Description */}
                     <View style={styles.textSection}>
-                      <Text style={styles.hormoneDescription}>
-                        {primaryCard.icon}{' '}
+                      <Text style={styles.hormoneDescription} numberOfLines={4} ellipsizeMode="tail">
+                        {primaryCard.icon ? <Text style={styles.alertIconText}>{primaryCard.icon} </Text> : null}
                         {primaryCard.description}
                       </Text>
                     </View>
 
-                    {/* Hormone-specific character image */}
-                    <View style={[styles.graphicSection, styles.progesteroneGraphic]}>
+                    <View pointerEvents="none" style={[styles.graphicSection, getHormoneArtContainerStyle(primaryCard.hormone)]}>
                       <Image
+                        pointerEvents="none"
                         source={getHormoneImage(primaryCard.hormone, primaryCard.level, primaryCard.priority, primaryCard.is_primary, primaryCard.score)}
-                        style={{ width: scale(120), height: verticalScale(120), resizeMode: 'contain' }}
+                        style={getHormoneArtImageStyle(primaryCard.hormone)}
                       />
                     </View>
                   </View>
@@ -273,28 +351,34 @@ const ResultScreen = () => {
             {/* Secondary hormone card */}
             {secondaryCard && (
               <View style={styles.cardWrapper}>
-                <View style={styles.hormoneCard}>
+                <View
+                  style={[
+                    styles.hormoneCard,
+                    { minHeight: CARD_MIN_HEIGHT },
+                    maxCardHeight ? { height: maxCardHeight } : null,
+                  ]}
+                  onLayout={(e) => handleCardLayout(e.nativeEvent.layout.height)}
+                >
                   <View style={styles.cardContent}>
-                    {/* Title and Subtitle */}
                     <View style={styles.titleSubtitleContainer}>
-                      <Text style={styles.hormoneName}>
-                        {secondaryCard.name}, <Text style={styles.hormoneSubtitle}>{secondaryCard.subtitle}</Text>
+                      <Text style={styles.hormoneTitleStrong}>
+                        {secondaryCard.name}
+                        <Text style={styles.hormoneTitleSoft}>, {secondaryCard.subtitle}</Text>
                       </Text>
                     </View>
 
-                    {/* Description */}
                     <View style={styles.textSection}>
-                      <Text style={styles.hormoneDescription}>
-                        {secondaryCard.icon}{' '}
+                      <Text style={styles.hormoneDescription} numberOfLines={4} ellipsizeMode="tail">
+                        {secondaryCard.icon ? <Text style={styles.alertIconText}>{secondaryCard.icon} </Text> : null}
                         {secondaryCard.description}
                       </Text>
                     </View>
 
-                    {/* Hormone-specific character image */}
-                    <View style={[styles.graphicSection, styles.testosteroneGraphic]}>
+                    <View pointerEvents="none" style={[styles.graphicSection, getHormoneArtContainerStyle(secondaryCard.hormone)]}>
                       <Image
+                        pointerEvents="none"
                         source={getHormoneImage(secondaryCard.hormone, secondaryCard.level, secondaryCard.priority, secondaryCard.is_primary, secondaryCard.score)}
-                        style={{ width: scale(120), height: verticalScale(120), resizeMode: 'contain' }}
+                        style={getHormoneArtImageStyle(secondaryCard.hormone)}
                       />
                     </View>
                   </View>
@@ -385,7 +469,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   cardsContainer: {
-    width: responsiveWidth(78),
+    width: responsiveWidth(82),
     gap: responsiveHeight(2.7),
   },
   cardWrapper: {
@@ -393,63 +477,68 @@ const styles = StyleSheet.create({
     marginTop: responsiveHeight(1), // Margin for High Priority tag
   },
   hormoneCard: {
-    backgroundColor: '#FFFBFC',
-    borderRadius: 12,
-    padding: responsiveWidth(6),
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    paddingHorizontal: responsiveWidth(5.4),
+    paddingTop: responsiveHeight(2.0),
+    paddingBottom: responsiveHeight(1.9),
     position: 'relative',
-    borderWidth: 0.5,
-    borderColor: '#cfcfcf',
-    elevation: 3,
-    overflow: 'hidden', // Clip parts that extend beyond card area
+    borderWidth: 1,
+    borderColor: '#E7E7EE',
+    // iOS shadow
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    // Android shadow
+    elevation: 2,
+    overflow: 'hidden',
   },
   cardContent: {
-    flexDirection: 'column', // Vertical layout
-    alignItems: 'flex-start', // Left alignment
-    position: 'relative', // Reference point for absolute positioned elements
+    position: 'relative',
+    paddingRight: scale(8),
+  },
+  titleSubtitleContainer: {
+    // Use padding (not a smaller maxWidth) so titles can wrap naturally while
+    // still leaving breathing room for the buddy art.
+    paddingRight: scale(96),
+    marginBottom: responsiveHeight(0.35),
+    zIndex: 2,
   },
   textSection: {
-    maxWidth: responsiveWidth(46), // Limit maximum width for text area (description only)
-    zIndex: 2, // Display above image (zIndex: 1)
+    paddingRight: scale(96),
+    zIndex: 2,
   },
-  hormoneName: {
-    fontFamily: 'Inter600',
-    fontSize: responsiveFontSize(1.98), //14px
-    color: '#000000',
-    lineHeight: responsiveHeight(2),
-    fontFamily: 'Inter600',
+  graphicSection: {
+    position: 'absolute',
+    zIndex: 1,
   },
-  hormoneSubtitle: {
+  hormoneTitleStrong: {
+    fontSize: responsiveFontSize(2.05),
+    color: '#0B0B0F',
+    fontFamily: 'Inter600',
+    lineHeight: responsiveFontSize(2.45),
+  },
+  hormoneTitleSoft: {
+    fontSize: responsiveFontSize(1.9),
+    color: '#66666F',
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.7), //12px
-    color: '#6f6f6f',
   },
   hormoneDescription: {
     fontFamily: 'Inter400',
-    fontSize: responsiveFontSize(1.7), //12px
-    color: '#6f6f6f',
-    lineHeight: responsiveHeight(2),
-    marginTop: responsiveHeight(0.5),
+    fontSize: responsiveFontSize(1.78),
+    color: '#66666F',
+    lineHeight: responsiveFontSize(2.2),
+    marginTop: responsiveHeight(0.8),
+  },
+  alertIconText: {
+    color: '#E34B4B',
+    fontFamily: 'Inter600',
   },
   underlineText: {
     textDecorationLine: 'underline',
     textDecorationStyle: 'dotted',
     textDecorationColor: 'rgba(0,0,0,0.5)',
-  },
-  graphicSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'absolute', // Absolute positioning
-    zIndex: 1, // Display behind text
-  },
-  progesteroneGraphic: {
-    right: scale(-22), // Progesterone image position
-    bottom: verticalScale(-38), // Relative position from card bottom
-  },
-  testosteroneGraphic: {
-    // right: responsiveWidth(-21), // Testosterone image position (more to the right)
-    // bottom: responsiveHeight(-8.5), // Relative position from card bottom
-    right: scale(-22), // Progesterone image position
-    bottom: verticalScale(-25)
   },
   priorityBadge: {
     position: 'absolute',

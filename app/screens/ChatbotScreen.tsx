@@ -9,6 +9,7 @@ import homeService, { ActionPlanResponse, AssignmentsResponse } from "@/services
 import { rewardService, RewardsStatusResponse } from "@/services/rewardService";
 import chatService from "@/services/chatService";
 import { personalizationService } from "@/services/personalizationService";
+import HistoryDrawer from "@/components/HistoryDrawer";
 import symptomCheckinService, { TapOption as SymptomTapOption } from "@/services/symptomCheckinService";
 import symptomTrackingService, { SymptomOverviewResponse } from "@/services/symptomTrackingService";
 import weeklyCheckinService, { QuestionResponse, TapOption } from "@/services/weeklyCheckinService";
@@ -390,6 +391,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   const [showContinueButton, setShowContinueButton] = useState(false);
   const [isLoadingCheckin, setIsLoadingCheckin] = useState(false);
 
+  // History drawer state
+  const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
+
   // Handle conversation context from different chats
   useEffect(() => {
     const contextFromRoute = route?.params?.conversationContext;
@@ -666,7 +670,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         purpose: action.purpose || '',
         target_hormone: action.hormones?.[0] || '',
         hormone_persona_intro: action.hormone_persona_intro || '',
-        hero_image_url: action.hero_image_url,
+        hero_image_url: action.hero_image_url || '',
         research_studies: action.research_studies || [],
         is_completed: action.is_completed || false,
         is_replaced: false,
@@ -706,6 +710,11 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     if (assignmentsData) {
       setCarePlanActionPlan(buildActionPlanFromAssignments(assignmentsData));
     }
+  };
+
+  const openPlanManager = () => {
+    refreshCarePlanPlanManagerData();
+    setPlanManagerVisible(true);
   };
 
   const detectFreezeIntent = (text: string) => {
@@ -799,10 +808,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     })();
   };
 
-  const initializeSymptomCheckin = async () => {
+  const initializeSymptomCheckin = async (forceNew: boolean = false) => {
     setIsLoadingCheckin(true);
     try {
-      const result = await symptomCheckinService.startToday();
+      const result = await symptomCheckinService.startToday(forceNew);
       if (result) {
         setSymptomThreadId(result.thread_id);
         setSymptomTapOptions(result.tap_options || []);
@@ -811,13 +820,13 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         const historyMessages = result.history || [];
         setMessages(historyMessages);
 
-        setMode("idle");
+        setMode("tap");
         setShowSlider(false);
         setShowSelectedValue(false);
       } else {
         setMessages([{ id: "symptom_fallback_1", text: "See any progress with your symptoms today? Track progress, wins, and difficulties.", isBot: true }]);
         setUiBlocks([]);
-        setMode("idle");
+        setMode("tap");
         setShowSlider(false);
         setShowSelectedValue(false);
       }
@@ -825,7 +834,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       console.error("Failed to initialize symptom check-in:", error);
       setMessages([{ id: "symptom_error_1", text: "See any progress with your symptoms today? Track progress, wins, and difficulties.", isBot: true }]);
       setUiBlocks([]);
-      setMode("idle");
+      setMode("tap");
       setShowSlider(false);
       setShowSelectedValue(false);
     }
@@ -861,20 +870,27 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   };
 
   // Initialize care plan check-in from API (daily thread)
-  const initializeCarePlanCheckin = async (initialUserMessage?: string) => {
+  const initializeCarePlanCheckin = async (initialUserMessage?: string, forceNew: boolean = false) => {
     setIsLoadingCheckin(true);
     try {
-      const result = await carePlanCheckinService.startToday();
+      const result = await carePlanCheckinService.startToday(forceNew);
 
       if (result) {
         setCarePlanThreadId(result.thread_id);
         setCarePlanTapOptions(result.tap_options || []);
         setUiBlocks(result.ui_blocks || []);
 
+        setCarePlanTapOptions(result.tap_options || []);
+        setUiBlocks(result.ui_blocks || []);
+
+        // Backend returns the new thread with greeting in 'history'.
+        // If forceNew was successful, history has exactly 1 message (greeting).
+        // If it failed (old server), history matches old thread.
+        // We trust the backend now that it is deployed.
         const historyMessages = result.history || [];
         setMessages(historyMessages);
 
-        setMode("idle");
+        setMode("tap");
         setShowSlider(false);
         setShowSelectedValue(false);
 
@@ -885,7 +901,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       } else {
         setMessages([{ id: "care_plan_fallback_1", text: "Quick care plan check-in — how are today’s actions going?", isBot: true }]);
         setUiBlocks([]);
-        setMode("idle");
+        setMode("tap");
         setShowSlider(false);
         setShowSelectedValue(false);
       }
@@ -893,7 +909,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       console.error("Failed to initialize care plan check-in:", error);
       setMessages([{ id: "care_plan_error_1", text: "Quick care plan check-in — how are today’s actions going?", isBot: true }]);
       setUiBlocks([]);
-      setMode("idle");
+      setMode("tap");
       setShowSlider(false);
       setShowSelectedValue(false);
     }
@@ -1096,6 +1112,94 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       console.error('Failed to submit check-in response:', error);
     }
     setIsLoadingCheckin(false);
+  };
+
+  const getCurrentFlowType = () => {
+    const context = route?.params?.conversationContext?.context;
+    if (context === "care_plan_modal") return "care_plan_checkin";
+    if (context === "symptom_checkin") return "symptom_checkin";
+    if (context === "weekly_checkin") return "weekly_checkin";
+    if (context === "know_body") return "know_body";
+    if (context === "personalise") return "personalise";
+    return "weekly_checkin";
+  };
+
+  const isPlanManagerCtaBlock = (block?: UIBlock) => {
+    if (!block) return false;
+    const title = (block.title || '').toLowerCase();
+    const subtitle = (block.subtitle || '').toLowerCase();
+    const textMatch = title.includes('care plan') || title.includes('manage plan') || subtitle.includes('manage plan');
+    const actionMatch = (block.actions || []).some((action) => {
+      const actionTitle = (action.title || '').toLowerCase();
+      const modalMatch = action.payload?.modal === 'PlanManagerModal';
+      return actionTitle.includes('manage plan') || modalMatch;
+    });
+    return textMatch || actionMatch;
+  };
+
+  const getUiBlocksForDisplay = () => {
+    const context = route?.params?.conversationContext?.context;
+    if (context === 'care_plan_modal') {
+      return (uiBlocks || []).filter((block) => !isPlanManagerCtaBlock(block));
+    }
+    return uiBlocks || [];
+  };
+
+  const handleHistoryPress = () => {
+    setShowHistoryDrawer(true);
+  };
+
+  const handleNewChat = () => {
+    setShowHistoryDrawer(false);
+    const context = route?.params?.conversationContext?.context;
+
+    // Reset based on context
+    if (context === "care_plan_modal") {
+      initializeCarePlanCheckin(undefined, true);
+    } else if (context === "symptom_checkin") {
+      initializeSymptomCheckin(true);
+    } else if (context === "know_body") {
+      initializeKnowBodyChat({ initialMessage: null, userResponse: null });
+    } else if (context === "personalise") {
+      initializePersonaliseChat({ initialMessage: null, userResponse: null });
+    } else {
+      initializeWeeklyCheckin(); // Weekly checkin handles new implementation differently?
+      // Assuming re-init works
+    }
+  };
+
+  const handleSelectThread = (threadId: string, historyMessages: any[]) => {
+    setShowHistoryDrawer(false);
+    const context = route?.params?.conversationContext?.context;
+
+    // Map messages
+    const mappedMessages: Message[] = historyMessages.map((msg: any) => ({
+      id: msg.id || `msg_${Date.now()}_${Math.random()}`,
+      text: msg.content || msg.text || "",
+      isBot: msg.role === 'assistant' || msg.isBot
+    }));
+
+    setMessages(mappedMessages);
+    setMode("idle");
+    setShowSlider(false);
+    setShowSelectedValue(false);
+
+    // Update IDs
+    if (context === "care_plan_modal") {
+      setCarePlanThreadId(threadId);
+      setMode("tap");
+      // We might need to fetch tap options for this thread?
+      // Ideally load state from thread. For now history is start.
+      setCarePlanTapOptions([]); // Reset or fetch?
+      // TODO: Ideally call a "resume thread" API to get state.
+    } else if (context === "symptom_checkin") {
+      setSymptomThreadId(threadId);
+      setSymptomTapOptions([]);
+    } else if (context === "weekly_checkin") {
+      setCheckinId(threadId);
+    } else {
+      setChatSessionId(threadId);
+    }
   };
 
   const [isRecording, setIsRecording] = useState(false);
@@ -1833,7 +1937,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
   };
 
   const renderUiBlocksInline = () => {
-    if (!uiBlocks || uiBlocks.length === 0) return null;
+    const blocks = getUiBlocksForDisplay();
+    if (!blocks || blocks.length === 0) return null;
 
     const submitSliderEvent = async (block: UIBlock, value: number) => {
       const contextFromRoute = route?.params?.conversationContext;
@@ -1874,7 +1979,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
     return (
       <View style={styles.uiBlocksContainer}>
-        {uiBlocks.map((block) => (
+        {blocks.map((block) => (
           <View key={block.id} style={styles.uiBlockCard}>
             {!!block.title && <Text style={styles.uiBlockTitle}>{block.title}</Text>}
             {!!block.subtitle && <Text style={styles.uiBlockSubtitle}>{block.subtitle}</Text>}
@@ -1892,6 +1997,36 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                     <Text style={styles.uiBlockSliderChipText}>{n}</Text>
                   </TouchableOpacity>
                 ))}
+              </View>
+            ) : block.type === 'swipeable_cards' && Array.isArray(block.payload?.cards) ? (
+              <View style={styles.uiBlockCardList}>
+                {block.payload.cards.map((card: any, idx: number) => {
+                  const action = block.actions?.[idx];
+                  return (
+                    <View key={`${block.id}_card_${idx}`} style={styles.uiBlockCardItem}>
+                      <Text style={styles.uiBlockCardIndex}>{`Option ${idx + 1}`}</Text>
+                      {!!card.title && <Text style={styles.uiBlockCardTitle}>{card.title}</Text>}
+                      {!!card.description && <Text style={styles.uiBlockCardDescription}>{card.description}</Text>}
+                      {!!card.benefit && <Text style={styles.uiBlockCardBenefit}>{card.benefit}</Text>}
+                      {action ? (
+                        <TouchableOpacity
+                          activeOpacity={0.85}
+                          onPress={() => handleUiBlockAction(block, action)}
+                          style={styles.uiBlockCardActionBtn}
+                        >
+                          <LinearGradient
+                            colors={[COLORS.gradPurple, COLORS.gradPink]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.uiBlockCardActionBtnGradient}
+                          >
+                            <Text style={styles.uiBlockCardActionText}>{action.title || 'Select'}</Text>
+                          </LinearGradient>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  );
+                })}
               </View>
             ) : (
               !!block.actions?.length && (
@@ -1947,7 +2082,15 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             contentContainerStyle={styles.scrollContent}
           >
             <Avatar showMessage={false} />
-            <View style={{ marginTop: verticalScale(20) }}>
+            <View style={{ marginTop: verticalScale(8) }}>
+              {!isLoadingCheckin && (
+                <View style={styles.managePlanBar}>
+                  <TouchableOpacity style={styles.managePlanButton} onPress={openPlanManager} activeOpacity={0.85}>
+                    <Text style={styles.managePlanTitle}>Manage today’s plan</Text>
+                    <Text style={styles.managePlanMeta}>Swap items, check refreshes</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
               <View style={styles.messagesWrapper}>
                 {/* Show all messages from the messages array */}
                 {messages.map((message, index) => (
@@ -2279,6 +2422,41 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       <Header
         onClose={navigateToIndex}
         title={getHeaderTitle()}
+        showHistoryButtons={isCarePlanContext || isSymptomContext}
+        onHistory={() => setShowHistoryDrawer(true)}
+        onNewChat={() => {
+          // Reset ALL state to start fresh
+          setMessages([]);
+          setUiBlocks([]);
+          setCarePlanTapOptions([]);
+          setSymptomTapOptions([]);
+
+          if (isCarePlanContext) {
+            setCarePlanThreadId(null);
+            // Pass forceNew=true to create brand new thread (ChatGPT-like)
+            setTimeout(() => initializeCarePlanCheckin(undefined, true), 100);
+          }
+          if (isSymptomContext) {
+            setSymptomThreadId(null);
+            setTimeout(() => initializeSymptomCheckin(true), 100); // forceNew=true
+          }
+        }}
+      />
+
+      {/* History Drawer */}
+      <HistoryDrawer
+        visible={showHistoryDrawer}
+        onClose={() => setShowHistoryDrawer(false)}
+        flowType={isCarePlanContext ? 'care_plan' : isSymptomContext ? 'symptom' : 'care_plan'}
+        flowTitle={isCarePlanContext ? 'Care Plan' : isSymptomContext ? 'Symptom' : 'Chat'}
+        onSelectThread={(threadId, loadedMessages) => {
+          setMessages(loadedMessages.map((m: any) => ({ id: m.id, text: m.text, isBot: m.isBot })));
+        }}
+        onNewChat={() => {
+          setMessages([]);
+          if (isCarePlanContext) initializeCarePlanCheckin(undefined, true); // forceNew=true
+          if (isSymptomContext) initializeSymptomCheckin(true); // forceNew=true
+        }}
       />
 
       {mode === "idle" && renderIdleMode()}
@@ -2378,6 +2556,14 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       ) : (
         renderContent()
       )}
+      <HistoryDrawer
+        visible={showHistoryDrawer}
+        onClose={() => setShowHistoryDrawer(false)}
+        flowType={getCurrentFlowType()}
+        flowTitle={getHeaderTitle()}
+        onSelectThread={handleSelectThread}
+        onNewChat={handleNewChat}
+      />
     </SafeAreaView>
   );
   // return (
@@ -2455,16 +2641,25 @@ const styles = StyleSheet.create({
   },
 
   managePlanBar: {
-    paddingHorizontal: scale(15),
-    paddingBottom: verticalScale(10),
+    paddingLeft: scale(12),
+    paddingRight: scale(15),
+    paddingBottom: verticalScale(12),
   },
   managePlanButton: {
     borderWidth: 1,
     borderColor: COLORS.outlineVariant,
     backgroundColor: COLORS.white,
-    borderRadius: scale(14),
-    paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(12),
+    borderRadius: scale(16),
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(14),
+    ...(isAndroid
+      ? ({ elevation: 1 } as any)
+      : {
+        shadowColor: '#000',
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+      }),
   },
   managePlanTitle: {
     fontSize: FONT_SIZES.small,
@@ -2515,6 +2710,57 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: scale(8),
+  },
+  uiBlockCardList: {
+    marginTop: verticalScale(10),
+    gap: verticalScale(10),
+  },
+  uiBlockCardItem: {
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    backgroundColor: COLORS.white,
+    borderRadius: scale(14),
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(12),
+  },
+  uiBlockCardIndex: {
+    fontSize: FONT_SIZES.caption,
+    fontFamily: FONT_FAMILIES['Inter-SemiBold'],
+    color: COLORS.greyLight,
+    marginBottom: verticalScale(4),
+  },
+  uiBlockCardTitle: {
+    fontSize: FONT_SIZES.small,
+    fontFamily: FONT_FAMILIES['Inter-SemiBold'],
+    color: COLORS.onSurface,
+  },
+  uiBlockCardDescription: {
+    marginTop: verticalScale(6),
+    fontSize: FONT_SIZES.extraSmall,
+    fontFamily: FONT_FAMILIES['Inter-Regular'],
+    color: COLORS.onSurface,
+  },
+  uiBlockCardBenefit: {
+    marginTop: verticalScale(6),
+    fontSize: FONT_SIZES.extraSmall,
+    fontFamily: FONT_FAMILIES['Inter-Regular'],
+    color: COLORS.greyLight,
+  },
+  uiBlockCardActionBtn: {
+    marginTop: verticalScale(10),
+    borderRadius: scale(12),
+    overflow: 'hidden',
+  },
+  uiBlockCardActionBtnGradient: {
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(10),
+    borderRadius: scale(12),
+  },
+  uiBlockCardActionText: {
+    fontSize: FONT_SIZES.button,
+    fontFamily: FONT_FAMILIES['Inter-SemiBold'],
+    color: COLORS.white,
+    textAlign: 'center',
   },
   uiBlockActionBtn: {
     borderRadius: scale(12),
@@ -2684,20 +2930,22 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderRadius: scale(10),
     paddingHorizontal: scale(20),
-    paddingVertical: verticalScale(15),
+    paddingVertical: verticalScale(12),
     marginRight: scale(10),
-    // height: verticalScale(50),  // ✅ fixed height
+    minHeight: verticalScale(44),  // Minimum height (single line)
+    maxHeight: verticalScale(120), // Max height (~4 lines) then scroll
     borderWidth: 1,
     borderColor: COLORS.outlineVariant,
   },
   textInput: {
     fontSize: FONT_SIZES.small,        // e.g. 14
-    lineHeight: FONT_SIZES.message,// e.g. 18 → taller than font
+    lineHeight: FONT_SIZES.message,    // e.g. 18 → taller than font
     color: COLORS.onSurface,
-    flex: 1,
     includeFontPadding: isAndroid ? false : undefined,
-    textAlignVertical: isAndroid ? 'center' : undefined, // Better for multiline 
+    textAlignVertical: isAndroid ? 'top' : undefined, // Top align for multiline
     paddingVertical: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   // textInput: {
   //   fontSize: FONT_SIZES.message,

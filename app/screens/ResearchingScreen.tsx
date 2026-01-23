@@ -163,6 +163,18 @@ const ResearchingScreen = () => {
     if (hasStartedRecommendation) return;
 
     try {
+      // FIX: Check if ResultLoadingScreen already started generation
+      const alreadyStarted = await AsyncStorage.getItem('recommendation_generation_started');
+      if (alreadyStarted === 'true') {
+        console.log('⏭️ [ResearchingScreen] Generation already started by ResultLoadingScreen, skipping duplicate call');
+        setHasStartedRecommendation(true);
+        setRecommendationStatus('in_progress');
+        // Clear the flag so it doesn't persist across sessions
+        await AsyncStorage.removeItem('recommendation_generation_started');
+        startPolling();
+        return;
+      }
+
       console.log('🚀 [ResearchingScreen] Starting recommendation generation with lifestyle_focus:', lifestyleFocus);
 
       setHasStartedRecommendation(true);
@@ -264,15 +276,18 @@ const ResearchingScreen = () => {
     }
   }, [step]);
 
-  // Auto-show login when animations complete AND API is done
+  // Auto-show login when animations complete - DON'T wait for API!
+  // Generation continues in background while user fills signup form
+  // SignupLoadingScreen will wait for plan readiness after signup
   useEffect(() => {
-    if (step === 2 && canProceedToFinal && !showLogin && !isUserLoggedIn) {
+    if (step === 2 && !showLogin && !isUserLoggedIn) {
       const timer = setTimeout(() => {
+        console.log('🚀 [ResearchingScreen] Showing signup - generation status:', recommendationStatus);
         setShowLogin(true);
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [step, canProceedToFinal, showLogin, isUserLoggedIn]);
+  }, [step, showLogin, isUserLoggedIn]);
 
   // Show loading while checking auth state
   if (!authChecked) {

@@ -29,9 +29,7 @@ import {
   View
 } from "react-native";
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
-import { verticalScale } from "react-native-size-matters";
 import TextInputContainer from "./customComponent/TextInputContainer";
-import FixedBottomContainer from "./FixedBottomContainer";
 import PrimaryButton from "./PrimaryButton";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -108,13 +106,14 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       setLoading(true);
       setLoadingMessage('Signing in with Google...');
 
-      // Set pending flag BEFORE auth to prevent ResearchingScreen from navigating early
-      AsyncStorage.setItem('session_link_complete', 'pending')
-        .then(() => signInWithCredential(auth, credential))
+      signInWithCredential(auth, credential)
         .then(async (result) => {
+          // CRITICAL: Distinguish between NEW users (signup) and RETURNING users (login)
+          const isNewUser = !!result?.additionalUserInfo?.isNewUser;
+          console.log(`🔐 [Google Auth] isNewUser=${isNewUser}, uid=${result.user.uid}`);
+
           // Track post-auth flow timing for debugging performance (signup vs login)
           try {
-            const isNewUser = !!result?.additionalUserInfo?.isNewUser;
             await AsyncStorage.setItem('post_auth_flow', isNewUser ? 'signup' : 'login');
             await AsyncStorage.setItem('post_auth_started_ms', Date.now().toString());
           } catch (e) {
@@ -127,16 +126,35 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
             await authService.saveCredentials(result.user.email, '', rememberMe);
           }
 
-          // Start session link in background (don't await)
-          // SignupLoadingScreen will wait for completion flag
-          sessionService.linkSessionToUser(result.user).catch((linkError) => {
-            console.error('Session linking failed:', linkError);
-          });
+          if (isNewUser) {
+            // NEW USER: Set pending flag and start session link
+            await AsyncStorage.setItem('session_link_complete', 'pending');
+            
+            // Start session link in background (don't await)
+            // SignupLoadingScreen will wait for completion flag
+            sessionService.linkSessionToUser(result.user).catch((linkError) => {
+              console.error('Session linking failed:', linkError);
+            });
 
-          // Navigate to loading screen immediately
-          // It will wait for session_link_complete flag
-          onClose();
-          navigation.navigate('SignupLoadingScreen');
+            // Navigate to loading screen for new users
+            onClose();
+            navigation.navigate('SignupLoadingScreen');
+          } else {
+            // RETURNING USER: Skip session link entirely!
+            // Clear any stale flags from previous sessions
+            await AsyncStorage.multiRemove([
+              'plan_generating_in_background',
+              'session_link_complete',
+              'fresh_signup_pending_refresh',
+              'post_auth_flow',
+              'post_auth_started_ms'
+            ]);
+
+            console.log('✅ [Google Auth] Returning user - navigating directly to MainScreenTabs');
+            Alert.alert('Success', 'Google login successful!');
+            onClose();
+            navigation.navigate('MainScreenTabs');
+          }
         })
         .catch((error) => {
           Alert.alert('Error', error.message || 'Google signup failed');
@@ -259,10 +277,11 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
         idToken: credential.identityToken!,
       });
 
-      // Set pending flag BEFORE auth to prevent ResearchingScreen from navigating early
-      await AsyncStorage.setItem('session_link_complete', 'pending');
-
       const result = await signInWithCredential(auth, firebaseCredential);
+
+      // CRITICAL: Distinguish between NEW users (signup) and RETURNING users (login)
+      const isNewUser = !!result?.additionalUserInfo?.isNewUser;
+      console.log(`🔐 [Apple Auth] isNewUser=${isNewUser}, uid=${result.user.uid}`);
 
       // Save login state using authService (Apple doesn't store passwords)
       await authService.setLoggedIn(result.user.uid);
@@ -270,16 +289,35 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
         await authService.saveCredentials(result.user.email, '', rememberMe);
       }
 
-      // Start session link in background (don't await)
-      // SignupLoadingScreen will wait for completion flag
-      sessionService.linkSessionToUser(result.user).catch((linkError) => {
-        console.error('Session linking failed:', linkError);
-      });
+      if (isNewUser) {
+        // NEW USER: Set pending flag and start session link
+        await AsyncStorage.setItem('session_link_complete', 'pending');
 
-      // Navigate to loading screen immediately
-      // It will wait for session_link_complete flag
-      onClose();
-      navigation.navigate('SignupLoadingScreen');
+        // Start session link in background (don't await)
+        // SignupLoadingScreen will wait for completion flag
+        sessionService.linkSessionToUser(result.user).catch((linkError) => {
+          console.error('Session linking failed:', linkError);
+        });
+
+        // Navigate to loading screen for new users
+        onClose();
+        navigation.navigate('SignupLoadingScreen');
+      } else {
+        // RETURNING USER: Skip session link entirely!
+        // Clear any stale flags from previous sessions
+        await AsyncStorage.multiRemove([
+          'plan_generating_in_background',
+          'session_link_complete',
+          'fresh_signup_pending_refresh',
+          'post_auth_flow',
+          'post_auth_started_ms'
+        ]);
+
+        console.log('✅ [Apple Auth] Returning user - navigating directly to MainScreenTabs');
+        Alert.alert('Success', 'Apple login successful!');
+        onClose();
+        navigation.navigate('MainScreenTabs');
+      }
     } catch (error: any) {
       Alert.alert("Error", error.message || "Apple signup failed");
     } finally {
@@ -306,12 +344,15 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
         <KeyboardAvoidingView
           style={styles.keyboardAvoidingView}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 40}
         >
           <ScrollView
+            style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled={true}
+            bounces={true}
           >
             {/* Header Section */}
             <View style={styles.headerContainer}>
@@ -333,6 +374,12 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
                   placeholder="Email address or Phone Number"
                   value={email}
                   onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="username"
+                  autoComplete="email"
+                  returnKeyType="next"
                   containerStyle={styles.textInput}
                 />
               </View>
@@ -344,6 +391,11 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={true}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="password"
+                  autoComplete="password"
+                  returnKeyType="next"
                   containerStyle={styles.textInput}
                 />
               </View>
@@ -355,6 +407,11 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={true}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="password"
+                  autoComplete="password"
+                  returnKeyType="done"
                   containerStyle={styles.textInput}
                 />
               </View>
@@ -407,16 +464,16 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
                 <Text style={styles.termsLink}>Privacy Policy</Text>
               </Text>
             </View>
-          </ScrollView>
 
-          {/* Bottom Button */}
-          <FixedBottomContainer>
-            <PrimaryButton
-              title={loading ? loadingMessage : "Sign up"}
-              onPress={handleSignup}
-              disabled={loading || !email || !password || !confirmPassword}
-            />
-          </FixedBottomContainer>
+            {/* Bottom Button - inside ScrollView so it scrolls with content */}
+            <View style={styles.buttonContainer}>
+              <PrimaryButton
+                title={loading ? loadingMessage : "Sign up"}
+                onPress={handleSignup}
+                disabled={loading || !email || !password || !confirmPassword}
+              />
+            </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Animated.View>
     </Modal>
@@ -439,7 +496,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     zIndex: 2,
     paddingTop: 8,
+    height: SCREEN_HEIGHT * 0.95,
     maxHeight: '95%',
+    overflow: 'hidden',
   },
   handleBar: {
     width: responsiveWidth(36),
@@ -453,7 +512,11 @@ const styles = StyleSheet.create({
   keyboardAvoidingView: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: responsiveWidth(5),
     paddingBottom: responsiveHeight(10),
   },
@@ -554,8 +617,12 @@ const styles = StyleSheet.create({
     lineHeight: responsiveFontSize(1.98) * 1.25,
   },
   termsContainer: {
-    marginBottom: verticalScale(20),
-    paddingBottom: verticalScale(30),
+    marginBottom: responsiveHeight(2),
+  },
+  buttonContainer: {
+    marginTop: responsiveHeight(1),
+    marginBottom: responsiveHeight(4),
+    paddingHorizontal: responsiveWidth(1),
   },
   termsText: {
     fontFamily: "Inter400",

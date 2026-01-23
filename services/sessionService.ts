@@ -149,7 +149,7 @@ class SessionService {
         return sessionData;
       } catch (fetchError: any) {
         clearTimeout(timeoutId);
-        
+
         // More detailed error logging
         if (fetchError.name === 'AbortError') {
           console.error('❌ Session creation timed out after 30s');
@@ -297,6 +297,37 @@ class SessionService {
       console.log('Response status:', response.status, response.statusText);
       console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
+      // Handle 404 - session was deleted on backend (e.g., during auto-transfer)
+      if (response.status === 404) {
+        console.warn('⚠️ Session not found on backend (404) - creating new session and retrying...');
+        await this.clearSession();
+        const newSession = await this.createSession();
+        if (newSession) {
+          // Retry the save with the new session
+          const retryRequestBody = {
+            session_id: newSession.session_id,
+            data: {
+              ...responseData,
+              survey_timezone: userTimezone
+            }
+          };
+          console.log('🔄 Retrying save with new session:', newSession.session_id);
+          const retryResponse = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${newSession.session_id}/data`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(retryRequestBody),
+          });
+          if (!retryResponse.ok) {
+            const retryError = await retryResponse.text();
+            console.error('❌ Retry save also failed:', retryError);
+            throw new Error(`Retry save failed: ${retryResponse.status}`);
+          }
+          console.log('✅ Retry save successful with new session');
+          return true;
+        }
+        throw new Error('Failed to create new session after 404');
+      }
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Answer save response error:', errorText);
@@ -324,7 +355,7 @@ class SessionService {
       // Set "in progress" flag to prevent premature API calls
       // BottomNavigationBar checks this before fetching streak data
       await AsyncStorage.setItem('session_link_complete', 'pending');
-      
+
       const sessionId = await this.getSessionId();
       if (!sessionId) {
         console.error('No session ID available.');
@@ -369,6 +400,11 @@ class SessionService {
       });
 
       if (!response.ok) {
+        // Handle 404 - session was deleted on backend
+        if (response.status === 404) {
+          console.warn('⚠️ Session not found during link - clearing stale session');
+          await this.clearSession();
+        }
         throw new Error(`Session link failed: ${response.status}`);
       }
 
@@ -406,12 +442,46 @@ class SessionService {
   }
 
   /**
-   * Clears the current session
+   * Clears the current session and ALL user-specific cached data
+   * CRITICAL: This must be called on logout to prevent data leaking between users
    */
   async clearSession(): Promise<void> {
     try {
+      const sessionId = await this.getSessionId();
+      if (sessionId) {
+        // Clear the validation flag for this session
+        await AsyncStorage.removeItem(`session_validated_${sessionId}`);
+      }
+      
+      // Clear session ID
       await AsyncStorage.removeItem('session_id');
       this.sessionId = null;
+      
+      // CRITICAL: Clear ALL user-specific data that could leak between users
+      // This ensures a new user doesn't see the old user's cached data
+      const userSpecificKeys = [
+        // Plan generation flags
+        'plan_generating_in_background',
+        'session_link_complete',
+        'fresh_signup_pending_refresh',
+        'post_auth_flow',
+        'post_auth_started_ms',
+        'session_link_completed_ms',
+        'session_link_duration_ms',
+        // HomeScreen cache
+        'homescreen_last_load',
+        // User profile data
+        'userName',
+        'lifestyle_focus',
+        // Any other user-specific cached data
+        'last_plan_id',
+        'cached_assignments',
+        'cached_cycle_info',
+      ];
+      
+      await AsyncStorage.multiRemove(userSpecificKeys);
+      console.log('🧹 Cleared all user-specific cached data');
+      
     } catch (error) {
       console.error('Session clear failed:', error);
     }
@@ -430,9 +500,14 @@ class SessionService {
   /**
    * Validates session and recreates if necessary
    * 
+   * CRITICAL: Always validates with backend on first call per app launch.
+   * If session is expired or not found on backend, creates a new session.
+   * Uses a per-session flag to avoid repeated validation during same app launch.
+   * 
+   * @param forceValidate - If true, bypasses the per-launch validation cache.
    * @returns Promise resolving to validation success status
    */
-  async validateAndRefreshSession(): Promise<boolean> {
+  async validateAndRefreshSession(forceValidate: boolean = false): Promise<boolean> {
     try {
       const sessionId = await this.getSessionId();
       if (!sessionId) {
@@ -441,7 +516,18 @@ class SessionService {
         return newSession !== null;
       }
 
-      // Check if existing session is valid (new endpoint)
+      // Check if we've already validated this session this app launch
+      // This prevents repeated backend calls while navigating between screens
+      const validatedKey = `session_validated_${sessionId}`;
+      const alreadyValidated = await AsyncStorage.getItem(validatedKey);
+
+      if (alreadyValidated === 'true' && !forceValidate) {
+        console.log('Session already validated this launch:', sessionId.slice(0, 20) + '...');
+        return true;
+      }
+
+      // ALWAYS validate with backend on first call
+      console.log('🔍 Validating session with backend:', sessionId.slice(0, 20) + '...');
       const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/data`, {
         method: 'GET',
         headers: {
@@ -450,17 +536,21 @@ class SessionService {
       });
 
       if (response.status === 404) {
-        console.log('Existing session invalid - creating new session');
+        // Session expired or not found on backend - create a fresh one
+        console.log('⚠️ Session expired/not found on backend, creating new session');
         await this.clearSession();
         const newSession = await this.createSession();
         return newSession !== null;
       }
 
-      console.log('Existing session is valid');
+      // Mark session as validated for this app launch
+      await AsyncStorage.setItem(validatedKey, 'true');
+      console.log('✅ Session validated with backend');
       return true;
     } catch (error) {
       console.error('Error during session validation:', error);
-      // Create new session on error
+      // On network error, create a new session to ensure flow works
+      console.log('⚠️ Network error during validation, creating new session');
       await this.clearSession();
       const newSession = await this.createSession();
       return newSession !== null;
@@ -598,6 +688,14 @@ class SessionService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Recommendation status check failed:', errorText);
+
+        // Handle 404 - session was deleted on backend
+        if (response.status === 404) {
+          console.warn('⚠️ Session not found during status check - clearing stale session');
+          await this.clearSession();
+          return null;
+        }
+
         throw new Error(`Recommendation status check failed: ${response.status} - ${errorText}`);
       }
 
@@ -647,6 +745,15 @@ class SessionService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Hormone analysis fetch failed:', errorText);
+
+        // Handle 404 - session was deleted on backend
+        if (response.status === 404) {
+          console.warn('⚠️ Session not found during hormone analysis - clearing stale session');
+          await this.clearSession();
+          // Return null - caller should handle by redirecting to survey
+          return null;
+        }
+
         throw new Error(`Hormone analysis fetch failed: ${response.status} - ${errorText}`);
       }
 

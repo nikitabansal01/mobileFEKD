@@ -367,6 +367,9 @@ class HomeService {
   /**
    * Retrieves today's assignments for the user
    * 
+   * OPTION 3+4 ENHANCEMENT: Handles 202 Accepted response when plan is being generated.
+   * If backend returns 202 with "generating: true", this method will poll until ready.
+   * 
    * @returns Promise resolving to assignments data or null on error
    */
   async getTodayAssignments(): Promise<AssignmentsResponse | null> {
@@ -402,6 +405,34 @@ class HomeService {
       });
       const requestMs = Date.now() - tReqStart;
 
+      // ═══════════════════════════════════════════════════════════════════════════════════
+      // OPTION 3+4 FIX: Handle 202 Accepted (plan is being generated)
+      // CRITICAL FIX: Do NOT poll here - HomeScreen has its own polling loop!
+      // Polling in BOTH places causes DUPLICATE API calls (2x load on server)
+      // Instead, return the 202 info so HomeScreen can handle polling exclusively
+      // ═══════════════════════════════════════════════════════════════════════════════════
+      if (response.status === 202) {
+        const generatingInfo = await response.json();
+        console.log('⏳ Plan is being generated - returning 202 info for HomeScreen to poll:', generatingInfo);
+        
+        // Return a special response indicating generation is in progress
+        // HomeScreen's startPlanGenerationPolling() will handle the polling
+        return {
+          generating: true,
+          plan_exists: false,
+          plan_id: null,
+          plan_date: generatingInfo.plan_date || new Date().toISOString().split('T')[0],
+          ready: false,
+          total_assignments: 0,
+          progress: generatingInfo.progress || 0,
+          session_id: generatingInfo.session_id,
+          processing_status: generatingInfo.processing_status || 'in_progress',
+          message: generatingInfo.message || 'Generating your personalized plan...',
+          // Mark this response so HomeScreen knows to start polling
+          _is_202_response: true
+        } as any;
+      }
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Failed to fetch today\'s assignments:', errorText);
@@ -427,6 +458,93 @@ class HomeService {
       return result;
     } catch (error) {
       console.error('❌ Error fetching today\'s assignments:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Internal helper to fetch full assignments (used after polling confirms plan exists)
+   */
+  private async _fetchFullAssignments(headers: Record<string, string>, timezone: string): Promise<AssignmentsResponse | null> {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/v1/new-scheduling/assignments/today?t=${new Date().getTime()}&timezone=${encodeURIComponent(timezone)}`,
+        { method: 'GET', headers }
+      );
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to fetch assignments after poll:', errorText);
+        return null;
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('❌ Error fetching assignments after poll:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if today's plan exists WITHOUT triggering generation.
+   * 
+   * OPTION 3+4 ENHANCEMENT: Also returns generation progress if session is generating.
+   * Use this for polling after signup to check if a plan has been created,
+   * without causing duplicate plan generation from race conditions.
+   * 
+   * @returns Promise resolving to plan status or null on error
+   */
+  async getTodayPlanStatus(): Promise<{
+    plan_exists: boolean;
+    generating?: boolean;  // NEW: true if session plan is being generated
+    plan_id: number | null;
+    plan_date: string;
+    ready: boolean;
+    total_assignments: number;
+    cycle_phase?: string;
+    primary_hormone?: string;
+    // NEW: Generation progress fields
+    session_id?: string;
+    processing_status?: string;
+    progress?: number;
+    phase?: string;
+    elapsed_seconds?: number;
+    estimated_remaining_seconds?: number;
+    message?: string;
+  } | null> {
+    try {
+      console.log('🔍 Checking today\'s plan status (no generation):', `${API_BASE_URL}/api/v1/new-scheduling/assignments/today/status`);
+
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      let timezone = 'UTC';
+      try {
+        timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      } catch (e) {
+        console.warn('Failed to get local timezone', e);
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/new-scheduling/assignments/today/status?timezone=${encodeURIComponent(timezone)}`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to check plan status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Plan status:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Error checking plan status:', error);
       return null;
     }
   }
@@ -734,6 +852,11 @@ class HomeService {
     message: string;
     error?: string;
     replaced_count?: number;
+    replacements?: Array<{
+      original_id: number;
+      new_id: number;
+      new_action: ActionPlanItem;
+    }>;
     refresh_status?: { limit: number; used: number; remaining: number; can_refresh: boolean };
   } | null> {
     try {

@@ -126,6 +126,50 @@ class ChatService {
       return [];
     }
   }
+
+  // ===== NEW: Per-flow thread history =====
+
+  async getThreadsByFlow(flowType: string, limit: number = 20): Promise<any> {
+    try {
+      const token = await getAuthToken();
+      const response = await fetch(`${API_BASE_URL}/api/v1/chat/threads/${flowType}?limit=${limit}`, {
+        method: 'GET',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (!response.ok) {
+        console.error('❌ Failed to get threads:', response.status);
+        return { threads: [], total: 0 };
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('❌ Error getting threads:', error);
+      return { threads: [], total: 0 };
+    }
+  }
+
+  async getThreadMessages(flowType: string, threadId: string): Promise<any> {
+    try {
+      const token = await getAuthToken();
+      const response = await fetch(`${API_BASE_URL}/api/v1/chat/threads/${flowType}/${threadId}`, {
+        method: 'GET',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (!response.ok) {
+        console.error('❌ Failed to get thread messages:', response.status);
+        return null;
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('❌ Error getting thread messages:', error);
+      return null;
+    }
+  }
 }
 
 export const chatService = new ChatService();

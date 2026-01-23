@@ -1,6 +1,6 @@
 import { createInputStyle } from '@/utils/inputStyles';
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, TextInput, TextInputProps, TouchableOpacity, View } from 'react-native';
 import { responsiveHeight } from 'react-native-responsive-dimensions';
 import { moderateScale } from 'react-native-size-matters';
 
@@ -32,6 +32,19 @@ interface TextInputContainerProps {
   autoFocus?: boolean;
   /** Reference to the TextInput component */
   inputRef?: React.RefObject<TextInput>;
+
+  /** TextInput auto-capitalization behavior */
+  autoCapitalize?: TextInputProps['autoCapitalize'];
+  /** Whether to enable auto-correct */
+  autoCorrect?: boolean;
+  /** iOS textContentType / Android autofill hints */
+  textContentType?: TextInputProps['textContentType'];
+  /** Android/iOS autoComplete hint */
+  autoComplete?: TextInputProps['autoComplete'];
+  /** Return key type */
+  returnKeyType?: TextInputProps['returnKeyType'];
+  /** Submit handler */
+  onSubmitEditing?: TextInputProps['onSubmitEditing'];
 }
 
 /**
@@ -68,6 +81,12 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
   onBlur,
   autoFocus,
   inputRef,
+  autoCapitalize,
+  autoCorrect,
+  textContentType,
+  autoComplete,
+  returnKeyType,
+  onSubmitEditing,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [isFilled, setIsFilled] = useState(!!value);
@@ -113,128 +132,99 @@ const TextInputContainer: React.FC<TextInputContainerProps> = ({
   return (
     <View style={[
       createInputStyle((isFocused || isFilled) ? 'selected' : 'default', {
-        paddingVertical: responsiveHeight(0),
+        paddingVertical: responsiveHeight(1.2),
       }),
       {
         minHeight: moderateScale(50, 1.5), // Larger height for TextInputContainer only
         justifyContent: 'center',
-        alignItems: 'flex-start', // Left-align text
+        alignItems: 'stretch',
       },
       containerStyle
     ]}>
-      {/* Floating Label - shown when focused or filled */}
-      {(isFocused || isFilled) && (
-        <Text style={styles.floatingLabel}>
-          {placeholder}
-        </Text>
-      )}
-      
-      
-      {/* Default Placeholder - shown when not focused and not filled */}
-      {!isFocused && !isFilled && (
-        <Text style={styles.defaultPlaceholder}>
-          {placeholder}
-        </Text>
-      )}
-      
-      {/* TextInput for actual input - always present and visible */}
-      <TextInput
-        style={[styles.visibleTextInput, inputStyle]}
-        placeholder=""
-        placeholderTextColor="transparent"
-        keyboardType={keyboardType}
-        value={value}
-        onChangeText={handleChangeText}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        autoFocus={autoFocus}
-        ref={inputRef}
-        secureTextEntry={secureTextEntry}
-        editable={true}
-        selectTextOnFocus={true}
-        caretHidden={false}
-      />
-      
-      {/* Clear Button */}
-      {isFilled && (
-        <TouchableOpacity
-          style={styles.clearButton}
-          onPress={handleClearInput}
-        >
-          <Text style={styles.clearButtonText}>×</Text>
-        </TouchableOpacity>
-      )}
+      {/* Floating label shown when focused or filled */}
+      {(isFocused || isFilled) ? (
+        <Text style={[styles.floatingLabel, textStyle]}>{placeholder}</Text>
+      ) : null}
+
+      <View style={styles.inputRow}>
+        <TextInput
+          style={[
+            styles.textInput,
+            (isFocused || isFilled) ? styles.textInputWithLabel : styles.textInputWithoutLabel,
+            inputStyle,
+          ]}
+          placeholder={(!isFocused && !isFilled) ? placeholder : ''}
+          placeholderTextColor="#b3b3b3"
+          keyboardType={keyboardType}
+          value={value}
+          onChangeText={handleChangeText}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          autoFocus={autoFocus}
+          ref={inputRef}
+          secureTextEntry={secureTextEntry}
+          editable={true}
+          caretHidden={false}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={autoCorrect}
+          textContentType={textContentType}
+          autoComplete={autoComplete}
+          returnKeyType={returnKeyType}
+          onSubmitEditing={onSubmitEditing}
+        />
+
+        {isFilled ? (
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={handleClearInput}
+            accessibilityRole="button"
+            accessibilityLabel={`Clear ${placeholder}`}
+          >
+            <Text style={styles.clearButtonText}>×</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  textInputContainer: {
-    position: 'relative',
-  },
   floatingLabel: {
-    position: 'absolute',
-    top: 4,
-    left: 20,
     fontFamily: 'Inter400',
     fontSize: moderateScale(10, 1.5), // 10px equivalent
     color: '#b3b3b3',
-    zIndex: 1,
+    marginBottom: 4,
   },
-  inputText: {
-      fontFamily: 'Inter400',
-      fontSize: moderateScale(14, 1.5), // 14px equivalent
-    color: '#000000',
-    marginTop: 8,
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  visibleTextInput: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 2,
-    // Apply same styles as Text component
+  textInput: {
+    flex: 1,
     fontFamily: 'Inter400',
     fontSize: moderateScale(14, 1.5), // 14px equivalent
-    paddingLeft: 20, // Same position as Text component
-    paddingTop: 16, // Move input text further down
     textAlign: 'left',
     textAlignVertical: 'center',
-    includeFontPadding: false,
-    // iOS-specific properties for better keyboard handling
+    includeFontPadding: Platform.OS === 'android',
     backgroundColor: 'transparent',
     borderWidth: 0,
     color: '#000000',
   },
+  textInputWithLabel: {
+    paddingVertical: 0,
+  },
+  textInputWithoutLabel: {
+    paddingVertical: 0,
+  },
   clearButton: {
-    position: 'absolute',
-    right: 15,
-    top: 0,
-    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 3,
     padding: 5, // Expand touch area
   },
   clearButtonText: {
     fontSize: moderateScale(16, 1.5),
     color: '#b3b3b3', // Same color as placeholder
     fontFamily: 'Inter400',
-  },
-  defaultPlaceholder: {
-    fontFamily: 'Inter400',
-    fontSize: moderateScale(14, 1.5), // 14px equivalent - same as input text
-    color: '#b3b3b3',
-    position: 'absolute',
-    left: 20,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    textAlign: 'left',
-    textAlignVertical: 'center',
-    includeFontPadding: false,
-    lineHeight: moderateScale(50, 1.5), // Match the container height for vertical centering
   },
 });
 

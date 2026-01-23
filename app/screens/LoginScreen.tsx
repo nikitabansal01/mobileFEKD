@@ -22,6 +22,7 @@ import PrimaryButton from '@/components/PrimaryButton';
 // Services
 import { auth, signInWithEmail } from '@/config/firebase';
 import authService from '@/services/authService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -91,6 +92,15 @@ const LoginScreen = () => {
           // For social logins, we enable remember me by default
           await authService.saveCredentials('', '', true);
 
+          // Clear stale flags from previous sessions (important for returning users)
+          await AsyncStorage.multiRemove([
+            'plan_generating_in_background',
+            'session_link_complete',
+            'fresh_signup_pending_refresh',
+            'post_auth_flow',
+            'post_auth_started_ms'
+          ]);
+
           Alert.alert('Success', 'Google login successful!');
           navigation.navigate('MainScreenTabs');
         })
@@ -118,6 +128,15 @@ const LoginScreen = () => {
         await authService.saveCredentials(email, password, rememberMe);
         // Mark user as logged in
         await authService.setLoggedIn(result.user.uid);
+
+        // Clear stale flags from previous sessions (important for returning users)
+        await AsyncStorage.multiRemove([
+          'plan_generating_in_background',
+          'session_link_complete',
+          'fresh_signup_pending_refresh',
+          'post_auth_flow',
+          'post_auth_started_ms'
+        ]);
 
         Alert.alert("Success", "Login successful!");
         navigation.navigate('MainScreenTabs');
@@ -169,6 +188,15 @@ const LoginScreen = () => {
       // For social logins, we enable remember me by default
       await authService.saveCredentials('', '', true);
 
+      // Clear stale flags from previous sessions (important for returning users)
+      await AsyncStorage.multiRemove([
+        'plan_generating_in_background',
+        'session_link_complete',
+        'fresh_signup_pending_refresh',
+        'post_auth_flow',
+        'post_auth_started_ms'
+      ]);
+
       Alert.alert("Success", "Apple login successful!");
       navigation.navigate('MainScreenTabs');
     } catch (error: any) {
@@ -187,7 +215,7 @@ const LoginScreen = () => {
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={'padding'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         {/* Scrollable Content - entire screen slides up with keyboard */}
@@ -222,6 +250,12 @@ const LoginScreen = () => {
               placeholder="Email address or Phone Number"
               value={email}
               onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="username"
+              autoComplete="email"
+              returnKeyType="next"
               containerStyle={styles.textInput}
             />
           </View>
@@ -233,6 +267,11 @@ const LoginScreen = () => {
               value={password}
               onChangeText={setPassword}
               secureTextEntry={true}
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="password"
+              autoComplete="password"
+              returnKeyType="done"
               containerStyle={styles.textInput}
             />
           </View>

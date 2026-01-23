@@ -68,7 +68,7 @@ export interface TranscribeResponse {
 }
 
 class CarePlanCheckinService {
-  async startToday(): Promise<StartCarePlanCheckInResponse | null> {
+  async startToday(forceNew: boolean = false): Promise<StartCarePlanCheckInResponse | null> {
     try {
       const token = await getAuthToken();
       if (!token) {
@@ -76,7 +76,8 @@ class CarePlanCheckinService {
         return null;
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/care-plan-checkin/start`, {
+      const url = `${API_BASE_URL}/api/v1/care-plan-checkin/start${forceNew ? '?force_new=true' : ''}`;
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

@@ -38,6 +38,7 @@ import { BRAND, BRAND_GRADIENT, TEXT, BACKGROUND, BORDER, UI, COLORS } from '@/c
 import { FONT_INTER, FONT_SERIF, TYPOGRAPHY } from '@/constants/fonts';
 import { LinearGradient } from 'expo-linear-gradient';
 import LottieView from 'lottie-react-native';
+import { auth } from '@/config/firebase';
 
 // =============================================================================
 // SUB-COMPONENTS
@@ -128,7 +129,7 @@ const DesigningPlanOverlay = ({ visible }: { visible: boolean }) => {
 
           <View style={styles.loadingPill}>
             <ActivityIndicator color={BRAND.accent} size="small" style={{ marginRight: 8 }} />
-            <Text style={styles.loadingText}>{loadingText}</Text>
+            <Text style={styles.loadingPillText}>{loadingText}</Text>
           </View>
         </Animated.View>
       </View>
@@ -167,11 +168,110 @@ interface HomeScreenProps {
       skipTodayLoading?: boolean;
       freshSignup?: boolean;
       shouldRefresh?: boolean; // Added: trigger refetch after action replacement
+      planGenerating?: boolean; // NEW: Indicates plan is still generating in background
     };
   };
 }
 
 const FRESH_SIGNUP_FLAG = 'fresh_signup_pending_refresh';
+
+/**
+ * PlanGeneratingOverlay
+ * 
+ * Shown when user arrives from signup but plan is still being generated.
+ * This provides a beautiful, non-blocking experience while the backend
+ * generates their personalized action plan (60-90 seconds).
+ */
+const PlanGeneratingOverlay = ({ visible, onPlanReady }: { visible: boolean; onPlanReady?: () => void }) => {
+  const [loadingText, setLoadingText] = useState("Crafting your personalized plan...");
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const pollCountRef = useRef(0);
+
+  useEffect(() => {
+    if (visible) {
+      // Fade in
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+
+      // Pulse animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.08,
+            duration: 1500,
+            useNativeDriver: true,
+            easing: Easing.inOut(Easing.ease),
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+            easing: Easing.inOut(Easing.ease),
+          }),
+        ])
+      ).start();
+
+      // Cycle loading text to show progress
+      const texts = [
+        "Crafting your personalized plan...",
+        "Analyzing your hormone profile...",
+        "Selecting optimal activities...",
+        "Generating beautiful images...",
+        "Preparing your daily actions...",
+        "Almost ready...",
+      ];
+      let index = 0;
+      const textInterval = setInterval(() => {
+        index = (index + 1) % texts.length;
+        setLoadingText(texts[index]);
+      }, 4000);
+
+      return () => {
+        clearInterval(textInterval);
+      };
+    } else {
+      fadeAnim.setValue(0);
+    }
+  }, [visible]);
+
+  if (!visible) return null;
+
+  return (
+    <View style={styles.planGeneratingContainer}>
+      <Animated.View style={[styles.planGeneratingContent, { opacity: fadeAnim }]}>
+        <View style={styles.planGeneratingIconContainer}>
+          <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+            <LottieView
+              source={require('../../assets/animation/auvra-character.json')}
+              autoPlay
+              loop
+              style={styles.planGeneratingAvatar}
+            />
+          </Animated.View>
+        </View>
+
+        <Text style={styles.planGeneratingTitle}>Creating Your Plan</Text>
+
+        <Text style={styles.planGeneratingSubtitle}>
+          Auvra is personalizing your daily actions based on your hormone profile, goals, and preferences.
+        </Text>
+
+        <View style={styles.planGeneratingPill}>
+          <ActivityIndicator color={BRAND.accent} size="small" style={{ marginRight: 8 }} />
+          <Text style={styles.planGeneratingText}>{loadingText}</Text>
+        </View>
+
+        <Text style={styles.planGeneratingHint}>
+          This usually takes about a minute
+        </Text>
+      </Animated.View>
+    </View>
+  );
+};
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
@@ -181,6 +281,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const [hasRetried, setHasRetried] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'time' | 'type'>('time');
+  
+  // NEW: Track if plan is still being generated in background
+  const [isPlanGenerating, setIsPlanGenerating] = useState(false);
+  const planPollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Action plan state (new system)
   const [actionPlan, setActionPlan] = useState<ActionPlanResponse | null>(null);
@@ -247,6 +351,133 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }
   }, [route?.params?.shouldRefresh]);
 
+  // NEW: Handle planGenerating param - poll for plan readiness after fresh signup
+  useEffect(() => {
+    const instanceId = componentIdRef.current;
+    
+    // Check if coming from signup with plan still generating
+    const checkPlanGenerating = async () => {
+      const planGeneratingFlag = await AsyncStorage.getItem('plan_generating_in_background');
+      const isPlanGeneratingParam = route?.params?.planGenerating;
+      
+      if (planGeneratingFlag === 'true' || isPlanGeneratingParam) {
+        console.log(`🔄 [HomeScreen:${instanceId}] Plan is generating in background - showing generating UI`);
+        setIsPlanGenerating(true);
+        setLoading(false); // Don't show generic loading, show plan generating overlay
+        
+        // Start polling for plan readiness
+        startPlanGenerationPolling();
+      }
+    };
+    
+    checkPlanGenerating();
+    
+    // Cleanup polling on unmount
+    return () => {
+      if (planPollIntervalRef.current) {
+        clearInterval(planPollIntervalRef.current);
+        planPollIntervalRef.current = null;
+      }
+    };
+  }, [route?.params?.planGenerating]);
+  
+  // Poll for plan readiness when plan is generating
+  // CRITICAL FIX: Use status-only endpoint to prevent duplicate plan generation
+  const startPlanGenerationPolling = async () => {
+    const instanceId = componentIdRef.current;
+    let pollCount = 0;
+    const maxPolls = 60; // Max 60 polls at 3s = 180 seconds max wait
+    let planFound = false; // Track if plan was found to prevent starting interval
+    
+    // Clear any existing interval
+    if (planPollIntervalRef.current) {
+      clearInterval(planPollIntervalRef.current);
+      planPollIntervalRef.current = null;
+    }
+    
+    const checkPlanReady = async () => {
+      if (planFound) return; // Already found, don't run again
+      
+      pollCount++;
+      console.log(`🔍 [HomeScreen:${instanceId}] Polling for plan status (attempt ${pollCount}/${maxPolls})...`);
+      
+      try {
+        // CRITICAL: Use status-only endpoint that doesn't trigger generation
+        // This prevents race conditions where multiple generation requests could
+        // create duplicate plans
+        const statusData = await homeService.getTodayPlanStatus();
+        
+        if (statusData?.plan_exists && statusData?.ready && statusData?.plan_id) {
+          // Plan is ready! Now fetch the full assignments
+          planFound = true;
+          console.log(`🎉 [HomeScreen:${instanceId}] Plan ${statusData.plan_id} exists after ${pollCount} polls - fetching full data...`);
+          
+          // Clear polling
+          if (planPollIntervalRef.current) {
+            clearInterval(planPollIntervalRef.current);
+            planPollIntervalRef.current = null;
+          }
+          
+          // Clear the generating flag
+          await AsyncStorage.removeItem('plan_generating_in_background');
+          
+          // Now fetch the full assignments (plan already exists, won't regenerate)
+          const assignmentsData = await homeService.getTodayAssignments();
+          
+          if (assignmentsData) {
+            // Update state with the plan data
+            setAssignments(assignmentsData);
+            if (assignmentsData?.hormone_stats) {
+              setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
+            }
+            wireUpActionPlan(assignmentsData);
+          }
+          
+          // Hide generating overlay
+          setIsPlanGenerating(false);
+          setLoading(false);
+          initialDataLoadedRef.current = true;
+          
+          // Start feedback timer for fresh plans
+          startFeedbackTimer();
+          
+          return;
+        }
+        
+        console.log(`⏳ [HomeScreen:${instanceId}] Plan not ready yet (poll ${pollCount}, exists=${statusData?.plan_exists}, ready=${statusData?.ready})`);
+        
+        // Check if max polls reached
+        if (pollCount >= maxPolls) {
+          console.log(`⚠️ [HomeScreen:${instanceId}] Max polls reached (${maxPolls}), giving up`);
+          if (planPollIntervalRef.current) {
+            clearInterval(planPollIntervalRef.current);
+            planPollIntervalRef.current = null;
+          }
+          await AsyncStorage.removeItem('plan_generating_in_background');
+          setIsPlanGenerating(false);
+          setLoading(false);
+          // Show error state or empty state
+          Alert.alert(
+            'Plan Generation Delayed',
+            'Your personalized plan is taking longer than expected. Please pull down to refresh in a moment.',
+            [{ text: 'OK' }]
+          );
+        }
+      } catch (error) {
+        console.log(`❌ [HomeScreen:${instanceId}] Error polling for plan:`, error);
+        // Continue polling unless it's a critical error
+      }
+    };
+    
+    // Initial check
+    await checkPlanReady();
+    
+    // Only start interval if plan was NOT found on initial check
+    if (!planFound) {
+      planPollIntervalRef.current = setInterval(checkPlanReady, 3000); // Poll every 3 seconds
+    }
+  };
+
   // Auvra chat modal state
   const [showAuvraChat, setShowAuvraChat] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -260,6 +491,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const freshSignupCheckRef = useRef<boolean>(false);
   const initialDataLoadedRef = useRef<boolean>(false); // Prevent duplicate initial fetches
+  const feedbackShownTodayRef = useRef<boolean>(false); // Track if feedback popup was shown today
 
   // Note: Fresh signup data loading is now handled by SignupLoadingScreen
   // which waits until data is ready before navigating to HomeScreen
@@ -295,15 +527,68 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const lastFocusTimeRef = useRef<number>(0);
   const loadCallIdRef = useRef<number>(0); // Unique ID for each load call to detect stale calls
   const componentIdRef = useRef<string>(Math.random().toString(36).substring(7)); // Unique ID for this component instance
+  
+  // CRITICAL: Track current user UID to detect user changes and reset state
+  const currentUserUidRef = useRef<string | null>(null);
 
   // Refs to track state for useFocusEffect (avoids stale closure and dependency issues)
   const showDailyReviewRef = useRef(showDailyReview);
   const isReviewBlockingRef = useRef(isReviewBlocking);
+  const showAuvraChatRef = useRef(showAuvraChat);
+
+  // CRITICAL: Detect user changes and reset all state
+  // This prevents data from old user leaking to new user after logout/login
+  useEffect(() => {
+    const checkUserChange = () => {
+      const currentUid = auth.currentUser?.uid || null;
+      const instanceId = componentIdRef.current;
+      
+      if (currentUserUidRef.current !== null && currentUserUidRef.current !== currentUid) {
+        // User changed! Reset ALL state to prevent data leakage
+        console.log(`🔄 [HomeScreen:${instanceId}] USER CHANGED from ${currentUserUidRef.current?.slice(0,8)}... to ${currentUid?.slice(0,8)}... - RESETTING ALL STATE`);
+        
+        // Reset all data state
+        setCycleInfo(null);
+        setAssignments(null);
+        setProgressStats(null);
+        setActionPlan(null);
+        setRewardsData(null);
+        setRefreshStatus(null);
+        setHasRetried(false);
+        setLoading(true);
+        setIsPlanGenerating(false);
+        
+        // Reset refs
+        dataLoadingRef.current = false;
+        lastFocusTimeRef.current = 0;
+        initialDataLoadedRef.current = false;
+        
+        // Clear any polling
+        if (planPollIntervalRef.current) {
+          clearInterval(planPollIntervalRef.current);
+          planPollIntervalRef.current = null;
+        }
+      }
+      
+      currentUserUidRef.current = currentUid;
+    };
+    
+    // Check on mount
+    checkUserChange();
+    
+    // Also listen for auth state changes
+    const unsubscribe = auth.onAuthStateChanged(() => {
+      checkUserChange();
+    });
+    
+    return () => unsubscribe();
+  }, []);
 
   // Keep refs in sync with state
   useEffect(() => {
     showDailyReviewRef.current = showDailyReview;
     isReviewBlockingRef.current = isReviewBlocking;
+    showAuvraChatRef.current = showAuvraChat;
 
     // CRITICAL: If review becomes active, immediately hide AuvraChatModal and clear timer
     if (isReviewBlocking || showDailyReview) {
@@ -314,6 +599,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       }
     }
   }, [isReviewBlocking, showDailyReview]);
+
+  // Keep showAuvraChatRef synced independently as well (used by timer callback)
+  useEffect(() => {
+    showAuvraChatRef.current = showAuvraChat;
+  }, [showAuvraChat]);
 
   // Auto-trigger unlock animation when today's data becomes ready (modal already closed)
   useEffect(() => {
@@ -364,6 +654,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       // SYNCHRONOUS GUARD: Check and set flag immediately to prevent race conditions
       const now = Date.now();
       const instanceId = componentIdRef.current;
+
+      // FIX: Skip if plan generation polling is active - polling handles this case
+      // This prevents duplicate API calls when navigating from SignupLoadingScreen
+      if (planPollIntervalRef.current) {
+        console.log(`🔄 [HomeScreen:${instanceId}] Skipped - plan generation polling active`);
+        return;
+      }
 
       // STRICT DEDUPLICATION: If last call was within 500ms, always skip
       // This handles React's potential double-invocation
@@ -496,7 +793,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           setCycleInfo(cycleData?.cycle_info || null);
 
           // If we got assignments, use them; otherwise use pending review items if available
-          if (assignmentsData) {
+          // CRITICAL FIX: Check if this is a 202 response (plan is generating) and start polling
+          if (assignmentsData && (assignmentsData as any)?._is_202_response) {
+            console.log(`⏳ [HomeScreen:${instanceId}] Got 202 response - plan is generating, starting polling...`);
+            setIsPlanGenerating(true);
+            await AsyncStorage.setItem('plan_generating_in_background', 'true');
+            startPlanGenerationPolling();
+          } else if (assignmentsData) {
             console.log(`✅ [HomeScreen:${instanceId}] Got ${assignmentsData.total_assignments} assignments`);
 
             // Post-auth (signup/login) end-to-end timing: from auth completion to plan fetch
@@ -535,6 +838,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             }
             if (assignmentsData) {
               wireUpActionPlan(assignmentsData);
+              // Start feedback timer if this is a newly generated plan
+              // Start feedback timer (shows popup once per session after 30s)
+              startFeedbackTimer();
             }
           } else if (reviewResponse?.items && reviewResponse.items.length > 0) {
             // Use pending review items as display data when assignments blocked
@@ -594,25 +900,57 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }, []) // Empty dependency - focus is the trigger, not state changes
   );
 
-  // Reset inactivity timer - Shows Auvra modal after configured seconds from backend
-  // IMPORTANT: Don't show during review - user must complete review first
-  const resetInactivityTimer = () => {
-    if (inactivityTimerRef.current) {
-      clearTimeout(inactivityTimerRef.current);
-      inactivityTimerRef.current = null;
+  // Show feedback popup ONCE per session, 30 seconds after assignments load
+  // SIMPLE: Just show once per session, no plan_source complexity
+  const startFeedbackTimer = useCallback(() => {
+    const instanceId = componentIdRef.current;
+
+    // Already shown this session
+    if (feedbackShownTodayRef.current) {
+      console.log(`📋 [HomeScreen:${instanceId}] Feedback timer not started: already shown this session`);
+      return;
     }
 
-    // Don't start timer if review is blocking or Auvra chat is already showing
-    if (!showAuvraChat && !isReviewBlockingRef.current && !showDailyReviewRef.current) {
-      // Use feedbackPromptSeconds from backend (default 30 seconds)
-      const timeoutMs = feedbackPromptSeconds * 1000;
-      inactivityTimerRef.current = setTimeout(() => {
-        // Double-check using REFS (not stale state) that review isn't blocking when timer fires
-        if (!isReviewBlockingRef.current && !showDailyReviewRef.current) {
-          setShowAuvraChat(true);
-        }
-      }, timeoutMs);
+    // If a timer is already armed, don't keep resetting it on re-renders/state changes.
+    // We want a single "arm once" behavior per session.
+    if (inactivityTimerRef.current) {
+      console.log(`📋 [HomeScreen:${instanceId}] Feedback timer already armed - leaving as-is`);
+      return;
     }
+
+    // Don't start timer if review is blocking or chat already showing
+    if (showAuvraChatRef.current || isReviewBlockingRef.current || showDailyReviewRef.current) {
+      console.log(
+        `📋 [HomeScreen:${instanceId}] Feedback timer not started: blocked ` +
+        `(showAuvraChat=${showAuvraChatRef.current}, isReviewBlocking=${isReviewBlockingRef.current}, showDailyReview=${showDailyReviewRef.current})`
+      );
+      return;
+    }
+
+    console.log(`📋 [HomeScreen:${instanceId}] Starting ${feedbackPromptSeconds}s feedback timer`);
+
+    // Show popup after 30 seconds
+    const timeoutMs = feedbackPromptSeconds * 1000;
+    inactivityTimerRef.current = setTimeout(() => {
+      if (!showAuvraChatRef.current && !feedbackShownTodayRef.current) {
+        console.log(`📋 [HomeScreen:${instanceId}] Showing feedback popup`);
+        setShowAuvraChat(true);
+        feedbackShownTodayRef.current = true;
+      }
+
+      // Always clear ref when the timer fires so we don't keep a stale handle around
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
+      }
+    }, timeoutMs);
+  }, [feedbackPromptSeconds]);
+
+  // Reset inactivity timer - DEPRECATED: Now using startFeedbackTimer instead
+  // Keeping for cleanup purposes only
+  const resetInactivityTimer = () => {
+    // Timer is now only started when a new plan is generated
+    // This function no longer starts new timers
   };
 
   // Handle user interaction
@@ -756,14 +1094,33 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           scrollViewRef.current.scrollTo({ y: 0, animated: false });
         }
 
-        // 4. Load the newly generated data
-        // Small delay to ensure DB consistency
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const [assignmentsData, rewardsData] = await Promise.all([
-          homeService.getTodayAssignments(),
-          rewardService.getRewardsStatus().catch(() => null),
-        ]);
+        // 4. Load the newly generated data with retry mechanism
+        // Retry up to 3 times with increasing delays to handle Supabase pooler staleness
+        let assignmentsData: any = null;
+        let retryCount = 0;
+        const maxRetries = 3;
+        const baseDelay = 1500; // 1.5s base delay
+        
+        while (!assignmentsData && retryCount < maxRetries) {
+          const currentDelay = baseDelay * (retryCount + 1); // 1.5s, 3s, 4.5s
+          console.log(`🔄 [HomeScreen:${instanceId}] Attempt ${retryCount + 1}/${maxRetries}: Waiting ${currentDelay}ms before fetching assignments...`);
+          await new Promise(resolve => setTimeout(resolve, currentDelay));
+          
+          try {
+            assignmentsData = await homeService.getTodayAssignments();
+            if (assignmentsData) {
+              console.log(`✅ [HomeScreen:${instanceId}] Successfully fetched assignments on attempt ${retryCount + 1}`);
+            } else {
+              console.log(`⚠️ [HomeScreen:${instanceId}] Attempt ${retryCount + 1} returned null, will retry...`);
+            }
+          } catch (err) {
+            console.log(`⚠️ [HomeScreen:${instanceId}] Attempt ${retryCount + 1} failed with error:`, err);
+          }
+          retryCount++;
+        }
+        
+        // Fetch rewards in parallel with last retry (optimization)
+        const rewardsData = await rewardService.getRewardsStatus().catch(() => null);
 
         if (assignmentsData) {
           setAssignments(assignmentsData);
@@ -771,6 +1128,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
             setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
           }
           wireUpActionPlan(assignmentsData);
+          // Start feedback timer (shows popup once per session after 30s)
+          startFeedbackTimer();
+        } else {
+          console.error(`❌ [HomeScreen:${instanceId}] Failed to fetch assignments after ${maxRetries} retries. User may need to restart app.`);
+          // Still continue to show the unlock animation - user can pull to refresh
         }
 
         if (rewardsData && rewardsData.refresh_status) {
@@ -1003,19 +1365,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     // NOTE: Do NOT close modal here! User clicks "Let's Go" button which calls onClose
   };
 
-  // Start timer when component mounts and data is loaded
-  // IMPORTANT: Don't start timer if review is blocking
+  // Arm the 30s feedback timer whenever we have assignments and we're not blocked.
+  // This also fixes the case where we attempted to start while review was blocking
+  // (startFeedbackTimer returns early) and never retried after review closes.
   useEffect(() => {
     if (!loading && assignments && !isReviewBlocking && !showDailyReview) {
-      resetInactivityTimer();
+      startFeedbackTimer();
     }
 
-    // Clear timer if review becomes blocking
+    // Clear timer if review becomes blocking (redundant with the ref-sync effect, but safe)
     if (isReviewBlocking || showDailyReview) {
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
       }
-      // Also hide Auvra chat if it was showing
       if (showAuvraChat) {
         setShowAuvraChat(false);
       }
@@ -1024,9 +1387,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     return () => {
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
       }
     };
-  }, [loading, assignments, showAuvraChat, feedbackPromptSeconds, isReviewBlocking, showDailyReview]);
+    // Intentionally NOT depending on showAuvraChat to avoid repeatedly re-arming/resetting.
+  }, [loading, assignments, isReviewBlocking, showDailyReview, feedbackPromptSeconds, startFeedbackTimer]);
 
   /**
    * Convert hormone_stats data to HormoneStats interface
@@ -1273,7 +1638,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         purpose: action.purpose || '',
         target_hormone: action.hormones?.[0] || '',
         hormone_persona_intro: action.hormone_persona_intro || '',
-        hero_image_url: action.hero_image_url,
+        hero_image_url: action.hero_image_url || '', // Ensure non-undefined
         research_studies: action.research_studies || [],
         is_completed: action.is_completed || false,
         is_replaced: false,
@@ -1634,6 +1999,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     return lightenColor(base, 0.75);
   };
 
+  // Show plan generating overlay if plan is still being generated after signup
+  if (isPlanGenerating) {
+    return (
+      <View style={styles.container}>
+        <PlanGeneratingOverlay visible={true} />
+      </View>
+    );
+  }
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -1799,6 +2173,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                   try {
                     const result = await homeService.refreshAllIncomplete();
                     if (result?.success) {
+                      // Log replacement details for debugging
+                      console.log('🔄 Refresh result:', JSON.stringify({
+                        replaced_count: result.replaced_count,
+                        has_replacements: !!result.replacements?.length,
+                        refresh_status: result.refresh_status,
+                      }));
+
                       Alert.alert(
                         '✅ Refreshed!',
                         result.message,
@@ -1807,7 +2188,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                       if (result.refresh_status) {
                         setRefreshStatus(result.refresh_status);
                       }
-                      // Reload assignments
+
+                      // Add small delay to ensure DB commit is fully visible
+                      await new Promise(resolve => setTimeout(resolve, 300));
+
+                      // Reload assignments to get fresh data
                       const newAssignments = await homeService.getTodayAssignments();
                       setAssignments(newAssignments);
                       if (newAssignments) wireUpActionPlan(newAssignments);
@@ -2600,10 +2985,67 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
   },
-  loadingText: {
+  loadingPillText: {
     fontFamily: FONT_INTER.medium,
     fontSize: 13,
     color: '#FFF',
+  },
+  
+  // Plan Generating Overlay styles (shown when plan is still being generated after signup)
+  planGeneratingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFF5F8',
+    paddingHorizontal: responsiveWidth(8),
+  },
+  planGeneratingContent: {
+    alignItems: 'center',
+    maxWidth: responsiveWidth(85),
+  },
+  planGeneratingIconContainer: {
+    marginBottom: responsiveHeight(3),
+  },
+  planGeneratingAvatar: {
+    width: responsiveWidth(35),
+    height: responsiveWidth(35),
+  },
+  planGeneratingTitle: {
+    fontFamily: FONT_SERIF.bold,
+    fontSize: responsiveFontSize(2.8),
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: responsiveHeight(1.5),
+  },
+  planGeneratingSubtitle: {
+    fontFamily: FONT_INTER.regular,
+    fontSize: responsiveFontSize(1.8),
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: responsiveHeight(3),
+    lineHeight: responsiveFontSize(2.6),
+  },
+  planGeneratingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(162, 154, 234, 0.15)',
+    paddingVertical: responsiveHeight(1.2),
+    paddingHorizontal: responsiveWidth(5),
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: 'rgba(162, 154, 234, 0.3)',
+    marginBottom: responsiveHeight(2),
+  },
+  planGeneratingText: {
+    fontFamily: FONT_INTER.medium,
+    fontSize: responsiveFontSize(1.6),
+    color: BRAND.accent,
+  },
+  planGeneratingHint: {
+    fontFamily: FONT_INTER.regular,
+    fontSize: responsiveFontSize(1.5),
+    color: '#999',
+    textAlign: 'center',
   },
 });
 
