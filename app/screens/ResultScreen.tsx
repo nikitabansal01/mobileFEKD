@@ -86,80 +86,64 @@ const ResultScreen = () => {
   };
 
   /**
-   * Get hormone-specific image styling to ensure visual consistency across all cards.
-   * Different hormones have different character shapes, so we adjust sizing accordingly.
+   * Get hormone-specific art sizing to ensure visual consistency across all cards.
+   * Art must always stay inside the card (no negative offsets).
    */
-  const getHormoneArtStyle = (hormone?: string) => {
+  const getHormoneArtSize = (hormone?: string) => {
     const h = (hormone || '').toLowerCase();
 
-    // Designed to match the Figma: oversized character art that peeks outside the card.
-    // Each hormone asset has different proportions, so we tune placement per hormone.
     if (h === 'progesterone') {
       return {
-        width: scale(170),
-        height: scale(170),
-        right: scale(-42),
-        bottom: verticalScale(-34),
+        width: scale(104),
+        height: scale(104),
         transform: [{ scale: 1 }],
       };
     }
 
     if (h === 'testosterone' || h === 'androgens') {
       return {
-        width: scale(150),
-        height: scale(150),
-        right: scale(-30),
-        bottom: verticalScale(-28),
+        width: scale(102),
+        height: scale(102),
         transform: [{ scale: 1 }],
       };
     }
 
     if (h === 'estrogen') {
       return {
-        width: scale(135),
-        height: scale(135),
-        right: scale(-22),
-        bottom: verticalScale(-24),
+        width: scale(98),
+        height: scale(98),
         transform: [{ scale: 1 }],
       };
     }
 
     if (h === 'insulin') {
       return {
-        width: scale(140),
-        height: scale(140),
-        right: scale(-26),
-        bottom: verticalScale(-26),
+        width: scale(98),
+        height: scale(98),
         // Slightly smaller to avoid the "too dominant" perception.
-        transform: [{ scale: 0.9 }],
+        transform: [{ scale: 0.92 }],
       };
     }
 
     if (h === 'thyroid') {
       return {
-        width: scale(140),
-        height: scale(140),
-        right: scale(-26),
-        bottom: verticalScale(-26),
-        transform: [{ scale: 0.9 }],
+        width: scale(98),
+        height: scale(98),
+        transform: [{ scale: 0.92 }],
       };
     }
 
     if (h === 'cortisol') {
       return {
-        width: scale(140),
-        height: scale(140),
-        right: scale(-26),
-        bottom: verticalScale(-26),
+        width: scale(98),
+        height: scale(98),
         transform: [{ scale: 0.95 }],
       };
     }
 
     return {
-      width: scale(140),
-      height: scale(140),
-      right: scale(-26),
-      bottom: verticalScale(-26),
+      width: scale(98),
+      height: scale(98),
       transform: [{ scale: 0.95 }],
     };
   };
@@ -294,24 +278,27 @@ const ResultScreen = () => {
                   ]}
                   onLayout={(e) => handleCardLayout(e.nativeEvent.layout.height)}
                 >
-                  <View style={styles.cardContent}>
-                    <Text style={styles.hormoneTitleLine} numberOfLines={1} ellipsizeMode="tail">
-                      <Text style={styles.hormoneTitleStrong}>{primaryCard.name}</Text>
-                      <Text style={styles.hormoneTitlePunct}>, </Text>
-                      <Text style={styles.hormoneTitleSoft}>{primaryCard.subtitle}</Text>
-                    </Text>
+                  <View style={styles.cardRow}>
+                    <View style={styles.cardLeftCol}>
+                      <Text style={styles.hormoneTitleStrong}>
+                        {primaryCard.name}
+                        <Text style={styles.hormoneTitleSoft}>, {primaryCard.subtitle}</Text>
+                      </Text>
 
-                    <Text style={styles.hormoneDescription} numberOfLines={4} ellipsizeMode="tail">
-                      {primaryCard.icon ? <Text style={styles.alertIconText}>{primaryCard.icon} </Text> : null}
-                      {primaryCard.description}
-                    </Text>
+                      <Text style={styles.hormoneDescription} numberOfLines={4} ellipsizeMode="tail">
+                        {primaryCard.icon ? <Text style={styles.alertIconText}>{primaryCard.icon} </Text> : null}
+                        {primaryCard.description}
+                      </Text>
+                    </View>
+
+                    <View style={styles.cardRightCol}>
+                      <Image
+                        pointerEvents="none"
+                        source={getHormoneImage(primaryCard.hormone, primaryCard.level, primaryCard.priority, primaryCard.is_primary, primaryCard.score)}
+                        style={[styles.cardArtImage, getHormoneArtSize(primaryCard.hormone)]}
+                      />
+                    </View>
                   </View>
-
-                  <Image
-                    pointerEvents="none"
-                    source={getHormoneImage(primaryCard.hormone, primaryCard.level, primaryCard.priority, primaryCard.is_primary, primaryCard.score)}
-                    style={[styles.cardArt, getHormoneArtStyle(primaryCard.hormone)]}
-                  />
                 </View>
                 {primaryCard.priority ? (
                   <View style={styles.priorityBadge}>
@@ -332,24 +319,27 @@ const ResultScreen = () => {
                   ]}
                   onLayout={(e) => handleCardLayout(e.nativeEvent.layout.height)}
                 >
-                  <View style={styles.cardContent}>
-                    <Text style={styles.hormoneTitleLine} numberOfLines={1} ellipsizeMode="tail">
-                      <Text style={styles.hormoneTitleStrong}>{secondaryCard.name}</Text>
-                      <Text style={styles.hormoneTitlePunct}>, </Text>
-                      <Text style={styles.hormoneTitleSoft}>{secondaryCard.subtitle}</Text>
-                    </Text>
+                  <View style={styles.cardRow}>
+                    <View style={styles.cardLeftCol}>
+                      <Text style={styles.hormoneTitleStrong}>
+                        {secondaryCard.name}
+                        <Text style={styles.hormoneTitleSoft}>, {secondaryCard.subtitle}</Text>
+                      </Text>
 
-                    <Text style={styles.hormoneDescription} numberOfLines={4} ellipsizeMode="tail">
-                      {secondaryCard.icon ? <Text style={styles.alertIconText}>{secondaryCard.icon} </Text> : null}
-                      {secondaryCard.description}
-                    </Text>
+                      <Text style={styles.hormoneDescription} numberOfLines={4} ellipsizeMode="tail">
+                        {secondaryCard.icon ? <Text style={styles.alertIconText}>{secondaryCard.icon} </Text> : null}
+                        {secondaryCard.description}
+                      </Text>
+                    </View>
+
+                    <View style={styles.cardRightCol}>
+                      <Image
+                        pointerEvents="none"
+                        source={getHormoneImage(secondaryCard.hormone, secondaryCard.level, secondaryCard.priority, secondaryCard.is_primary, secondaryCard.score)}
+                        style={[styles.cardArtImage, getHormoneArtSize(secondaryCard.hormone)]}
+                      />
+                    </View>
                   </View>
-
-                  <Image
-                    pointerEvents="none"
-                    source={getHormoneImage(secondaryCard.hormone, secondaryCard.level, secondaryCard.priority, secondaryCard.is_primary, secondaryCard.score)}
-                    style={[styles.cardArt, getHormoneArtStyle(secondaryCard.hormone)]}
-                  />
                 </View>
                 {secondaryCard.priority ? (
                   <View style={styles.priorityBadge}>
@@ -447,7 +437,7 @@ const styles = StyleSheet.create({
   hormoneCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    paddingHorizontal: responsiveWidth(6),
+    paddingHorizontal: responsiveWidth(5.4),
     paddingTop: responsiveHeight(2.0),
     paddingBottom: responsiveHeight(1.9),
     position: 'relative',
@@ -460,29 +450,32 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     // Android shadow
     elevation: 2,
-    overflow: 'visible',
+    overflow: 'hidden',
   },
-  cardContent: {
-    // Keep enough right padding so text never collides with oversized art.
-    paddingRight: scale(118),
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: responsiveWidth(1.6),
+  },
+  cardLeftCol: {
+    flex: 1,
     minWidth: 0,
+    paddingRight: responsiveWidth(1),
   },
-  cardArt: {
-    position: 'absolute',
+  cardRightCol: {
+    width: scale(104),
+    alignItems: 'flex-end',
+    justifyContent: 'flex-end',
+  },
+  cardArtImage: {
     resizeMode: 'contain',
-  },
-  hormoneTitleLine: {
-    lineHeight: responsiveFontSize(2.35),
   },
   hormoneTitleStrong: {
     fontSize: responsiveFontSize(2.05),
     color: '#0B0B0F',
     fontFamily: 'Inter600',
-  },
-  hormoneTitlePunct: {
-    fontSize: responsiveFontSize(2.05),
-    color: '#0B0B0F',
-    fontFamily: 'Inter600',
+    lineHeight: responsiveFontSize(2.45),
   },
   hormoneTitleSoft: {
     fontSize: responsiveFontSize(1.9),
