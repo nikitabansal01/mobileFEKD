@@ -2,7 +2,7 @@
   "expo": {
     "name": "Hormone Insight",
     "slug": "auvra-fe",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "scheme": "auvra",
     "web": {
       "bundler": "metro",
@@ -14,6 +14,12 @@
         "projectId": "bd0233ad-fa9b-4731-8442-ac80b7f74042"
       }
     },
-    "owner": "mohanganesh3"
+    "owner": "mohanganesh3",
+    "android": {
+      "package": "com.raphy0316.hormoneinsight"
+    },
+    "ios": {
+      "bundleIdentifier": "com.raphy0316.hormoneinsight"
+    }
   }
 }
