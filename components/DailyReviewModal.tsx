@@ -464,6 +464,10 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
   // Entrance animation
   useEffect(() => {
     if (visible) {
+      // CRITICAL DEBUG: Log when modal becomes visible
+      console.log(`🔔 [DailyReviewModal] MODAL VISIBLE - plan_id=${reviewData?.plan_id}, items=${reviewData?.items?.length || 0}`);
+      console.log(`🔔 [DailyReviewModal] Review date: ${reviewData?.review_date}, streak_at_risk=${reviewData?.streak_at_risk}`);
+      
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -481,7 +485,7 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
     }
-  }, [visible]);
+  }, [visible, reviewData]);
 
   // ============================================================================
   // HANDLERS
@@ -550,6 +554,13 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
 
   const handleSubmitReview = async () => {
     if (!reviewData?.plan_id) return;
+    
+    // CRITICAL DEBUG: Log exactly what's being submitted
+    const statuses = Array.from(itemReviewStates.values()).map(s => ({ id: s.item_id, status: s.status }));
+    console.log(`🚀 [DailyReviewModal] SUBMIT TRIGGERED - plan_id=${reviewData.plan_id}`);
+    console.log(`🚀 [DailyReviewModal] Item statuses:`, JSON.stringify(statuses));
+    console.log(`🚀 [DailyReviewModal] useFreeze=${useFreeze}, currentStep=${currentStep}`);
+    
     setIsSubmitting(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
