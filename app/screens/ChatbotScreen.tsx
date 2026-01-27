@@ -824,7 +824,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         setShowSlider(false);
         setShowSelectedValue(false);
       } else {
-        setMessages([{ id: "symptom_fallback_1", text: "See any progress with your symptoms today? Track progress, wins, and difficulties.", isBot: true }]);
+        setMessages([{ id: "symptom_fallback_1", text: "Hey! 💜 How are your symptoms today?", isBot: true }]);
         setUiBlocks([]);
         setMode("tap");
         setShowSlider(false);
@@ -832,7 +832,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       }
     } catch (error) {
       console.error("Failed to initialize symptom check-in:", error);
-      setMessages([{ id: "symptom_error_1", text: "See any progress with your symptoms today? Track progress, wins, and difficulties.", isBot: true }]);
+      setMessages([{ id: "symptom_error_1", text: "Hey! 💜 How are your symptoms today?", isBot: true }]);
       setUiBlocks([]);
       setMode("tap");
       setShowSlider(false);
@@ -1030,13 +1030,13 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       } else {
         // Fallback if API fails
         setMessages([
-          { id: "1", text: "Let's do a quick check-in. How are you feeling this week?", isBot: true },
+          { id: "1", text: "Hey! 💜 How have you been feeling this week?", isBot: true },
         ]);
       }
     } catch (error) {
       console.error('Failed to initialize weekly check-in:', error);
       setMessages([
-        { id: "1", text: "Let's do a quick check-in. How are you feeling this week?", isBot: true },
+        { id: "1", text: "Hey! 💜 How have you been feeling this week?", isBot: true },
       ]);
     }
     setIsLoadingCheckin(false);
@@ -1240,21 +1240,19 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           // Add "Something else" to API options
           return [...carePlanTapOptions, { id: "something_else", text: "💬 Something else" }];
         }
+        // Simple conversational fallback options
         return [
-          { id: "want-to-change", text: "👎 I want to change it" },
-          { id: "alternate-suggestions", text: "🔁 I want alternate suggestions" },
+          { id: "going_well", text: "✅ Going well!" },
+          { id: "need_help", text: "🤔 Need some help" },
           { id: "manage_plan", text: "🧩 Manage plan" },
           { id: "something_else", text: "💬 Something else" },
         ];
       case "weekly_checkin":
-        // Fallback options if API didn't return any
+        // Fallback options if API didn't return any - simple conversational options
         return [
-          { id: "not_sure", text: "Not sure" },
-          { id: "nothing_changed", text: "Nothing changed" },
-          { id: "a_little", text: "A few small changes" },
-          { id: "a_lot", text: "A big change" },
-          { id: "prefer_type", text: "I'd rather type" },
-          { id: "skip", text: "Prefer not to say" },
+          { id: "better", text: "😊 Feeling better" },
+          { id: "same", text: "😐 About the same" },
+          { id: "worse", text: "😟 Feeling worse" },
           { id: "something_else", text: "💬 Something else" },
         ];
       case "symptom_checkin":
@@ -1292,16 +1290,11 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           { id: "something_else", text: "💬 Something else" },
         ];
       default:
+        // Simple conversational fallback
         return [
-          { id: "ate-out-more", text: "Ate out more" },
-          { id: "ate-more-carbs", text: "Ate more carbs" },
-          { id: "ate-more-dairy", text: "Ate more dairy" },
-          { id: "skipped-meals", text: "Skipped meals" },
-          { id: "untimely-eating", text: "Untimely eating" },
-          { id: "less-sleep", text: "Less sleep" },
-          { id: "more-stress", text: "More stress/workload" },
-          { id: "more-caffeine", text: "More caffeine" },
-          { id: "more-alcohol", text: "More alcohol" },
+          { id: "feeling_good", text: "😊 Feeling good" },
+          { id: "could_be_better", text: "😐 Could be better" },
+          { id: "struggling", text: "😟 Struggling a bit" },
           { id: "something_else", text: "💬 Something else" },
         ];
     }
