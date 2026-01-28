@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.raphy0316.hormoneinsight'
+    namespace 'com.auvra.health'
     defaultConfig {
-        applicationId 'com.raphy0316.hormoneinsight'
+        applicationId 'com.auvra.health'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

@@ -4,6 +4,7 @@
     "slug": "auvra-fe",
     "version": "1.0.1",
     "scheme": "auvra",
+    "icon": "./assets/icon.png",
     "web": {
       "bundler": "metro",
       "favicon": "./assets/images/favicon.png"
@@ -16,10 +17,14 @@
     },
     "owner": "mohanganesh3",
     "android": {
-      "package": "com.raphy0316.hormoneinsight"
+      "package": "com.auvra.health",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      }
     },
     "ios": {
-      "bundleIdentifier": "com.raphy0316.hormoneinsight"
+      "bundleIdentifier": "com.auvra.health"
     }
   }
 }

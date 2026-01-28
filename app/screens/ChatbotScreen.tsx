@@ -1240,7 +1240,14 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           // Add "Something else" to API options
           return [...carePlanTapOptions, { id: "something_else", text: "💬 Something else" }];
         }
-        // Simple conversational fallback options
+        // While loading, show loading indicator options (disabled state handled elsewhere)
+        if (isLoadingCheckin) {
+          return [
+            { id: "loading", text: "⏳ Loading..." },
+          ];
+        }
+        // Fallback options - SHOULD RARELY BE USED now that backend always returns options
+        // These are kept as a safety net only
         return [
           { id: "going_well", text: "✅ Going well!" },
           { id: "need_help", text: "🤔 Need some help" },
@@ -1517,6 +1524,11 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
   const handleChoicePress = (option: ChoiceOption) => {
     const contextFromRoute = route?.params?.conversationContext;
+
+    // Ignore clicks on loading placeholder
+    if (option.id === "loading") {
+      return;
+    }
 
     // "Something else" switches to type mode for custom input across all contexts
     if (option.id === "something_else") {

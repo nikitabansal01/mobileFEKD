@@ -1,4 +1,4 @@
-package com.raphy0316.hormoneinsight
+package com.auvra.health
 
 import android.app.Application
 import android.content.res.Configuration

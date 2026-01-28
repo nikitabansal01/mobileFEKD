@@ -1,4 +1,4 @@
-package com.raphy0316.hormoneinsight
+package com.auvra.health
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

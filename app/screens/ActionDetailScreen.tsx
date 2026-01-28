@@ -82,6 +82,8 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
       pmid?: string;
       verification_link?: string;
       source?: string;
+      study_type?: string; // meta_analysis, systematic_review, rct, clinical_trial, etc.
+      study_type_label?: string; // Human-readable: "Meta-Analysis", "Systematic Review", etc.
     }>;
     variants?: Array<{
       variant_type: string;
@@ -610,10 +612,13 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                   onPress={() => setShowStudyDetails(!showStudyDetails)}
                 >
                   <Text style={styles.studyDetailsText}>
-                    {showStudyDetails ? 'Hide study details' : 'View study details'}
+                    {showStudyDetails 
+                      ? 'Hide research sources' 
+                      : `View ${action?.research_studies?.length || 0} research source${(action?.research_studies?.length || 0) !== 1 ? 's' : ''}`
+                    }
                   </Text>
                   <Ionicons
-                    name={showStudyDetails ? "chevron-up" : "chevron-down"} // Corrected to match mockup chevron style
+                    name={showStudyDetails ? "chevron-up" : "chevron-down"}
                     size={responsiveFontSize(1.7)}
                     color="#C17EC9"
                   />
@@ -633,9 +638,31 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                         const participants = typeof study.participants === 'number' && study.participants > 0 ? study.participants : null;
                         const pmid = study.pmid ? String(study.pmid) : null;
                         const verificationLink = study.verification_link ? String(study.verification_link) : null;
+                        const studyTypeLabel = study.study_type_label ? String(study.study_type_label) : null;
+                        const studyType = study.study_type ? String(study.study_type) : null;
+
+                        // Determine badge color based on study type priority
+                        const getBadgeColor = () => {
+                          switch (studyType) {
+                            case 'meta_analysis': return '#2E7D32'; // Dark green - highest quality
+                            case 'systematic_review': return '#388E3C'; // Green
+                            case 'rct': return '#1976D2'; // Blue
+                            case 'clinical_trial': return '#7B1FA2'; // Purple
+                            case 'cohort_study': return '#F57C00'; // Orange
+                            case 'review': return '#00796B'; // Teal
+                            default: return '#757575'; // Gray
+                          }
+                        };
 
                         return (
                           <View key={index} style={styles.studyCard}>
+                            {/* Study Type Badge */}
+                            {studyTypeLabel && (
+                              <View style={[styles.studyTypeBadge, { backgroundColor: getBadgeColor() }]}>
+                                <Text style={styles.studyTypeBadgeText}>{studyTypeLabel}</Text>
+                              </View>
+                            )}
+
                             <View style={styles.studyTitleRow}>
                               <Text style={styles.studyIcon}>🔗</Text>
                               <Text style={styles.studyTitle}>{title}</Text>
@@ -1131,6 +1158,20 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(16),
     padding: moderateScale(16),
     marginBottom: verticalScale(10),
+  },
+  studyTypeBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: verticalScale(4),
+    borderRadius: moderateScale(12),
+    marginBottom: verticalScale(8),
+  },
+  studyTypeBadgeText: {
+    fontSize: moderateScale(10.5, 1.5),
+    fontFamily: 'Inter600',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   studyTitleRow: {
     flexDirection: 'row',
