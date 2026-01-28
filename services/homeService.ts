@@ -782,14 +782,14 @@ class HomeService {
    * Replaces an action with a new one
    * 
    * @param itemId - ID of the action item to replace
-   * @param reason - Optional reason text
+   * @param reason - Optional reason text (can include custom feedback & preference hints)
    * @param replacementCategory - Categorized reason: 'allergic', 'no_time', 'dont_like', etc.
    * @returns Promise resolving to replacement result or null on error
    */
   async replaceAction(
     itemId: number,
     reason?: string,
-    replacementCategory?: 'dont_like' | 'allergic' | 'no_ingredients' | 'no_time' | 'already_done' | 'not_feeling_it' | 'other'
+    replacementCategory?: 'dont_like' | 'allergic' | 'no_ingredients' | 'no_time' | 'already_done' | 'not_feeling_it' | 'too_hard' | 'want_different' | 'other'
   ): Promise<{ success: boolean; replacement_action?: ActionPlanItem } | null> {
     try {
       console.log('🔄 Replacing action:', `${API_BASE_URL}/api/v1/new-scheduling/replace`);
