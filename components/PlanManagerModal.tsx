@@ -70,6 +70,24 @@ const QUICK_SUGGESTIONS: Record<string, string[]> = {
   mental: ['🧘 Breathing', '📝 Journaling', '🎵 Music', '☀️ Outdoors', '😴 Rest'],
 };
 
+// Skip reasons with premium styling
+export type SkipReason = 'no_time' | 'not_feeling_it' | 'not_relevant' | 'already_done' | 'other';
+
+const SKIP_REASONS: Array<{
+  label: string;
+  reason: SkipReason;
+  icon: string;
+  description: string;
+  color: string;
+  bgColor: string;
+}> = [
+  { label: 'No time today', reason: 'no_time', icon: '⏰', description: "I'm too busy", color: '#F59E0B', bgColor: '#FFFBEB' },
+  { label: 'Not feeling it', reason: 'not_feeling_it', icon: '😔', description: 'Low energy right now', color: '#6366F1', bgColor: '#EEF2FF' },
+  { label: 'Not relevant', reason: 'not_relevant', icon: '🤔', description: "Doesn't fit my needs", color: '#8B5CF6', bgColor: '#F5F3FF' },
+  { label: 'Already did today', reason: 'already_done', icon: '✅', description: 'Did something similar', color: '#10B981', bgColor: '#ECFDF5' },
+  { label: 'Other reason', reason: 'other', icon: '💬', description: 'Let me explain', color: '#0EA5E9', bgColor: '#F0F9FF' },
+];
+
 // Animated card component
 function AnimatedReasonCard({ 
   reason, 
@@ -482,6 +500,263 @@ function ReplaceReasonModal({
   );
 }
 
+// ============================================================================
+// SKIP REASON MODAL - Premium animated modal for skipping actions
+// ============================================================================
+function SkipReasonModal({
+  visible,
+  item,
+  onClose,
+  onSubmit,
+  busy,
+}: {
+  visible: boolean;
+  item: ActionPlanItem | null;
+  onClose: () => void;
+  onSubmit: (reason: string) => void;
+  busy: boolean;
+}) {
+  const [selectedReason, setSelectedReason] = useState<SkipReason | null>(null);
+  const [customReason, setCustomReason] = useState('');
+  const slideAnim = useRef(new Animated.Value(300)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          friction: 8,
+          tension: 65,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      slideAnim.setValue(300);
+      fadeAnim.setValue(0);
+      setSelectedReason(null);
+      setCustomReason('');
+    }
+  }, [visible]);
+
+  const handleClose = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: 300,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => onClose());
+  };
+
+  const handleSelectReason = (reason: SkipReason) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedReason(reason);
+  };
+
+  const handleSubmit = () => {
+    if (!selectedReason) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    
+    const reasonText = selectedReason === 'other' && customReason.trim()
+      ? customReason.trim()
+      : SKIP_REASONS.find(r => r.reason === selectedReason)?.label || selectedReason;
+    
+    onSubmit(reasonText);
+  };
+
+  const selectedReasonData = SKIP_REASONS.find(r => r.reason === selectedReason);
+  const headerColors: [string, string] = selectedReasonData 
+    ? [selectedReasonData.color, selectedReasonData.color + 'CC']
+    : ['#6B7280', '#4B5563'];
+
+  if (!visible || !item) return null;
+
+  return (
+    <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
+      <Animated.View style={[replaceStyles.overlay, { opacity: fadeAnim }]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={replaceStyles.keyboardView}
+        >
+          <TouchableOpacity 
+            style={replaceStyles.dismissArea} 
+            onPress={handleClose} 
+            activeOpacity={1} 
+          />
+          <Animated.View
+            style={[
+              replaceStyles.container,
+              { transform: [{ translateY: slideAnim }] },
+            ]}
+          >
+            {/* Header */}
+            <LinearGradient
+              colors={headerColors}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={replaceStyles.header}
+            >
+              <View style={replaceStyles.headerContent}>
+                <Text style={replaceStyles.title}>Skip "{item?.title}"?</Text>
+                <Text style={replaceStyles.subtitle}>
+                  Help us improve future plans 📝
+                </Text>
+              </View>
+              <TouchableOpacity onPress={handleClose} style={replaceStyles.closeBtn}>
+                <BlurView intensity={20} style={replaceStyles.closeBtnCircle}>
+                  <Text style={replaceStyles.closeText}>✕</Text>
+                </BlurView>
+              </TouchableOpacity>
+            </LinearGradient>
+
+            <ScrollView 
+              style={replaceStyles.scrollArea}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={replaceStyles.scrollContent}
+            >
+              <Text style={replaceStyles.quickLabel}>
+                Why are you skipping? 🤔
+              </Text>
+
+              <View style={replaceStyles.reasonGrid}>
+                {SKIP_REASONS.map((reason, index) => {
+                  const isSelected = selectedReason === reason.reason;
+                  return (
+                    <Pressable
+                      key={reason.reason}
+                      onPress={() => handleSelectReason(reason.reason)}
+                      disabled={busy}
+                      style={[
+                        replaceStyles.reasonCard,
+                        { width: '48%' },
+                        isSelected && { 
+                          borderColor: reason.color,
+                          backgroundColor: reason.bgColor,
+                          shadowColor: reason.color,
+                          shadowOffset: { width: 0, height: 4 },
+                          shadowOpacity: 0.3,
+                          shadowRadius: 8,
+                          elevation: 6,
+                        },
+                      ]}
+                    >
+                      <View style={[
+                        replaceStyles.iconBubble,
+                        isSelected && { backgroundColor: reason.color + '20' }
+                      ]}>
+                        <Text style={replaceStyles.reasonIcon}>{reason.icon}</Text>
+                      </View>
+                      <View style={replaceStyles.reasonTextWrap}>
+                        <Text style={[
+                          replaceStyles.reasonLabel,
+                          isSelected && { color: reason.color, fontWeight: '700' },
+                        ]}>
+                          {reason.label}
+                        </Text>
+                        <Text style={[
+                          replaceStyles.reasonDesc,
+                          isSelected && { color: reason.color + 'CC' },
+                        ]}>
+                          {reason.description}
+                        </Text>
+                      </View>
+                      {isSelected && (
+                        <View style={[replaceStyles.checkmark, { backgroundColor: reason.color }]}>
+                          <Text style={replaceStyles.checkmarkText}>✓</Text>
+                        </View>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* Custom reason input for "Other" */}
+              {selectedReason === 'other' && (
+                <View style={replaceStyles.customSection}>
+                  <Text style={replaceStyles.customLabel}>
+                    💬 Tell us more
+                  </Text>
+                  <TextInput
+                    style={replaceStyles.customInput}
+                    placeholder="Why are you skipping this?"
+                    placeholderTextColor="#9CA3AF"
+                    value={customReason}
+                    onChangeText={setCustomReason}
+                    multiline
+                    maxLength={200}
+                    autoFocus
+                    editable={!busy}
+                  />
+                  <Text style={replaceStyles.charCount}>
+                    {customReason.length}/200
+                  </Text>
+                </View>
+              )}
+
+              {/* Helpful note */}
+              <View style={replaceStyles.aiNote}>
+                <Text style={replaceStyles.aiNoteIcon}>💡</Text>
+                <Text style={replaceStyles.aiNoteText}>
+                  Your feedback helps us personalize future plans for you!
+                </Text>
+              </View>
+            </ScrollView>
+
+            {/* Submit Button */}
+            <View style={replaceStyles.footer}>
+              <TouchableOpacity
+                style={[
+                  replaceStyles.submitBtn,
+                  (!selectedReason || busy) && replaceStyles.submitBtnDisabled,
+                ]}
+                onPress={handleSubmit}
+                disabled={!selectedReason || busy}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={(!selectedReason || busy) 
+                    ? ['#D1D5DB', '#9CA3AF'] 
+                    : [selectedReasonData?.color || '#6B7280', (selectedReasonData?.color || '#6B7280') + 'CC']
+                  }
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={replaceStyles.submitBtnGradient}
+                >
+                  {busy ? (
+                    <View style={replaceStyles.loadingRow}>
+                      <ActivityIndicator color="#fff" size="small" />
+                      <Text style={replaceStyles.submitBtnText}>Recording...</Text>
+                    </View>
+                  ) : (
+                    <Text style={replaceStyles.submitBtnText}>
+                      Skip this action 👋
+                    </Text>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+              <Text style={replaceStyles.footerNote}>
+                You can always come back to it later
+              </Text>
+            </View>
+          </Animated.View>
+        </KeyboardAvoidingView>
+      </Animated.View>
+    </Modal>
+  );
+}
+
 const replaceStyles = StyleSheet.create({
   overlay: {
     flex: 1,
@@ -812,6 +1087,8 @@ export default function PlanManagerModal({
   const [busy, setBusy] = useState(false);
   const [replaceModalVisible, setReplaceModalVisible] = useState(false);
   const [itemToReplace, setItemToReplace] = useState<ActionPlanItem | null>(null);
+  const [skipModalVisible, setSkipModalVisible] = useState(false);
+  const [itemToSkip, setItemToSkip] = useState<ActionPlanItem | null>(null);
 
   const refreshStatus = rewardsStatus?.refresh_status;
   const freezeCount = rewardsStatus?.freeze_count ?? 0;
@@ -1037,43 +1314,38 @@ export default function PlanManagerModal({
   );
 
   const handleSkip = useCallback(
-    async (item: ActionPlanItem) => {
+    (item: ActionPlanItem) => {
       if (busy) return;
-
-      const reasons: Array<{ label: string; text?: string }> = [
-        { label: 'No time today', text: 'No time today' },
-        { label: 'Not feeling it', text: 'Not feeling it' },
-        { label: 'Not relevant', text: 'Not relevant' },
-        { label: 'Other', text: undefined },
-      ];
-
-      Alert.alert(
-        'Skip this action?',
-        'We’ll record that you skipped it (so we can improve future plans).',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          ...reasons.map((r) => ({
-            text: r.label,
-            onPress: async () => {
-              try {
-                setBusy(true);
-                await homeService.submitActionFeedback(item.id, 'skipped', r.text, 'home');
-
-                const nextStatus = await rewardService.getRewardsStatus();
-                onRewardsStatusChange(nextStatus);
-
-                Alert.alert('Skipped', 'Got it — recorded.');
-              } catch (e: any) {
-                Alert.alert('Error', e?.message || 'Failed to skip action.');
-              } finally {
-                setBusy(false);
-              }
-            },
-          })),
-        ]
-      );
+      // Open the custom skip modal
+      setItemToSkip(item);
+      setSkipModalVisible(true);
     },
-    [busy, onRewardsStatusChange]
+    [busy]
+  );
+
+  // Handle skip submission from the modal
+  const handleSkipSubmit = useCallback(
+    async (reason: string) => {
+      if (!itemToSkip) return;
+
+      try {
+        setBusy(true);
+        await homeService.submitActionFeedback(itemToSkip.id, 'skipped', reason, 'home');
+
+        const nextStatus = await rewardService.getRewardsStatus();
+        onRewardsStatusChange(nextStatus);
+
+        setSkipModalVisible(false);
+        setItemToSkip(null);
+        
+        Alert.alert('Skipped ✓', "Got it — we'll use this to improve your future plans.");
+      } catch (e: any) {
+        Alert.alert('Error', e?.message || 'Failed to skip action.');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [itemToSkip, onRewardsStatusChange]
   );
 
   return (
@@ -1158,6 +1430,18 @@ export default function PlanManagerModal({
           setItemToReplace(null);
         }}
         onSubmit={handleReplaceSubmit}
+        busy={busy}
+      />
+
+      {/* Custom Skip Reason Modal */}
+      <SkipReasonModal
+        visible={skipModalVisible}
+        item={itemToSkip}
+        onClose={() => {
+          setSkipModalVisible(false);
+          setItemToSkip(null);
+        }}
+        onSubmit={handleSkipSubmit}
         busy={busy}
       />
     </Modal>
