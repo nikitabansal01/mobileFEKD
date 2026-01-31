@@ -39,6 +39,8 @@ const ResultScreen = () => {
   const [secondaryCard, setSecondaryCard] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [maxCardHeight, setMaxCardHeight] = useState<number | null>(null);
+  const [isHealthy, setIsHealthy] = useState(false);
+  const [healthyMessage, setHealthyMessage] = useState<string | null>(null);
 
   const CARD_MIN_HEIGHT = responsiveHeight(15.5);
 
@@ -203,7 +205,11 @@ const ResultScreen = () => {
         const result = await sessionService.getHormoneAnalysis();
         if (!isMounted) return;
 
-        if (result && Array.isArray(result.hormone_cards) && result.hormone_cards.length > 0) {
+        // Check if user is healthy (no significant symptoms)
+        if (result && result.is_healthy) {
+          setIsHealthy(true);
+          setHealthyMessage(result.message || 'Based on your responses, your hormones appear to be balanced. This app is designed for users experiencing hormonal symptoms.');
+        } else if (result && Array.isArray(result.hormone_cards) && result.hormone_cards.length > 0) {
           // First card = primary (high priority)
           setPrimaryCard(result.hormone_cards[0]);
           // Second card = secondary (moderate) if exists
@@ -249,6 +255,82 @@ const ResultScreen = () => {
     return (
       <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#A29AEA" />
+      </SafeAreaView>
+    );
+  }
+
+  // Healthy user screen - show when no significant symptoms detected
+  if (isHealthy) {
+    return (
+      <SafeAreaView style={styles.container}>
+        {/* Back button */}
+        <View style={styles.backButtonContainer}>
+          <BackButton onPress={handleBack} />
+        </View>
+
+        <KeyboardAwareScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={[
+            styles.mainContent,
+            { minHeight: '100%', justifyContent: 'center' }
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.mainContent}>
+            {/* Auvra character */}
+            <View style={styles.headerSection}>
+              <View style={styles.characterContainer}>
+                <AuvraCharacter size={responsiveWidth(25)} />
+              </View>
+
+              <View style={styles.titleContainer}>
+                <View style={styles.maskedView}>
+                  <MaskedView
+                    style={{ height: 60, width: '100%' }}
+                    maskElement={
+                      <Text style={[styles.title, { color: 'black' }]}>
+                        Great news!
+                      </Text>
+                    }
+                  >
+                    <LinearGradient
+                      colors={['#7DD3A5', '#4CAF50', '#81C784']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={{ height: 60, width: '100%' }}
+                    />
+                  </MaskedView>
+                </View>
+              </View>
+            </View>
+
+            {/* Healthy message card */}
+            <View style={styles.cardsContainer}>
+              <View style={styles.cardWrapper}>
+                <View style={[styles.hormoneCard, { paddingVertical: responsiveHeight(3) }]}>
+                  <Text style={[styles.hormoneDescription, { fontSize: responsiveFontSize(2), lineHeight: responsiveFontSize(2.8), textAlign: 'center', color: '#333' }]}>
+                    {healthyMessage || 'Based on your responses, your hormones appear to be balanced.'}
+                  </Text>
+                  <Text style={[styles.hormoneDescription, { marginTop: responsiveHeight(2), textAlign: 'center' }]}>
+                    This app is designed for users experiencing hormonal symptoms like irregular periods, acne, mood swings, or other concerns.
+                  </Text>
+                  <Text style={[styles.hormoneDescription, { marginTop: responsiveHeight(2), textAlign: 'center', fontStyle: 'italic' }]}>
+                    If you feel something isn't right, please consult with a healthcare provider.
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        </KeyboardAwareScrollView>
+
+        {/* Fixed bottom area */}
+        <FixedBottomContainer>
+          <PrimaryButton
+            title="Go Back & Update Responses"
+            onPress={handleBack}
+          />
+        </FixedBottomContainer>
       </SafeAreaView>
     );
   }
