@@ -880,9 +880,6 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         setCarePlanTapOptions(result.tap_options || []);
         setUiBlocks(result.ui_blocks || []);
 
-        setCarePlanTapOptions(result.tap_options || []);
-        setUiBlocks(result.ui_blocks || []);
-
         // Backend returns the new thread with greeting in 'history'.
         // If forceNew was successful, history has exactly 1 message (greeting).
         // If it failed (old server), history matches old thread.
@@ -1236,6 +1233,11 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
     switch (contextFromRoute?.context) {
       case "care_plan_modal":
+        // Only suppress tap options when there are UI blocks that are actually shown.
+        // In care_plan_modal we intentionally hide the PlanManager CTA block (it is rendered
+        // via a separate modal). If we suppress based on raw `uiBlocks`, users can end up
+        // with *no* visible UI blocks and *no* tap options.
+        if (getUiBlocksForDisplay().length > 0) return [];
         if (carePlanTapOptions.length > 0) {
           // Add "Something else" to API options
           return [...carePlanTapOptions, { id: "something_else", text: "💬 Something else" }];
@@ -1265,7 +1267,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
       case "symptom_checkin":
         // If the backend is driving an inline UI block (e.g., severity 1–9),
         // don't show unrelated fallback tap options.
-        if (uiBlocks && uiBlocks.length > 0) return [];
+        if (getUiBlocksForDisplay().length > 0) return [];
 
         // Prefer API-provided tap options. Add "Something else" option to allow custom input.
         if (symptomTapOptions.length > 0) {
@@ -1278,7 +1280,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
         if (personaliseTapOptions.length > 0) {
           return [...personaliseTapOptions, { id: "something_else", text: "💬 Something else" }];
         }
-        if (uiBlocks && uiBlocks.length > 0) return [];
+        if (getUiBlocksForDisplay().length > 0) return [];
         return [
           { id: "add-factors", text: "I want to personalise more factors" },
           { id: "update-preferences", text: "I want to update my preferences" },

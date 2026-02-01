@@ -1,4 +1,5 @@
 import Images from '@/assets/images';
+import SVG from '@/assets/images/SVG';
 import AuvraCharacter from '@/components/AuvraCharacter';
 import BackButton from '@/components/BackButton';
 import FixedBottomContainer from '@/components/FixedBottomContainer';
@@ -94,14 +95,13 @@ const ResultScreen = () => {
   const getHormoneArtContainerStyle = (hormone?: string) => {
     const h = (hormone || '').toLowerCase();
 
-    // Default: bottom-right inside the card
+    // Default: bottom-right inside the card  
     const base = {
-      // Slight negative offsets are intentional: the card clips (overflow: hidden)
-      // so the art can sit tighter to the edge like the Figma without overlapping text.
-      right: scale(-10),
-      bottom: verticalScale(-4),
-      width: scale(110),
-      height: scale(110),
+      // Keep characters inside card bounds - reduced sizes for better fit
+      right: scale(-8),
+      bottom: verticalScale(-2),
+      width: scale(90),
+      height: scale(90),
     };
 
     if (h === 'progesterone') {
@@ -117,11 +117,11 @@ const ResultScreen = () => {
     if (h === 'testosterone' || h === 'androgens') {
       return {
         ...base,
-        // Wider asset (arms) needs more right push + a bit lower to avoid title overlap.
-        width: scale(120),
-        height: scale(120),
-        right: scale(-18),
-        bottom: verticalScale(-10),
+        // Reduced size to fit within card bounds
+        width: scale(95),
+        height: scale(95),
+        right: scale(-10),
+        bottom: verticalScale(-4),
       };
     }
 
@@ -149,16 +149,22 @@ const ResultScreen = () => {
     if (h === 'thyroid') {
       return {
         ...base,
-        width: scale(110),
-        height: scale(110),
+        // Smaller size to fit within card properly
+        width: scale(90),
+        height: scale(90),
+        right: scale(-8),
+        bottom: verticalScale(-2),
       };
     }
 
     if (h === 'cortisol') {
       return {
         ...base,
-        width: scale(110),
-        height: scale(110),
+        // Reduced size to fit within card bounds
+        width: scale(90),
+        height: scale(90),
+        right: scale(-8),
+        bottom: verticalScale(-2),
       };
     }
 
@@ -261,65 +267,133 @@ const ResultScreen = () => {
 
   // Healthy user screen - show when no significant symptoms detected
   if (isHealthy) {
+    const handleHealthyBack = () => {
+      // Navigate to OnboardingScreen for healthy users
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'OnboardingScreen' }],
+      });
+    };
+
     return (
       <SafeAreaView style={styles.container}>
+        {/* Decorative sparkles */}
+        <View style={{ position: 'absolute', top: responsiveHeight(8), left: responsiveWidth(8), zIndex: 10 }} pointerEvents="none">
+          <SVG.GraphicSparkle width={30} height={30} />
+        </View>
+        <View style={{ position: 'absolute', top: responsiveHeight(15), right: responsiveWidth(6), zIndex: 10 }} pointerEvents="none">
+          <SVG.GraphicSparkle1 width={24} height={28} />
+        </View>
+        <View style={{ position: 'absolute', bottom: responsiveHeight(35), left: responsiveWidth(5), zIndex: 10 }} pointerEvents="none">
+          <SVG.GraphicSparkle1 width={20} height={24} />
+        </View>
+        <View style={{ position: 'absolute', bottom: responsiveHeight(45), right: responsiveWidth(10), zIndex: 10 }} pointerEvents="none">
+          <SVG.GraphicSparkle width={25} height={25} />
+        </View>
+
         {/* Back button */}
         <View style={styles.backButtonContainer}>
-          <BackButton onPress={handleBack} />
+          <BackButton onPress={handleHealthyBack} />
         </View>
 
         <KeyboardAwareScrollView
           style={{ flex: 1 }}
           contentContainerStyle={[
             styles.mainContent,
-            { minHeight: '100%', justifyContent: 'center' }
+            { minHeight: '100%', justifyContent: 'center', paddingBottom: responsiveHeight(15) }
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.mainContent}>
-            {/* Auvra character */}
+          <View style={[styles.mainContent, { alignItems: 'center' }]}>
+            {/* Auvra character with glow effect */}
             <View style={styles.headerSection}>
-              <View style={styles.characterContainer}>
-                <AuvraCharacter size={responsiveWidth(25)} />
+              <View style={[styles.characterContainer, { marginBottom: responsiveHeight(2), alignItems: 'center', justifyContent: 'center' }]}>
+                {/* Glow circle - perfectly centered behind character */}
+                <View style={{
+                  position: 'absolute',
+                  width: responsiveWidth(38),
+                  height: responsiveWidth(38),
+                  borderRadius: responsiveWidth(19),
+                  backgroundColor: 'rgba(187, 68, 113, 0.08)',
+                }} />
+                <AuvraCharacter size={responsiveWidth(28)} />
               </View>
 
               <View style={styles.titleContainer}>
                 <View style={styles.maskedView}>
                   <MaskedView
-                    style={{ height: 60, width: '100%' }}
+                    style={{ height: 50, width: '100%' }}
                     maskElement={
-                      <Text style={[styles.title, { color: 'black' }]}>
-                        Great news!
+                      <Text style={[styles.healthyTitle, { color: 'black' }]}>
+                        You're doing great!
                       </Text>
                     }
                   >
                     <LinearGradient
-                      colors={['#7DD3A5', '#4CAF50', '#81C784']}
+                      colors={['#BB4471', '#D76B8C', '#E8A4B8']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
-                      style={{ height: 60, width: '100%' }}
+                      style={{ height: 50, width: '100%' }}
                     />
                   </MaskedView>
                 </View>
+                <Text style={styles.healthySubtitle}>
+                  Your hormones appear balanced
+                </Text>
               </View>
             </View>
 
-            {/* Healthy message card */}
-            <View style={styles.cardsContainer}>
-              <View style={styles.cardWrapper}>
-                <View style={[styles.hormoneCard, { paddingVertical: responsiveHeight(3) }]}>
-                  <Text style={[styles.hormoneDescription, { fontSize: responsiveFontSize(2), lineHeight: responsiveFontSize(2.8), textAlign: 'center', color: '#333' }]}>
-                    {healthyMessage || 'Based on your responses, your hormones appear to be balanced.'}
+            {/* Premium message card */}
+            <View style={[styles.cardsContainer, { marginTop: responsiveHeight(3) }]}>
+              <LinearGradient
+                colors={['rgba(187, 68, 113, 0.06)', 'rgba(255, 255, 255, 0.9)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={{
+                  borderRadius: 20,
+                  padding: 2,
+                  marginHorizontal: responsiveWidth(2),
+                }}
+              >
+                <View style={[styles.hormoneCard, {
+                  paddingVertical: responsiveHeight(3.5),
+                  paddingHorizontal: responsiveWidth(5),
+                  borderRadius: 18,
+                  backgroundColor: '#FEFEFE',
+                }]}>
+                  {/* Celebration emoji */}
+                  <Text style={{ fontSize: responsiveFontSize(4), textAlign: 'center', marginBottom: responsiveHeight(1.5) }}>
+                    🌸
                   </Text>
-                  <Text style={[styles.hormoneDescription, { marginTop: responsiveHeight(2), textAlign: 'center' }]}>
-                    This app is designed for users experiencing hormonal symptoms like irregular periods, acne, mood swings, or other concerns.
+
+                  <Text style={styles.healthyCardTitle}>
+                    Based on your responses, your hormones seem well-balanced.
                   </Text>
-                  <Text style={[styles.hormoneDescription, { marginTop: responsiveHeight(2), textAlign: 'center', fontStyle: 'italic' }]}>
-                    If you feel something isn't right, please consult with a healthcare provider.
+
+                  <View style={{
+                    height: 1,
+                    backgroundColor: 'rgba(187, 68, 113, 0.1)',
+                    marginVertical: responsiveHeight(2),
+                    marginHorizontal: responsiveWidth(5),
+                  }} />
+
+                  <Text style={styles.healthyCardBody}>
+                    Auvra is designed for users experiencing hormonal symptoms like irregular periods, acne, mood swings, or other concerns.
+                  </Text>
+
+                  <Text style={styles.healthyCardNote}>
+                    If you feel something isn't quite right, we always recommend consulting with a healthcare provider. 💜
                   </Text>
                 </View>
-              </View>
+              </LinearGradient>
+            </View>
+
+            {/* Soft encouragement */}
+            <View style={{ marginTop: responsiveHeight(3), alignItems: 'center' }}>
+              <Text style={styles.healthyFooter}>
+                Keep taking care of yourself!
+              </Text>
             </View>
           </View>
         </KeyboardAwareScrollView>
@@ -327,8 +401,8 @@ const ResultScreen = () => {
         {/* Fixed bottom area */}
         <FixedBottomContainer>
           <PrimaryButton
-            title="Go Back & Update Responses"
-            onPress={handleBack}
+            title="Return to Home"
+            onPress={handleHealthyBack}
           />
         </FixedBottomContainer>
       </SafeAreaView>
@@ -657,6 +731,49 @@ const styles = StyleSheet.create({
     flex: 1,
     marginBottom: responsiveHeight(0.5),
     zIndex: 2, // Display above image (zIndex: 1)
+  },
+  // Healthy user screen styles
+  healthyTitle: {
+    fontFamily: 'NotoSerif600',
+    fontSize: responsiveFontSize(3.2),
+    textAlign: 'center',
+    lineHeight: responsiveFontSize(4),
+  },
+  healthySubtitle: {
+    fontFamily: 'Inter500',
+    fontSize: responsiveFontSize(1.9),
+    color: '#6F6F6F',
+    textAlign: 'center',
+    marginTop: responsiveHeight(0.5),
+  },
+  healthyCardTitle: {
+    fontFamily: 'Inter600',
+    fontSize: responsiveFontSize(2),
+    color: '#404040',
+    textAlign: 'center',
+    lineHeight: responsiveFontSize(2.8),
+  },
+  healthyCardBody: {
+    fontFamily: 'Inter400',
+    fontSize: responsiveFontSize(1.75),
+    color: '#666666',
+    textAlign: 'center',
+    lineHeight: responsiveFontSize(2.5),
+  },
+  healthyCardNote: {
+    fontFamily: 'Inter400',
+    fontSize: responsiveFontSize(1.6),
+    color: '#888888',
+    textAlign: 'center',
+    marginTop: responsiveHeight(1.5),
+    fontStyle: 'italic',
+    lineHeight: responsiveFontSize(2.2),
+  },
+  healthyFooter: {
+    fontFamily: 'Inter500',
+    fontSize: responsiveFontSize(1.7),
+    color: '#BB4471',
+    textAlign: 'center',
   },
 });
 

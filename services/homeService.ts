@@ -790,7 +790,7 @@ class HomeService {
     itemId: number,
     reason?: string,
     replacementCategory?: 'dont_like' | 'allergic' | 'no_ingredients' | 'no_time' | 'already_done' | 'not_feeling_it' | 'too_hard' | 'want_different' | 'other'
-  ): Promise<{ success: boolean; replacement_action?: ActionPlanItem } | null> {
+  ): Promise<{ success: boolean; replacement_action?: ActionPlanItem; error?: string; message?: string } | null> {
     try {
       console.log('🔄 Replacing action:', `${API_BASE_URL}/api/v1/new-scheduling/replace`);
 
@@ -830,8 +830,25 @@ class HomeService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Failed to replace action:', errorText);
-        throw new Error(`Failed to replace action: ${response.status} - ${errorText}`);
+        console.error('❌ Failed to replace action:', response.status, errorText);
+        
+        // Return structured error with details
+        let errorMessage = 'Failed to replace action. Please try again.';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.detail || errorData.message || errorMessage;
+        } catch {
+          // errorText is not JSON, use status-based message
+          if (response.status === 429) {
+            errorMessage = 'Daily refresh limit reached. Try again tomorrow!';
+          } else if (response.status === 400) {
+            errorMessage = errorText || 'Invalid request. Please try again.';
+          } else if (response.status === 500) {
+            errorMessage = 'Server error. Please try again in a moment.';
+          }
+        }
+        
+        return { success: false, error: errorMessage, message: errorMessage };
       }
 
       const result = await response.json();
@@ -839,7 +856,8 @@ class HomeService {
       return result;
     } catch (error) {
       console.error('❌ Error replacing action:', error);
-      return null;
+      const errorMessage = error instanceof Error ? error.message : 'Network error. Please check your connection.';
+      return { success: false, error: errorMessage, message: errorMessage };
     }
   }
 

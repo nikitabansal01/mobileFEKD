@@ -405,11 +405,25 @@ const QuestionScreen = () => {
     console.log('🚀 [QuestionScreen] Initializing...');
     const initializeSession = async () => {
       try {
-        // Load saved answers first
-        await loadSavedAnswers();
+        // First check if we have an existing valid session
+        const existingSessionId = await sessionService.getSessionId();
 
         // Validate session and recreate if necessary
         const sessionValid = await sessionService.validateAndRefreshSession();
+
+        // Get new session ID after validation
+        const newSessionId = await sessionService.getSessionId();
+
+        // Only load saved answers if session ID is the same (resuming a session)
+        // If it's a new session, clear any stale saved answers
+        if (existingSessionId && existingSessionId === newSessionId) {
+          console.log('♻️ [QuestionScreen] Resuming existing session, loading saved answers');
+          await loadSavedAnswers();
+        } else {
+          console.log('🆕 [QuestionScreen] New session detected, clearing stale saved answers');
+          await clearSavedAnswers();
+        }
+
         if (sessionValid) {
           setSessionCreated(true);
           console.log('✅ [QuestionScreen] Session ready');

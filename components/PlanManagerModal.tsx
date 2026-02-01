@@ -1168,7 +1168,8 @@ export default function PlanManagerModal({
         );
 
         if (!result?.success || !result.replacement_action) {
-          Alert.alert('Could not replace', 'Please try again.');
+          const errorMsg = result?.message || result?.error || 'Could not replace action. Please try again.';
+          Alert.alert('Could not replace', errorMsg);
           return;
         }
 
