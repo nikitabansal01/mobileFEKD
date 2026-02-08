@@ -332,7 +332,7 @@ export default function PlanManagerModal({
               <Text style={styles.bannerText}>
                 {missedDays > 0
                   ? `You missed ${missedDays} day(s). You can protect your streak with a freeze.`
-                  : 'You can protect your streak with a freeze if you won’t complete today.'}
+                  : 'You can protect your streak with a freeze if you might not complete at least one action today.'}
               </Text>
               <TouchableOpacity style={[styles.bannerBtn, busy && { opacity: 0.6 }]} disabled={busy} onPress={handleFreeze}>
                 <Text style={styles.bannerBtnText}>{freezeCount > 0 ? 'Use freeze token 🧊' : 'No freeze tokens'}</Text>

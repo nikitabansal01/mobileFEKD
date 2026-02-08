@@ -760,7 +760,9 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
     const completedAfterReview = getCompletedAfterReview();
     const skippedCount = getSkippedCount();
     const totalItems = reviewData?.total_items ?? reviewData?.items?.length ?? 0;
-    const streakMaintained = completedAfterReview === totalItems;
+    // Streak rule: maintain with at least 1 completion (or empty plan)
+    const streakMaintained = totalItems === 0 || completedAfterReview > 0;
+    const allActionsCompleted = totalItems > 0 && completedAfterReview === totalItems;
     const canUseFreeze = !streakMaintained && (reviewData?.freezes_available || 0) > 0;
 
     // AFTER submission - show result
@@ -830,7 +832,11 @@ const DailyReviewModal: React.FC<DailyReviewModalProps> = ({
           <View style={styles.streakCard}>
             <Text style={styles.streakEmoji}>🔥</Text>
             <Text style={styles.streakTitle}>Streak Maintained!</Text>
-            <Text style={styles.streakSubtitle}>All actions completed — awesome!</Text>
+            <Text style={styles.streakSubtitle}>
+              {allActionsCompleted
+                ? 'All actions completed — awesome!'
+                : 'At least 1 action completed — your streak is safe!'}
+            </Text>
           </View>
         ) : (
           <View style={[styles.streakCard, styles.streakAtRiskCard]}>
