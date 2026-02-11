@@ -105,10 +105,42 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
    * - Movement: "Morning Yoga for 15 minutes"
    * - Mindfulness: "Deep Breathing for 5 minutes"
    */
+  const cleanTitle = (rawTitle: string): string => {
+    // Safety: strip verb prefixes and amounts if backend returned a verbose title
+    // e.g., "Have a 1 cup cooked chickpea" → "Chickpea"
+    let cleaned = rawTitle;
+    const verbPrefixes = [
+      /^eat\s+at\s+least\s+/i,
+      /^have\s+a\s+/i,
+      /^have\s+/i,
+      /^eat\s+/i,
+      /^do\s+/i,
+      /^practice\s+/i,
+      /^try\s+/i,
+      /^make\s+/i,
+      /^drink\s+/i,
+      /^take\s+/i,
+      /^add\s+/i,
+      /^include\s+/i,
+      /^consume\s+/i,
+      /^prepare\s+/i,
+    ];
+    for (const prefix of verbPrefixes) {
+      if (prefix.test(cleaned)) {
+        cleaned = cleaned.replace(prefix, '');
+        break;
+      }
+    }
+    // Strip leading amounts like "1 cup cooked", "1 serving of", "20 min of"
+    cleaned = cleaned.replace(/^\d+\s*(cups?\s+(cooked\s+)?|servings?\s+of\s+|tbsp\s+of\s+|tsp\s+of\s+|min\s+of\s+|minutes?\s+of\s+)/i, '');
+    return cleaned.trim() || rawTitle;
+  };
+
   const formatHowHeading = (): string => {
     if (!action) return '';
 
-    const { title, category, food_amounts, exercise_durations, mindfulness_durations } = action;
+    const { title: rawTitle, category, food_amounts, exercise_durations, mindfulness_durations } = action;
+    const title = cleanTitle(rawTitle);
 
     switch (category) {
       case 'food':
@@ -556,7 +588,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                     maskElement={
                       <View style={{ backgroundColor: 'transparent', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
                         <Text style={styles.title} allowFontScaling={false}>
-                          💡 Why {action?.title || 'Pumpkin Seeds'}?
+                          💡 Why {cleanTitle(action?.title || 'Pumpkin Seeds')}?
                         </Text>
                       </View>
                     }
