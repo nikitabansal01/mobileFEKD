@@ -1311,6 +1311,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
   const choiceOptions = getChoiceOptions();
 
+  // Index of the last bot message — UI blocks & choices attach inline here (ChatGPT/Claude pattern)
+  const lastBotMessageIndex = messages.reduce((last: number, msg: Message, i: number) => msg.isBot ? i : last, -1);
+
   // Get header title based on context
   const getHeaderTitle = (): string => {
     const contextFromRoute = route?.params?.conversationContext;
@@ -2107,10 +2110,10 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                     ) : (
                       <UserMessage text={message.text} />
                     )}
+                    {/* Inline: attach UI blocks right after the bot message that generated them */}
+                    {message.isBot && index === lastBotMessageIndex && !isLoadingCheckin && renderUiBlocksInline()}
                   </View>
                 ))}
-
-                {renderUiBlocksInline()}
 
                 {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
               </View>
@@ -2143,13 +2146,13 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             <Avatar showMessage={false} />
             <View style={{ marginTop: verticalScale(20) }}>
               <View style={styles.messagesWrapper}>
-                {messages.map((message) => (
+                {messages.map((message, index) => (
                   <View key={message.id}>
                     {message.isBot ? <BotMessage text={message.text} /> : <UserMessage text={message.text} />}
+                    {/* Inline: attach UI blocks right after the bot message that generated them */}
+                    {message.isBot && index === lastBotMessageIndex && !isLoadingCheckin && renderUiBlocksInline()}
                   </View>
                 ))}
-
-                {renderUiBlocksInline()}
 
                 {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
               </View>
@@ -2272,12 +2275,12 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                 ) : (
                   <UserMessage text={message.text} />
                 )}
+                {/* Inline: attach UI blocks right after the bot message that generated them */}
+                {message.isBot && index === lastBotMessageIndex && !isLoadingCheckin && renderUiBlocksInline()}
               </View>
             ))}
 
             {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
-
-            {renderUiBlocksInline()}
           </View>
         </View>
       </ScrollView>
@@ -2341,24 +2344,30 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                 ) : (
                   <UserMessage text={message.text} />
                 )}
+                {/* Inline: attach UI blocks + choices right after the bot message that generated them */}
+                {message.isBot && index === lastBotMessageIndex && !isLoadingCheckin && (
+                  <>
+                    {renderUiBlocksInline()}
+                    {choiceOptions.length > 0 && (
+                      <View style={styles.choiceOptionsInline}>
+                        <View style={styles.choiceOptionsGrid}>
+                          {choiceOptions.map((option, idx) => (
+                            <ChoiceButton
+                              key={`${option.id}_${idx}`}
+                              option={option}
+                              isSelected={route?.params?.conversationContext?.context === "weekly_checkin" && selectedOptions.includes(option.id)}
+                              onPress={() => handleChoicePress(option)}
+                            />
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                  </>
+                )}
               </View>
             ))}
 
             {isLoadingCheckin && messages.length > 0 ? <BotThinkingMessage /> : null}
-
-            {renderUiBlocksInline()}
-          </View>
-        </View>
-        <View style={styles.choiceOptionsContainer}>
-          <View style={styles.choiceOptionsGrid}>
-            {choiceOptions.map((option, index) => (
-              <ChoiceButton
-                key={`${option.id}_${index}`}
-                option={option}
-                isSelected={route?.params?.conversationContext?.context === "weekly_checkin" && selectedOptions.includes(option.id)}
-                onPress={() => handleChoicePress(option)}
-              />
-            ))}
           </View>
         </View>
         <View style={{ flex: 1 }} />
@@ -3020,6 +3029,11 @@ const styles = StyleSheet.create({
   choiceOptionsContainer: {
     // paddingHorizontal: scale(15),
     // paddingVertical: verticalScale(20),
+    width: '100%',
+  },
+  choiceOptionsInline: {
+    marginTop: verticalScale(16),
+    marginBottom: verticalScale(8),
     width: '100%',
   },
   choiceOptionsGrid: {
