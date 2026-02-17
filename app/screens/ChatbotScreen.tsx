@@ -1992,46 +1992,30 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
     return (
       <View style={styles.uiBlocksContainer}>
         {blocks.map((block, index) => {
-          // Skip rendering empty blocks (no title, subtitle, actions, or special content)
-          const hasTitle = !!block.title;
-          const hasSubtitle = !!block.subtitle;
-          const hasActions = !!block.actions?.length;
+
+          // Fix for empty UI blocks:
+          // 1. Calculate what is valid to render
+          const validTitle = block.title && block.title.trim().length > 0 ? block.title.trim() : null;
+          const validSubtitle = block.subtitle && block.subtitle.trim().length > 0 ? block.subtitle.trim() : null;
+          
+          const validActions = (block.actions || []).filter(a => a.title && a.title.trim().length > 0);
+          const hasValidActions = validActions.length > 0;
+          
           const isSlider = block.type === 'slider_1_9';
-          const cards = (block.payload as any)?.cards;
-          const isSwipeableCards = block.type === 'swipeable_cards' && Array.isArray(cards) && cards.length > 0;
-          
-          console.log(`[UI_BLOCK_${index}] Type: ${block.type}, ID: ${block.id}`);
-          console.log(`[UI_BLOCK_${index}] hasTitle: ${hasTitle}, hasSubtitle: ${hasSubtitle}, hasActions: ${hasActions}`);
-          console.log(`[UI_BLOCK_${index}] isSlider: ${isSlider}, isSwipeableCards: ${isSwipeableCards}`);
-          console.log(`[UI_BLOCK_${index}] Full block:`, JSON.stringify(block, null, 2));
-          
-          // Don't render empty blocks
-          if (!hasTitle && !hasSubtitle && !hasActions && !isSlider && !isSwipeableCards) {
-            console.log(`[UI_BLOCK_${index}] SKIPPING - empty block`);
-            return null;
+          const validCards = (block.payload as any)?.cards;
+          const hasValidCards = block.type === 'swipeable_cards' && Array.isArray(validCards) && validCards.length > 0;
+
+          // 2. Strict check: If no visible content, return null immediately
+          if (!validTitle && !validSubtitle && !hasValidActions && !isSlider && !hasValidCards) {
+             return null;
           }
 
-          console.log(`[UI_BLOCK_${index}] RENDERING block`);
-          
-          // Check what will actually render
-          const willRenderSlider = block.type === 'slider_1_9';
-          const willRenderCards = block.type === 'swipeable_cards' && Array.isArray(block.payload?.cards) && block.payload.cards.length > 0;
-          const filteredActions = (block.actions || []).filter(a => a.title && a.title.trim());
-          const willRenderActions = filteredActions.length > 0;
-          const hasVisibleText = (!!block.title && block.title.trim()) || (!!block.subtitle && block.subtitle.trim());
-          
-          // If nothing will actually render, skip the card entirely
-          if (!hasVisibleText && !willRenderSlider && !willRenderCards && !willRenderActions) {
-            console.log(`[UI_BLOCK_${index}] SKIPPING - no visible content will render`);
-            return null;
-          }
-          
           return (
           <View key={block.id} style={styles.uiBlockCard}>
-            {!!block.title && <Text style={styles.uiBlockTitle}>{block.title}</Text>}
-            {!!block.subtitle && <Text style={styles.uiBlockSubtitle}>{block.subtitle}</Text>}
+            {!!validTitle && <Text style={styles.uiBlockTitle}>{validTitle}</Text>}
+            {!!validSubtitle && <Text style={styles.uiBlockSubtitle}>{validSubtitle}</Text>}
 
-            {block.type === 'slider_1_9' ? (
+            {isSlider ? (
               <View style={styles.uiBlockSliderRow}>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
                   <TouchableOpacity
@@ -2045,9 +2029,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                   </TouchableOpacity>
                 ))}
               </View>
-            ) : block.type === 'swipeable_cards' && Array.isArray(block.payload?.cards) && block.payload.cards.length > 0 ? (
+            ) : hasValidCards ? (
               <View style={styles.uiBlockCardList}>
-                {block.payload.cards.map((card: any, idx: number) => {
+                {validCards.map((card: any, idx: number) => {
                   const action = block.actions?.[idx];
                   return (
                     <View key={`${block.id}_card_${idx}`} style={styles.uiBlockCardItem}>
@@ -2076,9 +2060,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                 })}
               </View>
             ) : (
-              filteredActions.length > 0 && (
+              hasValidActions && (
                 <View style={styles.uiBlockActionsRow}>
-                  {filteredActions.map((action) => {
+                  {validActions.map((action) => {
                     const isPrimary = action.style === 'primary' || !action.style;
                     return (
                       <TouchableOpacity
