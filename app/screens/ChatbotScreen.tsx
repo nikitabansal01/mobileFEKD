@@ -1948,6 +1948,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
   const renderUiBlocksInline = () => {
     const blocks = getUiBlocksForDisplay();
+    console.log('[UI_BLOCKS_DEBUG] Total blocks received:', blocks?.length);
+    console.log('[UI_BLOCKS_DEBUG] Blocks data:', JSON.stringify(blocks, null, 2));
     if (!blocks || blocks.length === 0) return null;
 
     const submitSliderEvent = async (block: UIBlock, value: number) => {
@@ -1989,7 +1991,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
     return (
       <View style={styles.uiBlocksContainer}>
-        {blocks.map((block) => {
+        {blocks.map((block, index) => {
           // Skip rendering empty blocks (no title, subtitle, actions, or special content)
           const hasTitle = !!block.title;
           const hasSubtitle = !!block.subtitle;
@@ -1998,11 +2000,18 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           const cards = (block.payload as any)?.cards;
           const isSwipeableCards = block.type === 'swipeable_cards' && Array.isArray(cards) && cards.length > 0;
           
+          console.log(`[UI_BLOCK_${index}] Type: ${block.type}, ID: ${block.id}`);
+          console.log(`[UI_BLOCK_${index}] hasTitle: ${hasTitle}, hasSubtitle: ${hasSubtitle}, hasActions: ${hasActions}`);
+          console.log(`[UI_BLOCK_${index}] isSlider: ${isSlider}, isSwipeableCards: ${isSwipeableCards}`);
+          console.log(`[UI_BLOCK_${index}] Full block:`, JSON.stringify(block, null, 2));
+          
           // Don't render empty blocks
           if (!hasTitle && !hasSubtitle && !hasActions && !isSlider && !isSwipeableCards) {
+            console.log(`[UI_BLOCK_${index}] SKIPPING - empty block`);
             return null;
           }
 
+          console.log(`[UI_BLOCK_${index}] RENDERING block`);
           return (
           <View key={block.id} style={styles.uiBlockCard}>
             {!!block.title && <Text style={styles.uiBlockTitle}>{block.title}</Text>}
