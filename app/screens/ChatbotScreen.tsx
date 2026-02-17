@@ -1989,7 +1989,20 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
     return (
       <View style={styles.uiBlocksContainer}>
-        {blocks.map((block) => (
+        {blocks.map((block) => {
+          // Skip rendering empty blocks (no title, subtitle, actions, or special content)
+          const hasTitle = !!block.title;
+          const hasSubtitle = !!block.subtitle;
+          const hasActions = !!block.actions?.length;
+          const isSlider = block.type === 'slider_1_9';
+          const isSwipeableCards = block.type === 'swipeable_cards' && Array.isArray(block.payload?.cards);
+          
+          // Don't render empty blocks
+          if (!hasTitle && !hasSubtitle && !hasActions && !isSlider && !isSwipeableCards) {
+            return null;
+          }
+
+          return (
           <View key={block.id} style={styles.uiBlockCard}>
             {!!block.title && <Text style={styles.uiBlockTitle}>{block.title}</Text>}
             {!!block.subtitle && <Text style={styles.uiBlockSubtitle}>{block.subtitle}</Text>}
@@ -2069,7 +2082,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
               )
             )}
           </View>
-        ))}
+          );
+        })}
       </View>
     );
   };
