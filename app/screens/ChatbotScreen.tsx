@@ -2012,6 +2012,19 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           }
 
           console.log(`[UI_BLOCK_${index}] RENDERING block`);
+          
+          // Check what will actually render
+          const willRenderSlider = block.type === 'slider_1_9';
+          const willRenderCards = block.type === 'swipeable_cards' && Array.isArray(block.payload?.cards) && block.payload.cards.length > 0;
+          const willRenderActions = block.actions && block.actions.some(a => a.title && a.title.trim());
+          const hasVisibleText = (!!block.title && block.title.trim()) || (!!block.subtitle && block.subtitle.trim());
+          
+          // If nothing will actually render, skip the card entirely
+          if (!hasVisibleText && !willRenderSlider && !willRenderCards && !willRenderActions) {
+            console.log(`[UI_BLOCK_${index}] SKIPPING - no visible content will render`);
+            return null;
+          }
+          
           return (
           <View key={block.id} style={styles.uiBlockCard}>
             {!!block.title && <Text style={styles.uiBlockTitle}>{block.title}</Text>}
@@ -2064,7 +2077,9 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
             ) : (
               !!block.actions?.length && (
                 <View style={styles.uiBlockActionsRow}>
-                  {block.actions.map((action) => {
+                  {block.actions
+                    .filter(action => action.title && action.title.trim())
+                    .map((action) => {
                     const isPrimary = action.style === 'primary' || !action.style;
                     return (
                       <TouchableOpacity
