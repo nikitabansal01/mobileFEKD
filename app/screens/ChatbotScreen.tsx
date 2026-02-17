@@ -244,6 +244,7 @@ function BotMessage({
 }: {
   text: string;
 }) {
+  if (!text || !text.trim()) return null;
   return (
     <View style={styles.botMessageContainer}>
       <View style={styles.botMessageBubble}>
@@ -274,6 +275,7 @@ function BotThinkingMessage() {
 }
 
 function UserMessage({ text }: { text: string }) {
+  if (!text || !text.trim()) return null;
   return (
     <View style={styles.userMessageContainer}>
       <View style={styles.userMessageBubble}>
@@ -292,6 +294,7 @@ function ChoiceButton({
   isSelected: boolean;
   onPress: () => void;
 }) {
+  if (!option.text || !option.text.trim()) return null;
   return (
     <TouchableOpacity
       style={[
