@@ -1951,9 +1951,21 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
   const renderUiBlocksInline = () => {
     const blocks = getUiBlocksForDisplay();
-    console.log('[UI_BLOCKS_DEBUG] Total blocks received:', blocks?.length);
-    console.log('[UI_BLOCKS_DEBUG] Blocks data:', JSON.stringify(blocks, null, 2));
     if (!blocks || blocks.length === 0) return null;
+
+    // CRITICAL FIX: Filter blocks BEFORE rendering to prevent empty container
+    const validBlocks = blocks.filter((block) => {
+      const validTitle = block.title && block.title.trim().length > 0;
+      const validSubtitle = block.subtitle && block.subtitle.trim().length > 0;
+      const validActions = (block.actions || []).filter(a => a.title && a.title.trim().length > 0).length > 0;
+      const isSlider = block.type === 'slider_1_9';
+      const hasValidCards = block.type === 'swipeable_cards' && Array.isArray(block.payload?.cards) && block.payload.cards.length > 0;
+      
+      return validTitle || validSubtitle || validActions || isSlider || hasValidCards;
+    });
+
+    // If no valid blocks, return null to prevent empty container from rendering
+    if (validBlocks.length === 0) return null;
 
     const submitSliderEvent = async (block: UIBlock, value: number) => {
       const contextFromRoute = route?.params?.conversationContext;
@@ -1994,24 +2006,14 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
     return (
       <View style={styles.uiBlocksContainer}>
-        {blocks.map((block, index) => {
-
-          // Fix for empty UI blocks:
-          // 1. Calculate what is valid to render
+        {validBlocks.map((block) => {
           const validTitle = block.title && block.title.trim().length > 0 ? block.title.trim() : null;
           const validSubtitle = block.subtitle && block.subtitle.trim().length > 0 ? block.subtitle.trim() : null;
-          
           const validActions = (block.actions || []).filter(a => a.title && a.title.trim().length > 0);
           const hasValidActions = validActions.length > 0;
-          
           const isSlider = block.type === 'slider_1_9';
           const validCards = (block.payload as any)?.cards;
           const hasValidCards = block.type === 'swipeable_cards' && Array.isArray(validCards) && validCards.length > 0;
-
-          // 2. Strict check: If no visible content, return null immediately
-          if (!validTitle && !validSubtitle && !hasValidActions && !isSlider && !hasValidCards) {
-             return null;
-          }
 
           return (
           <View key={block.id} style={styles.uiBlockCard}>
