@@ -1995,7 +1995,8 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           const hasSubtitle = !!block.subtitle;
           const hasActions = !!block.actions?.length;
           const isSlider = block.type === 'slider_1_9';
-          const isSwipeableCards = block.type === 'swipeable_cards' && Array.isArray(block.payload?.cards);
+          const cards = (block.payload as any)?.cards;
+          const isSwipeableCards = block.type === 'swipeable_cards' && Array.isArray(cards) && cards.length > 0;
           
           // Don't render empty blocks
           if (!hasTitle && !hasSubtitle && !hasActions && !isSlider && !isSwipeableCards) {
@@ -2021,7 +2022,7 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
                   </TouchableOpacity>
                 ))}
               </View>
-            ) : block.type === 'swipeable_cards' && Array.isArray(block.payload?.cards) ? (
+            ) : block.type === 'swipeable_cards' && Array.isArray(block.payload?.cards) && block.payload.cards.length > 0 ? (
               <View style={styles.uiBlockCardList}>
                 {block.payload.cards.map((card: any, idx: number) => {
                   const action = block.actions?.[idx];
