@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
     width: scale(60),         // wider than avatar
     height: verticalScale(4),        // short height = oval shape
     backgroundColor: "rgba(0,0,0,0.2)", // semi-transparent black
-    borderRadius: "50%",  // round corners to make it an ellipse
+    borderRadius: scale(30),  // round corners to make it an ellipse
     marginTop: verticalScale(12),
 
   },
