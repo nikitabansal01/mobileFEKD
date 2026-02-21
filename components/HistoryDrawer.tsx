@@ -38,7 +38,7 @@ interface HistoryDrawerProps {
     onClose: () => void;
     flowType: string;
     flowTitle: string;
-    onSelectThread: (threadId: string, messages: any[]) => void;
+    onSelectThread: (threadId: string, threadPayload: any) => void;
     onNewChat: () => void;
 }
 
@@ -92,7 +92,7 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
         try {
             const data = await chatService.getThreadMessages(flowType, thread.id);
             if (data && data.messages) {
-                onSelectThread(thread.id, data.messages);
+                onSelectThread(thread.id, data);
                 onClose();
             }
         } catch (error) {

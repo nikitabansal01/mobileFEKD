@@ -45,6 +45,8 @@ export interface Message {
   id: string;
   text: string;
   isBot: boolean;
+  created_at?: string;
+  ui_blocks?: any[];
 }
 
 /**
@@ -82,20 +84,38 @@ export interface CheckInStatusResponse {
  * Start check-in response
  */
 export interface StartCheckInResponse {
+  // Legacy fields
   checkin_id: string;
   week_number: number;
   year: number;
   question: QuestionResponse;
   is_already_completed?: boolean;  // True if viewing completed check-in in read-only mode
   next_due_date?: string;  // When the next check-in is available
+  // Standardized chatbot payload fields (optional for backwards compatibility)
+  thread_id?: string;
+  local_date?: string;
+  history?: Message[];
+  tap_options?: TapOption[];
+  ui_blocks?: any[];
+  actionable_insights?: Record<string, any>;
+  trace?: Record<string, any>;
 }
 
 /**
  * Submit response result
  */
 export interface SubmitResponseResult {
+  // Legacy fields
   checkin_id: string;
   question: QuestionResponse;
+  // Standardized chatbot payload fields (optional for backwards compatibility)
+  thread_id?: string;
+  local_date?: string;
+  history?: Message[];
+  tap_options?: TapOption[];
+  ui_blocks?: any[];
+  actionable_insights?: Record<string, any>;
+  trace?: Record<string, any>;
 }
 
 export interface TranscribeResponse {
@@ -137,7 +157,7 @@ class WeeklyCheckinService {
   /**
    * Start a new check-in or resume an incomplete one
    */
-  async startCheckin(): Promise<StartCheckInResponse | null> {
+  async startCheckin(options?: { signal?: AbortSignal }): Promise<StartCheckInResponse | null> {
     try {
       const token = await getAuthToken();
       if (!token) {
@@ -147,6 +167,7 @@ class WeeklyCheckinService {
 
       const response = await fetch(`${API_BASE_URL}/api/v1/weekly-checkin/start`, {
         method: 'POST',
+        signal: options?.signal,
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -160,7 +181,8 @@ class WeeklyCheckinService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === 'AbortError') return null;
       console.error('❌ Error starting check-in:', error);
       return null;
     }
@@ -173,7 +195,8 @@ class WeeklyCheckinService {
     checkinId: string,
     questionKey: string,
     response: any,
-    messageText?: string
+    messageText?: string,
+    options?: { signal?: AbortSignal }
   ): Promise<SubmitResponseResult | null> {
     try {
       const token = await getAuthToken();
@@ -184,6 +207,7 @@ class WeeklyCheckinService {
 
       const fetchResponse = await fetch(`${API_BASE_URL}/api/v1/weekly-checkin/respond`, {
         method: 'POST',
+        signal: options?.signal,
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -203,7 +227,8 @@ class WeeklyCheckinService {
       }
 
       return await fetchResponse.json();
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === 'AbortError') return null;
       console.error('❌ Error submitting response:', error);
       return null;
     }

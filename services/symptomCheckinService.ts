@@ -41,6 +41,7 @@ export interface Message {
   id: string;
   text: string;
   isBot: boolean;
+  ui_blocks?: UIBlock[];
 }
 
 export interface StartSymptomCheckInResponse {
@@ -48,6 +49,7 @@ export interface StartSymptomCheckInResponse {
   local_date: string;
   history: Message[];
   tap_options: TapOption[];
+  actionable_insights?: Record<string, any>;
   ui_blocks?: UIBlock[];
 }
 
@@ -65,7 +67,10 @@ export interface TranscribeResponse {
 }
 
 class SymptomCheckinService {
-  async startToday(forceNew: boolean = false): Promise<StartSymptomCheckInResponse | null> {
+  async startToday(
+    forceNew: boolean = false,
+    options?: { signal?: AbortSignal }
+  ): Promise<StartSymptomCheckInResponse | null> {
     try {
       const token = await getAuthToken();
       if (!token) {
@@ -76,6 +81,7 @@ class SymptomCheckinService {
       const url = `${API_BASE_URL}/api/v1/symptom-checkin/start${forceNew ? '?force_new=true' : ''}`;
       const response = await fetch(url, {
         method: 'POST',
+        signal: options?.signal,
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -89,13 +95,18 @@ class SymptomCheckinService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === 'AbortError') return null;
       console.error('❌ Error starting symptom check-in:', error);
       return null;
     }
   }
 
-  async sendMessage(threadId: string, messageText: string): Promise<RespondSymptomCheckInResponse | null> {
+  async sendMessage(
+    threadId: string,
+    messageText: string,
+    options?: { signal?: AbortSignal }
+  ): Promise<RespondSymptomCheckInResponse | null> {
     try {
       const token = await getAuthToken();
       if (!token) {
@@ -105,6 +116,7 @@ class SymptomCheckinService {
 
       const response = await fetch(`${API_BASE_URL}/api/v1/symptom-checkin/respond`, {
         method: 'POST',
+        signal: options?.signal,
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -122,13 +134,17 @@ class SymptomCheckinService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === 'AbortError') return null;
       console.error('❌ Error sending symptom message:', error);
       return null;
     }
   }
 
-  async sendEvent(event: UIEventRequest): Promise<RespondSymptomCheckInResponse | null> {
+  async sendEvent(
+    event: UIEventRequest,
+    options?: { signal?: AbortSignal }
+  ): Promise<RespondSymptomCheckInResponse | null> {
     try {
       const token = await getAuthToken();
       if (!token) {
@@ -138,6 +154,7 @@ class SymptomCheckinService {
 
       const response = await fetch(`${API_BASE_URL}/api/v1/symptom-checkin/event`, {
         method: 'POST',
+        signal: options?.signal,
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -152,7 +169,8 @@ class SymptomCheckinService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === 'AbortError') return null;
       console.error('❌ Error sending symptom UI event:', error);
       return null;
     }

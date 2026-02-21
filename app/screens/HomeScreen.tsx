@@ -1263,16 +1263,41 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       setIsReviewBlocking(false);
       setShowPlanAnimation(false);
 
-      // Force refresh home data
+      // Force refresh home data with retry logic for 428 errors
       try {
         setLoading(true);
-        const assignmentsData = await homeService.getTodayAssignments();
+        
+        let assignmentsData = null;
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (!assignmentsData && attempts < maxAttempts) {
+          try {
+            assignmentsData = await homeService.getTodayAssignments();
+          } catch (err: any) {
+            attempts++;
+            // Check if it's a 428 error (review still pending in backend's view)
+            if (err?.response?.status === 428 || err?.message?.includes('428')) {
+              console.log(`⏳ [HomeScreen:${instanceId}] Got 428 in handleDailyReviewClose, retrying in 2s... (attempt ${attempts}/${maxAttempts})`);
+              if (attempts < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+              }
+            } else {
+              console.error(`❌ [HomeScreen:${instanceId}] Non-428 error:`, err);
+              break;
+            }
+          }
+        }
+        
         if (assignmentsData) {
           setAssignments(assignmentsData);
           if (assignmentsData.hormone_stats) {
             setProgressStats({ hormone_stats: convertHormoneStats(assignmentsData.hormone_stats) });
           }
           wireUpActionPlan(assignmentsData);
+          console.log(`✅ [HomeScreen:${instanceId}] Assignments loaded successfully after ${attempts} attempt(s)`);
+        } else {
+          console.warn(`⚠️ [HomeScreen:${instanceId}] Could not load assignments after ${maxAttempts} attempts`);
         }
       } catch (err) {
         console.error(`❌ [HomeScreen:${instanceId}] Failed to load assignments after review close:`, err);
@@ -1318,23 +1343,49 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       // This prevents 428 errors if backend hasn't updated yet
       let reviewStatus = await homeService.getPendingReview();
       let attempts = 0;
-      while (reviewStatus?.needs_review && attempts < 3) {
-        console.log(`⏳ [HomeScreen:${instanceId}] Backend still reports pending review, waiting... (attempt ${attempts + 1})`);
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      const maxAttempts = 5; // Increased from 3 to 5 for more resilience
+      
+      while (reviewStatus?.needs_review && attempts < maxAttempts) {
+        console.log(`⏳ [HomeScreen:${instanceId}] Backend still reports pending review, waiting... (attempt ${attempts + 1}/${maxAttempts})`);
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Increased from 1000ms to 1500ms
         reviewStatus = await homeService.getPendingReview();
         attempts++;
       }
 
+      // CRITICAL FIX: Don't return early even if pending review check fails
+      // The commit may have succeeded but pooler is returning stale data
+      // Try to load assignments anyway - if review truly isn't complete, we'll get 428
       if (reviewStatus?.needs_review) {
-        console.warn(`⚠️ [HomeScreen:${instanceId}] Backend still reports pending review after retries. Will force refresh on close.`);
-        // Don't return - let handleDailyReviewClose handle the refresh
-        return;
+        console.warn(`⚠️ [HomeScreen:${instanceId}] Backend still reports pending review after ${maxAttempts} retries. Attempting to load assignments anyway...`);
+        // Note: We continue below instead of returning
       }
 
-      const [assignmentsData, rewardsData] = await Promise.all([
-        homeService.getTodayAssignments(),
-        rewardService.getRewardsStatus().catch(() => null),
-      ]);
+      // CRITICAL FIX: Add retry logic for assignments with 428 error handling
+      let assignmentsData = null;
+      let assignmentAttempts = 0;
+      const maxAssignmentAttempts = 3;
+      
+      while (!assignmentsData && assignmentAttempts < maxAssignmentAttempts) {
+        try {
+          assignmentsData = await homeService.getTodayAssignments();
+        } catch (err: any) {
+          assignmentAttempts++;
+          // Check if it's a 428 error (review still pending in backend's view)
+          if (err?.response?.status === 428 || err?.message?.includes('428')) {
+            console.log(`⏳ [HomeScreen:${instanceId}] Got 428 (review pending), retrying in 2s... (attempt ${assignmentAttempts}/${maxAssignmentAttempts})`);
+            if (assignmentAttempts < maxAssignmentAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+          } else {
+            // Non-428 error, don't retry
+            console.error(`❌ [HomeScreen:${instanceId}] Non-428 error loading assignments:`, err);
+            break;
+          }
+        }
+      }
+      
+      // Load rewards in parallel (non-blocking)
+      const rewardsData = await rewardService.getRewardsStatus().catch(() => null);
 
       if (assignmentsData) {
         setAssignments(assignmentsData);
@@ -1347,7 +1398,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         setIsTodayDataReady(true);
         console.log(`✅ [HomeScreen:${instanceId}] Today data ready - unlock animation will trigger on modal close`);
       } else {
-        console.warn(`⚠️ [HomeScreen:${instanceId}] No assignments data returned, will force refresh on close`);
+        console.warn(`⚠️ [HomeScreen:${instanceId}] No assignments data returned after ${assignmentAttempts} attempts, will force refresh on close`);
       }
 
       if (rewardsData) {

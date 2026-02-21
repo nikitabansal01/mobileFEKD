@@ -324,7 +324,7 @@ const QuestionScreen = () => {
   const navigation = useNavigation<StackNavigationProp<any>>();
   const insets = useSafeAreaInsets();
   const othersInputRef = useRef<TextInput>(null);
-  
+
   // Debounce ref for saving answers
   const saveDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedAnswersRef = useRef<string>(''); // Track last saved state to avoid redundant saves
@@ -361,12 +361,12 @@ const QuestionScreen = () => {
   // Save answers to AsyncStorage (debounced - called internally)
   const saveAnswersToStorageImmediate = async (answersToSave: typeof answers) => {
     const serialized = JSON.stringify(answersToSave);
-    
+
     // Skip if no actual change
     if (serialized === lastSavedAnswersRef.current) {
       return;
     }
-    
+
     try {
       await AsyncStorage.setItem(STORAGE_KEY, serialized);
       lastSavedAnswersRef.current = serialized;
@@ -375,14 +375,14 @@ const QuestionScreen = () => {
       console.error('❌ [QuestionScreen] Failed to save answers to storage:', error);
     }
   };
-  
+
   // Debounced save - waits 1 second after last change before saving
   const saveAnswersToStorageDebounced = (answersToSave: typeof answers) => {
     // Clear any pending save
     if (saveDebounceRef.current) {
       clearTimeout(saveDebounceRef.current);
     }
-    
+
     // Schedule save after 1 second of no changes
     saveDebounceRef.current = setTimeout(() => {
       saveAnswersToStorageImmediate(answersToSave);
@@ -405,11 +405,25 @@ const QuestionScreen = () => {
     console.log('🚀 [QuestionScreen] Initializing...');
     const initializeSession = async () => {
       try {
-        // Load saved answers first
-        await loadSavedAnswers();
+        // First check if we have an existing valid session
+        const existingSessionId = await sessionService.getSessionId();
 
         // Validate session and recreate if necessary
         const sessionValid = await sessionService.validateAndRefreshSession();
+
+        // Get new session ID after validation
+        const newSessionId = await sessionService.getSessionId();
+
+        // Only load saved answers if session ID is the same (resuming a session)
+        // If it's a new session, clear any stale saved answers
+        if (existingSessionId && existingSessionId === newSessionId) {
+          console.log('♻️ [QuestionScreen] Resuming existing session, loading saved answers');
+          await loadSavedAnswers();
+        } else {
+          console.log('🆕 [QuestionScreen] New session detected, clearing stale saved answers');
+          await clearSavedAnswers();
+        }
+
         if (sessionValid) {
           setSessionCreated(true);
           console.log('✅ [QuestionScreen] Session ready');
@@ -422,7 +436,7 @@ const QuestionScreen = () => {
     };
 
     initializeSession();
-    
+
     // Cleanup debounce timer on unmount
     return () => {
       if (saveDebounceRef.current) {
@@ -481,10 +495,56 @@ const QuestionScreen = () => {
     if (type === 'multiple-choice') {
       setAnswers(prev => {
         const existingAnswers = (prev[key] as string[]) || [];
+
+        // Handle "None of these" mutual exclusivity for otherConcerns
+        if (key === 'otherConcerns') {
+          if (normalizedValue === 'None of these') {
+            // If selecting "None of these", clear all symptoms and just set "None of these"
+            if (existingAnswers.includes('None of these')) {
+              // Deselecting "None of these"
+              return {
+                ...prev,
+                [key]: existingAnswers.filter(item => item !== 'None of these'),
+                // Also clear all concern categories
+                periodConcerns: [],
+                bodyConcerns: [],
+                skinAndHairConcerns: [],
+                mentalHealthConcerns: [],
+              };
+            } else {
+              // Selecting "None of these" - clear all symptoms
+              return {
+                ...prev,
+                [key]: ['None of these'],
+                periodConcerns: [],
+                bodyConcerns: [],
+                skinAndHairConcerns: [],
+                mentalHealthConcerns: [],
+              };
+            }
+          } else {
+            // Selecting something other than "None of these" - remove "None of these" if present
+            const withoutNone = existingAnswers.filter(item => item !== 'None of these');
+            const newAnswers = withoutNone.includes(normalizedValue)
+              ? withoutNone.filter(item => item !== normalizedValue)
+              : [...withoutNone, normalizedValue];
+            return { ...prev, [key]: newAnswers };
+          }
+        }
+
+        // For other symptom categories (periodConcerns, bodyConcerns, etc.)
+        // Also remove "None of these" from otherConcerns if user selects a symptom
+        const otherConcerns = (prev.otherConcerns as string[]) || [];
+        const updatedOtherConcerns = otherConcerns.filter(item => item !== 'None of these');
+
         const newAnswers = existingAnswers.includes(normalizedValue)
           ? existingAnswers.filter(item => item !== normalizedValue)
           : [...existingAnswers, normalizedValue];
-        return { ...prev, [key]: newAnswers };
+        return {
+          ...prev,
+          [key]: newAnswers,
+          otherConcerns: updatedOtherConcerns,
+        };
       });
     } else if (type === 'number') {
       // Store age as number
@@ -575,10 +635,42 @@ const QuestionScreen = () => {
   };
 
   /**
+   * Check if user has selected any symptoms (not just "None of these")
+   */
+  const hasSelectedSymptoms = (): boolean => {
+    const periodConcerns = answers.periodConcerns as string[] || [];
+    const bodyConcerns = answers.bodyConcerns as string[] || [];
+    const skinHairConcerns = answers.skinAndHairConcerns as string[] || [];
+    const mentalHealthConcerns = answers.mentalHealthConcerns as string[] || [];
+    const otherConcerns = answers.otherConcerns as string[] || [];
+
+    // Filter out "None of these" and "Others (please specify)" from each array
+    // to check if user has actual symptoms selected
+    const filterNonSymptoms = (arr: string[]) =>
+      arr.filter(c => c !== 'None of these' && c !== 'Others (please specify)');
+
+    const hasActualSymptoms =
+      filterNonSymptoms(periodConcerns).length > 0 ||
+      filterNonSymptoms(bodyConcerns).length > 0 ||
+      filterNonSymptoms(skinHairConcerns).length > 0 ||
+      filterNonSymptoms(mentalHealthConcerns).length > 0 ||
+      filterNonSymptoms(otherConcerns).length > 0;
+
+    return hasActualSymptoms;
+  };
+
+  /**
    * Handle continue button press
    */
   const handleContinue = async () => {
     if (currentStep < 5) {
+      // Special case: After step 4 (concerns), check if user has any symptoms
+      // If "None of these" is selected with no other symptoms, skip step 5 (topConcern)
+      if (currentStep === 3 && !hasSelectedSymptoms()) {
+        // Skip step 5 (topConcern) and go directly to step 6 (index 5 = diagnosis)
+        setCurrentStep(5);
+        return;
+      }
       // Move to next step for steps 1-5
       setCurrentStep(currentStep + 1);
     } else if (currentStep === 5) {

@@ -14,6 +14,7 @@ module.exports = function (api) {
           },
         },
       ],
+      'transform-inline-environment-variables',
       'react-native-worklets/plugin', // Must be last!
     ],
   };

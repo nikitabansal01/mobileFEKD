@@ -55,6 +55,7 @@ class ChatService {
     input_mode?: 'tap' | 'yap' | 'type';
     session_id?: string | null;
     metadata?: Record<string, any>;
+    signal?: AbortSignal;
   }): Promise<ChatMessageResponse | null> {
     try {
       const [token, userId] = await Promise.all([getAuthToken(), getUserId()]);
@@ -65,6 +66,7 @@ class ChatService {
 
       const response = await fetch(`${API_BASE_URL}/api/v1/chat/message`, {
         method: 'POST',
+        signal: params.signal,
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
           'Content-Type': 'application/json',
@@ -86,7 +88,8 @@ class ChatService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === 'AbortError') return null;
       console.error('❌ Error sending chat message:', error);
       return null;
     }
