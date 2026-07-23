@@ -24,7 +24,17 @@
       }
     },
     "ios": {
-      "bundleIdentifier": "com.auvra.health"
-    }
+      "bundleIdentifier": "com.auvra.health",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "plugins": [
+      "expo-apple-authentication",
+      "expo-font",
+      "expo-router",
+      "expo-web-browser"
+    ]
   }
 }

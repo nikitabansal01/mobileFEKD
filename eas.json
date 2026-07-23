@@ -6,11 +6,19 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "environment": "development"
+    },
+    "development-simulator": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "environment": "development",
+      "ios": {
+        "simulator": true
+      }
     },
     "preview": {
       "distribution": "internal",
-      "node": "20.10.0",
       "android": {
         "buildType": "apk"
       }

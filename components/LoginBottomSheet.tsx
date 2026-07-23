@@ -12,7 +12,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
-import { GoogleAuthProvider, OAuthProvider, signInWithCredential } from 'firebase/auth';
+import { getAdditionalUserInfo, GoogleAuthProvider, OAuthProvider, signInWithCredential } from 'firebase/auth';
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -91,6 +91,10 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
 
   const [googleRequest, googleResponse, googlePromptAsync] = Google.useIdTokenAuthRequest({
     clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
+    iosClientId:
+      process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ||
+      process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
+      '',
   });
 
   // Note: Data waiting is now handled by SignupLoadingScreen
@@ -109,7 +113,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       signInWithCredential(auth, credential)
         .then(async (result) => {
           // CRITICAL: Distinguish between NEW users (signup) and RETURNING users (login)
-          const isNewUser = !!result?.additionalUserInfo?.isNewUser;
+          const isNewUser = !!getAdditionalUserInfo(result)?.isNewUser;
           console.log(`🔐 [Google Auth] isNewUser=${isNewUser}, uid=${result.user.uid}`);
 
           // Track post-auth flow timing for debugging performance (signup vs login)
@@ -280,7 +284,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       const result = await signInWithCredential(auth, firebaseCredential);
 
       // CRITICAL: Distinguish between NEW users (signup) and RETURNING users (login)
-      const isNewUser = !!result?.additionalUserInfo?.isNewUser;
+      const isNewUser = !!getAdditionalUserInfo(result)?.isNewUser;
       console.log(`🔐 [Apple Auth] isNewUser=${isNewUser}, uid=${result.user.uid}`);
 
       // Save login state using authService (Apple doesn't store passwords)
@@ -639,4 +643,4 @@ const styles = StyleSheet.create({
 
 });
 
-export default LoginBottomSheet; 
+export default LoginBottomSheet;
