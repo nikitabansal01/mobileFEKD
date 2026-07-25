@@ -909,7 +909,7 @@ class HomeService {
         }
 
         const errorText = await response.text();
-        console.error('❌ Failed to refresh all:', errorText);
+        console.warn('Refresh All request was rejected:', errorText);
         return { success: false, error: 'server_error', message: 'Unable to refresh. Please try again.' };
       }
 
@@ -917,7 +917,7 @@ class HomeService {
       console.log('✅ Successfully refreshed all:', result);
       return { success: true, ...result };
     } catch (error) {
-      console.error('❌ Error refreshing all:', error);
+      console.warn('Refresh All request failed:', error);
       return { success: false, error: 'network_error', message: 'Network error. Check your connection.' };
     }
   }
