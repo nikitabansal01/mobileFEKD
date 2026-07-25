@@ -62,7 +62,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
     hero_image_url?: string;
     hormone_persona_intro?: string;
     // Category for determining heading format
-    category?: 'food' | 'movement' | 'mindfulness';
+    category?: 'food' | 'exercise' | 'movement' | 'mindfulness';
     // Category-specific fields for heading
     food_items?: string[];
     food_amounts?: string[];
@@ -119,6 +119,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
         }
         return `Eat ${title} today`;
 
+      case 'exercise':
       case 'movement':
         const duration = exercise_durations?.[0] || '';
         if (duration) {
@@ -263,6 +264,26 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
    */
   const handleTellMeMore = () => {
     // TODO: Implement "Tell me best ways to consume" functionality
+  };
+
+  const getHowButtonTitle = () => {
+    if (action?.category === 'exercise' || action?.category === 'movement') return 'Tell me how to do it →';
+    if (action?.category === 'mindfulness') return 'Tell me how to practice →';
+    if (action?.category === 'food') return 'Tell me best ways to consume →';
+    return 'Tell me how →';
+  };
+
+  const getHowSubtitle = () => {
+    if (action?.category === 'exercise' || action?.category === 'movement') {
+      return 'Movement guidance based on your preferences and concerns';
+    }
+    if (action?.category === 'mindfulness') {
+      return 'Practice guidance based on your preferences and concerns';
+    }
+    if (action?.category === 'food') {
+      return 'Eating suggestions based on your preferences and concerns';
+    }
+    return 'Guidance based on your preferences and concerns';
   };
 
   /**
@@ -451,7 +472,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
                   minimumFontScale={0.75}
                   allowFontScaling={false}
                 >
-                  Eating suggestions based on your preferences and concerns
+                  {getHowSubtitle()}
                 </Text>
                 <View style={styles.conditionsTags}>
                   {[...(action?.conditions || []), ...(action?.symptoms || [])].map((condition, index) => (
@@ -938,7 +959,7 @@ const ActionDetailScreen: React.FC<ActionDetailScreenProps> = ({ route }) => {
           </View>
         ) : (
           <PrimaryButton
-            title="Tell me best ways to consume →"
+            title={getHowButtonTitle()}
             onPress={() => setIsHowMode(true)}
           />
         )}
