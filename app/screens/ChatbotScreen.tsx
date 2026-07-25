@@ -527,9 +527,15 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
           console.log('🔄 Resuming Know My Body session:', activeSession.session_id);
           const history = await chatService.getSessionMessages(userId, activeSession.session_id);
 
-          if (history && history.length > 0) {
+          const displayableHistory = Array.isArray(history)
+            ? history.filter((msg: any) => typeof msg?.content === 'string' && msg.content.trim().length > 0)
+            : [];
+
+          const hasAssistantReply = displayableHistory.some((msg: any) => msg.role === 'assistant');
+
+          if (displayableHistory.length > 0 && hasAssistantReply) {
             setChatSessionId(activeSession.session_id);
-            setMessages(normalizeMessages(history.map((msg: any) => ({
+            setMessages(normalizeMessages(displayableHistory.map((msg: any) => ({
               id: `${msg.timestamp}`, // Use timestamp as ID
               text: msg.content,
               isBot: msg.role === 'assistant'
@@ -563,16 +569,25 @@ export default function Chatbot({ onBackToHome, route }: ChatbotProps & { route?
 
       if (result) {
         setChatSessionId(result.session_id);
-        if (result.content) {
-          const newMsg: Message = { id: `bot_${Date.now()}`, text: result.content, isBot: true };
-          setMessages([newMsg]);
-        }
+        const content = result.content?.trim() || 'What would you like to understand about your cycle, hormones, or symptoms?';
+        const newMsg: Message = { id: `bot_${Date.now()}`, text: content, isBot: true };
+        setMessages([newMsg]);
         if (result.ui_blocks) {
           setUiBlocks(result.ui_blocks);
         }
         if (result.choices && Array.isArray(result.choices)) {
           setPersonaliseTapOptions(choicesToChoiceOptions(result.choices));
         }
+        setMode('idle');
+        setShowSlider(false);
+        setShowSelectedValue(false);
+        scrollToBottom();
+      } else {
+        setMessages([{ id: 'know_body_fallback_1', text: 'What would you like to understand about your cycle, hormones, or symptoms?', isBot: true }]);
+        setPersonaliseTapOptions([]);
+        setMode('idle');
+        setShowSlider(false);
+        setShowSelectedValue(false);
       }
     } catch (error) {
       if ((error as any)?.name === "AbortError") return;
