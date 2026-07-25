@@ -31,6 +31,11 @@ export const FONTS = {
 // Maps the dash-format names to actual font names
 // =============================================================================
 export const FONT_FAMILIES = {
+  // Property aliases retained for components written before the standardized keys.
+  regular: 'Inter400',
+  medium: 'Inter500',
+  semiBold: 'Inter600',
+  bold: 'Inter700',
   // Inter variants - using system fonts as fallback
   'Inter-Regular': 'Inter400',
   'Inter-Medium': 'Inter500',

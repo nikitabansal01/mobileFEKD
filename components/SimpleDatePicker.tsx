@@ -111,7 +111,7 @@ const SimpleDatePicker: React.FC<SimpleDatePickerProps> = ({
   const renderCalendar = () => {
     const daysInMonth = getDaysInMonth(currentYear, currentMonth);
     const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
-    const days = [];
+    const days: React.ReactElement[] = [];
 
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < firstDay; i++) {

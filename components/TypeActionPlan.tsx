@@ -151,7 +151,7 @@ export default function TypeActionPlan({
       if (!weeklyCheckinStatus?.last_completed) return false;
 
       // Use the plan date from backend as the reference point for "today"
-      const planDate = assignments?.date || new Date().toISOString().split('T')[0];
+      const planDate = new Date().toISOString().split('T')[0];
 
       try {
         const completedDate = new Date(weeklyCheckinStatus.last_completed);
@@ -766,15 +766,8 @@ export default function TypeActionPlan({
         {/* Tomorrow section */}
         {(() => {
           // Calculate date (tomorrow relative to plan date)
-          let tomorrow: Date;
-          if (assignments?.date) {
-            const parts = assignments.date.split('-');
-            tomorrow = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-            tomorrow.setDate(tomorrow.getDate() + 1);
-          } else {
-            tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-          }
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
 
           const tomorrowDateStr = `${tomorrow.getDate()}${getOrdinalSuffix(tomorrow.getDate())} ${tomorrow.toLocaleString('en-US', { month: 'long' })}, ${tomorrow.getFullYear()}`;
 

@@ -246,7 +246,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
     selectedValue: number,
     onValueChange: (value: number) => void,
     label: string,
-    scrollRef?: React.RefObject<ScrollView>
+    scrollRef?: React.RefObject<ScrollView | null>
   ) => (
     <View style={styles.pickerColumn}>
       <Text style={styles.columnLabel}>{label}</Text>

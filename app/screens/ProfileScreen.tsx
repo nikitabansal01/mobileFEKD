@@ -591,7 +591,6 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: moderateScale(22, 1.5),
-    fontFamily: 'Inter600',
     fontFamily: 'serif',
     color: COLORS.black,
     marginBottom: verticalScale(3),
@@ -640,7 +639,6 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: moderateScale(8, 1.5),
-    fontFamily: 'Inter500',
     color: '#A65D50',
     fontFamily: FONT_FAMILIES['Inter-Medium'],
   },
@@ -653,7 +651,6 @@ const styles = StyleSheet.create({
   },
   personalizationTitle: {
     fontSize: moderateScale(14, 1.5),
-    fontFamily: 'Inter500',
     fontFamily: FONT_FAMILIES['Inter-Medium'],
     color: 'black',
   },
@@ -706,7 +703,6 @@ const styles = StyleSheet.create({
   },
   healthTitle: {
     fontSize: moderateScale(14, 1.5),
-    fontFamily: 'Inter500',
     fontFamily: FONT_FAMILIES['Inter-Medium'],
     color: COLORS.black,
     marginBottom: verticalScale(8),

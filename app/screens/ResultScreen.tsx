@@ -489,7 +489,6 @@ const ResultScreen = () => {
 
                     <View pointerEvents="none" style={[styles.graphicSection, getHormoneArtContainerStyle(primaryCard.hormone)]}>
                       <Image
-                        pointerEvents="none"
                         source={getHormoneImage(primaryCard.hormone, primaryCard.level, primaryCard.priority, primaryCard.is_primary, primaryCard.score)}
                         style={getHormoneArtImageStyle(primaryCard.hormone)}
                       />
@@ -532,7 +531,6 @@ const ResultScreen = () => {
 
                     <View pointerEvents="none" style={[styles.graphicSection, getHormoneArtContainerStyle(secondaryCard.hormone)]}>
                       <Image
-                        pointerEvents="none"
                         source={getHormoneImage(secondaryCard.hormone, secondaryCard.level, secondaryCard.priority, secondaryCard.is_primary, secondaryCard.score)}
                         style={getHormoneArtImageStyle(secondaryCard.hormone)}
                       />
@@ -710,7 +708,6 @@ const styles = StyleSheet.create({
     zIndex: 10, // Display above image (zIndex: 1) with high zIndex
   },
   priorityText: {
-    fontFamily: 'Inter500',
     fontSize: responsiveFontSize(1.42), //10px
     color: '#6f6f6f',
     textAlign: 'center',
@@ -726,11 +723,6 @@ const styles = StyleSheet.create({
     color: '#6f6f6f',
     textAlign: 'center',
     lineHeight: responsiveHeight(1.5),
-  },
-  titleSubtitleContainer: {
-    flex: 1,
-    marginBottom: responsiveHeight(0.5),
-    zIndex: 2, // Display above image (zIndex: 1)
   },
   // Healthy user screen styles
   healthyTitle: {
@@ -777,4 +769,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ResultScreen; 
+export default ResultScreen;

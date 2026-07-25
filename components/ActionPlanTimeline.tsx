@@ -94,6 +94,7 @@ type Props = {
     is_available: boolean;
     is_due: boolean;
     incomplete_id: string | null;
+    last_completed?: string | null;
   } | null;
 };
 
@@ -196,9 +197,7 @@ export default function ActionPlanTimeline({
     const isCompletedToday = (): boolean => {
       if (!weeklyCheckinStatus?.last_completed) return false;
 
-      // Use the plan date from backend as the reference point for "today"
-      // to avoid mismatch between device time and content time
-      const planDate = assignments?.date || new Date().toISOString().split('T')[0];
+      const planDate = new Date().toISOString().split('T')[0];
 
       try {
         // Convert last_completed (UTC) to a date object
@@ -1120,15 +1119,8 @@ export default function ActionPlanTimeline({
             const gapCenterY = todayLastY + geom.ITEM_BLOCK_H / 2 + geom.CAP_BOTTOM + responsiveHeight(4);
 
             // Calculate date (tomorrow relative to plan date)
-            let tomorrow: Date;
-            if (assignments?.date) {
-              const parts = assignments.date.split('-');
-              tomorrow = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-              tomorrow.setDate(tomorrow.getDate() + 1);
-            } else {
-              tomorrow = new Date();
-              tomorrow.setDate(tomorrow.getDate() + 1);
-            }
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
 
             const tomorrowDate = tomorrow.getDate();
             const tomorrowMonth = tomorrow.toLocaleString('en-US', { month: 'long' });

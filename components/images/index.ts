@@ -10,12 +10,12 @@ export {
   FoodMediumImage, 
   FoodFullImage,
   type OptimizedFoodImageProps,
-} from './OptimizedFoodImage';
+} from '../OptimizedFoodImage';
 
 export { 
   FoodImageGrid,
   type FoodGridItem,
-} from './FoodImageGrid';
+} from '../FoodImageGrid';
 
 // Re-export service for convenience
-export { foodImageService } from '../services/imageService';
+export { foodImageService } from '../../services/imageService';

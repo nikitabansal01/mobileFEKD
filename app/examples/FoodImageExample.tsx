@@ -18,15 +18,15 @@ import {
 import { StatusBar } from 'expo-status-bar';
 
 // Import the image components and services
-import { OptimizedFoodImage, FoodThumbnail, FoodFullImage } from '../components/OptimizedFoodImage';
-import { FoodImageGrid, FoodGridItem } from '../components/FoodImageGrid';
-import { foodImageService } from '../services/imageService';
+import { OptimizedFoodImage, FoodThumbnail, FoodFullImage } from '../../components/OptimizedFoodImage';
+import { FoodImageGrid, FoodGridItem } from '../../components/FoodImageGrid';
+import { foodImageService } from '../../services/imageService';
 import {
   useImagePrefetch,
   useFoodPrefetch,
   useAppStateCache,
   useCacheManager,
-} from '../hooks/useImagePrefetch';
+} from '../../hooks/useImagePrefetch';
 
 // ============================================================================
 // SAMPLE DATA

@@ -1754,7 +1754,6 @@ const styles = StyleSheet.create({
   },
   milestoneName: {
     fontSize: moderateScale(12, 1.5),
-    fontFamily: 'Inter500',
     fontFamily: FONT_FAMILIES['Inter-Regular'],
     lineHeight: moderateScale(15, 1.5),
     includeFontPadding: isAndroid ? false : undefined,
@@ -1785,7 +1784,6 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     fontSize: moderateScale(14, 1.5),
-    fontFamily: 'Inter500',
     color: COLORS.greyMedium,
     fontFamily: 'NotoSerif400',
     lineHeight: moderateScale(21, 1.5),
@@ -1836,7 +1834,6 @@ const styles = StyleSheet.create({
   },
   rewardTitle: {
     fontSize: moderateScale(14, 1.5),
-    fontFamily: 'Inter500',
     color: COLORS.black,
     fontFamily: 'NotoSerif400',
     lineHeight: moderateScale(21, 1.5),

@@ -55,8 +55,8 @@ function ProgressGradient({ progress }: { progress: number }) {
 
     return (
         <LinearGradient
-            colors={visibleColors}
-            locations={validLocations}
+            colors={visibleColors as [string, string, ...string[]]}
+            locations={validLocations as [number, number, ...number[]]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={[

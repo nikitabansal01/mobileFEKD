@@ -124,7 +124,7 @@ const OptionButtonsContainer: React.FC<OptionButtonsContainerProps> = ({
       }
     })();
     
-    const customStyles = [];
+    const customStyles: object[] = [];
     
     // Apply custom gap
     if (containerGap) {

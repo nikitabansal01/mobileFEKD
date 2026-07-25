@@ -25,7 +25,7 @@ import { FONT_FAMILIES as FONTS } from '../../constants/fonts';
 const { width: screenWidth } = Dimensions.get('window');
 
 const InsightScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const [selectedMonth, setSelectedMonth] = useState('Month');
   const [showConcernModal, setShowConcernModal] = useState(false);
   const cycleChartScrollRef = useRef<ScrollView>(null);
@@ -1797,7 +1797,6 @@ const styles = StyleSheet.create({
   },
   monthText: {
     fontSize: moderateScale(12, 1.5),
-    fontFamily: FONTS['Inter-Regular'],
     fontFamily: 'Inter400',
     color: '#000000',
     lineHeight: moderateScale(15, 1.5), // 125% of 12px
@@ -2338,7 +2337,6 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: moderateScale(18),
-    fontFamily: 'Inter600',
     color: '#333',
     textAlign: 'center',
     marginBottom: verticalScale(12),
@@ -2366,7 +2364,6 @@ const styles = StyleSheet.create({
   modalButtonPrimaryText: {
     color: '#FFFFFF',
     fontSize: moderateScale(16),
-    fontFamily: 'Inter600',
     fontFamily: FONTS['Inter-SemiBold'],
   },
   modalButtonSecondary: {
@@ -2379,7 +2376,6 @@ const styles = StyleSheet.create({
   modalButtonSecondaryText: {
     color: '#666',
     fontSize: moderateScale(14),
-    fontFamily: 'Inter500',
     textAlign: 'center',
     fontFamily: FONTS['Inter-Medium'],
   },

@@ -1267,7 +1267,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       try {
         setLoading(true);
         
-        let assignmentsData = null;
+        let assignmentsData: AssignmentsResponse | null = null;
         let attempts = 0;
         const maxAttempts = 3;
         
@@ -1361,7 +1361,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       }
 
       // CRITICAL FIX: Add retry logic for assignments with 428 error handling
-      let assignmentsData = null;
+      let assignmentsData: AssignmentsResponse | null = null;
       let assignmentAttempts = 0;
       const maxAssignmentAttempts = 3;
       
