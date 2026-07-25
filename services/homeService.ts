@@ -544,7 +544,9 @@ class HomeService {
       console.log('✅ Plan status:', result);
       return result;
     } catch (error) {
-      console.error('❌ Error checking plan status:', error);
+      // Status polling is intentionally retryable. A short backend/database
+      // interruption should not surface as a red development error overlay.
+      console.warn('Plan status check failed; the next poll will retry:', error);
       return null;
     }
   }
