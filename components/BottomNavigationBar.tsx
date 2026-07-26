@@ -63,9 +63,9 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
           setStreakAtRisk(data.streak_at_risk || false);
           setCanFreeze(data.can_freeze || false);
         }
-      } catch (error) {
-        // Silent fail - streak badge is not critical
-        console.log('Error fetching streak status for nav badge:', error);
+      } catch {
+        // Silent fail: the badge is non-critical, and a temporary backend or
+        // network outage must not flood Metro or interrupt the app.
       }
     };
 

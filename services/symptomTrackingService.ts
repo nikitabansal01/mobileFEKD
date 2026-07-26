@@ -5,8 +5,8 @@
  * - Fetch recent symptom logs + aggregates for charts
  * - Log a symptom severity entry (1-9) with optional factors
  */
-import { getAuth } from 'firebase/auth';
 import { Platform } from 'react-native';
+import { getAuthToken } from './authTokenService';
 
 const getApiBaseUrl = () => {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
@@ -15,18 +15,6 @@ const getApiBaseUrl = () => {
 };
 
 const API_BASE_URL = getApiBaseUrl();
-
-const getAuthToken = async (): Promise<string | null> => {
-  try {
-    const auth = getAuth();
-    const user = auth.currentUser;
-    if (user) return await user.getIdToken();
-    return null;
-  } catch (error) {
-    console.error('❌ Failed to get Firebase token:', error);
-    return null;
-  }
-};
 
 export type SymptomTrend = 'improving' | 'stable' | 'worsening' | 'unknown';
 

@@ -7,8 +7,8 @@
  * - Unlock status for gated features
  */
 
-import { getAuth } from 'firebase/auth';
 import { Platform } from 'react-native';
+import { getAuthToken } from './authTokenService';
 
 /**
  * Gets the API base URL based on platform and environment
@@ -25,24 +25,6 @@ const getApiBaseUrl = () => {
 };
 
 const API_BASE_URL = getApiBaseUrl();
-
-/**
- * Retrieves Firebase authentication token for API requests
- */
-const getAuthToken = async (): Promise<string | null> => {
-    try {
-        const auth = getAuth();
-        const user = auth.currentUser;
-        if (user) {
-            const token = await user.getIdToken();
-            return token;
-        }
-        return null;
-    } catch (error) {
-        console.error('❌ Failed to get Firebase token:', error);
-        return null;
-    }
-};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES

@@ -1,5 +1,5 @@
-import { getAuth } from 'firebase/auth';
 import { Platform } from 'react-native';
+import { getAuthToken } from './authTokenService';
 
 /**
  * Gets the API base URL based on platform and environment
@@ -19,26 +19,6 @@ const getApiBaseUrl = () => {
 };
 
 const API_BASE_URL = getApiBaseUrl();
-
-/**
- * Retrieves Firebase authentication token for API requests
- * 
- * @returns Promise resolving to the Firebase token or null if not available
- */
-const getAuthToken = async (): Promise<string | null> => {
-  try {
-    const auth = getAuth();
-    const user = auth.currentUser;
-    if (user) {
-      const token = await user.getIdToken();
-      return token;
-    }
-    return null;
-  } catch (error) {
-    console.error('❌ Failed to get Firebase token:', error);
-    return null;
-  }
-};
 
 /**
  * Type definitions for API responses and data structures

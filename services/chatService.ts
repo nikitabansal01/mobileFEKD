@@ -1,5 +1,6 @@
 import { getAuth } from 'firebase/auth';
 import { Platform } from 'react-native';
+import { getAuthToken } from './authTokenService';
 
 import type { UIBlock } from '@/utils/uiBlocks';
 
@@ -19,18 +20,6 @@ const getApiBaseUrl = () => {
 };
 
 const API_BASE_URL = getApiBaseUrl();
-
-const getAuthToken = async (): Promise<string | null> => {
-  try {
-    const auth = getAuth();
-    const user = auth.currentUser;
-    if (!user) return null;
-    return await user.getIdToken();
-  } catch (error) {
-    console.error('❌ Failed to get Firebase token:', error);
-    return null;
-  }
-};
 
 const getUserId = async (): Promise<string | null> => {
   const auth = getAuth();

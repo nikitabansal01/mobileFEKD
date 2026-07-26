@@ -3,8 +3,8 @@
  * 
  * Fetches analytics data for Symptom Patterns feature (requires 14-day streak reward).
  */
-import { getAuth } from 'firebase/auth';
 import { Platform } from 'react-native';
+import { getAuthToken } from './authTokenService';
 
 const getApiBaseUrl = () => {
     const envUrl = process.env.EXPO_PUBLIC_API_URL;
@@ -13,18 +13,6 @@ const getApiBaseUrl = () => {
 };
 
 const API_BASE_URL = getApiBaseUrl();
-
-const getAuthToken = async (): Promise<string | null> => {
-    try {
-        const auth = getAuth();
-        const user = auth.currentUser;
-        if (user) return await user.getIdToken();
-        return null;
-    } catch (error) {
-        console.error('❌ Failed to get Firebase token:', error);
-        return null;
-    }
-};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES

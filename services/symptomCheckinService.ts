@@ -1,5 +1,5 @@
-import { getAuth } from 'firebase/auth';
 import { Platform } from 'react-native';
+import { getAuthToken } from './authTokenService';
 
 import type { UIBlock, UIEventRequest } from '@/utils/uiBlocks';
 
@@ -19,18 +19,6 @@ const getApiBaseUrl = () => {
 };
 
 const API_BASE_URL = getApiBaseUrl();
-
-const getAuthToken = async (): Promise<string | null> => {
-  try {
-    const auth = getAuth();
-    const user = auth.currentUser;
-    if (user) return await user.getIdToken();
-    return null;
-  } catch (error) {
-    console.error('❌ Failed to get Firebase token:', error);
-    return null;
-  }
-};
 
 export interface TapOption {
   id: string;
