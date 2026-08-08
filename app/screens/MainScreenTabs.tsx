@@ -1,14 +1,11 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import BottomNavigationBar from '../../components/BottomNavigationBar';
 import ChatHistoryScreen from './ChatHistoryScreen';
-import CommunityScreen from './CommunityScreen';
 import HomeScreen from './HomeScreen';
 import InsightScreen from './InsightScreen';
 import PersonalizeScreen from './PersonalizeScreen';
 import ProfileScreen from './ProfileScreen';
 import ProgressScreen from './ProgressScreen';
-
-type TabType = 'home' | 'personalize' | 'progress' | 'community' | 'auvra' | 'insights' | 'profile';
 
 interface MainScreenTabsProps {
   route?: {
@@ -66,10 +63,6 @@ export default function MainScreenTabs({ route }: MainScreenTabsProps) {
       <Tab.Screen
         name="progress"
         component={ProgressScreen}
-      />
-      <Tab.Screen
-        name="community"
-        component={CommunityScreen}
       />
       <Tab.Screen
         name="profile"

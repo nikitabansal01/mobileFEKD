@@ -29,10 +29,7 @@
     "**/*.tsx"
   ],
   "exclude": [
-    "node_modules",
-    "old_HomeScreen.tsx",
-    "temp_master_HomeScreen.tsx",
-    "temp_timeline_db6617d.tsx"
+    "node_modules"
   ],
   "extends": "expo/tsconfig.base"
 }

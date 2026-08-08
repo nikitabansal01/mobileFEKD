@@ -1,0 +1,6 @@
+appId: com.auvra.health
+---
+- launchApp
+- assertVisible: "Today"
+- tapOn: "Profile"
+- tapOn: "Log out"

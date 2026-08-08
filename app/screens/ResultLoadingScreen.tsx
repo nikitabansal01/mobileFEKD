@@ -1,12 +1,13 @@
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useState } from 'react';
-import { Text, View, StyleSheet, Image } from 'react-native';
+import { Text, View, StyleSheet } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setSecureJson } from '@/src/core/storage/secureJsonStore';
+import { ONBOARDING_DRAFT_TTL_MS, SECURE_DRAFT_KEYS } from '@/src/core/storage/storageKeys';
 import AuvraMessageScreen from '../../components/AuvraMessageScreen';
 import OptionButtonsContainer from '../../components/customComponent/OptionButtonsContainer';
 import FixedBottomContainer from '../../components/FixedBottomContainer';
@@ -51,25 +52,21 @@ const ResultLoadingScreen = () => {
    */
   const handleContinue = async () => {
     try {
-      // Save lifestyle focus to AsyncStorage for ResearchingScreen
-      await AsyncStorage.setItem('lifestyle_focus', JSON.stringify(selectedOptions));
-      console.log('💾 [ResultLoadingScreen] Lifestyle focus saved:', selectedOptions);
+      // Before authentication, this health preference remains in component
+      // memory only. Secure storage deliberately refuses shared guest keys.
+      await setSecureJson(
+        SECURE_DRAFT_KEYS.onboardingLifestyleFocus,
+        selectedOptions,
+        ONBOARDING_DRAFT_TTL_MS,
+      ).catch(() => undefined);
 
       // Also save to backend session immediately
       const updateSuccess = await sessionService.updateSessionLifestyleFocus(selectedOptions);
       console.log('✅ [ResultLoadingScreen] Lifestyle focus synced to backend');
 
       if (updateSuccess) {
-        // OPTIMIZATION: Start generation HERE immediately instead of waiting for next screen
-        // This utilizes the 2.5s transition animation time for backend processing
-        console.log('🚀 [ResultLoadingScreen] Pre-starting recommendation generation to reduce latency...');
-        
-        // FIX: Set flag to prevent ResearchingScreen from starting generation again
-        await AsyncStorage.setItem('recommendation_generation_started', 'true');
-        
-        sessionService.startRecommendationGeneration().catch(err =>
-          console.log('⚠️ [ResultLoadingScreen] Background generation start warning:', err)
-        );
+        // v2 requires Firebase auth for plan generation. SignupLoadingScreen
+        // starts it after the durable claim, with a replay-safe idempotency key.
       }
     } catch (error) {
       console.error('❌ [ResultLoadingScreen] Failed to save lifestyle focus:', error);
@@ -223,4 +220,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ResultLoadingScreen; 
+export default ResultLoadingScreen;

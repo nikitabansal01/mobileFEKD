@@ -1,15 +1,11 @@
 import { initializeApp } from 'firebase/app';
 import {
   createUserWithEmailAndPassword,
-  getAuth,
   initializeAuth,
   getReactNativePersistence,
-  browserLocalPersistence,
-  setPersistence,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
 // React Native persistence
-import { Platform } from 'react-native';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
@@ -45,19 +41,9 @@ const app = initializeApp(firebaseConfig);
 /**
  * Firebase Auth instance with persistence configured per platform
  * - Native (iOS/Android): AsyncStorage persistence
- * - Web: browser local persistence
  */
 export const auth = (() => {
-  if (Platform.OS === 'web') {
-    const authInstance = getAuth(app);
-    // Ensure web uses local (non-session) persistence
-    setPersistence(authInstance, browserLocalPersistence).catch((error) => {
-      console.log('Persistence setting failed:', error);
-    });
-    return authInstance;
-  }
-
-  // Native (iOS/Android): persist auth state using AsyncStorage
+  // Native (iOS/Android): persist auth state using AsyncStorage.
   return initializeAuth(app, {
     persistence: getReactNativePersistence(ReactNativeAsyncStorage),
   });
@@ -72,10 +58,6 @@ export const auth = (() => {
  */
 export const signInWithEmail = async (email: string, password: string) => {
   try {
-    // Ensure persistence on web before sign-in so session survives refresh
-    if (Platform.OS === 'web') {
-      await setPersistence(auth, browserLocalPersistence);
-    }
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return { success: true, user: userCredential.user };
   } catch (error: any) {

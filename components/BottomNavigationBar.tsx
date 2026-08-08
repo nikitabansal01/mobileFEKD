@@ -1,18 +1,16 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useState } from 'react';
-import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import AuvraCharacterNoShadow from './AuvraCharacterNoShadow';
-import { rewardService } from '../services/rewardService';
 
 /**
  * Props for backwards compatibility
  */
 interface LegacyBottomNavigationBarProps {
-  activeTab?: 'home' | 'personalize' | 'auvra' | 'insights' | 'profile' | 'progress' | 'community';
+  activeTab?: 'home' | 'personalize' | 'auvra' | 'insights' | 'profile' | 'progress';
   onTabPress?: (tab: string) => void;
   navigation?: any;
 }
@@ -35,53 +33,6 @@ function isReactNavigationProps(props: BottomNavigationBarProps): props is Botto
 const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
   const hookNavigation = useNavigation();
   const characterSize = responsiveWidth(20);
-  const [streakAtRisk, setStreakAtRisk] = useState(false);
-  const [canFreeze, setCanFreeze] = useState(false);
-
-  // Fetch streak risk status to show badge
-  // OPTIMIZED: Only fetch after user profile exists (not during signup flow)
-  useEffect(() => {
-    let isMounted = true;
-    let interval: ReturnType<typeof setInterval> | null = null;
-
-    const fetchStreakStatus = async () => {
-      if (!isMounted) return;
-      
-      try {
-        // Skip if still in signup flow (session link not yet complete)
-        // This prevents wasteful API calls before user profile exists
-        const sessionLinkPending = await AsyncStorage.getItem('session_link_complete');
-        const freshSignupPending = await AsyncStorage.getItem('fresh_signup_pending_refresh');
-        
-        if (sessionLinkPending === 'pending' || freshSignupPending === 'true') {
-          console.log('⏳ Skipping streak fetch - signup in progress');
-          return;
-        }
-        
-        const data = await rewardService.getRewardsStatus();
-        if (data && isMounted) {
-          setStreakAtRisk(data.streak_at_risk || false);
-          setCanFreeze(data.can_freeze || false);
-        }
-      } catch {
-        // Silent fail: the badge is non-critical, and a temporary backend or
-        // network outage must not flood Metro or interrupt the app.
-      }
-    };
-
-    // Initial fetch with small delay to let app stabilize
-    const initialTimeout = setTimeout(fetchStreakStatus, 500);
-
-    // Refresh every 60 seconds
-    interval = setInterval(fetchStreakStatus, 60000);
-    
-    return () => {
-      isMounted = false;
-      clearTimeout(initialTimeout);
-      if (interval) clearInterval(interval);
-    };
-  }, []);
-
   const tabs = [
     {
       key: 'home',
@@ -223,7 +174,7 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = (props) => {
 
 const styles = StyleSheet.create({
   container: {
-    position: Platform.OS === 'web' ? 'fixed' as any : 'absolute',
+    position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,

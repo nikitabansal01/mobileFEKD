@@ -30,7 +30,7 @@ const emojiRegex = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F
  * @returns Array of text and emoji parts
  */
 function splitEmojiRuns(input: string) {
-  const parts: Array<{ type: 'emoji' | 'text'; value: string }> = [];
+  const parts: { type: 'emoji' | 'text'; value: string }[] = [];
   let lastIndex = 0;
 
   for (const match of input.matchAll(emojiRegex)) {

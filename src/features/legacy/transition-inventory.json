@@ -1,0 +1,7 @@
+{
+  "policy": "No module may contain raw fetch or a v1 URL. The v1 API is retired; every transitional adapter has been removed and no new entry may be added.",
+  "removal_deadline": "2026-08-08",
+  "retired_on": "2026-08-08",
+  "note": "The ten v1 adapters (carePlanCheckinService, chatService, homeService, insightsService, personalizationService, preferencesService, rewardService, symptomCheckinService, symptomTrackingService, weeklyCheckinService) became unreachable once the dead screen and controller subtrees were deleted, and were removed with them. services/ now holds only authService and sessionService, both of which go through src/core/api.",
+  "adapters": []
+}

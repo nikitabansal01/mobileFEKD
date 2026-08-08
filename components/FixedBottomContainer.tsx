@@ -111,14 +111,6 @@ const FixedBottomContainer = ({
             alignItems: 'center',
             gap,
             zIndex: 20,
-            // Web-specific fixes
-            ...(Platform.OS === 'web' && {
-              position: 'fixed',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              width: '100%',
-            }),
           },
           style
         ]}
@@ -147,16 +139,6 @@ const styles = StyleSheet.create({
     width: responsiveWidth(100),
     height: responsiveHeight(10),
     zIndex: 10,
-    // Web-specific fixes
-    ...(Platform.OS === 'web' && {
-      position: 'fixed' as any,
-      bottom: 0,
-      left: 0,
-      right: 0,
-      width: '100%',
-      height: responsiveHeight(10),
-      zIndex: 10,
-    }),
   },
   // fadeTop: {
   //   position: 'absolute',

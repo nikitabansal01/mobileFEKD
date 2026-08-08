@@ -29,7 +29,7 @@ type RootStackParamList = {
 
 interface ChatHistoryScreenProps {
   onBackToHome?: () => void;
-  activeTab?: 'home' | 'personalize' | 'auvra' | 'insights' | 'profile' | 'progress' | 'community';
+  activeTab?: 'home' | 'personalize' | 'auvra' | 'insights' | 'profile' | 'progress';
   onTabPress?: (tab: string) => void;
   chatContext?: {
     chatId: string;

@@ -3,7 +3,7 @@ import { Text } from "react-native";
 import Svg, { G, Mask, Path, Defs } from "react-native-svg";
 /* SVGR has dropped some elements not supported by react-native-svg: filter */
 export type Props = {
-text?:String,
+text?:string,
 width?:number,
 height?:number,
 }

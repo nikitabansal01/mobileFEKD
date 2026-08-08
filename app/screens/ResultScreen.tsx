@@ -326,7 +326,7 @@ const ResultScreen = () => {
                     style={{ height: 50, width: '100%' }}
                     maskElement={
                       <Text style={[styles.healthyTitle, { color: 'black' }]}>
-                        You're doing great!
+                        You&apos;re doing great!
                       </Text>
                     }
                   >
@@ -383,7 +383,7 @@ const ResultScreen = () => {
                   </Text>
 
                   <Text style={styles.healthyCardNote}>
-                    If you feel something isn't quite right, we always recommend consulting with a healthcare provider. 💜
+                    If you feel something isn&apos;t quite right, we always recommend consulting with a healthcare provider. 💜
                   </Text>
                 </View>
               </LinearGradient>

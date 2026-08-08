@@ -1,0 +1,7 @@
+{
+  "recorded_on": "2026-08-08",
+  "policy": "This is a decreasing-only inventory. Existing oversized files may shrink or be removed, but no new entry or larger baseline is permitted after this inventory is established.",
+  "max_lines": 800,
+  "note": "Emptied on 2026-08-08. Every entry named a file in the dead screen or controller subtrees, all of which were deleted. No handwritten module now exceeds max_lines, so the limit applies with no exceptions.",
+  "entries": []
+}

@@ -6,7 +6,7 @@ import GradientText from "@/components/GradientText";
 import { auth, signUpWithEmail } from "@/config/firebase";
 import sessionService from '@/services/sessionService';
 import authService from '@/services/authService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { userScopedAsyncStorage } from '@/src/core/storage/userScopedAsyncStorage';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -85,6 +85,8 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [healthDataAccepted, setHealthDataAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Signing up...');
   const [slideAnim] = useState(new Animated.Value(SCREEN_HEIGHT));
@@ -97,7 +99,42 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       '',
   });
 
-  // Note: Data waiting is now handled by SignupLoadingScreen
+  const canStartSignup = privacyAccepted && healthDataAccepted;
+
+  const hasValidOnboardingSession = async (): Promise<boolean> => {
+    const requirements = await sessionService.getRequiredConsents();
+    const types = new Set(requirements.map((item) => item.consent_type));
+    if (types.has('privacy') && types.has('health_data_processing')) return true;
+    Alert.alert('Questionnaire expired', 'Please restart your questionnaire before creating an account.');
+    return false;
+  };
+
+  /** Records explicit decisions using the exact document versions returned by v2. */
+  const prepareNewAccountSetup = async (): Promise<boolean> => {
+    if (!canStartSignup) {
+      Alert.alert('Consent required', 'Please review and accept both required consent documents.');
+      return false;
+    }
+    try {
+      const requirements = await sessionService.getRequiredConsents();
+      await sessionService.setClaimConsents(requirements.map((requirement) => ({
+        consent_type: requirement.consent_type,
+        document_version: requirement.document_version,
+        granted: requirement.consent_type === 'privacy'
+          ? privacyAccepted
+          : requirement.consent_type === 'health_data_processing'
+            ? healthDataAccepted
+            : false,
+      })));
+      await userScopedAsyncStorage.setItem('session_link_complete', 'pending');
+      await userScopedAsyncStorage.setItem('post_auth_flow', 'signup');
+      await userScopedAsyncStorage.setItem('post_auth_started_ms', Date.now().toString());
+      return true;
+    } catch (error: any) {
+      Alert.alert('Unable to continue', error?.message || 'Your onboarding session has expired. Please restart the questionnaire.');
+      return false;
+    }
+  };
 
   /**
    * Handles Google OAuth response and user authentication
@@ -114,39 +151,32 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
         .then(async (result) => {
           // CRITICAL: Distinguish between NEW users (signup) and RETURNING users (login)
           const isNewUser = !!getAdditionalUserInfo(result)?.isNewUser;
-          console.log(`🔐 [Google Auth] isNewUser=${isNewUser}, uid=${result.user.uid}`);
+          console.log(`🔐 [Google Auth] isNewUser=${isNewUser}`);
 
           // Track post-auth flow timing for debugging performance (signup vs login)
           try {
-            await AsyncStorage.setItem('post_auth_flow', isNewUser ? 'signup' : 'login');
-            await AsyncStorage.setItem('post_auth_started_ms', Date.now().toString());
-          } catch (e) {
+            await userScopedAsyncStorage.setItem('post_auth_flow', isNewUser ? 'signup' : 'login');
+            await userScopedAsyncStorage.setItem('post_auth_started_ms', Date.now().toString());
+          } catch {
             // ignore
           }
 
-          // Save login state using authService (Google doesn't store passwords)
-          await authService.setLoggedIn(result.user.uid);
-          if (rememberMe && result.user.email) {
-            await authService.saveCredentials(result.user.email, '', rememberMe);
-          }
+          await authService.saveLoginPreference(result.user.email ?? '', rememberMe);
 
           if (isNewUser) {
-            // NEW USER: Set pending flag and start session link
-            await AsyncStorage.setItem('session_link_complete', 'pending');
-            
-            // Start session link in background (don't await)
-            // SignupLoadingScreen will wait for completion flag
-            sessionService.linkSessionToUser(result.user).catch((linkError) => {
-              console.error('Session linking failed:', linkError);
-            });
-
-            // Navigate to loading screen for new users
+            if (!await prepareNewAccountSetup()) return;
             onClose();
             navigation.navigate('SignupLoadingScreen');
           } else {
+            if (await sessionService.hasPendingSignupRecovery()) {
+              if (!await prepareNewAccountSetup()) return;
+              onClose();
+              navigation.navigate('SignupLoadingScreen');
+              return;
+            }
             // RETURNING USER: Skip session link entirely!
             // Clear any stale flags from previous sessions
-            await AsyncStorage.multiRemove([
+            await userScopedAsyncStorage.multiRemove([
               'plan_generating_in_background',
               'session_link_complete',
               'fresh_signup_pending_refresh',
@@ -167,6 +197,9 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
           setLoading(false);
         });
     }
+  // An OAuth response is a one-shot event. Re-subscribing when UI state changes
+  // would process the same credential more than once.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [googleResponse]);
 
   /**
@@ -186,7 +219,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
         useNativeDriver: true,
       }).start();
     }
-  }, [visible]);
+  }, [visible, slideAnim]);
 
   /**
    * Handles email/password signup process
@@ -206,37 +239,23 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
       Alert.alert("Error", "Password must be at least 6 characters");
       return;
     }
+    if (!canStartSignup) {
+      Alert.alert('Consent required', 'Please review and accept both required consent documents.');
+      return;
+    }
+    if (!await hasValidOnboardingSession()) return;
 
     setLoading(true);
     setLoadingMessage('Creating your account...');
     try {
-      // Set pending flag BEFORE auth to prevent ResearchingScreen from navigating early
-      await AsyncStorage.setItem('session_link_complete', 'pending');
-      // Track post-auth flow timing for debugging performance
-      try {
-        await AsyncStorage.setItem('post_auth_flow', 'signup');
-        await AsyncStorage.setItem('post_auth_started_ms', Date.now().toString());
-      } catch (e) {
-        // ignore
-      }
       const result = await signUpWithEmail(email, password);
 
       if (result.success) {
-        // Save credentials and login state using authService
-        await authService.saveCredentials(email, password, rememberMe);
-        await authService.setLoggedIn(result.user?.uid || '');
-
-        // Start session link in background (don't await)
-        // SignupLoadingScreen will wait for completion flag
-        setLoadingMessage('Linking your survey data...');
-        sessionService.linkSessionToUser(result.user).catch((linkError) => {
-          console.error('Session linking failed:', linkError);
-        });
-
-        // Navigate to loading screen immediately
-        // It will wait for session_link_complete flag
-        onClose();
-        navigation.navigate('SignupLoadingScreen');
+        await authService.saveLoginPreference(email, rememberMe);
+        if (await prepareNewAccountSetup()) {
+          onClose();
+          navigation.navigate('SignupLoadingScreen');
+        }
       } else {
         Alert.alert("Error", result.error || "Signup failed");
       }
@@ -250,14 +269,24 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
   /**
    * Initiates Google OAuth signup process
    */
-  const handleGoogleSignin = () => {
-    googlePromptAsync();
+  const handleGoogleSignin = async () => {
+    if (!canStartSignup) {
+      Alert.alert('Consent required', 'Please review and accept both required consent documents.');
+      return;
+    }
+    if (!await hasValidOnboardingSession()) return;
+    void googlePromptAsync();
   };
 
   /**
    * Handles Apple authentication signup process
    */
   const handleAppleSignin = async () => {
+    if (!canStartSignup) {
+      Alert.alert('Consent required', 'Please review and accept both required consent documents.');
+      return;
+    }
+    if (!await hasValidOnboardingSession()) return;
     try {
       const isAvailable = await AppleAuthentication.isAvailableAsync();
 
@@ -285,31 +314,24 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
 
       // CRITICAL: Distinguish between NEW users (signup) and RETURNING users (login)
       const isNewUser = !!getAdditionalUserInfo(result)?.isNewUser;
-      console.log(`🔐 [Apple Auth] isNewUser=${isNewUser}, uid=${result.user.uid}`);
+      console.log(`🔐 [Apple Auth] isNewUser=${isNewUser}`);
 
-      // Save login state using authService (Apple doesn't store passwords)
-      await authService.setLoggedIn(result.user.uid);
-      if (rememberMe && result.user.email) {
-        await authService.saveCredentials(result.user.email, '', rememberMe);
-      }
+      await authService.saveLoginPreference(result.user.email ?? '', rememberMe);
 
       if (isNewUser) {
-        // NEW USER: Set pending flag and start session link
-        await AsyncStorage.setItem('session_link_complete', 'pending');
-
-        // Start session link in background (don't await)
-        // SignupLoadingScreen will wait for completion flag
-        sessionService.linkSessionToUser(result.user).catch((linkError) => {
-          console.error('Session linking failed:', linkError);
-        });
-
-        // Navigate to loading screen for new users
+        if (!await prepareNewAccountSetup()) return;
         onClose();
         navigation.navigate('SignupLoadingScreen');
       } else {
+            if (await sessionService.hasPendingSignupRecovery()) {
+              if (!await prepareNewAccountSetup()) return;
+              onClose();
+              navigation.navigate('SignupLoadingScreen');
+              return;
+            }
         // RETURNING USER: Skip session link entirely!
         // Clear any stale flags from previous sessions
-        await AsyncStorage.multiRemove([
+        await userScopedAsyncStorage.multiRemove([
           'plan_generating_in_background',
           'session_link_complete',
           'fresh_signup_pending_refresh',
@@ -430,6 +452,32 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
                 </View>
                 <Text style={styles.rememberText}>Remember me</Text>
               </TouchableOpacity>
+
+              <TouchableOpacity
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: privacyAccepted }}
+                accessibilityLabel="Accept the Privacy Policy"
+                style={styles.consentContainer}
+                onPress={() => setPrivacyAccepted((accepted) => !accepted)}
+              >
+                <View style={[styles.checkbox, privacyAccepted && styles.checkboxSelected]}>
+                  {privacyAccepted && <RightTickSvg size={responsiveFontSize(1.4)} color="#FFF" />}
+                </View>
+                <Text style={styles.consentText}>I agree to the Privacy Policy selected for this signup.</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: healthDataAccepted }}
+                accessibilityLabel="Consent to health data processing"
+                style={styles.consentContainer}
+                onPress={() => setHealthDataAccepted((accepted) => !accepted)}
+              >
+                <View style={[styles.checkbox, healthDataAccepted && styles.checkboxSelected]}>
+                  {healthDataAccepted && <RightTickSvg size={responsiveFontSize(1.4)} color="#FFF" />}
+                </View>
+                <Text style={styles.consentText}>I consent to processing my health information for my personalized plan.</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Divider */}
@@ -444,7 +492,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
               <TouchableOpacity
                 style={styles.socialButton}
                 onPress={handleGoogleSignin}
-                disabled={!googleRequest}
+                disabled={!googleRequest || loading || !canStartSignup}
               >
                 <GoogleIconSvg />
                 <Text style={styles.socialButtonText}>Sign up with Google</Text>
@@ -453,6 +501,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
               <TouchableOpacity
                 style={styles.socialButton}
                 onPress={handleAppleSignin}
+                disabled={loading || !canStartSignup}
               >
                 <AppleIconSvg />
                 <Text style={styles.socialButtonText}>Sign up with Apple</Text>
@@ -462,7 +511,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
             {/* Terms and Conditions */}
             <View style={styles.termsContainer}>
               <Text style={styles.termsText}>
-                By signing up, you agree to Auvra by Hormone Insight's{' '}
+                By signing up, you agree to Auvra by Hormone Insight&apos;s{' '}
                 <Text style={styles.termsLink}>Terms and Conditions</Text>
                 {' '}and{' '}
                 <Text style={styles.termsLink}>Privacy Policy</Text>
@@ -474,7 +523,7 @@ const LoginBottomSheet = ({ visible, onClose }: LoginBottomSheetProps) => {
               <PrimaryButton
                 title={loading ? loadingMessage : "Sign up"}
                 onPress={handleSignup}
-                disabled={loading || !email || !password || !confirmPassword}
+                disabled={loading || !email || !password || !confirmPassword || !canStartSignup}
               />
             </View>
           </ScrollView>
@@ -580,6 +629,19 @@ const styles = StyleSheet.create({
     color: "rgba(0, 0, 0, 0.6)",
     fontSize: responsiveFontSize(1.7), // 12px
     lineHeight: responsiveFontSize(1.7) * 1.25,
+  },
+  consentContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: responsiveWidth(2.5),
+    marginBottom: responsiveHeight(1.5),
+  },
+  consentText: {
+    flex: 1,
+    fontFamily: 'Inter400',
+    color: 'rgba(0, 0, 0, 0.72)',
+    fontSize: responsiveFontSize(1.55),
+    lineHeight: responsiveFontSize(1.55) * 1.35,
   },
   dividerContainer: {
     flexDirection: "row",

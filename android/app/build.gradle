@@ -81,6 +81,23 @@ def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBu
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+def releaseSigningProperties = [
+    storeFile: System.getenv('AUVRA_ANDROID_KEYSTORE_FILE'),
+    storePassword: System.getenv('AUVRA_ANDROID_KEYSTORE_PASSWORD'),
+    keyAlias: System.getenv('AUVRA_ANDROID_KEY_ALIAS'),
+    keyPassword: System.getenv('AUVRA_ANDROID_KEY_PASSWORD'),
+]
+def releaseBuildRequested = gradle.startParameter.taskNames.any {
+    it.toLowerCase().contains('release')
+}
+
+if (releaseBuildRequested && releaseSigningProperties.values().any { !it }) {
+    throw new GradleException(
+        'Release signing is not configured. Provide the four AUVRA_ANDROID_* signing secrets; ' +
+        'release builds must never fall back to the debug keystore.'
+    )
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
 
@@ -104,15 +121,21 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            if (releaseSigningProperties.values().every { it }) {
+                storeFile file(releaseSigningProperties.storeFile)
+                storePassword releaseSigningProperties.storePassword
+                keyAlias releaseSigningProperties.keyAlias
+                keyPassword releaseSigningProperties.keyPassword
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds

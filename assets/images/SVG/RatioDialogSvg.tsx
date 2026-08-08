@@ -2,7 +2,7 @@ import * as React from "react";
 import { Text } from "react-native";
 import Svg, { Defs, Mask, Path } from "react-native-svg";
 export type Props = {
-    text?:String,
+    text?:string,
     width?:number,
     height?:number,
     }

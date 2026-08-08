@@ -12,7 +12,6 @@ import {
   View
 } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
-import authService from '@/services/authService';
 import { auth } from '@/config/firebase';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -52,38 +51,13 @@ export default function SplashScreen() {
     // Check auth state and navigate accordingly
     const checkAuthAndNavigate = async () => {
       try {
-        // Wait for Firebase auth to initialize
-        await new Promise<void>((resolve) => {
-          const unsubscribe = auth.onAuthStateChanged((user) => {
-            unsubscribe();
-            resolve();
-          });
-        });
+        await auth.authStateReady();
 
         // Check if user is already logged in (Firebase session persists)
         if (auth.currentUser) {
           console.log('✅ User already logged in via Firebase, navigating to MainScreenTabs');
-          await authService.setLoggedIn(auth.currentUser.uid);
           setAuthChecked(true);
           navigation.replace('MainScreenTabs');
-          return;
-        }
-
-        // Attempt auto-login with saved credentials
-        const autoLoginResult = await authService.attemptAutoLogin();
-
-        if (autoLoginResult.success) {
-          console.log('✅ Auto-login successful, navigating to MainScreenTabs');
-          setAuthChecked(true);
-          navigation.replace('MainScreenTabs');
-          return;
-        }
-
-        // If user needs to enter password (was logged in but remember me was off)
-        if (autoLoginResult.needsPassword) {
-          console.log('🔑 User needs to enter password, navigating to LoginScreen');
-          setAuthChecked(true);
-          navigation.replace('LoginScreen');
           return;
         }
 

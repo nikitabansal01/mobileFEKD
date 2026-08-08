@@ -1,0 +1,38 @@
+import { StyleSheet } from 'react-native';
+import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+
+export const questionnaireStyles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#ffffff' },
+  flex: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: responsiveWidth(5) },
+  progressTrack: { flex: 1, height: 10, backgroundColor: '#E8E8E8', borderRadius: 5 },
+  progressValue: { height: 10, backgroundColor: '#EDD9EF', borderRadius: 5 },
+  scrollContent: { paddingHorizontal: scale(5), paddingTop: verticalScale(10), paddingBottom: responsiveHeight(15), alignItems: 'center', flexGrow: 1 },
+  questionContent: { width: responsiveWidth(90), alignItems: 'center', justifyContent: 'center', gap: verticalScale(4), marginBottom: responsiveHeight(3) },
+  character: { alignItems: 'center', justifyContent: 'center' },
+  questionTextContainer: { width: responsiveWidth(90), alignItems: 'center', justifyContent: 'center' },
+  maskedView: { width: '100%', height: verticalScale(43), alignItems: 'center', justifyContent: 'center' },
+  maskedViewInner: { flex: 1, flexDirection: 'row', height: '100%' },
+  gradientFill: { flex: 1, height: '100%' },
+  questionText: { fontFamily: 'NotoSerif600', fontSize: moderateScale(16, 1.5), textAlign: 'center', lineHeight: moderateScale(16, 1.5) * 1.25, width: responsiveWidth(85) },
+  subtitle: { fontFamily: 'Inter400', fontSize: moderateScale(14, 1.5), color: '#6f6f6f', textAlign: 'center', lineHeight: moderateScale(14, 1.5) * 1.25 },
+  fields: { width: responsiveWidth(90), gap: responsiveHeight(3), alignItems: 'stretch' },
+  field: { gap: responsiveHeight(2), alignItems: 'center' },
+  label: { fontFamily: 'Inter500', fontSize: moderateScale(14, 1.5), color: '#000000', lineHeight: moderateScale(14, 1.5) * 1.25, textAlign: 'center' },
+  section: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: responsiveWidth(2), marginVertical: responsiveHeight(1) },
+  sectionBirthControl: { alignSelf: 'stretch', alignItems: 'flex-start', justifyContent: 'flex-start', marginVertical: responsiveHeight(1) },
+  sectionText: { fontFamily: 'Inter500', fontSize: moderateScale(14, 1.5), color: '#c17ec9', textAlign: 'left' },
+  divider: { flex: 1, height: 1, backgroundColor: '#e0e0e0' },
+  promptBackButton: { position: 'absolute', top: responsiveHeight(6), left: responsiveWidth(4), zIndex: 30 },
+  promptContent: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: responsiveWidth(5) },
+  promptText: { alignItems: 'center' },
+  promptMasked: { width: responsiveWidth(80), height: responsiveHeight(12), alignItems: 'center', justifyContent: 'center' },
+  promptDescription: { fontFamily: 'NotoSerif600', fontSize: responsiveFontSize(2.27), textAlign: 'center', lineHeight: responsiveHeight(2.5) * 1.25 },
+  promptButtons: { alignItems: 'center', width: '100%' },
+  promptContinue: { marginBottom: verticalScale(10) },
+  skipButton: { paddingHorizontal: responsiveWidth(10) },
+  skipButtonText: { fontFamily: 'Inter500', fontSize: responsiveFontSize(1.98), color: '#6f6f6f', textAlign: 'center' },
+  errorContent: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: responsiveWidth(10), gap: responsiveHeight(2) },
+  errorText: { fontFamily: 'Inter500', fontSize: moderateScale(14, 1.5), color: '#6f6f6f', textAlign: 'center' },
+});

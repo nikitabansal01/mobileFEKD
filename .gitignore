@@ -46,3 +46,10 @@ app-example
 *.apk
 *.aab
 *.ipa
+
+# Native/generated artifacts and temporary AI-created source copies
+*.keystore
+android/app/src/main/assets/index.android.bundle
+old_*.tsx
+temp_*.tsx
+.watchman-cookie-*

@@ -1,11 +1,13 @@
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Animated } from 'react-native';
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions';
 import { LinearGradient } from 'expo-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { userScopedAsyncStorage } from '@/src/core/storage/userScopedAsyncStorage';
 import AuvraCharacter from '../../components/AuvraCharacter';
+import PrimaryButton from '../../components/PrimaryButton';
+import sessionService from '../../services/sessionService';
 
 /**
  * SignupLoadingScreen - REDESIGNED
@@ -30,6 +32,8 @@ const SignupLoadingScreen = () => {
   const navigation = useNavigation<StackNavigationProp<any>>();
   const [statusMessage, setStatusMessage] = useState('Setting up your account...');
   const [progress, setProgress] = useState(0);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const hasNavigated = useRef(false);
@@ -61,15 +65,12 @@ const SignupLoadingScreen = () => {
     pulse.start();
 
     return () => pulse.stop();
-  }, []);
+  }, [fadeAnim, pulseAnim]);
 
-  // Wait for session link to complete, then navigate IMMEDIATELY
-  // DO NOT wait for action plan - HomeScreen will handle that state
+  // Claim is awaited here. It is never a detached background operation: a
+  // retry uses the preserved device-only proof after a network/server failure.
   useEffect(() => {
     let isMounted = true;
-    let checkInterval: ReturnType<typeof setInterval> | null = null;
-    let progressTimer: ReturnType<typeof setInterval> | null = null;
-    let maxWaitTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const navigateToHome = async () => {
       if (hasNavigated.current || !isMounted) return;
@@ -77,10 +78,10 @@ const SignupLoadingScreen = () => {
 
       // Log timing for post-auth flow (signup/login)
       try {
-        const postAuthFlow = await AsyncStorage.getItem('post_auth_flow');
-        const postAuthStartedMsStr = await AsyncStorage.getItem('post_auth_started_ms');
-        const linkCompletedMsStr = await AsyncStorage.getItem('session_link_completed_ms');
-        const linkDurationMsStr = await AsyncStorage.getItem('session_link_duration_ms');
+        const postAuthFlow = await userScopedAsyncStorage.getItem('post_auth_flow');
+        const postAuthStartedMsStr = await userScopedAsyncStorage.getItem('post_auth_started_ms');
+        const linkCompletedMsStr = await userScopedAsyncStorage.getItem('session_link_completed_ms');
+        const linkDurationMsStr = await userScopedAsyncStorage.getItem('session_link_duration_ms');
 
         const now = Date.now();
         const screenMs = now - startedAtMsRef.current;
@@ -91,32 +92,27 @@ const SignupLoadingScreen = () => {
           `post_auth_to_now=${postAuthMs ?? 'n/a'}ms session_link_completed_ms=${linkCompletedMsStr ?? 'n/a'} ` +
           `session_link_duration_ms=${linkDurationMsStr ?? 'n/a'}`
         );
-      } catch (e) {
+      } catch {
         // ignore
       }
-
-      // Clear all timers
-      if (checkInterval) clearInterval(checkInterval);
-      if (progressTimer) clearInterval(progressTimer);
-      if (maxWaitTimeout) clearTimeout(maxWaitTimeout);
 
       // Show success message
       setProgress(100);
       setStatusMessage('Welcome to Auvra! 🎉');
 
-      // Clear flags
-      // NOTE: Keep post-auth timestamps for HomeScreen to log end-to-end once plan is fetched.
-      await AsyncStorage.multiRemove(['fresh_signup_pending_refresh', 'session_link_complete']);
+      // Retain the user-scoped completion record. It prevents a second account
+      // from observing this account's completed setup after an account switch.
+      await userScopedAsyncStorage.removeItem('fresh_signup_pending_refresh');
       
       // Set flag to indicate this is a fresh signup - HomeScreen will show generating UI
-      await AsyncStorage.setItem('plan_generating_in_background', 'true');
+      await userScopedAsyncStorage.setItem('plan_generating_in_background', 'true');
 
       // Small delay to show success message
       setTimeout(() => {
         if (isMounted) {
           // Determine if this flow was a *signup* (new user) vs login
           // HomeScreen will use this for more specific perf logs.
-          AsyncStorage.getItem('post_auth_flow').then((flow) => {
+          userScopedAsyncStorage.getItem('post_auth_flow').then((flow) => {
             const freshSignup = flow === 'signup';
             navigation.dispatch(
               CommonActions.reset({
@@ -130,29 +126,7 @@ const SignupLoadingScreen = () => {
       }, 500);
     };
 
-    // NEW: Only check for session link completion - DO NOT wait for plan
-    // The plan takes 60-90 seconds to generate. We don't want to block the user.
-    // HomeScreen will handle showing appropriate UI for "plan generating" state.
-    const checkSessionLinkComplete = async () => {
-      if (hasNavigated.current) return;
-
-      const isLinkComplete = await AsyncStorage.getItem('session_link_complete');
-      const waitedMs = Date.now() - startedAtMsRef.current;
-      
-      if (isLinkComplete === 'true') {
-        // Session link is done! Navigate immediately.
-        // Don't wait for plan - HomeScreen will handle that state.
-        console.log(`✅ [SignupLoadingScreen] Session linked after ${waitedMs}ms - navigating to HomeScreen`);
-        console.log(`📋 Plan is still generating in background - HomeScreen will show generating UI`);
-        navigateToHome();
-        return;
-      }
-
-      // Still waiting for session link
-      console.log(`⏳ [SignupLoadingScreen] Waiting for session link... (${waitedMs}ms)`);
-    };
-
-    // Progress animation - faster since we're not waiting for plan anymore
+    // Cosmetic progress is bounded below completion and does not imply success.
     let progressValue = 0;
     const messages = [
       { threshold: 30, message: 'Linking your account...' },
@@ -160,7 +134,7 @@ const SignupLoadingScreen = () => {
       { threshold: 90, message: 'Almost there...' },
     ];
 
-    progressTimer = setInterval(() => {
+    const progressTimer = setInterval(() => {
       if (hasNavigated.current || !isMounted) return;
 
       // Faster progress since session link takes ~5-10s, not 60-120s
@@ -173,26 +147,26 @@ const SignupLoadingScreen = () => {
       }
     }, 150);
 
-    // Poll every 500ms for session link (much faster than before)
-    checkInterval = setInterval(checkSessionLinkComplete, 500);
-
-    // Max wait of 15 seconds for session link (was 120s)
-    // If session link takes longer than this, something is wrong
-    maxWaitTimeout = setTimeout(() => {
-      console.log('⚠️ [SignupLoadingScreen] Max wait (15s) for session link - navigating anyway');
-      navigateToHome();
-    }, 15000);
-
-    // Initial check
-    checkSessionLinkComplete();
+    const claim = async () => {
+      setLinkError(null);
+      try {
+        const completed = await sessionService.completeSignup();
+        if (!completed) throw new Error('Please return to signup and explicitly accept the required consent documents.');
+        if (isMounted) await navigateToHome();
+      } catch (error: any) {
+        if (isMounted) {
+          setLinkError(error?.message || 'We could not link your questionnaire. Your answers are safe; please try again.');
+          setStatusMessage('Account setup needs your attention');
+        }
+      }
+    };
+    void claim();
 
     return () => {
       isMounted = false;
-      if (checkInterval) clearInterval(checkInterval);
       if (progressTimer) clearInterval(progressTimer);
-      if (maxWaitTimeout) clearTimeout(maxWaitTimeout);
     };
-  }, [navigation]);
+  }, [attempt, navigation]);
 
   return (
     <LinearGradient
@@ -222,11 +196,16 @@ const SignupLoadingScreen = () => {
         </View>
 
         {/* Loading Indicator */}
-        <ActivityIndicator size="large" color="#C17EC9" style={styles.loader} />
+        {linkError ? (
+          <View style={styles.retryContainer}>
+            <Text accessibilityRole="alert" style={styles.errorText}>{linkError}</Text>
+            <PrimaryButton title="Try again" onPress={() => setAttempt((value) => value + 1)} />
+          </View>
+        ) : <ActivityIndicator size="large" color="#C17EC9" style={styles.loader} />}
 
         {/* Sub-message */}
         <Text style={styles.subText}>
-          We're crafting a personalized hormone balance plan just for you
+          We&apos;re crafting a personalized hormone balance plan just for you
         </Text>
       </Animated.View>
     </LinearGradient>
@@ -277,6 +256,18 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginBottom: responsiveHeight(3),
+  },
+  retryContainer: {
+    width: responsiveWidth(75),
+    marginBottom: responsiveHeight(3),
+    gap: responsiveHeight(1.5),
+  },
+  errorText: {
+    fontFamily: 'Inter400',
+    color: '#9B2C2C',
+    textAlign: 'center',
+    fontSize: responsiveFontSize(1.6),
+    lineHeight: responsiveFontSize(2.2),
   },
   subText: {
     fontSize: responsiveFontSize(1.7),

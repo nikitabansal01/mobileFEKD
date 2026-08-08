@@ -1,770 +1,311 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Device from 'expo-device';
-import { Platform } from 'react-native';
+import { auth } from '@/config/firebase';
+import { createIdempotencyKey } from '@/src/core/api/client';
+import {
+  deleteGuestOnboardingTicket,
+  getGuestOnboardingTicket,
+  saveGuestOnboardingTicket,
+  type GuestConsentRequirement,
+  type GuestOnboardingTicket,
+} from '@/src/core/storage/guestOnboardingTicketStore';
+import {
+  deleteGuestOnboardingAssessment,
+  getGuestOnboardingAssessment,
+  saveGuestOnboardingAssessment,
+} from '@/src/core/storage/guestOnboardingAssessmentStore';
+import { deleteSecureJson, getSecureJson, setSecureJson } from '@/src/core/storage/secureJsonStore';
+import { ONBOARDING_DRAFT_TTL_MS } from '@/src/core/storage/storageKeys';
+import { clearUserScopedStorage } from '@/src/core/storage/userScopedStorage';
+import { userScopedAsyncStorage } from '@/src/core/storage/userScopedAsyncStorage';
+import {
+  claimOnboardingSession,
+  createOnboardingSession,
+  putAssessment,
+  type ConsentDecision,
+  type ConsentRequirement,
+} from '@/src/features/onboarding';
+import { mapQuestionnaireAnswers } from '@/src/features/onboarding/questionnaire/assessmentMapper';
+import type { MobileQuestionnaireV1 } from '@/src/features/onboarding/questionnaire/assessmentMapper';
+import type { QuestionnaireAnswers } from '@/src/features/onboarding/questionnaire/types';
+import { createPlanGeneration } from '@/src/features/plans';
 
-/**
- * Gets the API base URL based on platform and environment
- * 
- * @returns The appropriate API base URL for the current platform
- */
-const getApiBaseUrl = () => {
-  const envUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (envUrl) return envUrl;
+const JOB_KEY = 'auvra.draft.plan-generation.job.v2';
+const SESSION_CREATE_KEY = 'auvra.draft.onboarding-create-key.v2';
+type Ticket = GuestOnboardingTicket;
+export interface SessionData { session_id: string; device_id: string; created_at: string; status: string }
 
-  // Platform-specific default values
-  if (Platform.OS === 'android') {
-    // For Android emulator
-    return 'http://10.0.2.2:8000';
-  } else {
-    // For iOS simulator
-    return 'http://localhost:8000';
+const requiredConsentTypes = new Set(['privacy', 'health_data_processing']);
+const isRequiredConsentSet = (requirements: GuestConsentRequirement[]): boolean =>
+  requirements.length >= 2
+  && requirements.filter(({ consent_type }) => requiredConsentTypes.has(consent_type)).length === 2
+  && new Set(requirements.map(({ consent_type }) => consent_type)).size === requirements.length;
+
+const canonicalJson = (value: unknown): string => {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const object = value as Record<string, unknown>;
+    return `{${Object.keys(object).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(object[key])}`).join(',')}}`;
   }
+  return JSON.stringify(value);
 };
 
-const API_BASE_URL = getApiBaseUrl();
+const stablePayloadHash = (value: unknown): string => {
+  let hash = 2_166_136_261;
+  for (const char of canonicalJson(value)) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+};
 
-// API URL debugging logs
-console.log('API Base URL:', API_BASE_URL);
-console.log('Platform:', Platform.OS);
-
-/**
- * User response data structure for survey answers
- */
-export interface UserResponseData {
-  age?: number;
-  period_description?: string;
-  birth_control?: string[];
-  last_period_date?: string;
-  cycle_length?: string;
-  period_concerns?: string[];
-  body_concerns?: string[];
-  skin_hair_concerns?: string[];
-  mental_health_concerns?: string[];
-  other_concerns?: string[];
-  top_concern?: string;
-  diagnosed_conditions?: string[];
-  family_history?: string[];
-  workout_intensity?: string;
-  sleep_duration?: string;
-  stress_level?: string;
-}
+const assessmentIdempotencyKey = (sessionId: string, revision: number, body: object): string =>
+  `assessment-${sessionId}-${revision}-${stablePayloadHash(body)}`;
 
 /**
- * Session data structure
- */
-export interface SessionData {
-  session_id: string;
-  device_id: string;
-  created_at: string;
-  status: string;
-}
-
-/**
- * Session Service
- * 
- * Manages user sessions for survey data collection and recommendation generation.
- * Handles session creation, validation, data storage, and user linking.
+ * Compatibility façade for retained screens. Health answers are sent directly
+ * to v2 and are never stored under the device-wide guest credential key.
  */
 class SessionService {
-  /** Current session ID */
-  private sessionId: string | null = null;
+  private transientTicket: Ticket | null = null;
+  private selectedConsents: ConsentDecision[] | null = null;
+  private assessment: { answers: MobileQuestionnaireV1; timezone: string; version: number } | null = null;
 
-  /**
-   * Generates a unique device identifier
-   * 
-   * @returns Device identifier string
-   */
-  private getDeviceId(): string {
-    return Device.deviceName || Device.modelName || 'unknown-device';
+  private async ticket(): Promise<Ticket | null> {
+    const persisted = await getGuestOnboardingTicket();
+    if (persisted) this.transientTicket = persisted;
+    if (!persisted && this.transientTicket && Date.parse(this.transientTicket.expires_at) <= Date.now()) {
+      this.transientTicket = null;
+    }
+    const ticket = persisted ?? this.transientTicket;
+    if (!ticket) await deleteGuestOnboardingAssessment();
+    return ticket;
   }
 
-  /**
-   * Retrieves session ID from local storage
-   * 
-   * @returns Promise resolving to session ID or null
-   */
+  private async assessmentFor(ticket: Ticket): Promise<{ answers: MobileQuestionnaireV1; timezone: string; version: number } | null> {
+    if (this.assessment) return this.assessment;
+    const draft = await getGuestOnboardingAssessment(ticket.session_id);
+    if (!draft) return null;
+    this.assessment = {
+      answers: draft.answers as MobileQuestionnaireV1,
+      timezone: draft.timezone,
+      version: draft.revision,
+    };
+    return this.assessment;
+  }
+
+  private async persistAssessment(ticket: Ticket): Promise<void> {
+    if (!this.assessment) return;
+    await saveGuestOnboardingAssessment({
+      session_id: ticket.session_id,
+      expires_at: ticket.expires_at,
+      timezone: this.assessment.timezone,
+      revision: this.assessment.version,
+      answers: this.assessment.answers,
+    });
+  }
+
   async getSessionId(): Promise<string | null> {
-    try {
-      const sessionId = await AsyncStorage.getItem('session_id');
-      return sessionId;
-    } catch (error) {
-      console.error('Failed to get session ID:', error);
-      return null;
-    }
+    return (await this.ticket())?.session_id ?? null;
   }
 
-  /**
-   * Saves session ID to local storage
-   * 
-   * @param sessionId - Session ID to save
-   */
+  async getRequiredConsents(): Promise<ConsentRequirement[]> {
+    return (await this.ticket())?.required_consents ?? [];
+  }
+
+  /** Accepts only an explicit, complete decision against the server's versions. */
+  async setClaimConsents(decisions: ConsentDecision[]): Promise<void> {
+    const ticket = await this.ticket();
+    if (!ticket) throw new Error('Your onboarding session has expired. Please start again.');
+    if (!isRequiredConsentSet(ticket.required_consents)) {
+      throw new Error('The server did not provide the required consent documents.');
+    }
+    const expected = new Map(ticket.required_consents.map((item) => [item.consent_type, item.document_version]));
+    if (
+      decisions.length !== ticket.required_consents.length
+      || new Set(decisions.map((item) => item.consent_type)).size !== decisions.length
+      || decisions.some((item) => expected.get(item.consent_type) !== item.document_version || !item.granted)
+    ) {
+      throw new Error('Please explicitly accept every required consent document.');
+    }
+    // Consent choices are deliberately memory-only. The guest envelope may
+    // contain only the server ticket and required document versions.
+    this.selectedConsents = decisions.map((item) => ({ ...item }));
+  }
+
   async saveSessionId(sessionId: string): Promise<void> {
-    try {
-      await AsyncStorage.setItem('session_id', sessionId);
-      this.sessionId = sessionId;
-    } catch (error) {
-      console.error('Failed to save session ID:', error);
-    }
+    const ticket = await this.ticket();
+    if (!ticket || ticket.session_id !== sessionId) return;
+    this.transientTicket = ticket;
   }
 
-  /**
-   * Creates a new session for the device
-   * 
-   * @returns Promise resolving to session data or null on error
-   */
   async createSession(): Promise<SessionData | null> {
-    try {
-      const deviceId = this.getDeviceId();
-
-      console.log('Attempting to create session:', `${API_BASE_URL}/api/v1/questions/sessions`);
-      console.log('Request data:', { device_id: deviceId });
-
-      // Add timeout to prevent hanging indefinitely
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            device_id: deviceId
-          }),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Session creation failed with status:', response.status, errorText);
-          throw new Error(`Session creation failed: ${response.status}`);
-        }
-
-        const sessionData: SessionData = await response.json();
-        console.log('✅ Session created successfully:', sessionData.session_id);
-        await this.saveSessionId(sessionData.session_id);
-        return sessionData;
-      } catch (fetchError: any) {
-        clearTimeout(timeoutId);
-
-        // More detailed error logging
-        if (fetchError.name === 'AbortError') {
-          console.error('❌ Session creation timed out after 30s');
-        } else if (fetchError.message?.includes('Network request failed')) {
-          console.error('❌ Network request failed - check internet connection');
-          console.error('   API URL:', API_BASE_URL);
-          console.error('   Device may not have internet access or DNS is not resolving');
-        } else {
-          console.error('❌ Fetch error:', fetchError.message || fetchError);
-        }
-        throw fetchError;
-      }
-    } catch (error: any) {
-      console.error('Session creation error:', error.message || error);
-      return null;
+    const existing = await this.ticket();
+    if (existing) {
+      return { session_id: existing.session_id, device_id: 'server-issued', created_at: existing.expires_at, status: 'active' };
     }
+    let idempotencyKey = await getSecureJson<string>(SESSION_CREATE_KEY);
+    if (!idempotencyKey) {
+      idempotencyKey = createIdempotencyKey();
+      await setSecureJson(
+        SESSION_CREATE_KEY,
+        idempotencyKey,
+        ONBOARDING_DRAFT_TTL_MS,
+      );
+    }
+    const session = await createOnboardingSession(idempotencyKey);
+    const ticket: Ticket = {
+      session_id: session.session_id,
+      proof_token: session.proof_token,
+      expires_at: session.expires_at,
+      required_consents: session.required_consents,
+    };
+    await saveGuestOnboardingTicket(ticket);
+    await deleteSecureJson(SESSION_CREATE_KEY);
+    this.transientTicket = ticket;
+    return { session_id: session.session_id, device_id: 'server-issued', created_at: session.expires_at, status: 'active' };
   }
 
-  /**
-   * Saves survey answers to the session (new structure)
-   * 
-   * @param answers - User's survey answers
-   * @param questions - Survey questions structure
-   * @returns Promise resolving to success status
-   */
-  async saveAnswers(answers: Record<string, any>, questions: any[]): Promise<boolean> {
+  async saveAnswers(answers: QuestionnaireAnswers, _questions: unknown[] = []): Promise<boolean> {
+    let ticket = await this.ticket();
+    if (!ticket) { await this.createSession(); ticket = await this.ticket(); }
+    if (!ticket) return false;
+    const mappedAnswers = mapQuestionnaireAnswers(answers);
+    if (!Object.keys(mappedAnswers).length) return false;
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const request = {
+      schema_version: 'mobile-questionnaire.v1',
+      timezone,
+      answers: mappedAnswers,
+    } as const;
+    const revision = this.assessment?.version ?? 0;
+    const response = await putAssessment(
+      ticket.session_id,
+      ticket.proof_token,
+      request,
+      revision,
+      assessmentIdempotencyKey(ticket.session_id, revision, request),
+    );
+    this.assessment = { answers: mappedAnswers, timezone, version: response.version };
+    await this.persistAssessment(ticket);
+    return true;
+  }
+
+  /** Claim with a stable key; proof and health draft remain until plan acceptance. */
+  async linkSessionToUser(_firebaseUser?: unknown): Promise<boolean> {
+    const ticket = await this.ticket();
+    if (!ticket || !auth.currentUser || !this.selectedConsents) return false;
+    const startedAt = Date.now();
     try {
-      // Validate session and recreate if necessary
-      const sessionValid = await this.validateAndRefreshSession();
-      if (!sessionValid) {
-        console.error('Session creation failed');
-        return false;
-      }
-
-      const sessionId = await this.getSessionId();
-      if (!sessionId) {
-        console.error('No session ID available.');
-        return false;
-      }
-
-      console.log('Starting answer save:', {
-        sessionId,
-        answersCount: Object.keys(answers).length,
-        questionsCount: questions.length
-      });
-
-      // Save name to local storage (separate personal info)
-      const { name, ...sessionData } = answers;
-      if (name) {
-        await AsyncStorage.setItem('userName', name);
-        console.log('Name saved to local storage:', name);
-      }
-
-      // Convert answers to new structure (excluding personal info)
-      const responseData: any = {};
-
-      // Key mapping definition (excluding name)
-      const keyMapping: Record<string, string> = {
-        'age': 'age',
-        'periodDescription': 'period_description',
-        'birthControl': 'birth_control',
-        'lastPeriodDate': 'last_period_date',
-        'cycleLength': 'cycle_length',
-        'periodConcerns': 'period_concerns',
-        'bodyConcerns': 'body_concerns',
-        'skinAndHairConcerns': 'skin_hair_concerns',
-        'mentalHealthConcerns': 'mental_health_concerns',
-        'otherConcerns': 'other_concerns',
-        'topConcern': 'top_concern',
-        'diagnosedCondition': 'diagnosed_conditions',
-        'familyHistory': 'family_history',
-        'workoutIntensity': 'workout_intensity',
-        'sleepDuration': 'sleep_duration',
-        'stressLevel': 'stress_level'
-      };
-
-      // Map each question's answer
-      questions.forEach(q => {
-        const answer = answers[q.key];
-        console.log(`Question ${q.key}:`, answer);
-
-        // Exclude name from processing
-        if (q.key === 'name') {
-          console.log('Name not saved to session');
-          return;
-        }
-
-        const mappedKey = keyMapping[q.key];
-        if (mappedKey) {
-          // Convert age to number
-          if (q.key === 'age') {
-            responseData[mappedKey] = parseInt(answer) || 0;
-            console.log(`Mapped (age number conversion): ${q.key} -> ${mappedKey} =`, responseData[mappedKey]);
-          }
-          // Process Others text input
-          else if (q.key === 'otherConcerns' && Array.isArray(answer)) {
-            const processedAnswer = answer.map(item => {
-              if (item === 'Others (please specify)' && answers.otherConcernsText) {
-                return `Others: ${answers.otherConcernsText}`;
-              }
-              return item;
-            });
-            responseData[mappedKey] = processedAnswer;
-            console.log(`Mapped (Others processing): ${q.key} -> ${mappedKey} =`, processedAnswer);
-          } else if (q.key === 'diagnosedCondition' && Array.isArray(answer)) {
-            const processedAnswer = answer.map(item => {
-              if (item === 'Others (please specify)' && answers.diagnosedConditionText) {
-                return `Others: ${answers.diagnosedConditionText}`;
-              }
-              return item;
-            });
-            responseData[mappedKey] = processedAnswer;
-            console.log(`Mapped (Others processing): ${q.key} -> ${mappedKey} =`, processedAnswer);
-          } else {
-            responseData[mappedKey] = answer;
-            console.log(`Mapped: ${q.key} -> ${mappedKey} =`, answer);
-          }
-        } else {
-          console.log(`Not mapped: ${q.key} =`, answer);
-        }
-      });
-
-      // Auto-detect user timezone
-      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-      const requestBody = {
-        session_id: sessionId,
-        data: {
-          ...responseData,
-          survey_timezone: userTimezone  // Required!
-        }
-      };
-
-      console.log('Request URL:', `${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/data`);
-      console.log('Request body:', JSON.stringify(requestBody, null, 2));
-
-      const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/data`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      console.log('Response status:', response.status, response.statusText);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-      // Handle 404 - session was deleted on backend (e.g., during auto-transfer)
-      if (response.status === 404) {
-        console.warn('⚠️ Session not found on backend (404) - creating new session and retrying...');
-        await this.clearSession();
-        const newSession = await this.createSession();
-        if (newSession) {
-          // Retry the save with the new session
-          const retryRequestBody = {
-            session_id: newSession.session_id,
-            data: {
-              ...responseData,
-              survey_timezone: userTimezone
-            }
-          };
-          console.log('🔄 Retrying save with new session:', newSession.session_id);
-          const retryResponse = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${newSession.session_id}/data`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(retryRequestBody),
-          });
-          if (!retryResponse.ok) {
-            const retryError = await retryResponse.text();
-            console.error('❌ Retry save also failed:', retryError);
-            throw new Error(`Retry save failed: ${retryResponse.status}`);
-          }
-          console.log('✅ Retry save successful with new session');
-          return true;
-        }
-        throw new Error('Failed to create new session after 404');
-      }
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Answer save response error:', errorText);
-        throw new Error(`Answer save failed: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('Answer save successful:', result);
+      // Reuse one operation key if completion-record persistence fails after
+      // the server accepted the claim; the retry must replay rather than claim
+      // a now-claimed guest session a second time.
+      await claimOnboardingSession(
+        ticket.session_id,
+        ticket.proof_token,
+        this.selectedConsents,
+        `onboarding-claim-${ticket.session_id}`,
+      );
+      const completedAt = Date.now();
+      const wrote = await userScopedAsyncStorage.multiSet([
+        ['session_link_claimed', 'true'],
+        ['session_link_completed_ms', String(completedAt)],
+        ['session_link_duration_ms', String(completedAt - startedAt)],
+        ['session_link_completed_uid', auth.currentUser.uid],
+      ]);
+      if (!wrote) throw new Error('Unable to record account setup completion.');
       return true;
     } catch (error) {
-      console.error('Answer save error:', error);
-      return false;
+      // Do not delete the proof: network failures and server errors are retryable.
+      throw error;
     }
   }
 
   /**
-   * Links session to user after login (new structure)
-   * 
-   * @param firebaseUser - Firebase user object
-   * @returns Promise resolving to success status
+   * Resumable post-auth state machine: claim then accept exactly one initial
+   * plan job. Guest state is erased only after both server operations and the
+   * user-scoped completion record have succeeded.
    */
-  async linkSessionToUser(firebaseUser: any): Promise<boolean> {
-    try {
-      const linkStartMs = Date.now();
-      // Set "in progress" flag to prevent premature API calls
-      // BottomNavigationBar checks this before fetching streak data
-      await AsyncStorage.setItem('session_link_complete', 'pending');
-
-      const sessionId = await this.getSessionId();
-      if (!sessionId) {
-        console.error('No session ID available.');
-        // Still set flag so SignupLoadingScreen can proceed
-        await AsyncStorage.setItem('session_link_complete', 'true');
-        return false;
-      }
-
-      // Get name from local storage
-      const userName = await AsyncStorage.getItem('userName');
-
-      // Get lifestyle focus from local storage (set in ResearchingScreen)
-      const lifestyleFocusStr = await AsyncStorage.getItem('lifestyle_focus');
-      const lifestyleFocus = lifestyleFocusStr ? JSON.parse(lifestyleFocusStr) : null;
-
-      // Auto-detect user timezone
-      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-      const userProfile = {
-        name: userName || '',
-        email: firebaseUser.email || ''
-      };
-
-      console.log('Attempting session link:', {
-        sessionId,
-        userProfile,
-        timezone: userTimezone,
-        lifestyleFocus
-      });
-
-      const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/link`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await firebaseUser.getIdToken()}`
-        },
-        body: JSON.stringify({
-          user_profile: userProfile,
-          current_timezone: userTimezone,  // Required!
-          lifestyle_focus: lifestyleFocus  // Eat/Move/Pause preference
-        }),
-      });
-
-      if (!response.ok) {
-        // Handle 404 - session was deleted on backend
-        if (response.status === 404) {
-          console.warn('⚠️ Session not found during link - clearing stale session');
-          await this.clearSession();
-        }
-        throw new Error(`Session link failed: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('Session link successful:', result);
-
-      // Clean up local storage after successful link
-      await AsyncStorage.removeItem('userName');
-      await AsyncStorage.removeItem('lifestyle_focus');
-      console.log('Name and lifestyle focus removed from local storage');
-
-      // Signal that session link is complete - SignupLoadingScreen checks this
-      await AsyncStorage.setItem('session_link_complete', 'true');
-      try {
-        await AsyncStorage.setItem('session_link_completed_ms', Date.now().toString());
-        await AsyncStorage.setItem('session_link_duration_ms', (Date.now() - linkStartMs).toString());
-      } catch (e) {
-        // ignore
-      }
-      console.log('✅ Session link complete flag set');
-
-      return true;
-    } catch (error) {
-      console.error('Session link error:', error);
-      // Still set flag so SignupLoadingScreen can proceed (with empty data initially)
-      await AsyncStorage.setItem('session_link_complete', 'true');
-      try {
-        await AsyncStorage.setItem('session_link_completed_ms', Date.now().toString());
-        await AsyncStorage.setItem('session_link_duration_ms', 'error');
-      } catch (e) {
-        // ignore
-      }
-      return false;
-    }
+  async completeSignup(): Promise<boolean> {
+    if (!await this.linkSessionToUser()) return false;
+    const ticket = await this.ticket();
+    if (!ticket || !auth.currentUser) return false;
+    const job = await createPlanGeneration({}, `onboarding-plan-${ticket.session_id}`);
+    const completedAt = Date.now();
+    const wrote = await userScopedAsyncStorage.multiSet([
+      ['session_link_complete', 'true'],
+      ['onboarding_plan_job_id', job.job_id],
+      ['onboarding_setup_completed_ms', String(completedAt)],
+      ['onboarding_setup_completed_uid', auth.currentUser.uid],
+    ]);
+    if (!wrote) throw new Error('Unable to record personalized plan setup completion.');
+    await setSecureJson(JOB_KEY, job.job_id, ONBOARDING_DRAFT_TTL_MS);
+    this.transientTicket = null;
+    this.selectedConsents = null;
+    this.assessment = null;
+    await deleteGuestOnboardingTicket();
+    await deleteGuestOnboardingAssessment();
+    return true;
   }
 
-  /**
-   * Clears the current session and ALL user-specific cached data
-   * CRITICAL: This must be called on logout to prevent data leaking between users
-   */
+  /** Used by returning auth flows to resume, not discard, an interrupted signup. */
+  async hasPendingSignupRecovery(): Promise<boolean> {
+    const ticket = await this.ticket();
+    return Boolean(ticket && await this.assessmentFor(ticket));
+  }
+
+  async hasCompletedSignupForCurrentUser(): Promise<boolean> {
+    if (!auth.currentUser) return false;
+    const [complete, owner] = await Promise.all([
+      userScopedAsyncStorage.getItem('session_link_complete'),
+      userScopedAsyncStorage.getItem('onboarding_setup_completed_uid'),
+    ]);
+    return complete === 'true' && owner === auth.currentUser.uid;
+  }
+
   async clearSession(): Promise<void> {
-    try {
-      const sessionId = await this.getSessionId();
-      if (sessionId) {
-        // Clear the validation flag for this session
-        await AsyncStorage.removeItem(`session_validated_${sessionId}`);
-      }
-      
-      // Clear session ID
-      await AsyncStorage.removeItem('session_id');
-      this.sessionId = null;
-      
-      // CRITICAL: Clear ALL user-specific data that could leak between users
-      // This ensures a new user doesn't see the old user's cached data
-      const userSpecificKeys = [
-        // Plan generation flags
-        'plan_generating_in_background',
-        'session_link_complete',
-        'fresh_signup_pending_refresh',
-        'post_auth_flow',
-        'post_auth_started_ms',
-        'session_link_completed_ms',
-        'session_link_duration_ms',
-        // HomeScreen cache
-        'homescreen_last_load',
-        // User profile data
-        'userName',
-        'lifestyle_focus',
-        // Any other user-specific cached data
-        'last_plan_id',
-        'cached_assignments',
-        'cached_cycle_info',
-      ];
-      
-      await AsyncStorage.multiRemove(userSpecificKeys);
-      console.log('🧹 Cleared all user-specific cached data');
-      
-    } catch (error) {
-      console.error('Session clear failed:', error);
-    }
+    this.transientTicket = null;
+    this.selectedConsents = null;
+    this.assessment = null;
+    await deleteGuestOnboardingTicket();
+    await deleteGuestOnboardingAssessment();
+    await deleteSecureJson(JOB_KEY);
+    await deleteSecureJson(SESSION_CREATE_KEY);
   }
 
-  /**
-   * Checks if a session exists
-   * 
-   * @returns Promise resolving to session existence status
-   */
-  async hasSession(): Promise<boolean> {
-    const sessionId = await this.getSessionId();
-    return sessionId !== null;
-  }
-
-  /**
-   * Validates session and recreates if necessary
-   * 
-   * CRITICAL: Always validates with backend on first call per app launch.
-   * If session is expired or not found on backend, creates a new session.
-   * Uses a per-session flag to avoid repeated validation during same app launch.
-   * 
-   * @param forceValidate - If true, bypasses the per-launch validation cache.
-   * @returns Promise resolving to validation success status
-   */
-  async validateAndRefreshSession(forceValidate: boolean = false): Promise<boolean> {
-    try {
-      const sessionId = await this.getSessionId();
-      if (!sessionId) {
-        console.log('No session ID - creating new session');
-        const newSession = await this.createSession();
-        return newSession !== null;
-      }
-
-      // Check if we've already validated this session this app launch
-      // This prevents repeated backend calls while navigating between screens
-      const validatedKey = `session_validated_${sessionId}`;
-      const alreadyValidated = await AsyncStorage.getItem(validatedKey);
-
-      if (alreadyValidated === 'true' && !forceValidate) {
-        console.log('Session already validated this launch:', sessionId.slice(0, 20) + '...');
-        return true;
-      }
-
-      // ALWAYS validate with backend on first call
-      console.log('🔍 Validating session with backend:', sessionId.slice(0, 20) + '...');
-      const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/data`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.status === 404) {
-        // Session expired or not found on backend - create a fresh one
-        console.log('⚠️ Session expired/not found on backend, creating new session');
-        await this.clearSession();
-        const newSession = await this.createSession();
-        return newSession !== null;
-      }
-
-      // Mark session as validated for this app launch
-      await AsyncStorage.setItem(validatedKey, 'true');
-      console.log('✅ Session validated with backend');
-      return true;
-    } catch (error) {
-      console.error('Error during session validation:', error);
-      // On network error, create a new session to ensure flow works
-      console.log('⚠️ Network error during validation, creating new session');
-      await this.clearSession();
-      const newSession = await this.createSession();
-      return newSession !== null;
-    }
-  }
-
-  /**
-   * Logs out user and clears all stored information
-   */
+  async hasSession(): Promise<boolean> { return Boolean(await this.ticket()); }
+  async validateAndRefreshSession(): Promise<boolean> { return Boolean(await this.ticket()) || Boolean(await this.createSession()); }
   async logout(): Promise<void> {
-    try {
-      // Clear session information
-      await this.clearSession();
-
-      // Clear remember me information
-      await AsyncStorage.removeItem('rememberMe');
-      await AsyncStorage.removeItem('savedEmail');
-      await AsyncStorage.removeItem('savedPassword');
-
-      console.log('Logout complete - all stored information cleared');
-    } catch (error) {
-      console.error('Error during logout:', error);
-    }
+    this.selectedConsents = null;
+    this.assessment = null;
+    this.transientTicket = null;
+    await deleteGuestOnboardingTicket();
+    await deleteGuestOnboardingAssessment();
+    await clearUserScopedStorage(auth.currentUser?.uid ?? null);
   }
-
-  /**
-   * Updates session with lifestyle_focus (eat/move/pause preference)
-   * Must be called BEFORE starting recommendation generation
-   * 
-   * @param lifestyleFocus - Array of selected options: ['eat', 'move', 'pause']
-   * @returns Promise resolving to success status
-   */
   async updateSessionLifestyleFocus(lifestyleFocus: string[]): Promise<boolean> {
-    try {
-      const sessionId = await this.getSessionId();
-      if (!sessionId) {
-        console.error('❌ No session ID available for lifestyle_focus update.');
-        return false;
-      }
-
-      console.log('🎯 Updating session with lifestyle_focus:', lifestyleFocus);
-
-      // Auto-detect user timezone
-      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-      const requestBody = {
-        session_id: sessionId,
-        data: {
-          lifestyle_focus: lifestyleFocus,
-          survey_timezone: userTimezone
-        }
-      };
-
-      const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/data`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Lifestyle focus update failed:', errorText);
-        return false;
-      }
-
-      console.log('✅ Session lifestyle_focus updated successfully');
-      return true;
-    } catch (error) {
-      console.error('❌ Lifestyle focus update error:', error);
-      return false;
-    }
+    const ticket = await this.ticket();
+    const assessment = ticket ? await this.assessmentFor(ticket) : null;
+    if (!ticket || !assessment) return false;
+    const focus = [...new Set(lifestyleFocus)].filter(
+      (value): value is 'eat' | 'move' | 'pause' => value === 'eat' || value === 'move' || value === 'pause',
+    );
+    if (!focus.length) return false;
+    const answers: MobileQuestionnaireV1 = { ...assessment.answers, lifestyle_focus: focus };
+    const request = {
+      schema_version: 'mobile-questionnaire.v1',
+      timezone: assessment.timezone,
+      answers,
+    } as const;
+    const response = await putAssessment(
+      ticket.session_id,
+      ticket.proof_token,
+      request,
+      assessment.version,
+      assessmentIdempotencyKey(ticket.session_id, assessment.version, request),
+    );
+    this.assessment = { answers, timezone: assessment.timezone, version: response.version };
+    await this.persistAssessment(ticket);
+    return true;
   }
-
-  /**
-   * Starts recommendation generation process
-   * 
-   * @returns Promise resolving to success status
-   */
-  async startRecommendationGeneration(): Promise<boolean> {
-    try {
-      const sessionId = await this.getSessionId();
-      if (!sessionId) {
-        console.error('❌ No session ID available.');
-        return false;
-      }
-
-      console.log('🚀 Starting recommendation generation API call:', `${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/generate-recommendations`);
-
-      const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/generate-recommendations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Recommendation generation start failed:', errorText);
-        throw new Error(`Recommendation generation start failed: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ Recommendation generation start successful:', result);
-      return true;
-    } catch (error) {
-      console.error('❌ Recommendation generation start error:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Checks recommendation generation status
-   * 
-   * @returns Promise resolving to status information or null on error
-   */
-  async getRecommendationStatus(): Promise<{ status: string; data?: any } | null> {
-    try {
-      const sessionId = await this.getSessionId();
-      if (!sessionId) {
-        console.error('❌ No session ID available.');
-        return null;
-      }
-
-      console.log('🔍 Checking recommendation generation status API call:', `${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/recommendations/status`);
-
-      const response = await fetch(`${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/recommendations/status`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Recommendation status check failed:', errorText);
-
-        // Handle 404 - session was deleted on backend
-        if (response.status === 404) {
-          console.warn('⚠️ Session not found during status check - clearing stale session');
-          await this.clearSession();
-          return null;
-        }
-
-        throw new Error(`Recommendation status check failed: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('📊 Recommendation status response:', result);
-
-      // Normalize response structure
-      let normalizedResult = {
-        status: result.status || result.currentRecommendationStatus || 'pending',
-        data: result.data || result,
-        recommendations_count: result.recommendations_count || 0,
-        session_id: result.session_id
-      };
-
-      console.log('✅ Normalized response:', normalizedResult);
-      return normalizedResult;
-    } catch (error) {
-      console.error('❌ Recommendation status check error:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Fetches hormone analysis results for the current session
-   *
-   * Uses the backend /sessions/{session_id}/hormone-analysis endpoint
-   * and returns the parsed JSON response including hormone_cards.
-   */
-  async getHormoneAnalysis(): Promise<any | null> {
-    try {
-      const sessionId = await this.getSessionId();
-      if (!sessionId) {
-        console.error('❌ No session ID available for hormone analysis.');
-        return null;
-      }
-
-      const url = `${API_BASE_URL}/api/v1/questions/sessions/${sessionId}/hormone-analysis`;
-      console.log('🔍 Fetching hormone analysis:', url);
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Hormone analysis fetch failed:', errorText);
-
-        // Handle 404 - session was deleted on backend
-        if (response.status === 404) {
-          console.warn('⚠️ Session not found during hormone analysis - clearing stale session');
-          await this.clearSession();
-          // Return null - caller should handle by redirecting to survey
-          return null;
-        }
-
-        throw new Error(`Hormone analysis fetch failed: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('🧬 Hormone analysis response:', result);
-      return result;
-    } catch (error) {
-      console.error('❌ Hormone analysis fetch error:', error);
-      return null;
-    }
-  }
+  async getHormoneAnalysis(): Promise<any | null> { return null; }
 }
-
-export default new SessionService(); 
+export default new SessionService();

@@ -1,0 +1,10 @@
+appId: com.auvra.health
+---
+- launchApp:
+    clearState: true
+- tapOn: "Get started"
+- tapOn: "Continue"
+- tapOn: "Continue"
+# The remaining questionnaire values are fixture-dependent; this verifies the
+# authenticated claim and plan journey in CI with seeded Firebase credentials.
+- tapOn: "Continue"

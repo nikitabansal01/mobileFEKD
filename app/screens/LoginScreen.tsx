@@ -22,7 +22,7 @@ import PrimaryButton from '@/components/PrimaryButton';
 // Services
 import { auth, signInWithEmail } from '@/config/firebase';
 import authService from '@/services/authService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { userScopedAsyncStorage } from '@/src/core/storage/userScopedAsyncStorage';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -53,28 +53,20 @@ const LoginScreen = () => {
   const [loading, setLoading] = useState(false);
   const [slideAnim] = useState(new Animated.Value(0));
 
-  // Load saved email on mount if remember me was enabled
+  // Only an email may be remembered; passwords are never persisted.
   useEffect(() => {
-    const loadSavedCredentials = async () => {
+    const loadSavedEmail = async () => {
       try {
-        const savedCredentials = await authService.getSavedCredentials();
-        if (savedCredentials) {
-          setEmail(savedCredentials.email);
-          setPassword(savedCredentials.password);
+        const savedEmail = await authService.getSavedEmail();
+        if (savedEmail) {
+          setEmail(savedEmail);
           setRememberMe(true);
-        } else {
-          // Check if just email was saved
-          const savedEmail = await authService.getSavedEmail();
-          if (savedEmail) {
-            setEmail(savedEmail);
-            setRememberMe(true);
-          }
         }
       } catch (error) {
-        console.error('Error loading saved credentials:', error);
+        console.error('Error loading saved email:', error);
       }
     };
-    loadSavedCredentials();
+    void loadSavedEmail();
   }, []);
 
   const [googleRequest, googleResponse, googlePromptAsync] = Google.useIdTokenAuthRequest({
@@ -91,13 +83,10 @@ const LoginScreen = () => {
       const credential = GoogleAuthProvider.credential(id_token);
       signInWithCredential(auth, credential)
         .then(async (result) => {
-          // Save login state
-          await authService.setLoggedIn(result.user.uid);
-          // For social logins, we enable remember me by default
-          await authService.saveCredentials('', '', true);
+          await authService.saveLoginPreference(result.user.email ?? '', rememberMe);
 
           // Clear stale flags from previous sessions (important for returning users)
-          await AsyncStorage.multiRemove([
+          await userScopedAsyncStorage.multiRemove([
             'plan_generating_in_background',
             'session_link_complete',
             'fresh_signup_pending_refresh',
@@ -128,13 +117,10 @@ const LoginScreen = () => {
       const result = await signInWithEmail(email, password);
 
       if (result.success && result.user) {
-        // Save credentials based on remember me preference
-        await authService.saveCredentials(email, password, rememberMe);
-        // Mark user as logged in
-        await authService.setLoggedIn(result.user.uid);
+        await authService.saveLoginPreference(email, rememberMe);
 
         // Clear stale flags from previous sessions (important for returning users)
-        await AsyncStorage.multiRemove([
+        await userScopedAsyncStorage.multiRemove([
           'plan_generating_in_background',
           'session_link_complete',
           'fresh_signup_pending_refresh',
@@ -187,13 +173,10 @@ const LoginScreen = () => {
 
       const result = await signInWithCredential(auth, firebaseCredential);
 
-      // Save login state
-      await authService.setLoggedIn(result.user.uid);
-      // For social logins, we enable remember me by default
-      await authService.saveCredentials('', '', true);
+      await authService.saveLoginPreference(result.user.email ?? '', rememberMe);
 
       // Clear stale flags from previous sessions (important for returning users)
-      await AsyncStorage.multiRemove([
+      await userScopedAsyncStorage.multiRemove([
         'plan_generating_in_background',
         'session_link_complete',
         'fresh_signup_pending_refresh',
@@ -326,7 +309,7 @@ const LoginScreen = () => {
 
           {/* Sign Up Link */}
           <View style={styles.signupLinkContainer}>
-            <Text style={styles.signupLinkText}>Don't have an account? </Text>
+            <Text style={styles.signupLinkText}>Don&apos;t have an account? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('OnboardingScreen')}>
               <Text style={styles.signupLinkAction}>Sign up</Text>
             </TouchableOpacity>
@@ -335,7 +318,7 @@ const LoginScreen = () => {
           {/* Terms and Conditions */}
           <View style={styles.termsContainer}>
             <Text style={styles.termsText}>
-              By continuing, you agree to Auvra by Hormone Insight's{' '}
+              By continuing, you agree to Auvra by Hormone Insight&apos;s{' '}
               <Text style={styles.termsLink}>Terms and Conditions</Text>
               {' '}and{' '}
               <Text style={styles.termsLink}>Privacy Policy</Text>

@@ -1,18 +1,15 @@
 import Images from "@/assets/images";
-import FixedBottomContainer from "@/components/FixedBottomContainer";
 import LoginBottomSheet from "@/components/LoginBottomSheet";
-import PrimaryButton from "@/components/PrimaryButton";
 import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Defs, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { userScopedAsyncStorage } from '@/src/core/storage/userScopedAsyncStorage';
 
 import { auth } from "@/config/firebase";
-import sessionService from "@/services/sessionService";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { useEffect, useRef, useState } from "react";
-import { Animated, Image, Platform, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Image, Text, View } from "react-native";
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from "react-native-responsive-dimensions";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -100,26 +97,24 @@ const ResearchingScreen = () => {
   const route = useRoute<RouteProp<{ params: ResearchingScreenParams }, 'params'>>();
 
   // Get lifestyle focus from route params (set by ResultLoadingScreen)
-  const lifestyleFocus = route.params?.lifestyleFocus || [];
+  const lifestyleFocus = useMemo(
+    () => route.params?.lifestyleFocus ?? [],
+    [route.params?.lifestyleFocus],
+  );
 
   // Steps: 0: first animation, 1: second animation, 2: completion screen
   // (Question step removed - now handled by ResultLoadingScreen)
   const [step, setStep] = useState(0);
   const [showLogin, setShowLogin] = useState(false);
-  const [recommendationStatus, setRecommendationStatus] = useState<string>('pending');
-  const [canProceedToFinal, setCanProceedToFinal] = useState(false); // API completion status
+  const recommendationStatus = 'pending';
+  const canProceedToFinal = false;
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false); // User login status
-  const [hasStartedRecommendation, setHasStartedRecommendation] = useState(false); // Recommendation generation start status
   const [authChecked, setAuthChecked] = useState(false); // Auth state check status
-
-  // Use refs for interval to avoid state update loops
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const isPollingRef = useRef<boolean>(false);
 
   // Log the lifestyle focus received
   useEffect(() => {
     console.log('🎯 [ResearchingScreen] Received lifestyle focus from ResultLoadingScreen:', lifestyleFocus);
-  }, []);
+  }, [lifestyleFocus]);
 
   // Firebase login state detection
   useEffect(() => {
@@ -131,17 +126,10 @@ const ResearchingScreen = () => {
         setIsUserLoggedIn(true);
         setShowLogin(false); // Close bottom sheet when logged in
 
-        // Stop polling if still running
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
-          isPollingRef.current = false;
-        }
-
         // Check if LoginBottomSheet is handling navigation via SignupLoadingScreen
         // If session_link_complete is 'pending', LoginBottomSheet started the session link
         // and SignupLoadingScreen will handle navigation - DON'T double-navigate
-        const sessionLinkStatus = await AsyncStorage.getItem('session_link_complete');
+        const sessionLinkStatus = await userScopedAsyncStorage.getItem('session_link_complete');
         if (sessionLinkStatus === 'pending') {
           console.log('⏳ [ResearchingScreen] Session link in progress, SignupLoadingScreen will handle navigation');
           return; // Let SignupLoadingScreen handle navigation
@@ -158,112 +146,8 @@ const ResearchingScreen = () => {
     return () => unsubscribe();
   }, [navigation]);
 
-  // Helper function to start recommendation generation
-  const startRecommendationGeneration = async () => {
-    if (hasStartedRecommendation) return;
-
-    try {
-      // FIX: Check if ResultLoadingScreen already started generation
-      const alreadyStarted = await AsyncStorage.getItem('recommendation_generation_started');
-      if (alreadyStarted === 'true') {
-        console.log('⏭️ [ResearchingScreen] Generation already started by ResultLoadingScreen, skipping duplicate call');
-        setHasStartedRecommendation(true);
-        setRecommendationStatus('in_progress');
-        // Clear the flag so it doesn't persist across sessions
-        await AsyncStorage.removeItem('recommendation_generation_started');
-        startPolling();
-        return;
-      }
-
-      console.log('🚀 [ResearchingScreen] Starting recommendation generation with lifestyle_focus:', lifestyleFocus);
-
-      setHasStartedRecommendation(true);
-      const success = await sessionService.startRecommendationGeneration();
-      if (success) {
-        console.log('✅ [ResearchingScreen] Recommendation started, beginning polling');
-        setRecommendationStatus('in_progress');
-        startPolling();
-      } else {
-        console.error('❌ [ResearchingScreen] Failed to start recommendation');
-        setRecommendationStatus('error');
-        setCanProceedToFinal(true);
-      }
-    } catch (error: any) {
-      if (error.message && error.message.includes('Session not found')) {
-        console.log('⚠️ [ResearchingScreen] Session not found - may be logged in user');
-        setCanProceedToFinal(true);
-        setRecommendationStatus('completed');
-        return;
-      }
-
-      console.error('❌ [ResearchingScreen] Recommendation start error:', error);
-      setRecommendationStatus('error');
-      setCanProceedToFinal(true);
-    }
-  };
-
-  // START recommendations IMMEDIATELY on mount
-  // Backend already has lifestyle_focus saved by ResultLoadingScreen
-  // So it will generate with correct distribution!
-  useEffect(() => {
-    if (isUserLoggedIn || hasStartedRecommendation) return;
-
-    // Start immediately - lifestyle_focus was already saved by ResultLoadingScreen
-    console.log('⚡ [ResearchingScreen] Starting recommendations immediately with lifestyle_focus:', lifestyleFocus);
-    startRecommendationGeneration();
-  }, [isUserLoggedIn, hasStartedRecommendation]);
-
-  // Start polling function (uses refs to avoid re-render loops)
-  const startPolling = () => {
-    // Prevent double polling
-    if (isPollingRef.current || pollingIntervalRef.current) {
-      console.log('⏭️ [ResearchingScreen] Polling already active, skipping');
-      return;
-    }
-
-    isPollingRef.current = true;
-    console.log('🔄 [ResearchingScreen] Starting status polling (every 2.5s)');
-
-    pollingIntervalRef.current = setInterval(async () => {
-      try {
-        const status = await sessionService.getRecommendationStatus();
-        if (status) {
-          setRecommendationStatus(status.status);
-
-          // Stop status checking when completed
-          if (status.status === 'completed') {
-            console.log('✅ [ResearchingScreen] Recommendations completed!');
-            setCanProceedToFinal(true);
-            stopPolling();
-          } else if (status.status === 'error') {
-            console.log('⚠️ [ResearchingScreen] Recommendations error, allowing progression');
-            setCanProceedToFinal(true);
-            stopPolling();
-          }
-        }
-      } catch (error) {
-        console.error('❌ [ResearchingScreen] Error checking status:', error);
-      }
-    }, 3500); // Check every 3.5 seconds (optimized: less API load, still responsive)
-  };
-
-  // Stop polling function
-  const stopPolling = () => {
-    if (pollingIntervalRef.current) {
-      console.log('🛑 [ResearchingScreen] Stopping status polling');
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
-    isPollingRef.current = false;
-  };
-
-  // Clean up interval on component unmount
-  useEffect(() => {
-    return () => {
-      console.log('🧹 [ResearchingScreen] Cleanup - stopping polling');
-      stopPolling();
-    };
-  }, []);
+  // Plan creation is intentionally deferred until SignupLoadingScreen has an
+  // authenticated Firebase session and has durably claimed the questionnaire.
 
   // Automatic step transition: 0 (animation 1) -> 1 (animation 2) -> 2 (completion)
   // Steps are now: 0, 1, 2 (removed question step since it's in ResultLoadingScreen)
@@ -565,4 +449,4 @@ const ResearchingScreen = () => {
   );
 };
 
-export default ResearchingScreen; 
+export default ResearchingScreen;
