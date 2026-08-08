@@ -81,20 +81,35 @@ def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBu
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+// Release signing.
+//
+// On EAS Build the signing credentials are managed remotely and injected by
+// the build service, and EAS_BUILD is set in the environment; the build must
+// not second-guess that. For a *local* release build there is no such
+// guarantee, and the React Native template's default of signing release with
+// the debug keystore is not acceptable for a health app, so a local release
+// build must supply the four AUVRA_ANDROID_* values explicitly.
+//
+// An earlier version of this guard threw unconditionally whenever those four
+// variables were absent, which failed every EAS release build -- EAS does not
+// set them because it supplies credentials by its own mechanism.
+def isManagedBuild = System.getenv('EAS_BUILD') == 'true'
 def releaseSigningProperties = [
     storeFile: System.getenv('AUVRA_ANDROID_KEYSTORE_FILE'),
     storePassword: System.getenv('AUVRA_ANDROID_KEYSTORE_PASSWORD'),
     keyAlias: System.getenv('AUVRA_ANDROID_KEY_ALIAS'),
     keyPassword: System.getenv('AUVRA_ANDROID_KEY_PASSWORD'),
 ]
+def hasLocalReleaseSigning = releaseSigningProperties.values().every { it }
 def releaseBuildRequested = gradle.startParameter.taskNames.any {
     it.toLowerCase().contains('release')
 }
 
-if (releaseBuildRequested && releaseSigningProperties.values().any { !it }) {
+if (releaseBuildRequested && !isManagedBuild && !hasLocalReleaseSigning) {
     throw new GradleException(
-        'Release signing is not configured. Provide the four AUVRA_ANDROID_* signing secrets; ' +
-        'release builds must never fall back to the debug keystore.'
+        'Local release signing is not configured. Provide the four AUVRA_ANDROID_* ' +
+        'signing secrets, or build through EAS, which manages credentials itself. ' +
+        'A release build must never fall back to the debug keystore.'
     )
 }
 
@@ -122,7 +137,7 @@ android {
             keyPassword 'android'
         }
         release {
-            if (releaseSigningProperties.values().every { it }) {
+            if (hasLocalReleaseSigning) {
                 storeFile file(releaseSigningProperties.storeFile)
                 storePassword releaseSigningProperties.storePassword
                 keyAlias releaseSigningProperties.keyAlias
@@ -135,7 +150,10 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            signingConfig signingConfigs.release
+            // EAS injects managed credentials here. hasLocalReleaseSigning is
+            // only ever true for a local release build, which the guard above
+            // requires to be explicitly configured.
+            signingConfig hasLocalReleaseSigning ? signingConfigs.release : signingConfigs.debug
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds
