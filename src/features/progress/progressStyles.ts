@@ -1,0 +1,63 @@
+import { StyleSheet } from 'react-native';
+
+export const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
+  content: { paddingHorizontal: 24, paddingBottom: 48 },
+  title: {
+    color: '#211B22',
+    fontFamily: 'NotoSerif600',
+    fontSize: 27,
+    marginTop: 16,
+  },
+  body: {
+    color: '#625B63',
+    fontFamily: 'Inter400',
+    fontSize: 16,
+    lineHeight: 24,
+    marginTop: 12,
+  },
+  loading: { marginTop: 32 },
+  tabs: { flexDirection: 'row', gap: 8, marginTop: 20 },
+  tab: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: '#F4F1F4',
+  },
+  tabActive: { backgroundColor: '#211B22' },
+  tabLabel: { color: '#625B63', fontFamily: 'Inter500', fontSize: 14 },
+  tabLabelActive: { color: '#FFFFFF' },
+  statRow: { flexDirection: 'row', gap: 12, marginTop: 24 },
+  stat: {
+    flex: 1,
+    backgroundColor: '#F9F7F9',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  statValue: { color: '#211B22', fontFamily: 'NotoSerif600', fontSize: 22 },
+  statLabel: {
+    color: '#625B63',
+    fontFamily: 'Inter400',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  sectionTitle: {
+    color: '#211B22',
+    fontFamily: 'Inter600',
+    fontSize: 16,
+    marginTop: 28,
+    marginBottom: 4,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#EDE8ED',
+  },
+  rowLabel: { color: '#211B22', fontFamily: 'Inter400', fontSize: 15, flex: 1 },
+  rowValue: { color: '#211B22', fontFamily: 'Inter500', fontSize: 15 },
+  rowMuted: { color: '#9A929B', fontFamily: 'Inter400' },
+});
