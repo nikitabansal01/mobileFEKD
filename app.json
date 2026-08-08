@@ -3,9 +3,6 @@
     "name": "AUVRA",
     "slug": "auvra-fe",
     "version": "1.1.0",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
     "scheme": "auvra",
     "icon": "./assets/icon.png",
     "extra": {
