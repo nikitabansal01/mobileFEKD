@@ -5,6 +5,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # gitleaks needs history to catch a secret that was committed and
+          # then deleted; a shallow clone would only see the current tree.
+          fetch-depth: 0
+      - name: Scan the repository and its history for committed secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
@@ -13,3 +21,9 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test -- --runInBand
+      # Proves the app still bundles for a real device, not just that it
+      # typechecks. A broken asset or native import only surfaces here.
+      - name: Verify the Android bundle builds
+        run: npx expo export --platform android --output-dir /tmp/export-check
+        env:
+          EXPO_PUBLIC_API_URL: https://auvra-v2-api.onrender.com
