@@ -10,6 +10,7 @@ export interface ResolveApiBaseUrlOptions {
 
 const VERSION_PATH = '/api/v2';
 const VERSIONED_API_PATH = /\/api\/v\d+(?:\/|$)/i;
+const DEFAULT_PRODUCTION_API_ORIGIN = 'https://auvra-v2-api.onrender.com';
 
 const stripTrailingSlashes = (value: string) => value.replace(/\/+$/, '');
 
@@ -17,23 +18,16 @@ const localOriginFor = (platform: ApiPlatform): string =>
   platform === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
 
 /**
- * Resolve the only supported API base URL.
- *
- * EXPO_PUBLIC_API_URL is an origin (for example https://api.auvra.com), not a
- * versioned path. This prevents individual services from silently selecting a
- * different API version.
+ * Resolve the API base URL.
  */
 export function resolveApiBaseUrl({
   configuredUrl,
   platform,
   development,
 }: ResolveApiBaseUrlOptions): string {
-  const configured = configuredUrl?.trim();
+  const configured = configuredUrl?.trim() || (development ? undefined : DEFAULT_PRODUCTION_API_ORIGIN);
 
   if (!configured) {
-    if (!development) {
-      throw new Error('EXPO_PUBLIC_API_URL is required outside development.');
-    }
     return `${localOriginFor(platform)}${VERSION_PATH}`;
   }
 

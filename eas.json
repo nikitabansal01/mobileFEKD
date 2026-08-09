@@ -20,13 +20,19 @@
     "preview": {
       "distribution": "internal",
       "environment": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://auvra-v2-api.onrender.com"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
       "autoIncrement": true,
-      "environment": "production"
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://auvra-v2-api.onrender.com"
+      }
     }
   },
   "submit": {
