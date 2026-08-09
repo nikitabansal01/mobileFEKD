@@ -20,7 +20,9 @@ jobs:
       - run: npm run contract:check
       - run: npm run typecheck
       - run: npm run lint
-      - run: npm test -- --runInBand
+      # --coverage enforces the ratchet in jest.config.js, so coverage
+      # cannot silently regress.
+      - run: npm test -- --runInBand --coverage
       # Proves the app still bundles for a real device, not just that it
       # typechecks. A broken asset or native import only surfaces here.
       - name: Verify the Android bundle builds
