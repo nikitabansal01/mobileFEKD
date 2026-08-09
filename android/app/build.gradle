@@ -94,6 +94,7 @@ def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 // variables were absent, which failed every EAS release build -- EAS does not
 // set them because it supplies credentials by its own mechanism.
 def isManagedBuild = System.getenv('EAS_BUILD') == 'true'
+def isLocalBuild = System.getenv('AUVRA_LOCAL_BUILD') == 'true'
 def releaseSigningProperties = [
     storeFile: System.getenv('AUVRA_ANDROID_KEYSTORE_FILE'),
     storePassword: System.getenv('AUVRA_ANDROID_KEYSTORE_PASSWORD'),
@@ -105,7 +106,7 @@ def releaseBuildRequested = gradle.startParameter.taskNames.any {
     it.toLowerCase().contains('release')
 }
 
-if (releaseBuildRequested && !isManagedBuild && !hasLocalReleaseSigning) {
+if (releaseBuildRequested && !isManagedBuild && !isLocalBuild && !hasLocalReleaseSigning) {
     throw new GradleException(
         'Local release signing is not configured. Provide the four AUVRA_ANDROID_* ' +
         'signing secrets, or build through EAS, which manages credentials itself. ' +
