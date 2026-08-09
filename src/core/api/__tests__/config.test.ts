@@ -20,10 +20,13 @@ describe('resolveApiBaseUrl', () => {
     ).toBe('http://localhost:8000/api/v2');
   });
 
-  it('fails closed when production configuration is missing or insecure', () => {
-    expect(() =>
+  it('defaults to production Render API URL when missing in production', () => {
+    expect(
       resolveApiBaseUrl({ platform: 'ios', development: false }),
-    ).toThrow('required');
+    ).toBe('https://auvra-v2-api.onrender.com/api/v2');
+  });
+
+  it('fails closed when production configuration is insecure', () => {
     expect(() =>
       resolveApiBaseUrl({
         configuredUrl: 'http://api.auvra.com',
