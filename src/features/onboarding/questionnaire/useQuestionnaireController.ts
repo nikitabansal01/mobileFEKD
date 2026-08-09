@@ -28,14 +28,21 @@ export function useQuestionnaireController() {
   const initialize = useCallback(async () => {
     setInitialization('loading');
     try {
+      console.log('[QUESTIONNAIRE] Starting initialization...');
       const before = await sessionService.getSessionId();
+      console.log('[QUESTIONNAIRE] Got existing session ID:', before ? 'yes' : 'none');
       const valid = await sessionService.validateAndRefreshSession();
+      console.log('[QUESTIONNAIRE] validateAndRefreshSession returned:', valid);
       const after = await sessionService.getSessionId();
+      console.log('[QUESTIONNAIRE] Session ID after validation:', after ? 'yes' : 'none');
       if (!valid) throw new Error('Unable to start your questionnaire session.');
       if (before && before === after) await restoreDraft();
       else await clearDraft();
       setInitialization('ready');
-    } catch {
+      console.log('[QUESTIONNAIRE] Initialization complete - ready!');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[QUESTIONNAIRE] Initialization FAILED:', message);
       setInitialization('failed');
     }
   }, [clearDraft, restoreDraft]);

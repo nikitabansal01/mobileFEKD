@@ -138,8 +138,10 @@ class SessionService {
   }
 
   async createSession(): Promise<SessionData | null> {
+    console.log('[SESSION] createSession called');
     const existing = await this.ticket();
     if (existing) {
+      console.log('[SESSION] Returning existing ticket session');
       return { session_id: existing.session_id, device_id: 'server-issued', created_at: existing.expires_at, status: 'active' };
     }
     let idempotencyKey = await getSecureJson<string>(SESSION_CREATE_KEY);
@@ -151,7 +153,9 @@ class SessionService {
         ONBOARDING_DRAFT_TTL_MS,
       );
     }
+    console.log('[SESSION] Calling createOnboardingSession API...');
     const session = await createOnboardingSession(idempotencyKey);
+    console.log('[SESSION] API returned session_id:', session.session_id);
     const ticket: Ticket = {
       session_id: session.session_id,
       proof_token: session.proof_token,
@@ -161,6 +165,7 @@ class SessionService {
     await saveGuestOnboardingTicket(ticket);
     await deleteSecureJson(SESSION_CREATE_KEY);
     this.transientTicket = ticket;
+    console.log('[SESSION] Session created and saved successfully');
     return { session_id: session.session_id, device_id: 'server-issued', created_at: session.expires_at, status: 'active' };
   }
 
@@ -272,7 +277,22 @@ class SessionService {
   }
 
   async hasSession(): Promise<boolean> { return Boolean(await this.ticket()); }
-  async validateAndRefreshSession(): Promise<boolean> { return Boolean(await this.ticket()) || Boolean(await this.createSession()); }
+  async validateAndRefreshSession(): Promise<boolean> {
+    console.log('[SESSION] validateAndRefreshSession called');
+    const existingTicket = await this.ticket();
+    console.log('[SESSION] existing ticket:', existingTicket ? 'yes' : 'none');
+    if (existingTicket) return true;
+    console.log('[SESSION] No ticket, creating new session...');
+    try {
+      const session = await this.createSession();
+      console.log('[SESSION] createSession result:', session ? 'success' : 'null');
+      return Boolean(session);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[SESSION] createSession FAILED:', message);
+      throw error;
+    }
+  }
   async logout(): Promise<void> {
     this.selectedConsents = null;
     this.assessment = null;
