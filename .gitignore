@@ -53,3 +53,6 @@ android/app/src/main/assets/index.android.bundle
 old_*.tsx
 temp_*.tsx
 .watchman-cookie-*
+
+# Jest coverage output is a build artifact, never a source of truth.
+coverage/
